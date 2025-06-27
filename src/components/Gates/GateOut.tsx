@@ -46,13 +46,12 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     driverName: 'John Smith',
     vehicleNumber: 'ABC-123',
     status: 'validated',
-    priority: 'high',
     createdBy: 'Jane Operator',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
     validatedAt: new Date('2025-01-11T10:30:00'),
     estimatedReleaseDate: new Date('2025-01-12T14:00:00'),
-    notes: 'Priority shipment - handle with care'
+    notes: 'Handle with care'
   },
   {
     id: 'RO-2025-005',
@@ -95,7 +94,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     driverName: 'Lisa Green',
     vehicleNumber: 'JKL-345',
     status: 'validated',
-    priority: 'medium',
     createdBy: 'Sarah Client',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-10T16:00:00'),
@@ -367,15 +365,6 @@ export const GateOut: React.FC = () => {
                       {canViewAllData() ? order.clientName : 'Your Company'}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      order.priority === 'high' ? 'bg-red-100 text-red-800' :
-                      order.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {order.priority} priority
-                    </span>
-                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm text-gray-500">
@@ -430,16 +419,6 @@ export const GateOut: React.FC = () => {
                   <div>
                     <span className="text-gray-600">Client:</span>
                     <span className="ml-2 font-medium">{canViewAllData() ? selectedReleaseOrder.clientName : 'Your Company'}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Priority:</span>
-                    <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
-                      selectedReleaseOrder.priority === 'high' ? 'bg-red-100 text-red-800' :
-                      selectedReleaseOrder.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {selectedReleaseOrder.priority}
-                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">Driver:</span>

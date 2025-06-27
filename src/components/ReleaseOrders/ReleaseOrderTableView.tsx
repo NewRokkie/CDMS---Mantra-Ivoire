@@ -246,10 +246,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="space-y-1">
-                      {getStatusBadge(order.status)}
-                      {getPriorityBadge(order.priority)}
-                    </div>
+                    {getStatusBadge(order.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
@@ -352,7 +349,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   </h3>
                   <div className="flex items-center space-x-3 mt-2">
                     {getStatusBadge(selectedOrder.status)}
-                    {getPriorityBadge(selectedOrder.priority)}
                   </div>
                 </div>
                 <button

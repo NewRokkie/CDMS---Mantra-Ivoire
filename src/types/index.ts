@@ -211,7 +211,6 @@ export interface ReleaseOrder {
   validatedAt?: Date;
   completedAt?: Date;
   notes?: string;
-  priority: 'low' | 'medium' | 'high';
   estimatedReleaseDate?: Date;
 }
 

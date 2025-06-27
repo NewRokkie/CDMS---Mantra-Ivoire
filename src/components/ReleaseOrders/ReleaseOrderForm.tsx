@@ -23,7 +23,6 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
     transportCompany: order?.transportCompany || '',
     driverName: order?.driverName || '',
     vehicleNumber: order?.vehicleNumber || '',
-    priority: order?.priority || 'medium' as const,
     estimatedReleaseDate: order?.estimatedReleaseDate ? 
       order.estimatedReleaseDate.toISOString().split('T')[0] : '',
     notes: order?.notes || ''
@@ -114,7 +113,6 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
       driverName: formData.driverName,
       vehicleNumber: formData.vehicleNumber,
       status: order?.status || 'draft',
-      priority: formData.priority,
       createdBy: user?.name || 'Unknown',
       createdAt: order?.createdAt || new Date(),
       estimatedReleaseDate: formData.estimatedReleaseDate ? 
@@ -164,21 +162,6 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
                     placeholder="Client company name"
                     disabled={user?.role === 'client'}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Priority *
-                  </label>
-                  <select
-                    required
-                    value={formData.priority}
-                    onChange={(e) => handleInputChange('priority', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="low">Low Priority</option>
-                    <option value="medium">Medium Priority</option>
-                    <option value="high">High Priority</option>
-                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
