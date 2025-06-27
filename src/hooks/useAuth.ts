@@ -30,36 +30,47 @@ export const useAuthProvider = () => {
 
   useEffect(() => {
     // Check for stored user session
-    try {
-      const storedUser = localStorage.getItem('depot_user');
-      const storedToken = localStorage.getItem('depot_token');
-      
-      if (storedUser && storedToken) {
-        const userData = JSON.parse(storedUser);
-        // Validate token expiry (in production, this would be more sophisticated)
-        const tokenData = JSON.parse(atob(storedToken.split('.')[1] || '{}'));
-        const isExpired = tokenData.exp && Date.now() >= tokenData.exp * 1000;
+    const checkStoredSession = async () => {
+      try {
+        const storedUser = localStorage.getItem('depot_user');
+        const storedToken = localStorage.getItem('depot_token');
         
-        if (!isExpired) {
-          setUser(userData);
-          setIsAuthenticated(true);
+        if (storedUser && storedToken) {
+          const userData = JSON.parse(storedUser);
+          // Validate token expiry (in production, this would be more sophisticated)
+          const tokenData = JSON.parse(atob(storedToken.split('.')[1] || '{}'));
+          const isExpired = tokenData.exp && Date.now() >= tokenData.exp * 1000;
+          
+          if (!isExpired) {
+            console.log('Restoring user session for:', userData.name);
+            setUser(userData);
+            setIsAuthenticated(true);
+          } else {
+            // Token expired, clear storage
+            console.log('Token expired, clearing session');
+            localStorage.removeItem('depot_user');
+            localStorage.removeItem('depot_token');
+            setUser(null);
+            setIsAuthenticated(false);
+          }
         } else {
-          // Token expired, clear storage
-          localStorage.removeItem('depot_user');
-          localStorage.removeItem('depot_token');
+          console.log('No stored session found');
+          setUser(null);
           setIsAuthenticated(false);
         }
-      } else {
+      } catch (error) {
+        console.error('Error loading user session:', error);
+        // Clear corrupted data
+        localStorage.removeItem('depot_user');
+        localStorage.removeItem('depot_token');
+        setUser(null);
         setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading user session:', error);
-      // Clear corrupted data
-      localStorage.removeItem('depot_user');
-      localStorage.removeItem('depot_token');
-      setIsAuthenticated(false);
-    }
-    setIsLoading(false);
+    };
+
+    checkStoredSession();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -68,7 +79,7 @@ export const useAuthProvider = () => {
     
     try {
       // Mock login - in production, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 800)); // Reduced delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const mockUsers: { [key: string]: User } = {
         'admin@depot.com': {
@@ -157,7 +168,7 @@ export const useAuthProvider = () => {
           isActive: true,
           lastLogin: new Date('2025-01-09T14:20:00'),
           createdAt: new Date('2024-03-10'),
-          clientCode: 'SHIP001', // Add client code for data filtering
+          clientCode: 'SHIP001',
           moduleAccess: {
             dashboard: true,
             containers: true,
@@ -183,7 +194,7 @@ export const useAuthProvider = () => {
           isActive: true,
           lastLogin: new Date('2025-01-08T11:30:00'),
           createdAt: new Date('2024-04-15'),
-          clientCode: 'MAEU', // Different client code
+          clientCode: 'MAEU',
           moduleAccess: {
             dashboard: true,
             containers: true,
@@ -213,17 +224,24 @@ export const useAuthProvider = () => {
         
         const mockToken = `header.${btoa(JSON.stringify(tokenPayload))}.signature`;
         
+        // Store user data and token
         localStorage.setItem('depot_user', JSON.stringify(mockUser));
         localStorage.setItem('depot_token', mockToken);
         
         console.log('Setting user state for:', mockUser.name);
+        
+        // Update state synchronously
         setUser(mockUser);
         setIsAuthenticated(true);
+        
+        console.log('Login successful - user authenticated');
       } else {
         throw new Error('Invalid email or password');
       }
     } catch (error) {
       console.error('Login error:', error);
+      setUser(null);
+      setIsAuthenticated(false);
       throw error;
     } finally {
       setIsLoading(false);
@@ -231,11 +249,13 @@ export const useAuthProvider = () => {
   };
 
   const logout = () => {
+    console.log('Logging out user');
+    
     // Clear user state immediately
     setUser(null);
     setIsAuthenticated(false);
     
-    // Clear all authentication data from localStorage immediately
+    // Clear all authentication data from localStorage
     localStorage.removeItem('depot_user');
     localStorage.removeItem('depot_token');
     localStorage.removeItem('depot_preferences');

@@ -8,15 +8,7 @@ export const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, isLoading, isAuthenticated } = useAuth();
-
-  // Redirect immediately when authentication succeeds
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      // Authentication successful, the App component will handle the redirect
-      console.log('Authentication successful, redirecting...');
-    }
-  }, [isAuthenticated]);
+  const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +24,8 @@ export const LoginForm: React.FC = () => {
     try {
       console.log('Attempting login with:', email);
       await login(email, password);
-      console.log('Login successful');
-      // The useEffect will handle the redirect when isAuthenticated becomes true
+      console.log('Login completed successfully');
+      // The authentication state change will automatically trigger the redirect
     } catch (err) {
       console.error('Login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
@@ -88,6 +80,7 @@ export const LoginForm: React.FC = () => {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="Enter your email"
                 required
+                disabled={isSubmitting || isLoading}
               />
             </div>
 
@@ -104,11 +97,13 @@ export const LoginForm: React.FC = () => {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors pr-12"
                   placeholder="Enter your password"
                   required
+                  disabled={isSubmitting || isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  disabled={isSubmitting || isLoading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -148,7 +143,7 @@ export const LoginForm: React.FC = () => {
                 type="button"
                 onClick={() => handleDemoAccountClick(account.email, account.password)}
                 disabled={isLoading || isSubmitting}
-                className="w-full text-left p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                className="w-full text-left p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex justify-between items-center">
                   <div>

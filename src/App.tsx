@@ -20,25 +20,7 @@ function AppContent() {
   const { user, isLoading, isAuthenticated, hasModuleAccess } = useAuthProvider();
   const [activeModule, setActiveModule] = useState('dashboard');
 
-  // Force immediate re-render when authentication state changes
-  React.useEffect(() => {
-    if (isAuthenticated && user) {
-      console.log('User authenticated, setting dashboard as active module');
-      setActiveModule('dashboard');
-      // Force a re-render by updating the component state
-      setTimeout(() => {
-        console.log('Authentication complete, user should see dashboard');
-      }, 100);
-    }
-  }, [isAuthenticated, user]);
-
-  // Reset active module when user logs out
-  React.useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      console.log('User logged out, resetting to dashboard');
-      setActiveModule('dashboard');
-    }
-  }, [isAuthenticated, isLoading]);
+  console.log('App render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user?.name);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -47,7 +29,7 @@ function AppContent() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking authentication...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
