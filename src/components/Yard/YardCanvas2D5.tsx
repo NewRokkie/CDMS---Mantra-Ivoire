@@ -427,6 +427,16 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     handleResetView();
   }, []);
 
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      drawYard();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [drawYard]);
+
   return (
     <div className="relative w-full h-full bg-gray-900">
       {/* Canvas taking full space */}

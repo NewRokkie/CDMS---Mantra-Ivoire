@@ -167,28 +167,39 @@ export const YardManagement: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 flex">
-      {/* Search Panel - Fixed on the left */}
-      <div className="w-80 bg-white shadow-lg z-10 flex flex-col">
-        <YardSearchPanel
-          containers={filteredContainers}
-          selectedContainer={selectedContainer}
-          searchQuery={searchQuery}
-          isSearching={isSearching}
-          onContainerSearch={handleContainerSearch}
-          onClearSearch={handleClearSearch}
-          onContainerSelect={setSelectedContainer}
-        />
+    <div className="h-full flex flex-col">
+      {/* Page Header */}
+      <div className="flex-shrink-0 mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Yard Management</h2>
+        <p className="text-gray-600">Real-time container location and yard visualization</p>
       </div>
 
-      {/* 2.5D Yard Canvas - Takes remaining space */}
-      <div className="flex-1">
-        <YardCanvas2D5
-          yard={yard}
-          containers={filteredContainers}
-          selectedContainer={selectedContainer}
-          onContainerSelect={setSelectedContainer}
-        />
+      {/* Main Content Area - Full Height */}
+      <div className="flex-1 flex gap-6 min-h-0">
+        {/* Search Panel - Fixed Width */}
+        <div className="w-80 flex-shrink-0">
+          <YardSearchPanel
+            containers={filteredContainers}
+            selectedContainer={selectedContainer}
+            searchQuery={searchQuery}
+            isSearching={isSearching}
+            onContainerSearch={handleContainerSearch}
+            onClearSearch={handleClearSearch}
+            onContainerSelect={setSelectedContainer}
+          />
+        </div>
+
+        {/* Canvas Area - Takes Remaining Space */}
+        <div className="flex-1 bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="h-full">
+            <YardCanvas2D5
+              yard={yard}
+              containers={filteredContainers}
+              selectedContainer={selectedContainer}
+              onContainerSelect={setSelectedContainer}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
