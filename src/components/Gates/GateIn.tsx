@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, User, MapPin, Package, Calendar } from 'lucide-react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, User, MapPin, Package, Calendar, X, Info, Save, RotateCcw } from 'lucide-react';
 import { Container, Client } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 
 interface GateInFormData {
   containerSize: '20ft' | '40ft';
-  containerCount: 1 | 2; // Only for 20ft containers
+  containerCount: 1 | 2;
   containerNumbers: string[];
   clientId: string;
   clientName: string;
@@ -27,6 +27,10 @@ interface LocationOption {
   totalCapacity: number;
   containerSize: '20ft' | '40ft' | 'both';
   section: string;
+}
+
+interface FormErrors {
+  [key: string]: string;
 }
 
 // Mock clients data from Client Master Data
@@ -228,6 +232,11 @@ export const GateIn: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  
   const [formData, setFormData] = useState<GateInFormData>({
     containerSize: '20ft',
     containerCount: 1,
@@ -248,6 +257,18 @@ export const GateIn: React.FC = () => {
 
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 
+  // Auto-save functionality
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      const timer = setTimeout(() => {
+        // Simulate auto-save
+        console.log('Auto-saving form data...');
+        setHasUnsavedChanges(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasUnsavedChanges]);
+
   // Get available locations based on container size
   const getAvailableLocations = (): LocationOption[] => {
     return mockLocations.filter(location => 
@@ -258,18 +279,36 @@ export const GateIn: React.FC = () => {
 
   // Validate container number format
   const validateContainerNumber = (containerNumber: string): boolean => {
-    // Basic container number validation (4 letters + 7 digits)
     const containerRegex = /^[A-Z]{4}[0-9]{7}$/;
     return containerRegex.test(containerNumber.replace(/[-\s]/g, ''));
   };
 
-  // Check if all containers belong to the same client
-  const validateSameClient = (): boolean => {
-    if (formData.containerCount === 1) return true;
-    
-    // In a real implementation, this would check against a database
-    // For now, we'll assume validation passes if both container numbers are filled
-    return formData.containerNumbers.every(num => num.trim() !== '');
+  // Real-time validation
+  const validateField = (field: string, value: any): string => {
+    switch (field) {
+      case 'clientId':
+        return !value ? 'Client selection is required' : '';
+      case 'transportCompany':
+        return !value.trim() ? 'Transport company is required' : '';
+      case 'driverName':
+        return !value.trim() ? 'Driver name is required' : '';
+      case 'vehicleNumber':
+        return !value.trim() ? 'Vehicle number is required' : '';
+      case 'selectedLocation':
+        return !value ? 'Location selection is required' : '';
+      case 'containerNumbers':
+        const filledContainers = value.filter((num: string) => num.trim() !== '');
+        if (filledContainers.length === 0) return 'At least one container number is required';
+        
+        for (let i = 0; i < filledContainers.length; i++) {
+          if (!validateContainerNumber(filledContainers[i])) {
+            return `Container ${i + 1} number format is invalid (should be 4 letters + 7 digits)`;
+          }
+        }
+        return '';
+      default:
+        return '';
+    }
   };
 
   const handleInputChange = (field: keyof GateInFormData, value: any) => {
@@ -278,9 +317,9 @@ export const GateIn: React.FC = () => {
       
       // Handle container size change
       if (field === 'containerSize') {
-        newData.containerCount = 1; // Reset to single container
-        newData.containerNumbers = ['']; // Reset container numbers
-        newData.selectedLocation = ''; // Reset location
+        newData.containerCount = 1;
+        newData.containerNumbers = [''];
+        newData.selectedLocation = '';
       }
       
       // Handle container count change
@@ -302,13 +341,21 @@ export const GateIn: React.FC = () => {
       
       return newData;
     });
+
+    // Real-time validation
+    const error = validateField(field, value);
+    setErrors(prev => ({
+      ...prev,
+      [field]: error
+    }));
+
+    setHasUnsavedChanges(true);
   };
 
   const handleContainerNumberChange = (index: number, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      containerNumbers: prev.containerNumbers.map((num, i) => i === index ? value : num)
-    }));
+    const newContainerNumbers = [...formData.containerNumbers];
+    newContainerNumbers[index] = value;
+    handleInputChange('containerNumbers', newContainerNumbers);
   };
 
   const handleAddSeal = () => {
@@ -318,6 +365,7 @@ export const GateIn: React.FC = () => {
         ...prev,
         sealNumbers: [...prev.sealNumbers, sealNumber.trim()]
       }));
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -326,6 +374,7 @@ export const GateIn: React.FC = () => {
       ...prev,
       sealNumbers: prev.sealNumbers.filter((_, i) => i !== index)
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleAddDamage = () => {
@@ -335,6 +384,7 @@ export const GateIn: React.FC = () => {
         ...prev,
         damage: [...prev.damage, damage.trim()]
       }));
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -343,55 +393,41 @@ export const GateIn: React.FC = () => {
       ...prev,
       damage: prev.damage.filter((_, i) => i !== index)
     }));
+    setHasUnsavedChanges(true);
   };
 
-  const validateForm = (): string[] => {
-    const errors: string[] = [];
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
     
-    // Check required fields
-    if (!formData.clientId) errors.push('Client selection is required');
-    if (!formData.transportCompany.trim()) errors.push('Transport company is required');
-    if (!formData.driverName.trim()) errors.push('Driver name is required');
-    if (!formData.vehicleNumber.trim()) errors.push('Vehicle number is required');
-    if (!formData.selectedLocation) errors.push('Location selection is required');
-    
-    // Validate container numbers
-    const filledContainers = formData.containerNumbers.filter(num => num.trim() !== '');
-    if (filledContainers.length === 0) {
-      errors.push('At least one container number is required');
-    } else {
-      filledContainers.forEach((num, index) => {
-        if (!validateContainerNumber(num)) {
-          errors.push(`Container ${index + 1} number format is invalid (should be 4 letters + 7 digits)`);
-        }
-      });
-    }
-    
-    // For 20ft containers with 2 containers, validate same client
+    // Validate all fields
+    Object.keys(formData).forEach(field => {
+      const error = validateField(field, formData[field as keyof GateInFormData]);
+      if (error) newErrors[field] = error;
+    });
+
+    // Additional validations
     if (formData.containerSize === '20ft' && formData.containerCount === 2) {
-      if (formData.containerNumbers.filter(num => num.trim() !== '').length !== 2) {
-        errors.push('Both container numbers are required for double container entry');
-      } else if (!validateSameClient()) {
-        errors.push('Both containers must belong to the same client');
+      const filledContainers = formData.containerNumbers.filter(num => num.trim() !== '');
+      if (filledContainers.length !== 2) {
+        newErrors.containerNumbers = 'Both container numbers are required for double container entry';
       }
     }
-    
-    // Check location capacity
+
     const selectedLocation = getAvailableLocations().find(loc => loc.id === formData.selectedLocation);
     if (selectedLocation && selectedLocation.availableSlots < formData.containerCount) {
-      errors.push('Selected location does not have sufficient capacity');
+      newErrors.selectedLocation = 'Selected location does not have sufficient capacity';
     }
-    
-    return errors;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canPerformGateIn) return;
 
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      alert('Please fix the following errors:\n' + validationErrors.join('\n'));
+    if (!validateForm()) {
+      setCurrentStep(1); // Go back to first step if validation fails
       return;
     }
 
@@ -403,7 +439,7 @@ export const GateIn: React.FC = () => {
         .map((containerNumber, index) => ({
           id: `${Date.now()}-${index}`,
           number: containerNumber,
-          type: 'dry', // Default type, could be made selectable
+          type: 'dry',
           size: formData.containerSize,
           status: 'in_depot',
           location: formData.selectedLocation,
@@ -414,9 +450,11 @@ export const GateIn: React.FC = () => {
         }));
 
       // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      alert(`Successfully processed gate in for ${containers.length} container(s):\n${containers.map(c => c.number).join('\n')}`);
+      // Show success notification
+      setShowSuccessNotification(true);
+      setTimeout(() => setShowSuccessNotification(false), 5000);
       
       // Reset form
       setFormData({
@@ -433,12 +471,35 @@ export const GateIn: React.FC = () => {
         damage: [],
         notes: ''
       });
+      setCurrentStep(1);
+      setErrors({});
+      setHasUnsavedChanges(false);
       setShowForm(false);
     } catch (error) {
       alert(`Error processing gate in: ${error}`);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleResetForm = () => {
+    setFormData({
+      containerSize: '20ft',
+      containerCount: 1,
+      containerNumbers: [''],
+      clientId: '',
+      clientName: '',
+      transportCompany: '',
+      driverName: '',
+      vehicleNumber: '',
+      selectedLocation: '',
+      sealNumbers: [],
+      damage: [],
+      notes: ''
+    });
+    setCurrentStep(1);
+    setErrors({});
+    setHasUnsavedChanges(false);
   };
 
   const filteredGateIns = mockRecentGateIns.filter(gateIn =>
@@ -457,83 +518,107 @@ export const GateIn: React.FC = () => {
   }
 
   const availableLocations = getAvailableLocations();
+  const totalSteps = 3;
 
   return (
     <div className="space-y-6">
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 animate-slide-in-right">
+          <CheckCircle className="h-5 w-5" />
+          <span className="font-medium">Gate In processed successfully!</span>
+          <button
+            onClick={() => setShowSuccessNotification(false)}
+            className="ml-2 hover:bg-green-600 rounded p-1 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
+          <p className="text-gray-600 mt-1">Process container arrivals and assign yard locations</p>
+        </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
         >
-          <Plus className="h-4 w-4" />
-          <span>New Gate In</span>
+          <Plus className="h-5 w-5" />
+          <span className="font-medium">New Gate In</span>
         </button>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Truck className="h-5 w-5 text-green-600" />
+      {/* Enhanced Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200 p-6 hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-green-600 mb-1">Today's Gate Ins</p>
+              <p className="text-3xl font-bold text-green-900">12</p>
+              <p className="text-xs text-green-600 mt-1">+3 from yesterday</p>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Today's Gate Ins</p>
-              <p className="text-lg font-semibold text-gray-900">12</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <ContainerIcon className="h-5 w-5 text-blue-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Containers Processed</p>
-              <p className="text-lg font-semibold text-gray-900">18</p>
+            <div className="p-3 bg-green-200 rounded-xl">
+              <Truck className="h-8 w-8 text-green-700" />
             </div>
           </div>
         </div>
         
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Clock className="h-5 w-5 text-yellow-600" />
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6 hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-600 mb-1">Containers Processed</p>
+              <p className="text-3xl font-bold text-blue-900">18</p>
+              <p className="text-xs text-blue-600 mt-1">+5 from yesterday</p>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Average Processing Time</p>
-              <p className="text-lg font-semibold text-gray-900">8 min</p>
+            <div className="p-3 bg-blue-200 rounded-xl">
+              <ContainerIcon className="h-8 w-8 text-blue-700" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl border border-yellow-200 p-6 hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-yellow-600 mb-1">Avg Processing Time</p>
+              <p className="text-3xl font-bold text-yellow-900">8m</p>
+              <p className="text-xs text-yellow-600 mt-1">-2m improvement</p>
+            </div>
+            <div className="p-3 bg-yellow-200 rounded-xl">
+              <Clock className="h-8 w-8 text-yellow-700" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search recent gate ins..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
+      {/* Enhanced Search and Filter */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+          <div className="flex items-center space-x-4">
+            <div className="relative flex-1 md:w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                type="text"
+                placeholder="Search recent gate ins..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+              />
+            </div>
           </div>
-          <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <button className="flex items-center space-x-2 px-4 py-3 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Filter className="h-4 w-4" />
-            <span>Filter</span>
+            <span>Advanced Filter</span>
           </button>
         </div>
       </div>
 
-      {/* Recent Gate Ins */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+      {/* Enhanced Recent Gate Ins Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <h3 className="text-lg font-semibold text-gray-900">Recent Gate Ins</h3>
+          <p className="text-sm text-gray-600 mt-1">Latest container arrivals and processing status</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -561,7 +646,7 @@ export const GateIn: React.FC = () => {
                 <tr key={gateIn.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <ContainerIcon className="h-4 w-4 text-gray-400 mr-2" />
+                      <ContainerIcon className="h-5 w-5 text-gray-400 mr-3" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {gateIn.containerNumbers.join(', ')}
@@ -572,7 +657,7 @@ export const GateIn: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {gateIn.client}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -582,7 +667,7 @@ export const GateIn: React.FC = () => {
                     {gateIn.location}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Completed
                     </span>
@@ -594,291 +679,432 @@ export const GateIn: React.FC = () => {
         </div>
       </div>
 
-      {/* Gate In Form Modal */}
+      {/* Enhanced Modal with Backdrop Blur */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">New Gate In</h3>
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Container Size Selection */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl animate-slide-in-up">
+            {/* Modal Header */}
+            <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Container Configuration</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Container Size *
-                      </label>
-                      <select
-                        required
-                        value={formData.containerSize}
-                        onChange={(e) => handleInputChange('containerSize', e.target.value as '20ft' | '40ft')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      >
-                        <option value="20ft">20ft Container</option>
-                        <option value="40ft">40ft Container</option>
-                      </select>
+                  <h3 className="text-2xl font-bold text-gray-900">New Gate In Process</h3>
+                  <p className="text-gray-600 mt-1">Process container arrival and assign yard location</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  {hasUnsavedChanges && (
+                    <div className="flex items-center space-x-2 text-sm text-yellow-600">
+                      <Save className="h-4 w-4" />
+                      <span>Auto-saving...</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setShowForm(false)}
+                    className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Progress Indicator */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                  <span>Step {currentStep} of {totalSteps}</span>
+                  <span>{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-8 py-6 max-h-[calc(95vh-200px)] overflow-y-auto">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Step 1: Container Configuration */}
+                {currentStep === 1 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <Package className="h-5 w-5 mr-2 text-blue-600" />
+                        Container Configuration
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Container Size *
+                          </label>
+                          <select
+                            required
+                            value={formData.containerSize}
+                            onChange={(e) => handleInputChange('containerSize', e.target.value as '20ft' | '40ft')}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                              errors.containerSize ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                          >
+                            <option value="20ft">20ft Container</option>
+                            <option value="40ft">40ft Container</option>
+                          </select>
+                          {errors.containerSize && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <AlertTriangle className="h-4 w-4 mr-1" />
+                              {errors.containerSize}
+                            </p>
+                          )}
+                        </div>
+
+                        {formData.containerSize === '20ft' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Number of Containers *
+                            </label>
+                            <select
+                              required
+                              value={formData.containerCount}
+                              onChange={(e) => handleInputChange('containerCount', parseInt(e.target.value) as 1 | 2)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            >
+                              <option value={1}>Single Container (1)</option>
+                              <option value={2}>Double Container (2)</option>
+                            </select>
+                            <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                              <div className="flex items-start space-x-2">
+                                <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+                                <p className="text-sm text-blue-800">
+                                  Double container entry requires both containers to belong to the same client
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {formData.containerSize === '20ft' && (
+                    {/* Container Numbers */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <ContainerIcon className="h-5 w-5 mr-2 text-green-600" />
+                        Container Information
+                      </h4>
+                      
+                      <div className="space-y-4">
+                        {formData.containerNumbers.map((containerNumber, index) => (
+                          <div key={index}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Container Number {formData.containerCount > 1 ? `${index + 1} ` : ''}*
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={containerNumber}
+                              onChange={(e) => handleContainerNumberChange(index, e.target.value.toUpperCase())}
+                              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                                errors.containerNumbers ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                              placeholder="e.g., MSKU1234567"
+                              pattern="[A-Z]{4}[0-9]{7}"
+                              title="Container number should be 4 letters followed by 7 digits"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Format: 4 letters + 7 digits (e.g., MSKU1234567)</p>
+                          </div>
+                        ))}
+                        {errors.containerNumbers && (
+                          <p className="text-sm text-red-600 flex items-center">
+                            <AlertTriangle className="h-4 w-4 mr-1" />
+                            {errors.containerNumbers}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Client and Transport Information */}
+                {currentStep === 2 && (
+                  <div className="space-y-6 animate-fade-in">
+                    {/* Client Selection */}
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <User className="h-5 w-5 mr-2 text-purple-600" />
+                        Client Information
+                      </h4>
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Number of Containers *
+                          Client *
                         </label>
                         <select
                           required
-                          value={formData.containerCount}
-                          onChange={(e) => handleInputChange('containerCount', parseInt(e.target.value) as 1 | 2)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          value={formData.clientId}
+                          onChange={(e) => handleInputChange('clientId', e.target.value)}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${
+                            errors.clientId ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
                         >
-                          <option value={1}>Single Container (1)</option>
-                          <option value={2}>Double Container (2)</option>
+                          <option value="">Select a client...</option>
+                          {mockClients.filter(client => client.isActive).map(client => (
+                            <option key={client.id} value={client.id}>
+                              {client.name} ({client.code})
+                            </option>
+                          ))}
                         </select>
+                        {errors.clientId && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center">
+                            <AlertTriangle className="h-4 w-4 mr-1" />
+                            {errors.clientId}
+                          </p>
+                        )}
+                        {formData.clientId && (
+                          <div className="mt-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <div className="flex items-center space-x-3">
+                              <User className="h-5 w-5 text-purple-600" />
+                              <div>
+                                <p className="font-medium text-purple-900">
+                                  {mockClients.find(c => c.id === formData.clientId)?.contactPerson.name}
+                                </p>
+                                <p className="text-sm text-purple-700">
+                                  {mockClients.find(c => c.id === formData.clientId)?.contactPerson.position}
+                                </p>
+                                <p className="text-sm text-purple-600">
+                                  {mockClients.find(c => c.id === formData.clientId)?.contactPerson.email}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Container Numbers */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Container Information</h4>
-                  <div className="space-y-3">
-                    {formData.containerNumbers.map((containerNumber, index) => (
-                      <div key={index}>
+                    {/* Transport Information */}
+                    <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <Truck className="h-5 w-5 mr-2 text-orange-600" />
+                        Transport Information
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Transport Company *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.transportCompany}
+                            onChange={(e) => handleInputChange('transportCompany', e.target.value)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                              errors.transportCompany ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                            placeholder="Transport company name"
+                          />
+                          {errors.transportCompany && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <AlertTriangle className="h-4 w-4 mr-1" />
+                              {errors.transportCompany}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Driver Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.driverName}
+                            onChange={(e) => handleInputChange('driverName', e.target.value)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                              errors.driverName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                            placeholder="Driver full name"
+                          />
+                          {errors.driverName && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <AlertTriangle className="h-4 w-4 mr-1" />
+                              {errors.driverName}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Vehicle Number *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.vehicleNumber}
+                            onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                              errors.vehicleNumber ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                            placeholder="License plate"
+                          />
+                          {errors.vehicleNumber && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <AlertTriangle className="h-4 w-4 mr-1" />
+                              {errors.vehicleNumber}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Location and Additional Details */}
+                {currentStep === 3 && (
+                  <div className="space-y-6 animate-fade-in">
+                    {/* Location Assignment */}
+                    <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-200">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <MapPin className="h-5 w-5 mr-2 text-teal-600" />
+                        Location Assignment
+                      </h4>
+                      
+                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Container Number {formData.containerCount > 1 ? `${index + 1} ` : ''}*
+                          Available Locations for {formData.containerSize} Containers *
                         </label>
-                        <input
-                          type="text"
+                        <select
                           required
-                          value={containerNumber}
-                          onChange={(e) => handleContainerNumberChange(index, e.target.value.toUpperCase())}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                          placeholder="e.g., MSKU1234567"
-                          pattern="[A-Z]{4}[0-9]{7}"
-                          title="Container number should be 4 letters followed by 7 digits"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Format: 4 letters + 7 digits (e.g., MSKU1234567)</p>
+                          value={formData.selectedLocation}
+                          onChange={(e) => handleInputChange('selectedLocation', e.target.value)}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
+                            errors.selectedLocation ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Select a location...</option>
+                          {availableLocations.map(location => (
+                            <option key={location.id} value={location.id}>
+                              {location.name} - {location.availableSlots}/{location.totalCapacity} slots available ({location.section})
+                            </option>
+                          ))}
+                        </select>
+                        {errors.selectedLocation && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center">
+                            <AlertTriangle className="h-4 w-4 mr-1" />
+                            {errors.selectedLocation}
+                          </p>
+                        )}
+                        {formData.selectedLocation && (
+                          <div className="mt-3 p-4 bg-teal-50 rounded-lg border border-teal-200">
+                            <div className="flex items-center space-x-3">
+                              <MapPin className="h-5 w-5 text-teal-600" />
+                              <div>
+                                <p className="font-medium text-teal-900">
+                                  {availableLocations.find(l => l.id === formData.selectedLocation)?.name}
+                                </p>
+                                <p className="text-sm text-teal-700">
+                                  {availableLocations.find(l => l.id === formData.selectedLocation)?.availableSlots} slots available
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {availableLocations.length === 0 && (
+                          <div className="mt-3 p-4 bg-red-50 rounded-lg border border-red-200">
+                            <div className="flex items-center space-x-2">
+                              <AlertTriangle className="h-5 w-5 text-red-600" />
+                              <span className="text-sm text-red-800">No locations available for {formData.containerSize} containers</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Client Selection */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Client Information</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Client *
-                    </label>
-                    <select
-                      required
-                      value={formData.clientId}
-                      onChange={(e) => handleInputChange('clientId', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    >
-                      <option value="">Select a client...</option>
-                      {mockClients.filter(client => client.isActive).map(client => (
-                        <option key={client.id} value={client.id}>
-                          {client.name} ({client.code})
-                        </option>
-                      ))}
-                    </select>
-                    {formData.clientId && (
-                      <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-blue-800">
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4" />
-                          <span>
-                            {mockClients.find(c => c.id === formData.clientId)?.contactPerson.name} - 
-                            {mockClients.find(c => c.id === formData.clientId)?.contactPerson.position}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Location Assignment */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Location Assignment</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Available Locations for {formData.containerSize} Containers *
-                    </label>
-                    <select
-                      required
-                      value={formData.selectedLocation}
-                      onChange={(e) => handleInputChange('selectedLocation', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    >
-                      <option value="">Select a location...</option>
-                      {availableLocations.map(location => (
-                        <option key={location.id} value={location.id}>
-                          {location.name} - {location.availableSlots}/{location.totalCapacity} slots available ({location.section})
-                        </option>
-                      ))}
-                    </select>
-                    {formData.selectedLocation && (
-                      <div className="mt-2 p-2 bg-green-50 rounded text-sm text-green-800">
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>
-                            Selected: {availableLocations.find(l => l.id === formData.selectedLocation)?.name}
-                            {' '}({availableLocations.find(l => l.id === formData.selectedLocation)?.availableSlots} slots available)
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    {availableLocations.length === 0 && (
-                      <div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-800">
-                        <div className="flex items-center space-x-2">
-                          <AlertTriangle className="h-4 w-4" />
-                          <span>No locations available for {formData.containerSize} containers</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Transport Information */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Transport Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Transport Company *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.transportCompany}
-                        onChange={(e) => handleInputChange('transportCompany', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="Transport company name"
-                      />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Driver Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.driverName}
-                        onChange={(e) => handleInputChange('driverName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="Driver full name"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Vehicle Number *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.vehicleNumber}
-                        onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="License plate"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seal Numbers */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Seal Numbers
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {formData.sealNumbers.map((seal, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                      >
-                        {seal}
+                    {/* Additional Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Seal Numbers */}
+                      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Seal Numbers
+                        </label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {formData.sealNumbers.map((seal, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                            >
+                              {seal}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSeal(index)}
+                                className="ml-2 text-blue-600 hover:text-blue-800"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
                         <button
                           type="button"
-                          onClick={() => handleRemoveSeal(index)}
-                          className="ml-2 text-blue-600 hover:text-blue-800"
+                          onClick={handleAddSeal}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                         >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddSeal}
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    + Add Seal Number
-                  </button>
-                </div>
-
-                {/* Damage */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Damage Reports
-                  </label>
-                  <div className="space-y-2 mb-2">
-                    {formData.damage.map((damage, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-red-50 border border-red-200 rounded"
-                      >
-                        <span className="text-sm text-red-800">{damage}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveDamage(index)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          ×
+                          + Add Seal Number
                         </button>
                       </div>
-                    ))}
+
+                      {/* Damage Reports */}
+                      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Damage Reports
+                        </label>
+                        <div className="space-y-2 mb-3">
+                          {formData.damage.map((damage, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg"
+                            >
+                              <span className="text-sm text-red-800">{damage}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDamage(index)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddDamage}
+                          className="text-sm text-red-600 hover:text-red-800 font-medium"
+                        >
+                          + Report Damage
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Additional Notes
+                      </label>
+                      <textarea
+                        value={formData.notes}
+                        onChange={(e) => handleInputChange('notes', e.target.value)}
+                        rows={4}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Enter any additional notes or special instructions..."
+                      />
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddDamage}
-                    className="text-sm text-red-600 hover:text-red-800"
-                  >
-                    + Report Damage
-                  </button>
-                </div>
+                )}
 
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Additional notes..."
-                  />
-                </div>
-
-                {/* Validation Summary */}
+                {/* Validation Alerts */}
                 {formData.containerSize === '20ft' && formData.containerCount === 2 && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm text-yellow-800">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                      <span className="text-sm text-yellow-800 font-medium">
                         Double container entry: Both containers must belong to the same client
                       </span>
                     </div>
@@ -886,44 +1112,79 @@ export const GateIn: React.FC = () => {
                 )}
 
                 {formData.containerSize === '40ft' && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <Package className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm text-blue-800">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      <span className="text-sm text-blue-800 font-medium">
                         40ft containers require paired stack locations and are limited to one container per truck
                       </span>
                     </div>
                   </div>
                 )}
+              </form>
+            </div>
 
-                {/* Form Actions */}
-                <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+            {/* Modal Footer */}
+            <div className="px-8 py-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
                   <button
                     type="button"
-                    onClick={() => setShowForm(false)}
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    onClick={handleResetForm}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    Cancel
+                    <RotateCcw className="h-4 w-4" />
+                    <span>Reset Form</span>
                   </button>
-                  <button
-                    type="submit"
-                    disabled={isProcessing || availableLocations.length === 0}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Process Gate In</span>
-                      </>
-                    )}
-                  </button>
+                  {Object.keys(errors).length > 0 && (
+                    <div className="flex items-center space-x-2 text-sm text-red-600">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>{Object.keys(errors).length} error{Object.keys(errors).length !== 1 ? 's' : ''} found</span>
+                    </div>
+                  )}
                 </div>
-              </form>
+                
+                <div className="flex items-center space-x-3">
+                  {currentStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(prev => prev - 1)}
+                      className="px-6 py-3 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Previous
+                    </button>
+                  )}
+                  
+                  {currentStep < totalSteps ? (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(prev => prev + 1)}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg"
+                    >
+                      Next Step
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      onClick={handleSubmit}
+                      disabled={isProcessing || availableLocations.length === 0 || Object.keys(errors).length > 0}
+                      className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-5 w-5" />
+                          <span>Process Gate In</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
