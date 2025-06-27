@@ -123,21 +123,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
     );
   };
 
-  const getPriorityBadge = (priority: ReleaseOrder['priority']) => {
-    const priorityConfig = {
-      low: { color: 'bg-gray-100 text-gray-800', label: 'Low' },
-      medium: { color: 'bg-yellow-100 text-yellow-800', label: 'Medium' },
-      high: { color: 'bg-red-100 text-red-800', label: 'High' }
-    };
-    
-    const config = priorityConfig[priority];
-    return (
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
-
   const formatContainerCount = (count: number) => {
     return count === 1 ? '1 container' : `${count} containers`;
   };
