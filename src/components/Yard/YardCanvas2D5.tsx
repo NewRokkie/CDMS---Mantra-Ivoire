@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Home } from 'lucide-react';
+import { Home, X } from 'lucide-react';
 import { Yard, Container } from '../../types';
 
 interface YardCanvas2D5Props {
@@ -46,6 +46,7 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
   });
   
   const [hoveredContainer, setHoveredContainer] = useState<Container | null>(null);
+  const [showLocationToast, setShowLocationToast] = useState(false);
 
   // Define the Tantarelli yard layout based on the hand-drawn sketch
   const stackPositions: StackPosition[] = [
@@ -105,6 +106,44 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     { stackNumber: 'S101', x: 1050, y: 380, width: 30, height: 40, section: 'bottom' },
     { stackNumber: 'S103', x: 1100, y: 380, width: 40, height: 40, section: 'bottom' }
   ];
+
+  // Calculate yard bounds for auto-fit functionality
+  const getYardBounds = () => {
+    const minX = Math.min(...stackPositions.map(s => s.x));
+    const maxX = Math.max(...stackPositions.map(s => s.x + s.width));
+    const minY = Math.min(...stackPositions.map(s => s.y));
+    const maxY = Math.max(...stackPositions.map(s => s.y + s.height));
+    
+    return {
+      minX: minX - 50, // Add padding
+      maxX: maxX + 50,
+      minY: minY - 50,
+      maxY: maxY + 50,
+      width: (maxX - minX) + 100,
+      height: (maxY - minY) + 100
+    };
+  };
+
+  const calculateDefaultView = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { zoom: 1, offsetX: 0, offsetY: 0 };
+
+    const bounds = getYardBounds();
+    const padding = 50;
+    
+    // Calculate zoom to fit all stacks with padding
+    const scaleX = (canvas.width - padding * 2) / bounds.width;
+    const scaleY = (canvas.height - padding * 2) / bounds.height;
+    const zoom = Math.min(scaleX, scaleY, 1.5); // Max zoom of 1.5 for readability
+    
+    // Calculate center offset
+    const centerX = bounds.minX + bounds.width / 2;
+    const centerY = bounds.minY + bounds.height / 2;
+    const offsetX = -centerX;
+    const offsetY = -centerY;
+    
+    return { zoom, offsetX, offsetY };
+  }, []);
 
   const getStackFromLocation = (location: string): StackPosition | null => {
     const stackMatch = location.match(/Stack (S\d+)/);
@@ -179,23 +218,25 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
       ctx.strokeRect(section.x, section.y, section.width, section.height);
     });
 
-    // Draw grid lines
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 2]);
-    for (let x = 0; x <= 1400; x += 20) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, 500);
-      ctx.stroke();
+    // Draw grid lines (only visible at higher zoom levels)
+    if (viewState.zoom > 0.8) {
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      for (let x = 0; x <= 1400; x += 20) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 500);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= 500; y += 20) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(1400, y);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
     }
-    for (let y = 0; y <= 500; y += 20) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(1400, y);
-      ctx.stroke();
-    }
-    ctx.setLineDash([]);
 
     // Draw stacks
     stackPositions.forEach(stack => {
@@ -215,11 +256,12 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
       ctx.lineWidth = isSelected ? 3 : 1;
       ctx.strokeRect(stack.x, stack.y, stack.width, stack.height);
       
-      // Stack number
+      // Stack number (scale font size based on zoom for readability)
+      const fontSize = Math.max(8, Math.min(14, 12 * viewState.zoom));
       ctx.fillStyle = isSelected ? '#ffffff' : '#374151';
-      ctx.font = 'bold 12px Arial';
+      ctx.font = `bold ${fontSize}px Arial`;
       ctx.textAlign = 'center';
-      ctx.fillText(stack.stackNumber, stack.x + stack.width / 2, stack.y + stack.height / 2 + 4);
+      ctx.fillText(stack.stackNumber, stack.x + stack.width / 2, stack.y + stack.height / 2 + fontSize / 3);
     });
 
     // Draw containers
@@ -238,55 +280,58 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
 
       // Container with 2.5D effect
       const color = getContainerColor(container);
-      ctx.fillStyle = isSelected ? '#fbbf24' : color;
+      ctx.fillStyle = isSelected ? '#f97316' : color; // Orange for selected
       ctx.fillRect(containerX, containerY, containerWidth, containerHeight);
       
       // 2.5D depth
-      ctx.fillStyle = isSelected ? '#f59e0b' : color + 'CC';
+      ctx.fillStyle = isSelected ? '#ea580c' : color + 'CC';
       ctx.fillRect(containerX + 2, containerY - 2, containerWidth, containerHeight);
       
       // Container border
-      ctx.strokeStyle = isSelected ? '#d97706' : '#000000';
+      ctx.strokeStyle = isSelected ? '#c2410c' : '#000000';
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.strokeRect(containerX, containerY, containerWidth, containerHeight);
 
-      // Container number (if selected or hovered)
-      if (isSelected || isHovered) {
+      // Container number (if selected or hovered and zoom is sufficient)
+      if ((isSelected || isHovered) && viewState.zoom > 1.5) {
+        const fontSize = Math.max(8, 10 * viewState.zoom);
         ctx.fillStyle = '#000000';
-        ctx.font = 'bold 10px Arial';
+        ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(container.number, containerX + containerWidth / 2, containerY + containerHeight + 15);
       }
     });
 
-    // Draw roads and pathways
-    ctx.strokeStyle = '#6b7280';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([10, 5]);
-    
-    // Main horizontal roads
-    ctx.beginPath();
-    ctx.moveTo(0, 175);
-    ctx.lineTo(1400, 175);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(0, 285);
-    ctx.lineTo(1400, 285);
-    ctx.stroke();
-    
-    // Vertical access roads
-    ctx.beginPath();
-    ctx.moveTo(25, 0);
-    ctx.lineTo(25, 500);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(1375, 0);
-    ctx.lineTo(1375, 500);
-    ctx.stroke();
-    
-    ctx.setLineDash([]);
+    // Draw roads and pathways (only at higher zoom levels)
+    if (viewState.zoom > 0.6) {
+      ctx.strokeStyle = '#6b7280';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 5]);
+      
+      // Main horizontal roads
+      ctx.beginPath();
+      ctx.moveTo(0, 175);
+      ctx.lineTo(1400, 175);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(0, 285);
+      ctx.lineTo(1400, 285);
+      ctx.stroke();
+      
+      // Vertical access roads
+      ctx.beginPath();
+      ctx.moveTo(25, 0);
+      ctx.lineTo(25, 500);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(1375, 0);
+      ctx.lineTo(1375, 500);
+      ctx.stroke();
+      
+      ctx.setLineDash([]);
+    }
 
     // Restore context
     ctx.restore();
@@ -298,7 +343,7 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     const { targetZoom, targetOffsetX, targetOffsetY } = viewState;
     if (targetZoom === undefined || targetOffsetX === undefined || targetOffsetY === undefined) return;
 
-    const speed = 0.1;
+    const speed = 0.12;
     const zoomDiff = targetZoom - viewState.zoom;
     const xDiff = targetOffsetX - viewState.offsetX;
     const yDiff = targetOffsetY - viewState.offsetY;
@@ -347,7 +392,7 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     if (selectedContainer) {
       const stack = getStackFromLocation(selectedContainer.location);
       if (stack) {
-        const targetZoom = 3;
+        const targetZoom = 3.5;
         const targetOffsetX = -stack.x - stack.width / 2;
         const targetOffsetY = -stack.y - stack.height / 2;
 
@@ -358,6 +403,9 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
           targetOffsetY,
           isAnimating: true
         }));
+
+        // Show location toast
+        setShowLocationToast(true);
       }
     }
   }, [selectedContainer]);
@@ -414,28 +462,59 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
   };
 
   const handleResetView = () => {
-    setViewState({
-      zoom: 1,
-      offsetX: -700, // Center the yard horizontally
-      offsetY: -250, // Center the yard vertically
-      isAnimating: false
-    });
+    // Clear any existing location toasts/notifications
+    setShowLocationToast(false);
+    
+    // Clear selected container (removes orange indicator)
+    onContainerSelect(null);
+    
+    // Calculate and animate to default view
+    const defaultView = calculateDefaultView();
+    setViewState(prev => ({
+      ...prev,
+      targetZoom: defaultView.zoom,
+      targetOffsetX: defaultView.offsetX,
+      targetOffsetY: defaultView.offsetY,
+      isAnimating: true
+    }));
   };
 
-  // Initialize with centered view
+  // Initialize with default view that fits all stacks
   useEffect(() => {
-    handleResetView();
-  }, []);
+    const initializeView = () => {
+      const defaultView = calculateDefaultView();
+      setViewState({
+        zoom: defaultView.zoom,
+        offsetX: defaultView.offsetX,
+        offsetY: defaultView.offsetY,
+        isAnimating: false
+      });
+    };
 
-  // Handle window resize
+    // Small delay to ensure canvas is properly sized
+    const timer = setTimeout(initializeView, 100);
+    return () => clearTimeout(timer);
+  }, [calculateDefaultView]);
+
+  // Handle window resize - recalculate default view
   useEffect(() => {
     const handleResize = () => {
+      // Only recalculate if we're at default view (no selected container)
+      if (!selectedContainer) {
+        const defaultView = calculateDefaultView();
+        setViewState(prev => ({
+          ...prev,
+          zoom: defaultView.zoom,
+          offsetX: defaultView.offsetX,
+          offsetY: defaultView.offsetY
+        }));
+      }
       drawYard();
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [drawYard]);
+  }, [calculateDefaultView, selectedContainer, drawYard]);
 
   return (
     <div className="relative w-full h-full bg-gray-900">
@@ -452,14 +531,14 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
         />
       </div>
 
-      {/* Reset View Button - Only control available */}
+      {/* Home Button - Reset to Full Yard View */}
       <div className="absolute top-4 right-4">
         <button
           onClick={handleResetView}
-          className="p-3 bg-white border border-gray-300 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
+          className="p-3 bg-white border border-gray-300 rounded-lg shadow-lg hover:bg-gray-50 transition-colors group"
           title="Reset to Full Yard View"
         >
-          <Home className="h-5 w-5" />
+          <Home className="h-5 w-5 group-hover:text-blue-600 transition-colors" />
         </button>
       </div>
 
@@ -475,12 +554,34 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
         </div>
       )}
 
-      {/* Selected Container Indicator */}
-      {selectedContainer && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-4 py-2 rounded-lg shadow-lg font-medium">
-          📍 {selectedContainer.number} - {selectedContainer.location}
+      {/* Location Toast - Shows when container is selected */}
+      {showLocationToast && selectedContainer && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-lg font-medium flex items-center space-x-3">
+          <span className="text-xl">📍</span>
+          <span>{selectedContainer.number} - {selectedContainer.location}</span>
+          <button
+            onClick={() => setShowLocationToast(false)}
+            className="ml-2 hover:bg-orange-600 rounded p-1 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
+
+      {/* Yard Info - Shows current view state */}
+      <div className="absolute bottom-4 right-4 bg-white bg-opacity-95 rounded-lg p-3 text-xs shadow-lg">
+        <div className="font-semibold mb-1 text-gray-900">{yard.name}</div>
+        <div className="space-y-1 text-gray-600">
+          <div>Zoom: {Math.round(viewState.zoom * 100)}%</div>
+          <div>Stacks: {stackPositions.length}</div>
+          <div>Containers: {containers.length}</div>
+          {selectedContainer && (
+            <div className="text-orange-600 font-medium">
+              📍 {selectedContainer.number}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
