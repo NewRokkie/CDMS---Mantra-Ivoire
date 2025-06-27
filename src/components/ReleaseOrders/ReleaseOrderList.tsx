@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, LayoutGrid, List, AlertTriangle, FileText, Clock, CheckCircle, Package } from 'lucide-react';
 import { ReleaseOrder, Container } from '../../types';
-import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
 import { ReleaseOrderTableView } from './ReleaseOrderTableView';
+import { ReleaseOrderKPICards } from './ReleaseOrderKPICards';
+import { ReleaseOrderViewToggle } from './ReleaseOrderViewToggle';
+import { ReleaseOrderDetailedView } from './ReleaseOrderDetailedView';
+import { ReleaseOrderHeader } from './ReleaseOrderHeader';
 
 // Mock containers available for release
 const mockAvailableContainers: Container[] = [
@@ -263,8 +265,7 @@ export const ReleaseOrderList: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'detailed'>('table');
   const [showForm, setShowForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ReleaseOrder | null>(null);
-  const { t } = useLanguage();
-  const { user, canViewAllData, getClientFilter } = useAuth();
+  const { user, getClientFilter } = useAuth();
 
   // Filter release orders based on user permissions
   const getFilteredOrders = () => {
@@ -283,11 +284,6 @@ export const ReleaseOrderList: React.FC = () => {
   };
 
   const filteredOrders = getFilteredOrders();
-
-  const canCreateOrders = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor' || user?.role === 'client';
-
-  // Show client restriction notice
-  const showClientNotice = !canViewAllData() && user?.role === 'client';
 
   const handleCreateOrder = () => {
     setSelectedOrder(null);
@@ -312,176 +308,22 @@ export const ReleaseOrderList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">{t('releases.title')}</h2>
-          {showClientNotice && (
-            <div className="flex items-center mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-blue-600 mr-2" />
-              <p className="text-sm text-blue-800">
-                You are viewing release orders for <strong>{user?.company}</strong> only.
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center space-x-3">
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'table'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <List className="h-4 w-4 mr-1 inline" />
-              Table View
-            </button>
-            <button
-              onClick={() => setViewMode('detailed')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'detailed'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <LayoutGrid className="h-4 w-4 mr-1 inline" />
-              Detailed View
-            </button>
-          </div>
+      <ReleaseOrderHeader onCreateOrder={handleCreateOrder} />
 
-          {canCreateOrders && (
-            <button 
-              onClick={handleCreateOrder}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Create Release Order</span>
-            </button>
-          )}
-        </div>
-      </div>
+      <ReleaseOrderKPICards stats={stats} />
 
-      {/* Enhanced Responsive KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {/* Total Orders */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <List className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Total Orders</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Pending */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-3 bg-yellow-50 rounded-xl">
-                  <AlertTriangle className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Pending</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Validated */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-3 bg-green-50 rounded-xl">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Validated</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.validated}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Completed */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <CheckCircle className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Total Containers */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-3 bg-purple-50 rounded-xl">
-                  <Package className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Total Containers</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalContainers}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Ready for Release - Only show on larger screens or as 6th card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 sm:col-span-2 lg:col-span-1 xl:col-span-1">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-3 bg-green-50 rounded-xl">
-                  <Package className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Ready for Release</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.readyContainers}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-end">
+        <ReleaseOrderViewToggle 
+          viewMode={viewMode} 
+          onViewModeChange={setViewMode} 
+        />
       </div>
 
       {/* Conditional View Rendering */}
       {viewMode === 'table' ? (
         <ReleaseOrderTableView orders={filteredOrders} />
       ) : (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <LayoutGrid className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Detailed View</h3>
-          <p className="text-gray-600">
-            The detailed view with enhanced cards and filters is coming soon.
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Switch to Table View to see the streamlined release orders table.
-          </p>
-        </div>
+        <ReleaseOrderDetailedView />
       )}
 
       {/* Release Order Form Modal */}
