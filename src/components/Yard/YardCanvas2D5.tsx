@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Home, Search } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { Yard, Container } from '../../types';
 
 interface YardCanvas2D5Props {
@@ -45,8 +45,6 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     isAnimating: false
   });
   
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const [hoveredContainer, setHoveredContainer] = useState<Container | null>(null);
 
   // Define the Tantarelli yard layout based on the hand-drawn sketch
@@ -144,7 +142,7 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
+    // Set canvas size to full container
     const container = containerRef.current;
     if (container) {
       canvas.width = container.clientWidth;
@@ -179,12 +177,6 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
       ctx.strokeStyle = '#9ca3af';
       ctx.lineWidth = 2;
       ctx.strokeRect(section.x, section.y, section.width, section.height);
-
-      // Section labels
-      ctx.fillStyle = '#374151';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(section.name, section.x + section.width / 2, section.y + 20);
     });
 
     // Draw grid lines
@@ -370,58 +362,33 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     }
   }, [selectedContainer]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  };
-
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      const deltaX = e.clientX - lastMousePos.x;
-      const deltaY = e.clientY - lastMousePos.y;
+    // Check for container hover
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      setViewState(prev => ({
-        ...prev,
-        offsetX: prev.offsetX + deltaX / prev.zoom,
-        offsetY: prev.offsetY + deltaY / prev.zoom,
-        isAnimating: false
-      }));
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-      setLastMousePos({ x: e.clientX, y: e.clientY });
-    } else {
-      // Check for container hover
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    // Transform to world coordinates
+    const worldX = (x - canvas.width / 2) / viewState.zoom - viewState.offsetX;
+    const worldY = (y - canvas.height / 2) / viewState.zoom - viewState.offsetY;
 
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      // Transform to world coordinates
-      const worldX = (x - canvas.width / 2) / viewState.zoom - viewState.offsetX;
-      const worldY = (y - canvas.height / 2) / viewState.zoom - viewState.offsetY;
-
-      // Find hovered container
-      let foundContainer: Container | null = null;
-      for (const container of containers) {
-        const stack = getStackFromLocation(container.location);
-        if (stack && worldX >= stack.x && worldX <= stack.x + stack.width &&
-            worldY >= stack.y && worldY <= stack.y + stack.height) {
-          foundContainer = container;
-          break;
-        }
+    // Find hovered container
+    let foundContainer: Container | null = null;
+    for (const container of containers) {
+      const stack = getStackFromLocation(container.location);
+      if (stack && worldX >= stack.x && worldX <= stack.x + stack.width &&
+          worldY >= stack.y && worldY <= stack.y + stack.height) {
+        foundContainer = container;
+        break;
       }
-      setHoveredContainer(foundContainer);
     }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
+    setHoveredContainer(foundContainer);
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (isDragging) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -446,183 +413,64 @@ export const YardCanvas2D5: React.FC<YardCanvas2D5Props> = ({
     onContainerSelect(null);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    setViewState(prev => ({
-      ...prev,
-      zoom: Math.max(0.3, Math.min(5, prev.zoom * zoomFactor)),
-      isAnimating: false
-    }));
-  };
-
-  const handleZoomIn = () => {
-    setViewState(prev => ({
-      ...prev,
-      zoom: Math.min(5, prev.zoom * 1.2),
-      isAnimating: false
-    }));
-  };
-
-  const handleZoomOut = () => {
-    setViewState(prev => ({
-      ...prev,
-      zoom: Math.max(0.3, prev.zoom / 1.2),
-      isAnimating: false
-    }));
-  };
-
   const handleResetView = () => {
     setViewState({
       zoom: 1,
-      offsetX: 0,
-      offsetY: 0,
+      offsetX: -700, // Center the yard horizontally
+      offsetY: -250, // Center the yard vertically
       isAnimating: false
     });
   };
 
-  const handleFitToView = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const yardWidth = 1400;
-    const yardHeight = 500;
-    const padding = 50;
-    
-    const scaleX = (canvas.width - padding * 2) / yardWidth;
-    const scaleY = (canvas.height - padding * 2) / yardHeight;
-    const scale = Math.min(scaleX, scaleY, 2);
-
-    setViewState({
-      zoom: scale,
-      offsetX: -yardWidth / 2,
-      offsetY: -yardHeight / 2,
-      isAnimating: false
-    });
-  };
+  // Initialize with centered view
+  useEffect(() => {
+    handleResetView();
+  }, []);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Tantarelli Yard - 2.5D View
-          </h3>
-          <p className="text-sm text-gray-600">
-            Real-time container visualization with automatic zoom to location
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            Zoom: {Math.round(viewState.zoom * 100)}%
-          </span>
-        </div>
+    <div className="relative w-full h-full bg-gray-900">
+      {/* Canvas taking full space */}
+      <div
+        ref={containerRef}
+        className="w-full h-full"
+        onMouseMove={handleMouseMove}
+      >
+        <canvas
+          ref={canvasRef}
+          onClick={handleClick}
+          className="w-full h-full cursor-crosshair"
+        />
       </div>
 
-      <div className="relative">
-        {/* Canvas */}
-        <div
-          ref={containerRef}
-          className="w-full h-96 cursor-move overflow-hidden"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
+      {/* Reset View Button - Only control available */}
+      <div className="absolute top-4 right-4">
+        <button
+          onClick={handleResetView}
+          className="p-3 bg-white border border-gray-300 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
+          title="Reset to Full Yard View"
         >
-          <canvas
-            ref={canvasRef}
-            onClick={handleClick}
-            className="w-full h-full"
-          />
-        </div>
-
-        {/* Controls */}
-        <div className="absolute top-4 right-4 flex flex-col space-y-2">
-          <button
-            onClick={handleZoomIn}
-            className="p-2 bg-white border border-gray-300 rounded shadow hover:bg-gray-50 transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </button>
-          <button
-            onClick={handleZoomOut}
-            className="p-2 bg-white border border-gray-300 rounded shadow hover:bg-gray-50 transition-colors"
-            title="Zoom Out"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </button>
-          <button
-            onClick={handleResetView}
-            className="p-2 bg-white border border-gray-300 rounded shadow hover:bg-gray-50 transition-colors"
-            title="Reset View"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </button>
-          <button
-            onClick={handleFitToView}
-            className="p-2 bg-white border border-gray-300 rounded shadow hover:bg-gray-50 transition-colors"
-            title="Fit to View"
-          >
-            <Home className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-white bg-opacity-95 rounded-lg p-3 text-xs shadow-lg">
-          <div className="font-semibold mb-2 text-gray-900">Legend</div>
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-blue-600 rounded"></div>
-              <span>Maersk (MAEU)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-600 rounded"></div>
-              <span>MSC (MSCU)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-600 rounded"></div>
-              <span>CMA CGM (CMDU)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-purple-600 rounded"></div>
-              <span>Shipping Solutions</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-orange-600 rounded"></div>
-              <span>Hapag-Lloyd (HLCU)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-              <span>Selected Container</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Instructions */}
-        <div className="absolute bottom-4 right-4 bg-white bg-opacity-95 rounded-lg p-3 text-xs shadow-lg">
-          <div className="font-semibold mb-1 text-gray-900">Controls</div>
-          <div className="space-y-1">
-            <div>• <strong>Pan:</strong> Click and drag</div>
-            <div>• <strong>Zoom:</strong> Mouse wheel</div>
-            <div>• <strong>Select:</strong> Click containers</div>
-            <div>• <strong>Search:</strong> Auto-zoom to container</div>
-          </div>
-        </div>
-
-        {/* Container Info Tooltip */}
-        {hoveredContainer && (
-          <div className="absolute top-4 left-4 bg-black bg-opacity-90 text-white rounded-lg p-3 text-sm shadow-lg">
-            <div className="font-semibold">{hoveredContainer.number}</div>
-            <div className="text-xs opacity-90">
-              <div>Client: {hoveredContainer.client}</div>
-              <div>Type: {hoveredContainer.type} • {hoveredContainer.size}</div>
-              <div>Location: {hoveredContainer.location}</div>
-            </div>
-          </div>
-        )}
+          <Home className="h-5 w-5" />
+        </button>
       </div>
+
+      {/* Container Info Tooltip */}
+      {hoveredContainer && (
+        <div className="absolute top-4 left-4 bg-black bg-opacity-90 text-white rounded-lg p-3 text-sm shadow-lg">
+          <div className="font-semibold">{hoveredContainer.number}</div>
+          <div className="text-xs opacity-90">
+            <div>Client: {hoveredContainer.client}</div>
+            <div>Type: {hoveredContainer.type} • {hoveredContainer.size}</div>
+            <div>Location: {hoveredContainer.location}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Container Indicator */}
+      {selectedContainer && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-4 py-2 rounded-lg shadow-lg font-medium">
+          📍 {selectedContainer.number} - {selectedContainer.location}
+        </div>
+      )}
     </div>
   );
 };

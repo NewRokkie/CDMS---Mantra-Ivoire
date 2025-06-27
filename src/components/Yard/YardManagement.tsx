@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { YardCanvas2D5 } from './YardCanvas2D5';
 import { YardSearchPanel } from './YardSearchPanel';
-import { YardStatistics } from './YardStatistics';
 import { Yard, Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -168,42 +167,28 @@ export const YardManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Yard Management</h2>
-          <p className="text-gray-600">Real-time container location and yard visualization</p>
-        </div>
+    <div className="fixed inset-0 bg-gray-900 flex">
+      {/* Search Panel - Fixed on the left */}
+      <div className="w-80 bg-white shadow-lg z-10 flex flex-col">
+        <YardSearchPanel
+          containers={filteredContainers}
+          selectedContainer={selectedContainer}
+          searchQuery={searchQuery}
+          isSearching={isSearching}
+          onContainerSearch={handleContainerSearch}
+          onClearSearch={handleClearSearch}
+          onContainerSelect={setSelectedContainer}
+        />
       </div>
 
-      {/* Statistics */}
-      <YardStatistics yard={yard} />
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Search Panel */}
-        <div className="lg:col-span-1">
-          <YardSearchPanel
-            containers={filteredContainers}
-            selectedContainer={selectedContainer}
-            searchQuery={searchQuery}
-            isSearching={isSearching}
-            onContainerSearch={handleContainerSearch}
-            onClearSearch={handleClearSearch}
-            onContainerSelect={setSelectedContainer}
-          />
-        </div>
-
-        {/* 2.5D Yard Canvas */}
-        <div className="lg:col-span-3">
-          <YardCanvas2D5
-            yard={yard}
-            containers={filteredContainers}
-            selectedContainer={selectedContainer}
-            onContainerSelect={setSelectedContainer}
-          />
-        </div>
+      {/* 2.5D Yard Canvas - Takes remaining space */}
+      <div className="flex-1">
+        <YardCanvas2D5
+          yard={yard}
+          containers={filteredContainers}
+          selectedContainer={selectedContainer}
+          onContainerSelect={setSelectedContainer}
+        />
       </div>
     </div>
   );
