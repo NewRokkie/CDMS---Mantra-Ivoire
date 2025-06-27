@@ -1,0 +1,166 @@
+import React from 'react';
+import { 
+  LayoutDashboard, 
+  Container, 
+  FileText, 
+  Send,
+  LogIn,
+  LogOut as LogOutIcon,
+  BarChart3,
+  Anchor,
+  Building,
+  Users,
+  Grid3X3,
+  Shield,
+  Settings
+} from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
+
+interface SidebarProps {
+  activeModule: string;
+  setActiveModule: (module: string) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule }) => {
+  const { user, hasModuleAccess } = useAuth();
+  const { t } = useLanguage();
+
+  // Reordered menu items by priority and workflow dependencies
+  const allMenuItems = [
+    // 1. Dashboard - Always first
+    { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), moduleKey: 'dashboard' as const, priority: 1 },
+    
+    // 2. Gate In - First operational step
+    { id: 'gate-in', icon: LogIn, label: 'Gate In', moduleKey: 'gateIn' as const, priority: 2 },
+    
+    // 3. Release Orders - Must be created before Gate Out
+    { id: 'releases', icon: FileText, label: t('nav.releases'), moduleKey: 'releases' as const, priority: 3 },
+    
+    // 4. Gate Out - Depends on Release Orders
+    { id: 'gate-out', icon: LogOutIcon, label: 'Gate Out', moduleKey: 'gateOut' as const, priority: 4 },
+    
+    // 5. Containers - Overview after operations
+    { id: 'containers', icon: Container, label: t('nav.containers'), moduleKey: 'containers' as const, priority: 5 },
+    
+    // 6. Supporting modules
+    { id: 'edi', icon: Send, label: t('nav.edi'), moduleKey: 'edi' as const, priority: 6 },
+    { id: 'yard', icon: Grid3X3, label: 'Yard Management', moduleKey: 'yard' as const, priority: 7 },
+    { id: 'stack-management', icon: Settings, label: 'Stack Management', moduleKey: 'yard' as const, priority: 8 },
+    { id: 'reports', icon: BarChart3, label: t('nav.reports'), moduleKey: 'reports' as const, priority: 9 },
+    
+    // 7. Management modules
+    { id: 'clients', icon: Building, label: 'Client Master Data', moduleKey: 'clients' as const, priority: 10 },
+    
+    // 8. Administrative modules (bottom)
+    { id: 'users', icon: Users, label: 'User Management', moduleKey: 'users' as const, priority: 11 },
+    { id: 'module-access', icon: Shield, label: 'Module Access', moduleKey: 'moduleAccess' as const, priority: 12 },
+  ];
+
+  // Filter menu items based on user's module access and sort by priority
+  const getMenuItems = () => {
+    if (!user) return [];
+    
+    return allMenuItems
+      .filter(item => {
+        // Always show dashboard
+        if (item.id === 'dashboard') return true;
+        
+        // Check if user has access to this module
+        return hasModuleAccess(item.moduleKey);
+      })
+      .sort((a, b) => a.priority - b.priority); // Sort by priority
+  };
+
+  const menuItems = getMenuItems();
+
+  return (
+    <aside className="bg-slate-900 text-white w-64 h-screen flex flex-col">
+      {/* Header - Fixed with proper spacing */}
+      <div className="p-6 pb-4 flex-shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Anchor className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg">DepotManager</h2>
+            <p className="text-xs text-slate-400">Container Solutions</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Navigation - Scrollable with transparent scrollbar */}
+      <nav className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent">
+        <ul className="space-y-2 pb-4">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeModule === item.id;
+            
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => setActiveModule(item.id)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-lg transform scale-105'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="font-medium">{item.label}</span>
+                  
+                  {/* Priority indicator for workflow items */}
+                  {item.priority <= 5 && (
+                    <span className={`ml-auto text-xs px-2 py-1 rounded-full ${
+                      isActive 
+                        ? 'bg-blue-500 text-blue-100' 
+                        : 'bg-slate-700 text-slate-400'
+                    }`}>
+                      {item.priority}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        
+        {/* Workflow Guide */}
+        <div className="mt-6 p-4 bg-slate-800 rounded-lg">
+          <h4 className="text-sm font-semibold text-slate-200 mb-2">Workflow Guide</h4>
+          <div className="text-xs text-slate-400 space-y-1">
+            <div className="flex items-center space-x-2">
+              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">1</span>
+              <span>Gate In</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">2</span>
+              <span>Create Release Order</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">3</span>
+              <span>Gate Out</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">4</span>
+              <span>View Containers</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+      {/* Footer - Fixed */}
+      <div className="p-4 border-t border-slate-800 flex-shrink-0">
+        <div className="text-xs text-slate-400">
+          <p>© 2025 DepotManager</p>
+          <p>Version 1.0.0</p>
+          {user && (
+            <p className="mt-2 text-slate-300">
+              Logged in as: {user.role}
+            </p>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+};
