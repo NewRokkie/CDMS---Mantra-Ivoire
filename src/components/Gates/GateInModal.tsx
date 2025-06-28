@@ -52,7 +52,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   if (!showForm) return null;
 
   return (
-    <div className="inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-lg flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up">
         
 {/* Modal Header */}
