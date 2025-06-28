@@ -11,7 +11,6 @@ import {
   Users,
   Grid3X3,
   Shield,
-  Container,
   Settings
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
