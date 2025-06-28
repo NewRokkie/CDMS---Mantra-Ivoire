@@ -55,55 +55,59 @@ export const GateInModal: React.FC<GateInModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up">
         {/* Modal Header */}
-        <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">New Gate In Process</h3>
-              <p className="text-sm text-gray-600 mt-1">Step {currentStep} of 3</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              {autoSaving && (
-                <div className="flex items-center space-x-2 text-green-600">
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Auto-saving...</span>
-                </div>
-              )}
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="flex items-center space-x-2">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                    step <= currentStep 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-200 text-gray-500'
-                  }`}>
-                    {step}
-                  </div>
-                  {step < 3 && (
-                    <div className={`w-12 h-1 mx-2 rounded transition-colors ${
-                      step < currentStep ? 'bg-blue-600' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-gray-600">
-              <span>Container Info</span>
-              <span>Transport Details</span>
-              <span>Location & Final</span>
-            </div>
-          </div>
+<div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+  <div className="flex items-center justify-between">
+    <div>
+      <h3 className="text-xl font-bold text-gray-900">New Gate In Process</h3>
+      <p className="text-sm text-gray-600 mt-1">Step {currentStep} of 3</p>
+    </div>
+    <div className="flex items-center space-x-3">
+      {autoSaving && (
+        <div className="flex items-center space-x-2 text-green-600">
+          <Loader className="h-4 w-4 animate-spin" />
+          <span className="text-sm">Auto-saving...</span>
         </div>
+      )}
+      <button
+        onClick={() => setShowForm(false)}
+        className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors"
+      >
+        <X className="h-6 w-6" />
+      </button>
+    </div>
+  </div>
+  
+  {/* Progress Bar */}
+  <div className="mt-4">
+    <div className="flex justify-center">
+      <div className="flex items-center">
+        {[1, 2, 3].map((step) => (
+          <div key={step} className="flex flex-col items-center">
+            <div className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                step <= currentStep 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-500'
+              }`}>
+                {step}
+              </div>
+              {step < 3 && (
+                <div className={`w-12 h-1 mx-2 rounded transition-colors ${
+                  step < currentStep ? 'bg-blue-600' : 'bg-gray-200'
+                }`} />
+              )}
+            </div>
+            <span className="mt-2 text-xs text-gray-600 w-24 text-center">
+              {step === 1 && 'Container Info'}
+              {step === 2 && 'Transport Details'}
+              {step === 3 && 'Location & Final'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Modal Body */}
         <div className="px-8 py-6 max-h-[60vh] overflow-y-auto">
