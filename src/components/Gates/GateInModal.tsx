@@ -54,7 +54,8 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up">
-        {/* Modal Header */}
+        
+{/* Modal Header */}
 <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
   <div className="flex items-center justify-between">
     <div>
@@ -78,26 +79,28 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   </div>
   
   {/* Progress Bar */}
-  <div className="mt-4">
-    <div className="flex justify-center">
-      <div className="flex items-center">
+  <div className="mt-6">
+    <div className="relative">
+      {/* Progress line */}
+      <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 z-0"></div>
+      <div 
+        className="absolute top-4 left-0 h-1 bg-blue-600 z-10 transition-all duration-300" 
+        style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+      ></div>
+      
+      <div className="flex justify-between relative z-20">
         {[1, 2, 3].map((step) => (
           <div key={step} className="flex flex-col items-center">
-            <div className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                step <= currentStep 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-500'
-              }`}>
-                {step}
-              </div>
-              {step < 3 && (
-                <div className={`w-12 h-1 mx-2 rounded transition-colors ${
-                  step < currentStep ? 'bg-blue-600' : 'bg-gray-200'
-                }`} />
-              )}
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+              step <= currentStep 
+                ? 'bg-blue-600 text-white border-2 border-blue-600' 
+                : 'bg-white text-gray-500 border-2 border-gray-300'
+            }`}>
+              {step}
             </div>
-            <span className="mt-2 text-xs text-gray-600 w-24 text-center">
+            <span className={`mt-3 text-xs font-medium transition-colors duration-300 ${
+              step <= currentStep ? 'text-blue-600' : 'text-gray-500'
+            }`}>
               {step === 1 && 'Container Info'}
               {step === 2 && 'Transport Details'}
               {step === 3 && 'Location & Final'}
