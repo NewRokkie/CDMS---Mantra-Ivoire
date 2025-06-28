@@ -29,32 +29,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
   // Reordered menu items by priority and workflow dependencies
   const allMenuItems = [
     // 1. Dashboard - Always first
-    { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), moduleKey: 'dashboard' as const, priority: 1 },
+    { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), moduleKey: 'dashboard' as const },
     
     // 2. Gate In - First operational step
-    { id: 'gate-in', icon: LogIn, label: 'Gate In', moduleKey: 'gateIn' as const, priority: 2 },
+    { id: 'gate-in', icon: LogIn, label: 'Gate In', moduleKey: 'gateIn' as const },
     
     // 3. Release Orders - Must be created before Gate Out
-    { id: 'releases', icon: FileText, label: t('nav.releases'), moduleKey: 'releases' as const, priority: 3 },
+    { id: 'releases', icon: FileText, label: t('nav.releases'), moduleKey: 'releases' as const },
     
     // 4. Gate Out - Depends on Release Orders
-    { id: 'gate-out', icon: LogOutIcon, label: 'Gate Out', moduleKey: 'gateOut' as const, priority: 4 },
+    { id: 'gate-out', icon: LogOutIcon, label: 'Gate Out', moduleKey: 'gateOut' as const },
     
     // 5. Containers - Overview after operations
-    { id: 'containers', icon: Container, label: t('nav.containers'), moduleKey: 'containers' as const, priority: 5 },
+    { id: 'containers', icon: Container, label: t('nav.containers'), moduleKey: 'containers' as const },
     
     // 6. Supporting modules
-    { id: 'edi', icon: Send, label: t('nav.edi'), moduleKey: 'edi' as const, priority: 6 },
-    { id: 'yard', icon: Grid3X3, label: 'Yard Management', moduleKey: 'yard' as const, priority: 7 },
-    { id: 'stack-management', icon: Settings, label: 'Stack Management', moduleKey: 'yard' as const, priority: 8 },
-    { id: 'reports', icon: BarChart3, label: t('nav.reports'), moduleKey: 'reports' as const, priority: 9 },
+    { id: 'edi', icon: Send, label: t('nav.edi'), moduleKey: 'edi' as const },
+    { id: 'yard', icon: Grid3X3, label: 'Yard Management', moduleKey: 'yard' as const },
+    { id: 'stack-management', icon: Settings, label: 'Stack Management', moduleKey: 'yard' as const },
+    { id: 'reports', icon: BarChart3, label: t('nav.reports'), moduleKey: 'reports' as const },
     
     // 7. Management modules
-    { id: 'clients', icon: Building, label: 'Client Master Data', moduleKey: 'clients' as const, priority: 10 },
+    { id: 'clients', icon: Building, label: 'Client Master Data', moduleKey: 'clients' as const },
     
     // 8. Administrative modules (bottom)
     { id: 'users', icon: Users, label: 'User Management', moduleKey: 'users' as const, priority: 11 },
-    { id: 'module-access', icon: Shield, label: 'Module Access', moduleKey: 'moduleAccess' as const, priority: 12 },
+    { id: 'module-access', icon: Shield, label: 'Module Access', moduleKey: 'moduleAccess' as const },
   ];
 
   // Filter menu items based on user's module access and sort by priority
@@ -69,7 +69,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
         // Check if user has access to this module
         return hasModuleAccess(item.moduleKey);
       })
-      .sort((a, b) => a.priority - b.priority); // Sort by priority
   };
 
   const menuItems = getMenuItems();
@@ -109,44 +108,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
                   <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="font-medium">{item.label}</span>
                   
-                  {/* Priority indicator for workflow items */}
-                  {item.priority <= 5 && (
-                    <span className={`ml-auto text-xs px-2 py-1 rounded-full ${
-                      isActive 
-                        ? 'bg-blue-500 text-blue-100' 
-                        : 'bg-slate-700 text-slate-400'
-                    }`}>
-                      {item.priority}
-                    </span>
-                  )}
                 </button>
               </li>
             );
           })}
         </ul>
-        
-        {/* Workflow Guide */}
-        <div className="mt-6 p-4 bg-slate-800 rounded-lg">
-          <h4 className="text-sm font-semibold text-slate-200 mb-2">Workflow Guide</h4>
-          <div className="text-xs text-slate-400 space-y-1">
-            <div className="flex items-center space-x-2">
-              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">1</span>
-              <span>Gate In</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">2</span>
-              <span>Create Release Order</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">3</span>
-              <span>Gate Out</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">4</span>
-              <span>View Containers</span>
-            </div>
-          </div>
-        </div>
       </nav>
       
       {/* Footer - Fixed */}
