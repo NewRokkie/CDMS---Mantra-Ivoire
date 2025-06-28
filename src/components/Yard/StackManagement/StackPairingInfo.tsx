@@ -161,14 +161,6 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({
                   <div className="w-2.5 h-2.5 bg-orange-100 border border-orange-300 rounded"></div>
                   <span>Matching 40ft</span>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-2.5 h-2.5 bg-yellow-100 border border-yellow-300 rounded"></div>
-                  <span>Mismatched</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-2.5 h-2.5 bg-blue-100 border border-blue-300 rounded"></div>
-                  <span>Odd+Odd Midpoint</span>
-                </div>
               </div>
             </div>
           </div>
