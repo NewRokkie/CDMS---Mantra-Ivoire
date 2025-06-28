@@ -53,7 +53,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up">
+      <div className="bg-white rounded-2xl w-full h-full max-w-2xl shadow-strong animate-slide-in-up">
         
 {/* Modal Header */}
 <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
