@@ -82,8 +82,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
             <Anchor className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h2 className="font-bold text-lg">DepotManager</h2>
-            <p className="text-xs text-slate-400">Container Solutions</p>
+            <h2 className="font-bold text-lg">CDMS</h2>
+            <p className="text-xs text-slate-400">Mantra Ivoire Solutions</p>
           </div>
         </div>
       </div>
