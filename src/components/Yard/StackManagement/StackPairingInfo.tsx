@@ -1,6 +1,5 @@
 import React from 'react';
 import { Package, Info } from 'lucide-react';
-import { Tooltip } from './Tooltip'; // Assuming you have a Tooltip component
 
 interface StackConfiguration {
   stackId: string;
@@ -60,9 +59,6 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({
         <div className="flex-1">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-semibold text-gray-900 text-lg">Valid Stack Pairs for 40ft Containers</h4>
-            <Tooltip content="Pairs of stacks that can accommodate 40ft containers. S-prefixed numbers represent the midpoint between two odd-numbered stacks.">
-              <Info className="h-4 w-4 text-gray-400 hover:text-gray-500 cursor-pointer" />
-            </Tooltip>
           </div>
           
           {validPairs.length > 0 ? (
