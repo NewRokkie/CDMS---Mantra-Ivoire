@@ -108,7 +108,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                             : 'bg-blue-600 text-white hover:bg-blue-700'
                         }`}
                       >
-                        20feet
+                        20ft
                       </button>
                       <button
                         onClick={() => onContainerSizeChange(config.stackId, '40feet')}
@@ -128,7 +128,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                             : ''
                         }
                       >
-                        40feet
+                        40ft
                       </button>
                     </div>
                   </td>
