@@ -103,7 +103,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
             }`}>
               {step === 1 && 'Container Info'}
               {step === 2 && 'Transport Details'}
-              {step === 3 && 'Location & Final'}
+              {step === 3 && 'Location & Validation'}
             </span>
           </div>
         ))}
