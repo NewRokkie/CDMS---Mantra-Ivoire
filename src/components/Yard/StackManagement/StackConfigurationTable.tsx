@@ -98,7 +98,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
+                    <div className="relative inline-flex items-center bg-gray-200 rounded-full p-1">
                       <button
                         onClick={() => onContainerSizeChange(config.stackId, '20feet')}
                         disabled={config.containerSize === '20feet'}
