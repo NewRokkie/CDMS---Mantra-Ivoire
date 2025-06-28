@@ -7,11 +7,11 @@ import {
   LogIn,
   LogOut as LogOutIcon,
   BarChart3,
-  Anchor,
   Building,
   Users,
   Grid3X3,
   Shield,
+  Container,
   Settings
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -79,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
       <div className="p-6 pb-4 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Anchor className="h-6 w-6 text-white" />
+            <Container className="h-6 w-6 text-white" />
           </div>
           <div>
             <h2 className="font-bold text-lg">MANTRA IVOIRE</h2>
