@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
   const menuItems = getMenuItems();
 
   return (
-    <aside className="bg-slate-900 text-white w-64 h-screen flex flex-col">
+    <aside className="bg-slate-900 text-white w-72 h-screen flex flex-col">
       {/* Header - Fixed with proper spacing */}
       <div className="p-6 pb-4 flex-shrink-0">
         <div className="flex items-center space-x-3">
