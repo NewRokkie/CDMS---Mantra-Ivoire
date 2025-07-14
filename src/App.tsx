@@ -8,7 +8,7 @@ import { DashboardOverview } from './components/Dashboard/DashboardOverview';
 import { ContainerList } from './components/Containers/ContainerList';
 import { ReleaseOrderList } from './components/ReleaseOrders/ReleaseOrderList';
 import { EDIManagement } from './components/EDI/EDIManagement';
-import GateIn from './components/Gates/GateIn';
+import { GateIn } from './components/Gates/GateIn';
 import { GateOut } from './components/Gates/GateOut';
 import { ClientMasterData } from './components/Clients/ClientMasterData';
 import { UserManagement } from './components/Users/UserManagement';
