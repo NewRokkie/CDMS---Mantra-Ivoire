@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit } from 'lucide-react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInModal } from './GateInModal';
@@ -7,16 +7,16 @@ import { GateInModal } from './GateInModal';
 // Enhanced interface for the new gate-in process
 export interface GateInFormData {
   // Step 1: Container Information
-  containerNumber: string;
-  secondContainerNumber: string; // For when quantity is 2
   containerSize: '20ft' | '40ft';
   containerQuantity: 1 | 2;
   status: 'FULL' | 'EMPTY';
   isDamaged: boolean;
-  bookingReference: string;
   clientId: string;
   clientCode: string;
   clientName: string;
+  bookingReference: string;
+  containerNumber: string;
+  secondContainerNumber: string; // For when quantity is 2
   
   // Step 2: Transport Details
   driverName: string;
@@ -25,7 +25,9 @@ export interface GateInFormData {
   
   // Location & Validation (Step 3)
   assignedLocation: string;
+  truckArrivalDate: string;
   truckArrivalTime: string;
+  truckDepartureDate: string;
   truckDepartureTime: string;
   
   // Additional fields
@@ -80,7 +82,9 @@ const mockPendingOperations = [
     transportCompany: 'Swift Transport',
     operationStatus: 'pending' as const,
     assignedLocation: '',
+    truckArrivalDate: '',
     truckArrivalTime: '',
+    truckDepartureDate: '',
     truckDepartureTime: ''
   },
   {
@@ -100,7 +104,9 @@ const mockPendingOperations = [
     transportCompany: 'Express Logistics',
     operationStatus: 'pending' as const,
     assignedLocation: '',
+    truckArrivalDate: '',
     truckArrivalTime: '',
+    truckDepartureDate: '',
     truckDepartureTime: ''
   },
   {
@@ -120,7 +126,9 @@ const mockPendingOperations = [
     transportCompany: 'Ocean Transport',
     operationStatus: 'pending' as const,
     assignedLocation: '',
+    truckArrivalDate: '',
     truckArrivalTime: '',
+    truckDepartureDate: '',
     truckDepartureTime: ''
   }
 ];
@@ -144,7 +152,9 @@ const mockCompletedOperations = [
     transportCompany: 'Local Transport',
     operationStatus: 'completed' as const,
     assignedLocation: 'Stack S1',
+    truckArrivalDate: '2025-01-11',
     truckArrivalTime: '13:15',
+    truckDepartureDate: '2025-01-11',
     truckDepartureTime: '13:45',
     completedAt: new Date('2025-01-11T13:45:00')
   }
@@ -158,23 +168,27 @@ export const GateIn: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [pendingOperations, setPendingOperations] = useState(mockPendingOperations);
+  const [completedOperations, setCompletedOperations] = useState(mockCompletedOperations);
   
   const [formData, setFormData] = useState<GateInFormData>({
-    containerNumber: '',
-    secondContainerNumber: '',
     containerSize: '20ft',
     containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
-    bookingReference: '',
     clientId: '',
     clientCode: '',
     clientName: '',
+    bookingReference: '',
+    containerNumber: '',
+    secondContainerNumber: '',
     driverName: '',
     truckNumber: '',
     transportCompany: '',
     assignedLocation: '',
+    truckArrivalDate: '',
     truckArrivalTime: '',
+    truckDepartureDate: '',
     truckDepartureTime: '',
     notes: '',
     operationStatus: 'pending'
@@ -272,31 +286,57 @@ export const GateIn: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const updatedFormData = { ...formData, operationStatus: 'pending' };
+      // Create new operation
+      const newOperation = {
+        id: `PO-${Date.now()}`,
+        date: new Date(),
+        containerNumber: formData.containerNumber,
+        secondContainerNumber: formData.secondContainerNumber,
+        containerSize: formData.containerSize,
+        containerQuantity: formData.containerQuantity,
+        status: formData.status,
+        isDamaged: formData.isDamaged,
+        bookingReference: formData.bookingReference,
+        clientCode: formData.clientCode,
+        clientName: formData.clientName,
+        truckNumber: formData.truckNumber,
+        driverName: formData.driverName,
+        transportCompany: formData.transportCompany,
+        operationStatus: 'pending' as const,
+        assignedLocation: '',
+        truckArrivalDate: '',
+        truckArrivalTime: '',
+        truckDepartureDate: '',
+        truckDepartureTime: ''
+      };
       
       // Simulate processing
       await new Promise(resolve => setTimeout(resolve, 1500));
       
+      // Add to pending operations
+      setPendingOperations(prev => [newOperation, ...prev]);
+      
       alert(`Gate In operation submitted for container ${formData.containerNumber}${formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''}`);
-      setActiveView('pending');
       
       // Reset form
       setFormData({
-        containerNumber: '',
-        secondContainerNumber: '',
         containerSize: '20ft',
         containerQuantity: 1,
         status: 'FULL',
         isDamaged: false,
-        bookingReference: '',
         clientId: '',
         clientCode: '',
         clientName: '',
+        bookingReference: '',
+        containerNumber: '',
+        secondContainerNumber: '',
         driverName: '',
         truckNumber: '',
         transportCompany: '',
         assignedLocation: '',
+        truckArrivalDate: '',
         truckArrivalTime: '',
+        truckDepartureDate: '',
         truckDepartureTime: '',
         notes: '',
         operationStatus: 'pending'
@@ -319,6 +359,23 @@ export const GateIn: React.FC = () => {
     setIsProcessing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Move from pending to completed
+      const completedOperation = {
+        ...operation,
+        operationStatus: 'completed' as const,
+        assignedLocation: locationData.assignedLocation,
+        truckArrivalDate: locationData.truckArrivalDate,
+        truckArrivalTime: locationData.truckArrivalTime,
+        truckDepartureDate: locationData.truckDepartureDate,
+        truckDepartureTime: locationData.truckDepartureTime,
+        completedAt: new Date()
+      };
+      
+      // Remove from pending and add to completed
+      setPendingOperations(prev => prev.filter(op => op.id !== operation.id));
+      setCompletedOperations(prev => [completedOperation, ...prev]);
+      
       alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
       setActiveView('overview');
       setSelectedOperation(null);
@@ -343,14 +400,14 @@ export const GateIn: React.FC = () => {
     );
   };
 
-  const filteredPendingOperations = mockPendingOperations.filter(op =>
+  const filteredPendingOperations = pendingOperations.filter(op =>
     op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredCompletedOperations = mockCompletedOperations.filter(op =>
+  const filteredCompletedOperations = completedOperations.filter(op =>
     op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -404,7 +461,7 @@ export const GateIn: React.FC = () => {
             className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
           >
             <Clock className="h-4 w-4" />
-            <span>Pending ({mockPendingOperations.length})</span>
+            <span>Pending ({pendingOperations.length})</span>
           </button>
           <button
             onClick={() => setShowForm(true)}
@@ -437,7 +494,7 @@ export const GateIn: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Pending Operations</p>
-              <p className="text-lg font-semibold text-gray-900">{mockPendingOperations.length}</p>
+              <p className="text-lg font-semibold text-gray-900">{pendingOperations.length}</p>
             </div>
           </div>
         </div>
@@ -540,8 +597,7 @@ export const GateIn: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.clientCode}</div>
-                    <div className="text-sm text-gray-500">{operation.clientName}</div>
+                    <div className="text-sm font-medium text-gray-900">{operation.clientCode} - {operation.clientName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.truckNumber}
@@ -622,9 +678,9 @@ const PendingOperationsView: React.FC<{
         <div className="flex items-center space-x-4">
           <button
             onClick={onBack}
-            className="btn-secondary"
+            className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            ← Back to Overview
+            <ArrowLeft className="h-5 w-5" />
           </button>
           <h2 className="text-2xl font-bold text-gray-900">Pending Operations</h2>
         </div>
@@ -696,8 +752,7 @@ const PendingOperationsView: React.FC<{
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.clientCode}</div>
-                    <div className="text-sm text-gray-500">{operation.clientName}</div>
+                    <div className="text-sm font-medium text-gray-900">{operation.clientCode} - {operation.clientName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.truckNumber}
@@ -747,7 +802,9 @@ const LocationValidationView: React.FC<{
   mockLocations: any;
 }> = ({ operation, onBack, onComplete, isProcessing, mockLocations }) => {
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [truckArrivalDate, setTruckArrivalDate] = useState('');
   const [truckArrivalTime, setTruckArrivalTime] = useState('');
+  const [truckDepartureDate, setTruckDepartureDate] = useState('');
   const [truckDepartureTime, setTruckDepartureTime] = useState('');
   const [searchLocation, setSearchLocation] = useState('');
 
@@ -767,14 +824,16 @@ const LocationValidationView: React.FC<{
   );
 
   const handleComplete = () => {
-    if (!selectedLocation || !truckArrivalTime) {
+    if (!selectedLocation || !truckArrivalDate || !truckArrivalTime) {
       alert('Please fill in all required fields');
       return;
     }
 
     const locationData = {
       assignedLocation: selectedLocation,
+      truckArrivalDate,
       truckArrivalTime,
+      truckDepartureDate,
       truckDepartureTime
     };
 
@@ -785,8 +844,11 @@ const LocationValidationView: React.FC<{
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button onClick={onBack} className="btn-secondary">
-            ← Back to Pending
+          <button 
+            onClick={onBack} 
+            className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </button>
           <h2 className="text-2xl font-bold text-gray-900">Location & Validation</h2>
         </div>
@@ -809,8 +871,7 @@ const LocationValidationView: React.FC<{
           </div>
           <div>
             <span className="text-sm text-gray-600">Client:</span>
-            <div className="font-medium">{operation.clientCode}</div>
-            <div className="text-sm text-gray-500">{operation.clientName}</div>
+            <div className="font-medium">{operation.clientCode} - {operation.clientName}</div>
           </div>
           <div>
             <span className="text-sm text-gray-600">Status:</span>
@@ -894,29 +955,62 @@ const LocationValidationView: React.FC<{
       {/* Time Tracking */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Time Tracking</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Truck Arrival Time *
-            </label>
-            <input
-              type="time"
-              value={truckArrivalTime}
-              onChange={(e) => setTruckArrivalTime(e.target.value)}
-              className="form-input w-full"
-              required
-            />
+            <h4 className="font-medium text-gray-900 mb-3">Truck Arrival *</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={truckArrivalDate}
+                  onChange={(e) => setTruckArrivalDate(e.target.value)}
+                  className="form-input w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={truckArrivalTime}
+                  onChange={(e) => setTruckArrivalTime(e.target.value)}
+                  className="form-input w-full"
+                  required
+                />
+              </div>
+            </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Truck Departure Time
-            </label>
-            <input
-              type="time"
-              value={truckDepartureTime}
-              onChange={(e) => setTruckDepartureTime(e.target.value)}
-              className="form-input w-full"
-            />
+            <h4 className="font-medium text-gray-900 mb-3">Truck Departure</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={truckDepartureDate}
+                  onChange={(e) => setTruckDepartureDate(e.target.value)}
+                  className="form-input w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={truckDepartureTime}
+                  onChange={(e) => setTruckDepartureTime(e.target.value)}
+                  className="form-input w-full"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -928,7 +1022,7 @@ const LocationValidationView: React.FC<{
         </button>
         <button
           onClick={handleComplete}
-          disabled={isProcessing || !selectedLocation || !truckArrivalTime}
+          disabled={isProcessing || !selectedLocation || !truckArrivalDate || !truckArrivalTime}
           className="btn-success disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? 'Processing...' : 'Complete Operation'}

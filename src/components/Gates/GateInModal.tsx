@@ -122,42 +122,6 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   </h4>
                   
                   <div className="space-y-4">
-                    {/* Container Number */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Container Number *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.containerNumber}
-                        onChange={(e) => handleInputChange('containerNumber', e.target.value)}
-                        className="form-input w-full"
-                        placeholder="e.g., MSKU1234567"
-                        pattern="[A-Z]{4}[0-9]{7}"
-                        title="Format: 4 letters followed by 7 digits"
-                      />
-                    </div>
-
-                    {/* Second Container Number (if quantity is 2) */}
-                    {formData.containerQuantity === 2 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Second Container Number *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.secondContainerNumber}
-                          onChange={(e) => handleInputChange('secondContainerNumber', e.target.value)}
-                          className="form-input w-full"
-                          placeholder="e.g., MSKU1234568"
-                          pattern="[A-Z]{4}[0-9]{7}"
-                          title="Format: 4 letters followed by 7 digits"
-                        />
-                      </div>
-                    )}
-
                     {/* Container Size and Quantity */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -191,26 +155,6 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Client Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Client *
-                      </label>
-                      <select
-                        value={formData.clientId}
-                        onChange={(e) => handleClientChange(e.target.value)}
-                        className="form-input w-full"
-                        required
-                      >
-                        <option value="">Select a client...</option>
-                        {mockClients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.code} - {client.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
                     {/* Status Switches */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -240,6 +184,26 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       </div>
                     </div>
 
+                    {/* Client Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Client *
+                      </label>
+                      <select
+                        value={formData.clientId}
+                        onChange={(e) => handleClientChange(e.target.value)}
+                        className="form-input w-full"
+                        required
+                      >
+                        <option value="">Select a client...</option>
+                        {mockClients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.code} - {client.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     {/* Booking Reference - Only for FULL containers */}
                     {formData.status === 'FULL' && (
                       <div>
@@ -256,6 +220,44 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         />
                       </div>
                     )}
+
+                    {/* Container Numbers - Moved to the end */}
+                    <div className="space-y-4 pt-4 border-t border-blue-200">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Container Number *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.containerNumber}
+                          onChange={(e) => handleInputChange('containerNumber', e.target.value)}
+                          className="form-input w-full"
+                          placeholder="e.g., MSKU1234567"
+                          pattern="[A-Z]{4}[0-9]{7}"
+                          title="Format: 4 letters followed by 7 digits"
+                        />
+                      </div>
+
+                      {/* Second Container Number (if quantity is 2) */}
+                      {formData.containerQuantity === 2 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Second Container Number *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.secondContainerNumber}
+                            onChange={(e) => handleInputChange('secondContainerNumber', e.target.value)}
+                            className="form-input w-full"
+                            placeholder="e.g., MSKU1234568"
+                            pattern="[A-Z]{4}[0-9]{7}"
+                            title="Format: 4 letters followed by 7 digits"
+                          />
+                        </div>
+                      )}
+                    </div>
 
                     {/* Damage Warning */}
                     {formData.isDamaged && (
