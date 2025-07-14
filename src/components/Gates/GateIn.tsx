@@ -1,671 +1,373 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Truck, User, MapPin, Package, Clock, CheckCircle, AlertCircle, Search, Home } from 'lucide-react';
+// GateIn.tsx
+import React, { useState } from 'react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package } from 'lucide-react';
+import { useLanguage } from '../../hooks/useLanguage';
+import { useAuth } from '../../hooks/useAuth';
+import { GateInModal } from './GateInModal';
 
-interface Container {
-  id: string;
-  number: string;
-  size: '20ft' | '40ft';
+// Move the interface to the top level so it can be imported
+export interface GateInFormData {
+  containerSize: '20ft' | '40ft';
+  quantity: 1 | 2;
+  containerNumbers: string[];
   client: string;
+  clientCode: string;
+  transportCompany: string;
+  driverName: string;
+  vehicleNumber: string;
   location: string;
-  gateInTime: string;
-  status: 'active' | 'completed';
   sealNumbers: string[];
-  damageReport?: string;
-  notes?: string;
+  damage: string[];
+  notes: string;
 }
 
-interface Client {
-  id: string;
-  name: string;
-  code: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-}
+// Mock client data
+const mockClients = [
+  { id: '1', name: 'Maersk Line', code: 'MAEU' },
+  { id: '2', name: 'MSC Mediterranean Shipping', code: 'MSCU' },
+  { id: '3', name: 'CMA CGM', code: 'CMDU' },
+  { id: '4', name: 'Shipping Solutions Inc', code: 'SHIP001' },
+  { id: '5', name: 'Hapag-Lloyd', code: 'HLCU' }
+];
 
-interface Location {
-  id: string;
-  name: string;
-  section: 'Top' | 'Middle' | 'Bottom';
-  availableSlots: number;
-  totalSlots: number;
-  acceptedSizes: ('20ft' | '40ft')[];
-}
+// Mock location data based on container size
+const mockLocations = {
+  '20ft': [
+    { id: 'S1', name: 'Stack S1', capacity: 20, available: 15 },
+    { id: 'S3', name: 'Stack S3', capacity: 25, available: 18 },
+    { id: 'S101', name: 'Stack S101', capacity: 5, available: 3 },
+    { id: 'S103', name: 'Stack S103', capacity: 10, available: 7 }
+  ],
+  '40ft': [
+    { id: 'S5', name: 'Stack S5', capacity: 25, available: 20 },
+    { id: 'S7', name: 'Stack S7', capacity: 25, available: 22 },
+    { id: 'S61', name: 'Stack S61', capacity: 30, available: 25 },
+    { id: 'S65', name: 'Stack S65', capacity: 30, available: 28 }
+  ]
+};
 
-interface GateInProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+// Mock data for recent gate-ins
+const mockRecentGateIns = [
+  {
+    id: '1',
+    containerNumbers: ['MSKU-123456-7'],
+    client: 'Maersk Line',
+    gateInTime: new Date('2025-01-11T14:30:00'),
+    status: 'completed',
+    location: 'Stack S5'
+  },
+  {
+    id: '2',
+    containerNumbers: ['TCLU-987654-3'],
+    client: 'MSC',
+    gateInTime: new Date('2025-01-11T13:15:00'),
+    status: 'completed',
+    location: 'Stack S3'
+  }
+];
 
-const GateIn: React.FC<GateInProps> = ({ isOpen, onClose }) => {
+export const GateIn: React.FC = () => {
+  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  
+  const [formData, setFormData] = useState<GateInFormData>({
+    containerSize: '20ft',
+    quantity: 1,
+    containerNumbers: [''],
+    client: '',
+    clientCode: '',
+    transportCompany: '',
+    driverName: '',
+    vehicleNumber: '',
+    location: '',
+    sealNumbers: [],
+    damage: [],
+    notes: ''
+  });
 
-  // Form state
-  const [containerSize, setContainerSize] = useState<'20ft' | '40ft'>('20ft');
-  const [quantity, setQuantity] = useState<1 | 2>(1);
-  const [containerNumbers, setContainerNumbers] = useState<string[]>(['']);
-  const [selectedClient, setSelectedClient] = useState<string>('');
-  const [transportCompany, setTransportCompany] = useState('');
-  const [driverName, setDriverName] = useState('');
-  const [vehicleNumber, setVehicleNumber] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [sealNumbers, setSealNumbers] = useState<string[]>(['']);
-  const [damageReport, setDamageReport] = useState('');
-  const [notes, setNotes] = useState('');
+  const { t } = useLanguage();
+  const { user } = useAuth();
 
-  // Validation state
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 
-  // Mock data
-  const clients: Client[] = [
-    { id: '1', name: 'Maersk Line', code: 'MAEU', contactPerson: 'John Smith', email: 'john@maersk.com', phone: '+1-555-0101' },
-    { id: '2', name: 'MSC Mediterranean', code: 'MSCU', contactPerson: 'Maria Garcia', email: 'maria@msc.com', phone: '+1-555-0102' },
-    { id: '3', name: 'CMA CGM', code: 'CMAU', contactPerson: 'Pierre Dubois', email: 'pierre@cmacgm.com', phone: '+1-555-0103' },
-    { id: '4', name: 'COSCO Shipping', code: 'COSU', contactPerson: 'Li Wei', email: 'li.wei@cosco.com', phone: '+1-555-0104' },
-    { id: '5', name: 'Hapag-Lloyd', code: 'HLCU', contactPerson: 'Hans Mueller', email: 'hans@hapag-lloyd.com', phone: '+1-555-0105' },
-  ];
-
-  const locations: Location[] = [
-    // 20ft specific locations
-    { id: 'S1', name: 'Stack S1 (Entry)', section: 'Top', availableSlots: 15, totalSlots: 20, acceptedSizes: ['20ft'] },
-    { id: 'S31', name: 'Stack S31 (End)', section: 'Bottom', availableSlots: 8, totalSlots: 20, acceptedSizes: ['20ft'] },
-    { id: 'S101', name: 'Stack S101 (Special)', section: 'Middle', availableSlots: 12, totalSlots: 15, acceptedSizes: ['20ft'] },
-    { id: 'S103', name: 'Stack S103 (Special)', section: 'Middle', availableSlots: 6, totalSlots: 15, acceptedSizes: ['20ft'] },
+  const handleInputChange = (field: keyof GateInFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
     
-    // 40ft specific locations (paired stacks)
-    { id: 'S3-S5', name: 'Stacks S3+S5 (Paired)', section: 'Top', availableSlots: 10, totalSlots: 15, acceptedSizes: ['40ft'] },
-    { id: 'S7-S9', name: 'Stacks S7+S9 (Paired)', section: 'Top', availableSlots: 8, totalSlots: 15, acceptedSizes: ['40ft'] },
-    { id: 'S11-S13', name: 'Stacks S11+S13 (Paired)', section: 'Middle', availableSlots: 12, totalSlots: 20, acceptedSizes: ['40ft'] },
-    { id: 'S15-S17', name: 'Stacks S15+S17 (Paired)', section: 'Middle', availableSlots: 5, totalSlots: 20, acceptedSizes: ['40ft'] },
-    { id: 'S19-S21', name: 'Stacks S19+S21 (Paired)', section: 'Bottom', availableSlots: 14, totalSlots: 25, acceptedSizes: ['40ft'] },
-    
-    // Flexible locations (both sizes)
-    { id: 'S73', name: 'Stack S73 (Flexible)', section: 'Bottom', availableSlots: 18, totalSlots: 30, acceptedSizes: ['20ft', '40ft'] },
-    { id: 'S75', name: 'Stack S75 (Flexible)', section: 'Bottom', availableSlots: 22, totalSlots: 30, acceptedSizes: ['20ft', '40ft'] },
-    { id: 'S77', name: 'Stack S77 (Flexible)', section: 'Bottom', availableSlots: 16, totalSlots: 30, acceptedSizes: ['20ft', '40ft'] },
-    { id: 'S79', name: 'Stack S79 (Flexible)', section: 'Bottom', availableSlots: 20, totalSlots: 30, acceptedSizes: ['20ft', '40ft'] },
-  ];
+    // Trigger auto-save
+    setAutoSaving(true);
+    setTimeout(() => setAutoSaving(false), 1000);
+  };
 
-  const [recentGateIns] = useState<Container[]>([
-    {
-      id: '1',
-      number: 'MSKU1234567',
-      size: '20ft',
-      client: 'Maersk Line',
-      location: 'S1',
-      gateInTime: '2024-01-15 14:30',
-      status: 'active',
-      sealNumbers: ['SL123456'],
-    },
-    {
-      id: '2',
-      number: 'MSCU9876543',
-      size: '40ft',
-      client: 'MSC Mediterranean',
-      location: 'S3-S5',
-      gateInTime: '2024-01-15 13:45',
-      status: 'completed',
-      sealNumbers: ['SL789012', 'SL345678'],
-    },
-  ]);
+  const handleContainerSizeChange = (is40ft: boolean) => {
+    const newSize = is40ft ? '40ft' : '20ft';
+    setFormData(prev => ({
+      ...prev,
+      containerSize: newSize,
+      quantity: newSize === '40ft' ? 1 : prev.quantity, // Reset quantity to 1 for 40ft
+      containerNumbers: newSize === '40ft' ? [''] : (prev.quantity === 2 ? ['', ''] : ['']),
+      location: '' // Reset location when size changes
+    }));
+  };
 
-  // Filter locations based on container size
-  const filteredLocations = locations.filter(location => 
-    location.acceptedSizes.includes(containerSize) && location.availableSlots > 0
-  );
+  const handleQuantityChange = (isDouble: boolean) => {
+    const newQuantity = isDouble ? 2 : 1;
+    setFormData(prev => ({
+      ...prev,
+      quantity: newQuantity as 1 | 2,
+      containerNumbers: newQuantity === 2 ? ['', ''] : ['']
+    }));
+  };
 
-  // Auto-save functionality
-  useEffect(() => {
-    const autoSaveTimer = setInterval(() => {
-      if (containerNumbers[0] || selectedClient || transportCompany) {
-        setAutoSaving(true);
-        setTimeout(() => setAutoSaving(false), 1000);
-      }
-    }, 3000);
+  const handleContainerNumberChange = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      containerNumbers: prev.containerNumbers.map((num, i) => i === index ? value : num)
+    }));
+  };
 
-    return () => clearInterval(autoSaveTimer);
-  }, [containerNumbers, selectedClient, transportCompany]);
-
-  // Reset form when container size changes
-  useEffect(() => {
-    if (containerSize === '40ft') {
-      setQuantity(1);
-      setContainerNumbers(['']);
+  const handleClientSelect = (clientId: string) => {
+    const client = mockClients.find(c => c.id === clientId);
+    if (client) {
+      setFormData(prev => ({
+        ...prev,
+        client: client.name,
+        clientCode: client.code
+      }));
     }
-    setSelectedLocation('');
-    setErrors({});
-  }, [containerSize]);
-
-  // Update container number fields based on quantity
-  useEffect(() => {
-    if (quantity === 1) {
-      setContainerNumbers([containerNumbers[0] || '']);
-    } else {
-      setContainerNumbers([containerNumbers[0] || '', containerNumbers[1] || '']);
-    }
-  }, [quantity]);
+  };
 
   const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (step === 1) {
-      if (!containerNumbers[0]) {
-        newErrors.container1 = 'Container number is required';
-      } else if (!/^[A-Z]{4}\d{7}$/.test(containerNumbers[0])) {
-        newErrors.container1 = 'Invalid format (e.g., MSKU1234567)';
-      }
-
-      if (quantity === 2 && !containerNumbers[1]) {
-        newErrors.container2 = 'Second container number is required';
-      } else if (quantity === 2 && containerNumbers[1] && !/^[A-Z]{4}\d{7}$/.test(containerNumbers[1])) {
-        newErrors.container2 = 'Invalid format (e.g., MSKU1234567)';
-      }
-
-      if (!selectedClient) {
-        newErrors.client = 'Client selection is required';
-      }
+    switch (step) {
+      case 1:
+        return formData.containerNumbers.every(num => num.trim() !== '') && formData.client !== '';
+      case 2:
+        return formData.transportCompany !== '' && formData.driverName !== '' && formData.vehicleNumber !== '';
+      case 3:
+        return formData.location !== '';
+      default:
+        return true;
     }
-
-    if (step === 2) {
-      if (!transportCompany) newErrors.transportCompany = 'Transport company is required';
-      if (!driverName) newErrors.driverName = 'Driver name is required';
-      if (!vehicleNumber) newErrors.vehicleNumber = 'Vehicle number is required';
-    }
-
-    if (step === 3) {
-      if (!selectedLocation) newErrors.location = 'Location selection is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+      setCurrentStep(prev => Math.min(3, prev + 1));
     }
   };
 
-  const handlePrevious = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+  const handlePrevStep = () => {
+    setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep(3)) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canPerformGateIn) return;
 
-    setIsLoading(true);
+    setIsProcessing(true);
     try {
-      // Simulate API call
+      // Simulate processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      setNotification({
-        type: 'success',
-        message: `Successfully processed ${quantity} container(s) for gate in`
-      });
+      const containerNumbers = formData.containerNumbers.filter(num => num.trim() !== '');
+      alert(`Successfully processed gate in for ${containerNumbers.length} container(s): ${containerNumbers.join(', ')}`);
       
-      setTimeout(() => {
-        onClose();
-        resetForm();
-      }, 2000);
-    } catch (error) {
-      setNotification({
-        type: 'error',
-        message: 'Failed to process gate in. Please try again.'
+      // Reset form
+      setFormData({
+        containerSize: '20ft',
+        quantity: 1,
+        containerNumbers: [''],
+        client: '',
+        clientCode: '',
+        transportCompany: '',
+        driverName: '',
+        vehicleNumber: '',
+        location: '',
+        sealNumbers: [],
+        damage: [],
+        notes: ''
       });
+      setCurrentStep(1);
+      setShowForm(false);
+    } catch (error) {
+      alert(`Error processing gate in: ${error}`);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  const resetForm = () => {
-    setCurrentStep(1);
-    setContainerSize('20ft');
-    setQuantity(1);
-    setContainerNumbers(['']);
-    setSelectedClient('');
-    setTransportCompany('');
-    setDriverName('');
-    setVehicleNumber('');
-    setSelectedLocation('');
-    setSealNumbers(['']);
-    setDamageReport('');
-    setNotes('');
-    setErrors({});
-    setNotification(null);
-  };
+  const filteredGateIns = mockRecentGateIns.filter(gateIn =>
+    gateIn.containerNumbers.some(num => num.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    gateIn.client.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const addSealNumber = () => {
-    setSealNumbers([...sealNumbers, '']);
-  };
+  const availableLocations = mockLocations[formData.containerSize];
 
-  const removeSealNumber = (index: number) => {
-    setSealNumbers(sealNumbers.filter((_, i) => i !== index));
-  };
-
-  const updateSealNumber = (index: number, value: string) => {
-    const updated = [...sealNumbers];
-    updated[index] = value;
-    setSealNumbers(updated);
-  };
-
-  const selectedClientData = clients.find(client => client.id === selectedClient);
-  const selectedLocationData = locations.find(location => location.id === selectedLocation);
-
-  if (!isOpen) return null;
+  if (!canPerformGateIn) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+        <p className="text-gray-600">You don't have permission to perform gate in operations.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden fade-in slide-up">
-        {/* Header */}
-        <div className="bg-brand-gradient px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Truck className="w-6 h-6 text-white" />
-            <h2 className="text-xl font-bold text-white">Gate In - Container Entry</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
+        <button
+          onClick={() => setShowForm(true)}
+          className="btn-success flex items-center space-x-2"
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Gate In</span>
+        </button>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Truck className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Today's Gate Ins</p>
+              <p className="text-lg font-semibold text-gray-900">12</p>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white hover:text-gray-200 transition-colors"
-          >
-            <X className="w-6 h-6" />
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <ContainerIcon className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Containers In Depot</p>
+              <p className="text-lg font-semibold text-gray-900">892</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Clock className="h-5 w-5 text-yellow-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Average Processing Time</p>
+              <p className="text-lg font-semibold text-gray-900">8 min</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search recent gate ins..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input pl-10 w-full"
+            />
+          </div>
+          <button className="btn-secondary flex items-center space-x-2">
+            <Filter className="h-4 w-4" />
+            <span>Filter</span>
           </button>
         </div>
-
-        {/* Progress Bar */}
-        <div className="px-6 py-3 bg-gray-50 border-b">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-brand-black">Step {currentStep} of 3</span>
-            {autoSaving && (
-              <div className="flex items-center space-x-2 text-sm text-dark-green">
-                <div className="spinner w-3 h-3"></div>
-                <span>Auto-saving...</span>
-              </div>
-            )}
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="progress-bar h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 3) * 100}%` }}
-            ></div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
-          {/* Step 1: Container Configuration & Client */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              {/* Container Size Selection */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-brand-black mb-4 flex items-center">
-                  <Package className="w-5 h-5 mr-2 text-brand-green" />
-                  Container Configuration
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-brand-black mb-2">Container Size</label>
-                    <div className="flex space-x-4">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="containerSize"
-                          value="20ft"
-                          checked={containerSize === '20ft'}
-                          onChange={(e) => setContainerSize(e.target.value as '20ft' | '40ft')}
-                          className="sr-only"
-                        />
-                        <div className={`px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                          containerSize === '20ft' 
-                            ? 'border-brand-green bg-brand-green text-white' 
-                            : 'border-gray-300 bg-white text-brand-black hover:border-brand-green'
-                        }`}>
-                          20ft
-                        </div>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="containerSize"
-                          value="40ft"
-                          checked={containerSize === '40ft'}
-                          onChange={(e) => setContainerSize(e.target.value as '20ft' | '40ft')}
-                          className="sr-only"
-                        />
-                        <div className={`px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                          containerSize === '40ft' 
-                            ? 'border-brand-green bg-brand-green text-white' 
-                            : 'border-gray-300 bg-white text-brand-black hover:border-brand-green'
-                        }`}>
-                          40ft
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {containerSize === '20ft' && (
-                    <div>
-                      <label className="block text-sm font-medium text-brand-black mb-2">Quantity</label>
-                      <div className="flex space-x-4">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="quantity"
-                            value="1"
-                            checked={quantity === 1}
-                            onChange={() => setQuantity(1)}
-                            className="sr-only"
-                          />
-                          <div className={`px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                            quantity === 1 
-                              ? 'border-brand-green bg-brand-green text-white' 
-                              : 'border-gray-300 bg-white text-brand-black hover:border-brand-green'
-                          }`}>
-                            Single (1)
-                          </div>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="quantity"
-                            value="2"
-                            checked={quantity === 2}
-                            onChange={() => setQuantity(2)}
-                            className="sr-only"
-                          />
-                          <div className={`px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                            quantity === 2 
-                              ? 'border-brand-green bg-brand-green text-white' 
-                              : 'border-gray-300 bg-white text-brand-black hover:border-brand-green'
-                          }`}>
-                            Double (2)
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Container Numbers */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-brand-black mb-1">
-                      Container Number {quantity === 2 ? '1' : ''}
-                    </label>
-                    <input
-                      type="text"
-                      value={containerNumbers[0]}
-                      onChange={(e) => {
-                        const updated = [...containerNumbers];
-                        updated[0] = e.target.value.toUpperCase();
-                        setContainerNumbers(updated);
-                      }}
-                      placeholder="e.g., MSKU1234567"
-                      className={`form-input w-full px-3 py-2 rounded-lg ${
-                        errors.container1 ? 'error' : ''
-                      }`}
-                    />
-                    {errors.container1 && (
-                      <p className="text-red-500 text-sm mt-1">{errors.container1}</p>
-                    )}
-                  </div>
-
-                  {quantity === 2 && (
-                    <div>
-                      <label className="block text-sm font-medium text-brand-black mb-1">
-                        Container Number 2
-                      </label>
-                      <input
-                        type="text"
-                        value={containerNumbers[1] || ''}
-                        onChange={(e) => {
-                          const updated = [...containerNumbers];
-                          updated[1] = e.target.value.toUpperCase();
-                          setContainerNumbers(updated);
-                        }}
-                        placeholder="e.g., MSKU1234568"
-                        className={`form-input w-full px-3 py-2 rounded-lg ${
-                          errors.container2 ? 'error' : ''
-                        }`}
-                      />
-                      {errors.container2 && (
-                        <p className="text-red-500 text-sm mt-1">{errors.container2}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Client Selection */}
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-brand-black mb-4 flex items-center">
-                  <User className="w-5 h-5 mr-2 text-brand-green" />
-                  Client Information
-                </h3>
-                
-                <div>
-                  <label className="block text-sm font-medium text-brand-black mb-1">Select Client</label>
-                  <select
-                    value={selectedClient}
-                    onChange={(e) => setSelectedClient(e.target.value)}
-                    className={`form-input w-full px-3 py-2 rounded-lg ${
-                      errors.client ? 'error' : ''
-                    }`}
-                  >
-                    <option value="">Choose a client...</option>
-                    {clients.map(client => (
-                      <option key={client.id} value={client.id}>
-                        {client.name} ({client.code})
-                      </option>
-                    ))}
-                  </select>
-                  {errors.client && (
-                    <p className="text-red-500 text-sm mt-1">{errors.client}</p>
-                  )}
-                </div>
-
-                {selectedClientData && (
-                  <div className="mt-3 p-3 bg-white rounded border">
-                    <h4 className="font-medium text-brand-black">{selectedClientData.name}</h4>
-                    <p className="text-sm text-gray-600">Contact: {selectedClientData.contactPerson}</p>
-                    <p className="text-sm text-gray-600">Email: {selectedClientData.email}</p>
-                    <p className="text-sm text-gray-600">Phone: {selectedClientData.phone}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Transport Information */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-brand-black mb-4 flex items-center">
-                  <Truck className="w-5 h-5 mr-2 text-brand-green" />
-                  Transport Information
-                </h3>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-brand-black mb-1">Transport Company</label>
-                    <input
-                      type="text"
-                      value={transportCompany}
-                      onChange={(e) => setTransportCompany(e.target.value)}
-                      placeholder="Enter transport company name"
-                      className={`form-input w-full px-3 py-2 rounded-lg ${
-                        errors.transportCompany ? 'error' : ''
-                      }`}
-                    />
-                    {errors.transportCompany && (
-                      <p className="text-red-500 text-sm mt-1">{errors.transportCompany}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-brand-black mb-1">Driver Name</label>
-                    <input
-                      type="text"
-                      value={driverName}
-                      onChange={(e) => setDriverName(e.target.value)}
-                      placeholder="Enter driver's full name"
-                      className={`form-input w-full px-3 py-2 rounded-lg ${
-                        errors.driverName ? 'error' : ''
-                      }`}
-                    />
-                    {errors.driverName && (
-                      <p className="text-red-500 text-sm mt-1">{errors.driverName}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-brand-black mb-1">Vehicle Number</label>
-                    <input
-                      type="text"
-                      value={vehicleNumber}
-                      onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                      placeholder="Enter vehicle/truck number"
-                      className={`form-input w-full px-3 py-2 rounded-lg ${
-                        errors.vehicleNumber ? 'error' : ''
-                      }`}
-                    />
-                    {errors.vehicleNumber && (
-                      <p className="text-red-500 text-sm mt-1">{errors.vehicleNumber}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Location & Additional Details */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-brand-black mb-4 flex items-center">
-                  <MapPin className="w-5 h-5 mr-2 text-brand-green" />
-                  Location Assignment
-                </h3>
-                
-                <div>
-                  <label className="block text-sm font-medium text-brand-black mb-1">
-                    Select Location (for {containerSize} containers)
-                  </label>
-                  <select
-                    value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
-                    className={`form-input w-full px-3 py-2 rounded-lg ${
-                      errors.location ? 'error' : ''
-                    }`}
-                  >
-                    <option value="">Choose a location...</option>
-                    {filteredLocations.map(location => (
-                      <option key={location.id} value={location.id}>
-                        {location.name} - {location.section} Section ({location.availableSlots}/{location.totalSlots} available)
-                      </option>
-                    ))}
-                  </select>
-                  {errors.location && (
-                    <p className="text-red-500 text-sm mt-1">{errors.location}</p>
-                  )}
-                </div>
-
-                {selectedLocationData && (
-                  <div className="mt-3 p-3 bg-white rounded border">
-                    <h4 className="font-medium text-brand-black">{selectedLocationData.name}</h4>
-                    <p className="text-sm text-gray-600">Section: {selectedLocationData.section}</p>
-                    <p className="text-sm text-gray-600">
-                      Available Slots: {selectedLocationData.availableSlots} / {selectedLocationData.totalSlots}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Accepted Sizes: {selectedLocationData.acceptedSizes.join(', ')}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Summary */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-brand-black mb-4">Summary</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Container Size:</span> {containerSize}</p>
-                  <p><span className="font-medium">Quantity:</span> {quantity} container(s)</p>
-                  <p><span className="font-medium">Container Number(s):</span> {containerNumbers.filter(n => n).join(', ')}</p>
-                  <p><span className="font-medium">Client:</span> {selectedClientData?.name || 'Not selected'}</p>
-                  <p><span className="font-medium">Transport Company:</span> {transportCompany || 'Not specified'}</p>
-                  <p><span className="font-medium">Driver:</span> {driverName || 'Not specified'}</p>
-                  <p><span className="font-medium">Vehicle:</span> {vehicleNumber || 'Not specified'}</p>
-                  <p><span className="font-medium">Location:</span> {selectedLocationData?.name || 'Not selected'}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-between">
-          <div className="flex space-x-3">
-            {currentStep > 1 && (
-              <button
-                onClick={handlePrevious}
-                className="btn-secondary px-4 py-2 rounded-lg font-medium transition-all"
-                disabled={isLoading}
-              >
-                Previous
-              </button>
-            )}
-          </div>
-
-          <div className="flex space-x-3">
-            {currentStep < 3 ? (
-              <button
-                onClick={handleNext}
-                className="btn-primary px-6 py-2 rounded-lg font-medium transition-all"
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="btn-primary px-6 py-2 rounded-lg font-medium transition-all flex items-center space-x-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="spinner w-4 h-4"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Complete Gate In</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Notification */}
-        {notification && (
-          <div className={`absolute top-4 right-4 p-4 rounded-lg shadow-lg ${
-            notification.type === 'success' ? 'notification-success' : 'notification-error'
-          } fade-in`}>
-            <div className="flex items-center space-x-2">
-              {notification.type === 'success' ? (
-                <CheckCircle className="w-5 h-5" />
-              ) : (
-                <AlertCircle className="w-5 h-5" />
-              )}
-              <span>{notification.message}</span>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Recent Gate Ins */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Gate Ins</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Container Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Client
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Gate In Time
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Location
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredGateIns.map((gateIn) => (
+                <tr key={gateIn.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {gateIn.containerNumbers.join(', ')}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {gateIn.client}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {gateIn.gateInTime.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {gateIn.location}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Completed
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Gate In Form Modal */}
+      <GateInModal
+        showForm={showForm}
+        setShowForm={setShowForm}
+        formData={formData}
+        setFormData={setFormData}
+        currentStep={currentStep}
+        setCurrentStep={setCurrentStep}
+        isProcessing={isProcessing}
+        autoSaving={autoSaving}
+        validateStep={validateStep}
+        handleSubmit={handleSubmit}
+        handleNextStep={handleNextStep}
+        handlePrevStep={handlePrevStep}
+        handleContainerSizeChange={handleContainerSizeChange}
+        handleQuantityChange={handleQuantityChange}
+        handleContainerNumberChange={handleContainerNumberChange}
+        handleClientSelect={handleClientSelect}
+        handleInputChange={handleInputChange}
+        mockClients={mockClients}
+        availableLocations={availableLocations}
+      />
     </div>
   );
 };
-
-export default GateIn;
