@@ -370,7 +370,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
       {/* Detail Modal */}
       {showDetailModal && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-6">
@@ -390,10 +390,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 </button>
               </div>
 
-              {/* Order Information Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Basic Information */}
-                <div className="space-y-4">
+              {/* Order Information and Notes - 2 Column Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Order Information */}
+                <div className="space-y-4 md:col-span-1">
                   <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2">
                     Order Information
                   </h4>
@@ -453,20 +453,25 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   </div>
                 </div>
 
-              </div>
-
-              {/* Notes */}
-              {selectedOrder.notes && (
-                <div className="mb-8">
-                  <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3">
+                {/* Notes */}
+                <div className="space-y-4 md:col-span-1">
+                  <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2">
                     Notes
                   </h4>
-                  <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedOrder.notes}</p>
+                  {selectedOrder.notes ? (
+                    <div className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm leading-relaxed">
+                      {selectedOrder.notes}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 italic text-sm">
+                      No notes provided for this release order.
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Container List */}
-              <div>
+              <div className="mt-6">
                 <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">
                   Containers ({selectedOrder.containers.length})
                 </h4>
