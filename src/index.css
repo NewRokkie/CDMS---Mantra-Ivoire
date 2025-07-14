@@ -1,1 +1,236 @@
-(Content omitted)
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Brand Colors */
+:root {
+  --principal-green: #A0C800;
+  --dark-green: #698714;
+  --brand-black: #2E2E2E;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--principal-green);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-green);
+}
+
+/* Custom Switch Component */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--principal-green);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--principal-green);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Modal Backdrop Blur */
+.modal-backdrop {
+  backdrop-filter: blur(4px);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Smooth Animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Brand Button Styles */
+.btn-primary {
+  background: linear-gradient(135deg, var(--principal-green), var(--dark-green));
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--dark-green), var(--principal-green));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(160, 200, 0, 0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--brand-black);
+  border: 2px solid var(--principal-green);
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--principal-green);
+  color: white;
+}
+
+/* Form Input Styles */
+.form-input {
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  border-color: var(--principal-green);
+  box-shadow: 0 0 0 3px rgba(160, 200, 0, 0.1);
+  outline: none;
+}
+
+.form-input.error {
+  border-color: #ef4444;
+}
+
+.form-input.success {
+  border-color: var(--principal-green);
+}
+
+/* Progress Bar */
+.progress-bar {
+  background: linear-gradient(90deg, var(--principal-green), var(--dark-green));
+  transition: width 0.3s ease;
+}
+
+/* Loading Spinner */
+.spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid var(--principal-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Notification Styles */
+.notification-success {
+  background: linear-gradient(135deg, var(--principal-green), var(--dark-green));
+  color: white;
+}
+
+.notification-error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+/* Card Hover Effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Brand Text Colors */
+.text-brand-green {
+  color: var(--principal-green);
+}
+
+.text-dark-green {
+  color: var(--dark-green);
+}
+
+.text-brand-black {
+  color: var(--brand-black);
+}
+
+/* Background Colors */
+.bg-brand-green {
+  background-color: var(--principal-green);
+}
+
+.bg-dark-green {
+  background-color: var(--dark-green);
+}
+
+.bg-brand-black {
+  background-color: var(--brand-black);
+}
+
+/* Gradient Backgrounds */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, var(--principal-green), var(--dark-green));
+}
+
+.bg-brand-gradient-reverse {
+  background: linear-gradient(135deg, var(--dark-green), var(--principal-green));
+}
