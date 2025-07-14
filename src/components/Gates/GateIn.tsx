@@ -1,24 +1,33 @@
-// GateIn.tsx
 import React, { useState } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package } from 'lucide-react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInModal } from './GateInModal';
 
-// Move the interface to the top level so it can be imported
+// Enhanced interface for the new gate-in process
 export interface GateInFormData {
+  // Step 1: Container Information
+  containerNumber: string;
   containerSize: '20ft' | '40ft';
-  quantity: 1 | 2;
-  containerNumbers: string[];
-  client: string;
-  clientCode: string;
-  transportCompany: string;
+  containerType: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  status: 'FULL' | 'EMPTY';
+  isDamaged: boolean;
+  bookingReference: string;
+  
+  // Step 2: Transport Details
   driverName: string;
-  vehicleNumber: string;
-  location: string;
-  sealNumbers: string[];
-  damage: string[];
+  driverLicense: string;
+  truckNumber: string;
+  transportCompany: string;
+  
+  // Location & Validation (Step 3)
+  assignedLocation: string;
+  truckArrivalTime: string;
+  truckDepartureTime: string;
+  
+  // Additional fields
   notes: string;
+  operationStatus: 'draft' | 'pending' | 'completed';
 }
 
 // Mock client data
@@ -30,62 +39,127 @@ const mockClients = [
   { id: '5', name: 'Hapag-Lloyd', code: 'HLCU' }
 ];
 
-// Mock location data based on container size
+// Mock location data
 const mockLocations = {
   '20ft': [
-    { id: 'S1', name: 'Stack S1', capacity: 20, available: 15 },
-    { id: 'S3', name: 'Stack S3', capacity: 25, available: 18 },
-    { id: 'S101', name: 'Stack S101', capacity: 5, available: 3 },
-    { id: 'S103', name: 'Stack S103', capacity: 10, available: 7 }
+    { id: 'S1', name: 'Stack S1', capacity: 20, available: 15, section: 'Top Section' },
+    { id: 'S31', name: 'Stack S31', capacity: 35, available: 28, section: 'Top Section' },
+    { id: 'S101', name: 'Stack S101', capacity: 5, available: 3, section: 'Bottom Section' },
+    { id: 'S103', name: 'Stack S103', capacity: 10, available: 7, section: 'Bottom Section' }
   ],
   '40ft': [
-    { id: 'S5', name: 'Stack S5', capacity: 25, available: 20 },
-    { id: 'S7', name: 'Stack S7', capacity: 25, available: 22 },
-    { id: 'S61', name: 'Stack S61', capacity: 30, available: 25 },
-    { id: 'S65', name: 'Stack S65', capacity: 30, available: 28 }
+    { id: 'S3-S5', name: 'Stack S3+S5', capacity: 25, available: 20, section: 'Top Section' },
+    { id: 'S7-S9', name: 'Stack S7+S9', capacity: 25, available: 22, section: 'Top Section' },
+    { id: 'S61-S63', name: 'Stack S61+S63', capacity: 30, available: 25, section: 'Bottom Section' },
+    { id: 'S65-S67', name: 'Stack S65+S67', capacity: 30, available: 28, section: 'Bottom Section' }
+  ],
+  damage: [
+    { id: 'DMG-VIRTUAL', name: 'Damage Stack (Virtual)', capacity: 999, available: 999, section: 'Virtual' }
   ]
 };
 
-// Mock data for recent gate-ins
-const mockRecentGateIns = [
+// Mock pending operations
+const mockPendingOperations = [
   {
-    id: '1',
-    containerNumbers: ['MSKU-123456-7'],
-    client: 'Maersk Line',
-    gateInTime: new Date('2025-01-11T14:30:00'),
-    status: 'completed',
-    location: 'Stack S5'
+    id: 'PO-001',
+    date: new Date('2025-01-11T14:30:00'),
+    containerNumber: 'MSKU-123456-7',
+    containerSize: '40ft',
+    containerType: 'dry',
+    status: 'FULL',
+    isDamaged: false,
+    bookingReference: 'BK-MAE-2025-001',
+    truckNumber: 'ABC-123',
+    driverName: 'John Smith',
+    transportCompany: 'Swift Transport',
+    operationStatus: 'pending' as const,
+    assignedLocation: '',
+    truckArrivalTime: '',
+    truckDepartureTime: ''
   },
   {
-    id: '2',
-    containerNumbers: ['TCLU-987654-3'],
-    client: 'MSC',
-    gateInTime: new Date('2025-01-11T13:15:00'),
-    status: 'completed',
-    location: 'Stack S3'
+    id: 'PO-002',
+    date: new Date('2025-01-11T15:45:00'),
+    containerNumber: 'TCLU-987654-3',
+    containerSize: '20ft',
+    containerType: 'reefer',
+    status: 'EMPTY',
+    isDamaged: true,
+    bookingReference: '',
+    truckNumber: 'XYZ-456',
+    driverName: 'Maria Garcia',
+    transportCompany: 'Express Logistics',
+    operationStatus: 'pending' as const,
+    assignedLocation: '',
+    truckArrivalTime: '',
+    truckDepartureTime: ''
+  },
+  {
+    id: 'PO-003',
+    date: new Date('2025-01-11T16:20:00'),
+    containerNumber: 'GESU-456789-1',
+    containerSize: '40ft',
+    containerType: 'dry',
+    status: 'FULL',
+    isDamaged: false,
+    bookingReference: 'BK-CMA-2025-003',
+    truckNumber: 'DEF-789',
+    driverName: 'Robert Chen',
+    transportCompany: 'Ocean Transport',
+    operationStatus: 'pending' as const,
+    assignedLocation: '',
+    truckArrivalTime: '',
+    truckDepartureTime: ''
+  }
+];
+
+// Mock completed operations
+const mockCompletedOperations = [
+  {
+    id: 'CO-001',
+    date: new Date('2025-01-11T13:15:00'),
+    containerNumber: 'SHIP-111222-8',
+    containerSize: '20ft',
+    containerType: 'dry',
+    status: 'FULL',
+    isDamaged: false,
+    bookingReference: 'BK-SHIP-2025-001',
+    truckNumber: 'GHI-012',
+    driverName: 'Lisa Green',
+    transportCompany: 'Local Transport',
+    operationStatus: 'completed' as const,
+    assignedLocation: 'Stack S1',
+    truckArrivalTime: '13:15',
+    truckDepartureTime: '13:45',
+    completedAt: new Date('2025-01-11T13:45:00')
   }
 ];
 
 export const GateIn: React.FC = () => {
+  const [activeView, setActiveView] = useState<'overview' | 'pending' | 'location'>('overview');
   const [showForm, setShowForm] = useState(false);
+  const [selectedOperation, setSelectedOperation] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
   
   const [formData, setFormData] = useState<GateInFormData>({
+    containerNumber: '',
     containerSize: '20ft',
-    quantity: 1,
-    containerNumbers: [''],
-    client: '',
-    clientCode: '',
-    transportCompany: '',
+    containerType: 'dry',
+    status: 'FULL',
+    isDamaged: false,
+    bookingReference: '',
     driverName: '',
-    vehicleNumber: '',
-    location: '',
-    sealNumbers: [],
-    damage: [],
-    notes: ''
+    driverLicense: '',
+    truckNumber: '',
+    transportCompany: '',
+    assignedLocation: '',
+    truckArrivalTime: '',
+    truckDepartureTime: '',
+    notes: '',
+    operationStatus: 'draft'
   });
 
   const { t } = useLanguage();
@@ -104,52 +178,30 @@ export const GateIn: React.FC = () => {
     setTimeout(() => setAutoSaving(false), 1000);
   };
 
-  const handleContainerSizeChange = (is40ft: boolean) => {
-    const newSize = is40ft ? '40ft' : '20ft';
+  const handleStatusChange = (isFullStatus: boolean) => {
+    const newStatus = isFullStatus ? 'FULL' : 'EMPTY';
     setFormData(prev => ({
       ...prev,
-      containerSize: newSize,
-      quantity: newSize === '40ft' ? 1 : prev.quantity, // Reset quantity to 1 for 40ft
-      containerNumbers: newSize === '40ft' ? [''] : (prev.quantity === 2 ? ['', ''] : ['']),
-      location: '' // Reset location when size changes
+      status: newStatus,
+      bookingReference: newStatus === 'EMPTY' ? '' : prev.bookingReference
     }));
   };
 
-  const handleQuantityChange = (isDouble: boolean) => {
-    const newQuantity = isDouble ? 2 : 1;
+  const handleDamageChange = (isDamaged: boolean) => {
     setFormData(prev => ({
       ...prev,
-      quantity: newQuantity as 1 | 2,
-      containerNumbers: newQuantity === 2 ? ['', ''] : ['']
+      isDamaged,
+      assignedLocation: isDamaged ? 'DMG-VIRTUAL' : ''
     }));
-  };
-
-  const handleContainerNumberChange = (index: number, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      containerNumbers: prev.containerNumbers.map((num, i) => i === index ? value : num)
-    }));
-  };
-
-  const handleClientSelect = (clientId: string) => {
-    const client = mockClients.find(c => c.id === clientId);
-    if (client) {
-      setFormData(prev => ({
-        ...prev,
-        client: client.name,
-        clientCode: client.code
-      }));
-    }
   };
 
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return formData.containerNumbers.every(num => num.trim() !== '') && formData.client !== '';
+        return formData.containerNumber.trim() !== '' && 
+               (formData.status === 'EMPTY' || formData.bookingReference.trim() !== '');
       case 2:
-        return formData.transportCompany !== '' && formData.driverName !== '' && formData.vehicleNumber !== '';
-      case 3:
-        return formData.location !== '';
+        return formData.driverName !== '' && formData.truckNumber !== '' && formData.transportCompany !== '';
       default:
         return true;
     }
@@ -157,7 +209,7 @@ export const GateIn: React.FC = () => {
 
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(3, prev + 1));
+      setCurrentStep(prev => Math.min(2, prev + 1));
     }
   };
 
@@ -165,32 +217,41 @@ export const GateIn: React.FC = () => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (isDraft: boolean = false) => {
     if (!canPerformGateIn) return;
 
     setIsProcessing(true);
     try {
-      // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const status = isDraft ? 'draft' : 'pending';
+      const updatedFormData = { ...formData, operationStatus: status };
       
-      const containerNumbers = formData.containerNumbers.filter(num => num.trim() !== '');
-      alert(`Successfully processed gate in for ${containerNumbers.length} container(s): ${containerNumbers.join(', ')}`);
+      // Simulate processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      if (isDraft) {
+        alert(`Draft saved for container ${formData.containerNumber}`);
+      } else {
+        alert(`Gate In operation submitted for container ${formData.containerNumber}`);
+        setActiveView('pending');
+      }
       
       // Reset form
       setFormData({
+        containerNumber: '',
         containerSize: '20ft',
-        quantity: 1,
-        containerNumbers: [''],
-        client: '',
-        clientCode: '',
-        transportCompany: '',
+        containerType: 'dry',
+        status: 'FULL',
+        isDamaged: false,
+        bookingReference: '',
         driverName: '',
-        vehicleNumber: '',
-        location: '',
-        sealNumbers: [],
-        damage: [],
-        notes: ''
+        driverLicense: '',
+        truckNumber: '',
+        transportCompany: '',
+        assignedLocation: '',
+        truckArrivalTime: '',
+        truckDepartureTime: '',
+        notes: '',
+        operationStatus: 'draft'
       });
       setCurrentStep(1);
       setShowForm(false);
@@ -201,12 +262,51 @@ export const GateIn: React.FC = () => {
     }
   };
 
-  const filteredGateIns = mockRecentGateIns.filter(gateIn =>
-    gateIn.containerNumbers.some(num => num.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    gateIn.client.toLowerCase().includes(searchTerm.toLowerCase())
+  const handlePendingOperationClick = (operation: any) => {
+    setSelectedOperation(operation);
+    setActiveView('location');
+  };
+
+  const handleLocationValidation = async (operation: any, locationData: any) => {
+    setIsProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      alert(`Container ${operation.containerNumber} successfully assigned to ${locationData.assignedLocation}`);
+      setActiveView('overview');
+      setSelectedOperation(null);
+    } catch (error) {
+      alert(`Error completing operation: ${error}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
+      pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+      completed: { color: 'bg-green-100 text-green-800', label: 'Completed' }
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig];
+    return (
+      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const filteredPendingOperations = mockPendingOperations.filter(op =>
+    op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const availableLocations = mockLocations[formData.containerSize];
+  const filteredCompletedOperations = mockCompletedOperations.filter(op =>
+    op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (!canPerformGateIn) {
     return (
@@ -218,21 +318,57 @@ export const GateIn: React.FC = () => {
     );
   }
 
+  // Location & Validation View
+  if (activeView === 'location' && selectedOperation) {
+    return (
+      <LocationValidationView
+        operation={selectedOperation}
+        onBack={() => setActiveView('pending')}
+        onComplete={handleLocationValidation}
+        isProcessing={isProcessing}
+        mockLocations={mockLocations}
+      />
+    );
+  }
+
+  // Pending Operations View
+  if (activeView === 'pending') {
+    return (
+      <PendingOperationsView
+        operations={filteredPendingOperations}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onBack={() => setActiveView('overview')}
+        onOperationClick={handlePendingOperationClick}
+      />
+    );
+  }
+
+  // Main Overview
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn-success flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Gate In</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setActiveView('pending')}
+            className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            <Clock className="h-4 w-4" />
+            <span>Pending ({mockPendingOperations.length})</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn-success flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Gate In</span>
+          </button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -247,11 +383,23 @@ export const GateIn: React.FC = () => {
         
         <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
           <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Clock className="h-5 w-5 text-yellow-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Pending Operations</p>
+              <p className="text-lg font-semibold text-gray-900">{mockPendingOperations.length}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
+          <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
               <ContainerIcon className="h-5 w-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Containers In Depot</p>
+              <p className="text-sm font-medium text-gray-500">Containers Processed</p>
               <p className="text-lg font-semibold text-gray-900">892</p>
             </div>
           </div>
@@ -259,12 +407,12 @@ export const GateIn: React.FC = () => {
         
         <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
           <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Clock className="h-5 w-5 text-yellow-600" />
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-purple-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Average Processing Time</p>
-              <p className="text-lg font-semibold text-gray-900">8 min</p>
+              <p className="text-sm font-medium text-gray-500">Damaged Containers</p>
+              <p className="text-lg font-semibold text-gray-900">3</p>
             </div>
           </div>
         </div>
@@ -277,7 +425,7 @@ export const GateIn: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
               type="text"
-              placeholder="Search recent gate ins..."
+              placeholder="Search operations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="form-input pl-10 w-full"
@@ -290,54 +438,81 @@ export const GateIn: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Gate Ins */}
+      {/* Recent Completed Operations */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Gate Ins</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Recent Completed Operations</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Container Number
+                  Date & Time
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
+                  Container No.
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gate In Time
+                  Truck No.
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Driver Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status & Details
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Location
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredGateIns.map((gateIn) => (
-                <tr key={gateIn.id} className="hover:bg-gray-50 transition-colors">
+              {filteredCompletedOperations.map((operation) => (
+                <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {gateIn.containerNumbers.join(', ')}
+                      {operation.date.toLocaleDateString()}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {operation.date.toLocaleTimeString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                    <div className="text-sm text-gray-500">
+                      {operation.containerSize} • {operation.containerType}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {gateIn.client}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {gateIn.gateInTime.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {gateIn.location}
+                    {operation.truckNumber}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Completed
-                    </span>
+                    <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                    <div className="text-sm text-gray-500">{operation.transportCompany}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      {getStatusBadge(operation.operationStatus)}
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {operation.status}
+                      </span>
+                      {operation.isDamaged && (
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                          Damaged
+                        </span>
+                      )}
+                    </div>
+                    {operation.bookingReference && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Booking: {operation.bookingReference}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {operation.assignedLocation}
                   </td>
                 </tr>
               ))}
@@ -347,27 +522,334 @@ export const GateIn: React.FC = () => {
       </div>
 
       {/* Gate In Form Modal */}
-      <GateInModal
-        showForm={showForm}
-        setShowForm={setShowForm}
-        formData={formData}
-        setFormData={setFormData}
-        currentStep={currentStep}
-        setCurrentStep={setCurrentStep}
-        isProcessing={isProcessing}
-        autoSaving={autoSaving}
-        validateStep={validateStep}
-        handleSubmit={handleSubmit}
-        handleNextStep={handleNextStep}
-        handlePrevStep={handlePrevStep}
-        handleContainerSizeChange={handleContainerSizeChange}
-        handleQuantityChange={handleQuantityChange}
-        handleContainerNumberChange={handleContainerNumberChange}
-        handleClientSelect={handleClientSelect}
-        handleInputChange={handleInputChange}
-        mockClients={mockClients}
-        availableLocations={availableLocations}
-      />
+      {showForm && (
+        <GateInModal
+          showForm={showForm}
+          setShowForm={setShowForm}
+          formData={formData}
+          setFormData={setFormData}
+          currentStep={currentStep}
+          setCurrentStep={setCurrentStep}
+          isProcessing={isProcessing}
+          autoSaving={autoSaving}
+          validateStep={validateStep}
+          handleSubmit={handleSubmit}
+          handleNextStep={handleNextStep}
+          handlePrevStep={handlePrevStep}
+          handleInputChange={handleInputChange}
+          handleStatusChange={handleStatusChange}
+          handleDamageChange={handleDamageChange}
+          mockClients={mockClients}
+        />
+      )}
+    </div>
+  );
+};
+
+// Pending Operations View Component
+const PendingOperationsView: React.FC<{
+  operations: any[];
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  onBack: () => void;
+  onOperationClick: (operation: any) => void;
+}> = ({ operations, searchTerm, onSearchChange, onBack, onOperationClick }) => {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="btn-secondary"
+          >
+            ← Back to Overview
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Pending Operations</h2>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            placeholder="Search pending operations..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="form-input pl-10 w-full"
+          />
+        </div>
+      </div>
+
+      {/* Pending Operations Table */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Operations Awaiting Location Assignment</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Container No.
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Truck No.
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Driver Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {operations.map((operation) => (
+                <tr 
+                  key={operation.id} 
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => onOperationClick(operation)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {operation.date.toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                    <div className="text-sm text-gray-500">
+                      {operation.containerSize} • {operation.containerType}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {operation.truckNumber}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                    <div className="text-sm text-gray-500">{operation.transportCompany}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {operation.status}
+                      </span>
+                      {operation.isDamaged && (
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                          Damaged
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button className="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                      Assign Location →
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Location & Validation View Component
+const LocationValidationView: React.FC<{
+  operation: any;
+  onBack: () => void;
+  onComplete: (operation: any, locationData: any) => void;
+  isProcessing: boolean;
+  mockLocations: any;
+}> = ({ operation, onBack, onComplete, isProcessing, mockLocations }) => {
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [truckArrivalTime, setTruckArrivalTime] = useState('');
+  const [truckDepartureTime, setTruckDepartureTime] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
+
+  // Auto-assign damage stack for damaged containers
+  React.useEffect(() => {
+    if (operation.isDamaged) {
+      setSelectedLocation('DMG-VIRTUAL');
+    }
+  }, [operation.isDamaged]);
+
+  const availableLocations = operation.isDamaged 
+    ? mockLocations.damage 
+    : mockLocations[operation.containerSize] || [];
+
+  const filteredLocations = availableLocations.filter((loc: any) =>
+    loc.name.toLowerCase().includes(searchLocation.toLowerCase())
+  );
+
+  const handleComplete = () => {
+    if (!selectedLocation || !truckArrivalTime) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const locationData = {
+      assignedLocation: selectedLocation,
+      truckArrivalTime,
+      truckDepartureTime
+    };
+
+    onComplete(operation, locationData);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button onClick={onBack} className="btn-secondary">
+            ← Back to Pending
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Location & Validation</h2>
+        </div>
+      </div>
+
+      {/* Operation Summary */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Operation Details</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <span className="text-sm text-gray-600">Container:</span>
+            <div className="font-medium">{operation.containerNumber}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Size & Type:</span>
+            <div className="font-medium">{operation.containerSize} • {operation.containerType}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Status:</span>
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+              }`}>
+                {operation.status}
+              </span>
+              {operation.isDamaged && (
+                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                  Damaged
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Driver:</span>
+            <div className="font-medium">{operation.driverName}</div>
+          </div>
+        </div>
+        {operation.bookingReference && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <span className="text-sm text-gray-600">Booking Reference:</span>
+            <div className="font-medium">{operation.bookingReference}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Location Assignment */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          {operation.isDamaged ? 'Auto-Assigned to Damage Stack' : 'Stack Selection'}
+        </h3>
+        
+        {!operation.isDamaged && (
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Search stacks..."
+                value={searchLocation}
+                onChange={(e) => setSearchLocation(e.target.value)}
+                className="form-input pl-10 w-full"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredLocations.map((location: any) => (
+            <div
+              key={location.id}
+              onClick={() => !operation.isDamaged && setSelectedLocation(location.id)}
+              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                selectedLocation === location.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : operation.isDamaged
+                  ? 'border-red-200 bg-red-50 cursor-not-allowed'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="font-medium text-gray-900">{location.name}</div>
+              <div className="text-sm text-gray-600">{location.section}</div>
+              <div className="text-sm text-gray-500 mt-2">
+                Available: {location.available}/{location.capacity}
+              </div>
+              {operation.isDamaged && location.id === 'DMG-VIRTUAL' && (
+                <div className="text-xs text-red-600 mt-1">Auto-assigned for damaged container</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Time Tracking */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Time Tracking</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Truck Arrival Time *
+            </label>
+            <input
+              type="time"
+              value={truckArrivalTime}
+              onChange={(e) => setTruckArrivalTime(e.target.value)}
+              className="form-input w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Truck Departure Time
+            </label>
+            <input
+              type="time"
+              value={truckDepartureTime}
+              onChange={(e) => setTruckDepartureTime(e.target.value)}
+              className="form-input w-full"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-end space-x-3">
+        <button onClick={onBack} className="btn-secondary">
+          Cancel
+        </button>
+        <button
+          onClick={handleComplete}
+          disabled={isProcessing || !selectedLocation || !truckArrivalTime}
+          className="btn-success disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isProcessing ? 'Processing...' : 'Complete Operation'}
+        </button>
+      </div>
     </div>
   );
 };
