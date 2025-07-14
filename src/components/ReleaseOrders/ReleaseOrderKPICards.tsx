@@ -85,24 +85,7 @@ export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stat
         </div>
       </div>
       
-      {/* Total Containers */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <Package className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600 truncate">Total Containers</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalContainers}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Ready for Release - Only show on larger screens or as 6th card */}
+      {/* Ready for Release */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 sm:col-span-2 lg:col-span-1 xl:col-span-1">
         <div className="flex items-center justify-between">
           <div className="flex-1">
