@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, AlertTriangle, CheckCircle, Package } from 'lucide-react';
+import { List, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface ReleaseOrderStats {
   total: number;
@@ -16,7 +16,7 @@ interface ReleaseOrderKPICardsProps {
 
 export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stats }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Total Orders */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
         <div className="flex items-center justify-between">
@@ -79,23 +79,6 @@ export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stat
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-600 truncate">Completed</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Ready for Release */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 sm:col-span-2 lg:col-span-1 xl:col-span-1">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-3 bg-green-50 rounded-xl">
-                <Package className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600 truncate">Ready for Release</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.readyContainers}</p>
               </div>
             </div>
           </div>

@@ -11,7 +11,6 @@ import {
   Package,
   Calendar,
   User,
-  Truck,
   FileText,
   MapPin,
   Clock
@@ -35,11 +34,27 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
   const { user, canViewAllData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'id', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedOrder, setSelectedOrder] = useState<ReleaseOrder | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // Get unique clients for filter
+  const uniqueClients = useMemo(() => {
+    const clients = orders.map(order => ({
+      code: order.clientCode,
+      name: order.clientName
+    }));
+    const uniqueClientsMap = new Map();
+    clients.forEach(client => {
+      if (client.code) {
+        uniqueClientsMap.set(client.code, client);
+      }
+    });
+    return Array.from(uniqueClientsMap.values());
+  }, [orders]);
 
   // Filter and sort orders
   const filteredAndSortedOrders = useMemo(() => {
@@ -50,8 +65,9 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
         order.containers.some(c => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      const matchesClient = clientFilter === 'all' || order.clientCode === clientFilter;
       
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesClient;
     });
 
     // Sort orders
@@ -86,7 +102,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
     });
 
     return filtered;
-  }, [orders, searchTerm, statusFilter, sortConfig]);
+  }, [orders, searchTerm, statusFilter, clientFilter, sortConfig]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
@@ -170,6 +186,19 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               <option value="partial">Partial Release</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
+            </select>
+            
+            <select
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Clients</option>
+              {uniqueClients.map((client) => (
+                <option key={client.code} value={client.code}>
+                  {client.code} - {client.name}
+                </option>
+              ))}
             </select>
           </div>
           
@@ -422,35 +451,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   </div>
                 </div>
 
-                {/* Transport Information */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Transport Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <Truck className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Transport Company:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.transportCompany}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Driver:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.driverName}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Truck className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Vehicle:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.vehicleNumber}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Notes */}
