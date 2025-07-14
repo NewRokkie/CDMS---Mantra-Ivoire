@@ -14,13 +14,16 @@ interface GateInModalProps {
   isProcessing: boolean;
   autoSaving: boolean;
   validateStep: (step: number) => boolean;
-  handleSubmit: (isDraft?: boolean) => void;
+  handleSubmit: () => void;
   handleNextStep: () => void;
   handlePrevStep: () => void;
   handleInputChange: (field: keyof GateInFormData, value: any) => void;
+  handleContainerSizeChange: (size: '20ft' | '40ft') => void;
+  handleQuantityChange: (quantity: 1 | 2) => void;
   handleStatusChange: (isFullStatus: boolean) => void;
   handleDamageChange: (isDamaged: boolean) => void;
-  mockClients: Array<{ id: string; name: string; code: string }>;
+  handleClientChange: (clientId: string) => void;
+  mockClients: Array<{ id: string; code: string; name: string }>;
 }
 
 export const GateInModal: React.FC<GateInModalProps> = ({
@@ -35,8 +38,11 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   handleNextStep,
   handlePrevStep,
   handleInputChange,
+  handleContainerSizeChange,
+  handleQuantityChange,
   handleStatusChange,
   handleDamageChange,
+  handleClientChange,
   mockClients,
 }) => {
   if (!showForm) return null;
@@ -133,7 +139,26 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       />
                     </div>
 
-                    {/* Container Size and Type */}
+                    {/* Second Container Number (if quantity is 2) */}
+                    {formData.containerQuantity === 2 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Second Container Number *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.secondContainerNumber}
+                          onChange={(e) => handleInputChange('secondContainerNumber', e.target.value)}
+                          className="form-input w-full"
+                          placeholder="e.g., MSKU1234568"
+                          pattern="[A-Z]{4}[0-9]{7}"
+                          title="Format: 4 letters followed by 7 digits"
+                        />
+                      </div>
+                    )}
+
+                    {/* Container Size and Quantity */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -141,7 +166,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         </label>
                         <Switch
                           checked={formData.containerSize === '40ft'}
-                          onChange={(is40ft) => handleInputChange('containerSize', is40ft ? '40ft' : '20ft')}
+                          onChange={(is40ft) => handleContainerSizeChange(is40ft ? '40ft' : '20ft')}
                           label=""
                           leftLabel="20ft"
                           rightLabel="40ft"
@@ -150,20 +175,40 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Container Type *
+                          Quantity *
                         </label>
-                        <select
-                          value={formData.containerType}
-                          onChange={(e) => handleInputChange('containerType', e.target.value)}
-                          className="form-input w-full"
-                        >
-                          <option value="dry">Dry Container</option>
-                          <option value="reefer">Reefer Container</option>
-                          <option value="tank">Tank Container</option>
-                          <option value="flat_rack">Flat Rack</option>
-                          <option value="open_top">Open Top</option>
-                        </select>
+                        <Switch
+                          checked={formData.containerQuantity === 2}
+                          onChange={(isDouble) => handleQuantityChange(isDouble ? 2 : 1)}
+                          label=""
+                          leftLabel="Single (1)"
+                          rightLabel="Double (2)"
+                          disabled={formData.containerSize === '40ft'}
+                        />
+                        {formData.containerSize === '40ft' && (
+                          <p className="text-xs text-gray-500 mt-1">40ft containers limited to single quantity</p>
+                        )}
                       </div>
+                    </div>
+
+                    {/* Client Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Client *
+                      </label>
+                      <select
+                        value={formData.clientId}
+                        onChange={(e) => handleClientChange(e.target.value)}
+                        className="form-input w-full"
+                        required
+                      >
+                        <option value="">Select a client...</option>
+                        {mockClients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.code} - {client.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     {/* Status Switches */}
@@ -254,19 +299,6 @@ export const GateInModal: React.FC<GateInModalProps> = ({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Driver License
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.driverLicense}
-                        onChange={(e) => handleInputChange('driverLicense', e.target.value)}
-                        className="form-input w-full"
-                        placeholder="License number"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Truck Number *
                       </label>
                       <input
@@ -279,7 +311,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       />
                     </div>
 
-                    <div>
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Transport Company *
                       </label>
@@ -302,10 +334,17 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     <div>
                       <span className="text-gray-600">Container:</span>
                       <div className="font-medium">{formData.containerNumber || 'Not specified'}</div>
+                      {formData.secondContainerNumber && (
+                        <div className="font-medium">{formData.secondContainerNumber}</div>
+                      )}
                     </div>
                     <div>
-                      <span className="text-gray-600">Size & Type:</span>
-                      <div className="font-medium">{formData.containerSize} • {formData.containerType}</div>
+                      <span className="text-gray-600">Size & Quantity:</span>
+                      <div className="font-medium">{formData.containerSize} • Qty: {formData.containerQuantity}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Client:</span>
+                      <div className="font-medium">{formData.clientCode ? `${formData.clientCode} - ${formData.clientName}` : 'Not selected'}</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Status:</span>
@@ -335,7 +374,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
                     </div>
                     {formData.bookingReference && (
-                      <div className="col-span-2">
+                      <div>
                         <span className="text-gray-600">Booking Reference:</span>
                         <div className="font-medium">{formData.bookingReference}</div>
                       </div>
@@ -395,34 +434,24 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   Next Step
                 </button>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSubmit(true)}
-                    disabled={isProcessing}
-                    className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    type="submit"
-                    onClick={() => handleSubmit(false)}
-                    disabled={isProcessing || !validateStep(currentStep)}
-                    className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader className="h-4 w-4 animate-spin" />
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Submit Operation</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  onClick={() => handleSubmit()}
+                  disabled={isProcessing || !validateStep(currentStep)}
+                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader className="h-4 w-4 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Submit Operation</span>
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>

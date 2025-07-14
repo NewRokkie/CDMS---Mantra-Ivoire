@@ -8,15 +8,18 @@ import { GateInModal } from './GateInModal';
 export interface GateInFormData {
   // Step 1: Container Information
   containerNumber: string;
+  secondContainerNumber: string; // For when quantity is 2
   containerSize: '20ft' | '40ft';
-  containerType: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  containerQuantity: 1 | 2;
   status: 'FULL' | 'EMPTY';
   isDamaged: boolean;
   bookingReference: string;
+  clientId: string;
+  clientCode: string;
+  clientName: string;
   
   // Step 2: Transport Details
   driverName: string;
-  driverLicense: string;
   truckNumber: string;
   transportCompany: string;
   
@@ -27,16 +30,16 @@ export interface GateInFormData {
   
   // Additional fields
   notes: string;
-  operationStatus: 'draft' | 'pending' | 'completed';
+  operationStatus: 'pending' | 'completed';
 }
 
-// Mock client data
+// Mock client data with code - name format
 const mockClients = [
-  { id: '1', name: 'Maersk Line', code: 'MAEU' },
-  { id: '2', name: 'MSC Mediterranean Shipping', code: 'MSCU' },
-  { id: '3', name: 'CMA CGM', code: 'CMDU' },
-  { id: '4', name: 'Shipping Solutions Inc', code: 'SHIP001' },
-  { id: '5', name: 'Hapag-Lloyd', code: 'HLCU' }
+  { id: '1', code: '1088663', name: 'MAERSK LINE' },
+  { id: '2', code: '2045789', name: 'MSC MEDITERRANEAN SHIPPING' },
+  { id: '3', code: '3067234', name: 'CMA CGM' },
+  { id: '4', code: '4012567', name: 'SHIPPING SOLUTIONS INC' },
+  { id: '5', code: '5098432', name: 'HAPAG-LLOYD' }
 ];
 
 // Mock location data
@@ -63,12 +66,15 @@ const mockPendingOperations = [
   {
     id: 'PO-001',
     date: new Date('2025-01-11T14:30:00'),
-    containerNumber: 'MSKU-123456-7',
+    containerNumber: 'MSKU1234567',
+    secondContainerNumber: '',
     containerSize: '40ft',
-    containerType: 'dry',
+    containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-MAE-2025-001',
+    clientCode: '1088663',
+    clientName: 'MAERSK LINE',
     truckNumber: 'ABC-123',
     driverName: 'John Smith',
     transportCompany: 'Swift Transport',
@@ -80,12 +86,15 @@ const mockPendingOperations = [
   {
     id: 'PO-002',
     date: new Date('2025-01-11T15:45:00'),
-    containerNumber: 'TCLU-987654-3',
+    containerNumber: 'TCLU9876543',
+    secondContainerNumber: 'TCLU9876544',
     containerSize: '20ft',
-    containerType: 'reefer',
+    containerQuantity: 2,
     status: 'EMPTY',
     isDamaged: true,
     bookingReference: '',
+    clientCode: '2045789',
+    clientName: 'MSC MEDITERRANEAN SHIPPING',
     truckNumber: 'XYZ-456',
     driverName: 'Maria Garcia',
     transportCompany: 'Express Logistics',
@@ -97,12 +106,15 @@ const mockPendingOperations = [
   {
     id: 'PO-003',
     date: new Date('2025-01-11T16:20:00'),
-    containerNumber: 'GESU-456789-1',
+    containerNumber: 'GESU4567891',
+    secondContainerNumber: '',
     containerSize: '40ft',
-    containerType: 'dry',
+    containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-CMA-2025-003',
+    clientCode: '3067234',
+    clientName: 'CMA CGM',
     truckNumber: 'DEF-789',
     driverName: 'Robert Chen',
     transportCompany: 'Ocean Transport',
@@ -118,12 +130,15 @@ const mockCompletedOperations = [
   {
     id: 'CO-001',
     date: new Date('2025-01-11T13:15:00'),
-    containerNumber: 'SHIP-111222-8',
+    containerNumber: 'SHIP1112228',
+    secondContainerNumber: '',
     containerSize: '20ft',
-    containerType: 'dry',
+    containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-SHIP-2025-001',
+    clientCode: '4012567',
+    clientName: 'SHIPPING SOLUTIONS INC',
     truckNumber: 'GHI-012',
     driverName: 'Lisa Green',
     transportCompany: 'Local Transport',
@@ -146,20 +161,23 @@ export const GateIn: React.FC = () => {
   
   const [formData, setFormData] = useState<GateInFormData>({
     containerNumber: '',
+    secondContainerNumber: '',
     containerSize: '20ft',
-    containerType: 'dry',
+    containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
     bookingReference: '',
+    clientId: '',
+    clientCode: '',
+    clientName: '',
     driverName: '',
-    driverLicense: '',
     truckNumber: '',
     transportCompany: '',
     assignedLocation: '',
     truckArrivalTime: '',
     truckDepartureTime: '',
     notes: '',
-    operationStatus: 'draft'
+    operationStatus: 'pending'
   });
 
   const { t } = useLanguage();
@@ -176,6 +194,23 @@ export const GateIn: React.FC = () => {
     // Trigger auto-save
     setAutoSaving(true);
     setTimeout(() => setAutoSaving(false), 1000);
+  };
+
+  const handleContainerSizeChange = (size: '20ft' | '40ft') => {
+    setFormData(prev => ({
+      ...prev,
+      containerSize: size,
+      containerQuantity: size === '40ft' ? 1 : prev.containerQuantity,
+      secondContainerNumber: size === '40ft' ? '' : prev.secondContainerNumber
+    }));
+  };
+
+  const handleQuantityChange = (quantity: 1 | 2) => {
+    setFormData(prev => ({
+      ...prev,
+      containerQuantity: quantity,
+      secondContainerNumber: quantity === 1 ? '' : prev.secondContainerNumber
+    }));
   };
 
   const handleStatusChange = (isFullStatus: boolean) => {
@@ -195,11 +230,26 @@ export const GateIn: React.FC = () => {
     }));
   };
 
+  const handleClientChange = (clientId: string) => {
+    const selectedClient = mockClients.find(c => c.id === clientId);
+    if (selectedClient) {
+      setFormData(prev => ({
+        ...prev,
+        clientId: selectedClient.id,
+        clientCode: selectedClient.code,
+        clientName: selectedClient.name
+      }));
+    }
+  };
+
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return formData.containerNumber.trim() !== '' && 
-               (formData.status === 'EMPTY' || formData.bookingReference.trim() !== '');
+        const hasContainerNumber = formData.containerNumber.trim() !== '';
+        const hasSecondContainer = formData.containerQuantity === 1 || formData.secondContainerNumber.trim() !== '';
+        const hasClient = formData.clientId !== '';
+        const hasBookingRef = formData.status === 'EMPTY' || formData.bookingReference.trim() !== '';
+        return hasContainerNumber && hasSecondContainer && hasClient && hasBookingRef;
       case 2:
         return formData.driverName !== '' && formData.truckNumber !== '' && formData.transportCompany !== '';
       default:
@@ -217,41 +267,39 @@ export const GateIn: React.FC = () => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
-  const handleSubmit = async (isDraft: boolean = false) => {
+  const handleSubmit = async () => {
     if (!canPerformGateIn) return;
 
     setIsProcessing(true);
     try {
-      const status = isDraft ? 'draft' : 'pending';
-      const updatedFormData = { ...formData, operationStatus: status };
+      const updatedFormData = { ...formData, operationStatus: 'pending' };
       
       // Simulate processing
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      if (isDraft) {
-        alert(`Draft saved for container ${formData.containerNumber}`);
-      } else {
-        alert(`Gate In operation submitted for container ${formData.containerNumber}`);
-        setActiveView('pending');
-      }
+      alert(`Gate In operation submitted for container ${formData.containerNumber}${formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''}`);
+      setActiveView('pending');
       
       // Reset form
       setFormData({
         containerNumber: '',
+        secondContainerNumber: '',
         containerSize: '20ft',
-        containerType: 'dry',
+        containerQuantity: 1,
         status: 'FULL',
         isDamaged: false,
         bookingReference: '',
+        clientId: '',
+        clientCode: '',
+        clientName: '',
         driverName: '',
-        driverLicense: '',
         truckNumber: '',
         transportCompany: '',
         assignedLocation: '',
         truckArrivalTime: '',
         truckDepartureTime: '',
         notes: '',
-        operationStatus: 'draft'
+        operationStatus: 'pending'
       });
       setCurrentStep(1);
       setShowForm(false);
@@ -271,7 +319,7 @@ export const GateIn: React.FC = () => {
     setIsProcessing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      alert(`Container ${operation.containerNumber} successfully assigned to ${locationData.assignedLocation}`);
+      alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
       setActiveView('overview');
       setSelectedOperation(null);
     } catch (error) {
@@ -283,7 +331,6 @@ export const GateIn: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       completed: { color: 'bg-green-100 text-green-800', label: 'Completed' }
     };
@@ -299,13 +346,15 @@ export const GateIn: React.FC = () => {
   const filteredPendingOperations = mockPendingOperations.filter(op =>
     op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredCompletedOperations = mockCompletedOperations.filter(op =>
     op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!canPerformGateIn) {
@@ -454,6 +503,9 @@ export const GateIn: React.FC = () => {
                   Container No.
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Client
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Truck No.
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -480,9 +532,16 @@ export const GateIn: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                    {operation.secondContainerNumber && (
+                      <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
+                    )}
                     <div className="text-sm text-gray-500">
-                      {operation.containerSize} • {operation.containerType}
+                      {operation.containerSize} • Qty: {operation.containerQuantity}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.clientCode}</div>
+                    <div className="text-sm text-gray-500">{operation.clientName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.truckNumber}
@@ -537,8 +596,11 @@ export const GateIn: React.FC = () => {
           handleNextStep={handleNextStep}
           handlePrevStep={handlePrevStep}
           handleInputChange={handleInputChange}
+          handleContainerSizeChange={handleContainerSizeChange}
+          handleQuantityChange={handleQuantityChange}
           handleStatusChange={handleStatusChange}
           handleDamageChange={handleDamageChange}
+          handleClientChange={handleClientChange}
           mockClients={mockClients}
         />
       )}
@@ -598,6 +660,9 @@ const PendingOperationsView: React.FC<{
                   Container No.
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Client
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Truck No.
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -623,9 +688,16 @@ const PendingOperationsView: React.FC<{
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                    {operation.secondContainerNumber && (
+                      <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
+                    )}
                     <div className="text-sm text-gray-500">
-                      {operation.containerSize} • {operation.containerType}
+                      {operation.containerSize} • Qty: {operation.containerQuantity}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.clientCode}</div>
+                    <div className="text-sm text-gray-500">{operation.clientName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.truckNumber}
@@ -727,10 +799,18 @@ const LocationValidationView: React.FC<{
           <div>
             <span className="text-sm text-gray-600">Container:</span>
             <div className="font-medium">{operation.containerNumber}</div>
+            {operation.secondContainerNumber && (
+              <div className="font-medium">{operation.secondContainerNumber}</div>
+            )}
           </div>
           <div>
-            <span className="text-sm text-gray-600">Size & Type:</span>
-            <div className="font-medium">{operation.containerSize} • {operation.containerType}</div>
+            <span className="text-sm text-gray-600">Size & Qty:</span>
+            <div className="font-medium">{operation.containerSize} • Qty: {operation.containerQuantity}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Client:</span>
+            <div className="font-medium">{operation.clientCode}</div>
+            <div className="text-sm text-gray-500">{operation.clientName}</div>
           </div>
           <div>
             <span className="text-sm text-gray-600">Status:</span>
@@ -750,6 +830,10 @@ const LocationValidationView: React.FC<{
           <div>
             <span className="text-sm text-gray-600">Driver:</span>
             <div className="font-medium">{operation.driverName}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Truck:</span>
+            <div className="font-medium">{operation.truckNumber}</div>
           </div>
         </div>
         {operation.bookingReference && (
