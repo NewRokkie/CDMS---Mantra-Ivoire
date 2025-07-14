@@ -157,6 +157,29 @@ const mockCompletedOperations = [
     truckDepartureDate: '2025-01-11',
     truckDepartureTime: '13:45',
     completedAt: new Date('2025-01-11T13:45:00')
+  },
+  {
+    id: 'CO-002',
+    date: new Date('2025-01-11T12:30:00'),
+    containerNumber: 'MAEU7778889',
+    secondContainerNumber: 'MAEU7778890',
+    containerSize: '20ft',
+    containerQuantity: 2,
+    status: 'EMPTY',
+    isDamaged: false,
+    bookingReference: '',
+    clientCode: '1088663',
+    clientName: 'MAERSK LINE',
+    truckNumber: 'JKL-345',
+    driverName: 'Tom Wilson',
+    transportCompany: 'Global Logistics',
+    operationStatus: 'completed' as const,
+    assignedLocation: 'Stack S31',
+    truckArrivalDate: '2025-01-11',
+    truckArrivalTime: '12:30',
+    truckDepartureDate: '2025-01-11',
+    truckDepartureTime: '13:00',
+    completedAt: new Date('2025-01-11T13:00:00')
   }
 ];
 
@@ -198,6 +221,11 @@ export const GateIn: React.FC = () => {
   const { user } = useAuth();
 
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
+
+  // Combine all operations for unified display
+  const allOperations = [...pendingOperations, ...completedOperations].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 
   const handleInputChange = (field: keyof GateInFormData, value: any) => {
     setFormData(prev => ({
@@ -400,18 +428,12 @@ export const GateIn: React.FC = () => {
     );
   };
 
-  const filteredPendingOperations = pendingOperations.filter(op =>
+  const filteredOperations = allOperations.filter(op =>
     op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredCompletedOperations = completedOperations.filter(op =>
-    op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+    op.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (!canPerformGateIn) {
@@ -441,7 +463,12 @@ export const GateIn: React.FC = () => {
   if (activeView === 'pending') {
     return (
       <PendingOperationsView
-        operations={filteredPendingOperations}
+        operations={pendingOperations.filter(op =>
+          op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          op.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+        )}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onBack={() => setActiveView('overview')}
@@ -544,10 +571,10 @@ export const GateIn: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Completed Operations */}
+      {/* Recent Gate In Operations */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Completed Operations</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Recent Gate In Operations</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -577,7 +604,7 @@ export const GateIn: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredCompletedOperations.map((operation) => (
+              {filteredOperations.map((operation) => (
                 <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -627,13 +654,25 @@ export const GateIn: React.FC = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {operation.assignedLocation}
+                    {operation.assignedLocation || (
+                      <span className="text-gray-400 italic">Pending assignment</span>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        
+        {filteredOperations.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
+            <p className="text-gray-600">
+              {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been created yet."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Gate In Form Modal */}
