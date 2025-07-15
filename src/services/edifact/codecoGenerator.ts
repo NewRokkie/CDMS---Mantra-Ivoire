@@ -57,7 +57,6 @@ export class CODECOGenerator {
     const sizeTypeMap: { [key: string]: string } = {
       '20ft': '22G1', // 20ft General Purpose
       '40ft': '42G1', // 40ft General Purpose
-      '45ft': '45G1'  // 45ft General Purpose
     };
 
     const detail: EquipmentDetail = {
