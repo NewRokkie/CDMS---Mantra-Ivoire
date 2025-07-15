@@ -709,6 +709,8 @@ export const GateIn: React.FC = () => {
   };
 
   const handlePendingView = () => {
+    console.log('Switching to pending view');
+    console.log('Pending operations count:', pendingOperations.length);
     setActiveView('pending');
   };
 
