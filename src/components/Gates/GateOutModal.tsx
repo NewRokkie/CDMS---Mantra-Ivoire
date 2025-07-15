@@ -207,7 +207,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
               <ReleaseOrderSearchField
                 releaseOrders={availableReleaseOrders}
                 selectedReleaseOrder={selectedReleaseOrder}
-                onSelect={handleReleaseOrderSelect}
+                onOrderSelect={handleReleaseOrderSelect}
                 error={errors.selectedReleaseOrderId}
                 placeholder="Search by order ID, client name, or container..."
               />
