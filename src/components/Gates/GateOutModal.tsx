@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, Calendar } from 'lucide-react';
 import { ReleaseOrder } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
 
 interface GateOutModalProps {
   showModal: boolean;
@@ -224,50 +225,64 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                 <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
                   <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                     <FileText className="h-5 w-5 mr-2" />
-                    Select Release Order
+                    Release Order Selection
                   </h4>
                   
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Available Release Orders *
-                      </label>
-                      <select
-                        value={formData.selectedReleaseOrderId}
-                        onChange={(e) => handleReleaseOrderChange(e.target.value)}
-                        className="form-input w-full"
-                        required
-                      >
-                        <option value="">Select a release order...</option>
-                        {availableReleaseOrders.map((order) => (
-                          <option key={order.id} value={order.id}>
-                            {order.id} - {order.clientName} ({order.containers.length} containers)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <ReleaseOrderSearchField
+                      releaseOrders={availableReleaseOrders}
+                      selectedOrderId={formData.selectedReleaseOrderId}
+                      onOrderSelect={handleReleaseOrderChange}
+                      placeholder="Search and select a release order..."
+                      required
+                      canViewAllData={user?.role !== 'client'}
+                    />
 
                     {/* Release Order Details */}
                     {selectedReleaseOrder && (
-                      <div className="bg-white p-4 rounded-lg border border-blue-200">
-                        <h5 className="font-medium text-gray-900 mb-3">Release Order Details</h5>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
+                      <div className="bg-white p-4 rounded-lg border border-blue-200 mt-4">
+                        <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                          Selected Release Order
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Order ID:</span>
+                            <span className="font-medium">{selectedReleaseOrder.id}</span>
+                          </div>
+                          <div className="flex justify-between">
                             <span className="text-gray-600">Client:</span>
-                            <span className="ml-2 font-medium">{selectedReleaseOrder.clientName}</span>
+                            <span className="font-medium truncate ml-2">
+                              {user?.role === 'client' ? 'Your Company' : selectedReleaseOrder.clientName}
+                            </span>
                           </div>
-                          <div>
+                          <div className="flex justify-between">
                             <span className="text-gray-600">Status:</span>
-                            <span className="ml-2 font-medium capitalize">{selectedReleaseOrder.status}</span>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              selectedReleaseOrder.status === 'validated' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {selectedReleaseOrder.status}
+                            </span>
                           </div>
-                          <div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Containers:</span>
+                            <span className="font-medium">
+                              {selectedReleaseOrder.containers.filter(c => c.status === 'ready').length}/
+                              {selectedReleaseOrder.containers.length} ready
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
                             <span className="text-gray-600">Created:</span>
-                            <span className="ml-2 font-medium">{selectedReleaseOrder.createdAt.toLocaleDateString()}</span>
+                            <span className="font-medium">{selectedReleaseOrder.createdAt.toLocaleDateString()}</span>
                           </div>
-                          <div>
-                            <span className="text-gray-600">Total Containers:</span>
-                            <span className="ml-2 font-medium">{selectedReleaseOrder.containers.length}</span>
-                          </div>
+                          {selectedReleaseOrder.estimatedReleaseDate && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Est. Release:</span>
+                              <span className="font-medium text-blue-600">
+                                {selectedReleaseOrder.estimatedReleaseDate.toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -276,7 +291,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
 
                 {/* Container Selection */}
                 {selectedReleaseOrder && (
-                  <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold text-green-900 flex items-center">
                         <Package className="h-5 w-5 mr-2" />
@@ -292,7 +307,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                       </button>
                     </div>
                     
-                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                    <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-thin">
                       {selectedReleaseOrder.containers.map((container) => (
                         <div
                           key={container.id}
@@ -308,7 +323,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
                               {/* Selection Indicator */}
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                                 formData.selectedContainers.includes(container.id)
                                   ? 'border-blue-500 bg-blue-500'
                                   : container.status === 'ready'
@@ -316,17 +331,17 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                                   : 'border-gray-200'
                               }`}>
                                 {formData.selectedContainers.includes(container.id) && (
-                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
                                 )}
                               </div>
                               <div>
                                 <div className="font-medium text-gray-900">{container.containerNumber}</div>
-                                <div className="text-sm text-gray-600">
+                                <div className="text-xs text-gray-600">
                                   {container.containerType} • {container.containerSize} • {container.currentLocation}
                                 </div>
-                                <div className="flex items-center space-x-2 mt-2">
+                                <div className="flex items-center space-x-2 mt-1">
                                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                     container.status === 'ready' ? 'bg-green-100 text-green-800' :
                                     container.status === 'released' ? 'bg-blue-100 text-blue-800' :
@@ -344,7 +359,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                             {/* Selection Status Indicator */}
                             {formData.selectedContainers.includes(container.id) && (
                               <div className="flex items-center space-x-2">
-                                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
                                   Selected
                                 </span>
                               </div>
