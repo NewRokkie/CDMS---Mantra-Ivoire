@@ -279,35 +279,65 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                       {selectedReleaseOrder.containers.map((container) => (
                         <div
                           key={container.id}
-                          className={`p-3 border rounded-lg ${
+                          onClick={() => container.status === 'ready' && handleContainerSelection(container.id)}
+                          className={`p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
                             container.status === 'ready' 
-                              ? 'border-green-200 bg-white' 
-                              : 'border-gray-200 bg-gray-50'
+                              ? formData.selectedContainers.includes(container.id)
+                                ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]'
+                                : 'border-green-200 bg-white hover:border-green-300 hover:shadow-sm'
+                              : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={formData.selectedContainers.includes(container.id)}
-                                onChange={() => handleContainerSelection(container.id)}
-                                disabled={container.status !== 'ready'}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                              />
+                              {/* Selection Indicator */}
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                formData.selectedContainers.includes(container.id)
+                                  ? 'border-blue-500 bg-blue-500'
+                                  : container.status === 'ready'
+                                  ? 'border-gray-300 hover:border-blue-300'
+                                  : 'border-gray-200'
+                              }`}>
+                                {formData.selectedContainers.includes(container.id) && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
                               <div>
                                 <div className="font-medium text-gray-900">{container.containerNumber}</div>
                                 <div className="text-sm text-gray-600">
                                   {container.containerType} • {container.containerSize} • {container.currentLocation}
                                 </div>
+                                <div className="flex items-center space-x-2 mt-2">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    container.status === 'ready' ? 'bg-green-100 text-green-800' :
+                                    container.status === 'released' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {container.status}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    Added {container.addedAt.toLocaleDateString()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              container.status === 'ready' ? 'bg-green-100 text-green-800' :
-                              container.status === 'released' ? 'bg-blue-100 text-blue-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {container.status}
-                            </span>
+                            
+                            {/* Selection Status Indicator */}
+                            {formData.selectedContainers.includes(container.id) && (
+                              <div className="flex items-center space-x-2">
+                                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                  Selected
+                                </span>
+                              </div>
+                            )}
+                            
+                            {container.status !== 'ready' && (
+                              <div className="text-xs text-gray-500 italic">
+                                Not available for release
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
