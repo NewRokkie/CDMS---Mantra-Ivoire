@@ -203,7 +203,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
             </div>
           </div>
         </div>
-      </div>
 
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -371,66 +370,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
           )}
         </div>
       </div>
-    </div>
-  );
-};
-
-      {totalPages > 1 && (
-        <div className="bg-white rounded-lg border border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              
-              {/* Page Numbers */}
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Detail Modal */}
       {showDetailModal && selectedOrder && (
