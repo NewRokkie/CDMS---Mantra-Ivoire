@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye } from 'lucide-react';
+import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye, Plus } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { GateInModal } from './GateInModal';
 
 interface Container {
   id: string;
@@ -46,6 +48,23 @@ interface PendingOperation {
   assignedTo?: string;
 }
 
+export interface GateInFormData {
+  containerNumber: string;
+  secondContainerNumber: string;
+  containerSize: '20ft' | '40ft';
+  containerQuantity: 1 | 2;
+  status: 'EMPTY' | 'FULL';
+  isDamaged: boolean;
+  clientId: string;
+  clientCode: string;
+  clientName: string;
+  bookingReference: string;
+  driverName: string;
+  truckNumber: string;
+  transportCompany: string;
+  notes: string;
+}
+
 export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'operations' | 'pending'>('operations');
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +72,9 @@ export const GateIn: React.FC = () => {
   const [operations, setOperations] = useState<GateInOperation[]>([]);
   const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { user, canViewAllData, getClientFilter } = useAuth();
 
   // Mock data for operations
   const mockOperations: GateInOperation[] = [
@@ -112,6 +134,33 @@ export const GateIn: React.FC = () => {
       containerSize: '40ft',
       weight: 22100,
       location: 'C-15-07'
+    },
+    {
+      id: '5',
+      containerNumber: 'SHIP1112228',
+      driverName: 'Lisa Garcia',
+      truckNumber: 'JKL-345',
+      client: 'Shipping Solutions Inc',
+      timestamp: '2024-01-15 10:45:00',
+      status: 'completed',
+      containerType: '20ft Standard',
+      containerSize: '20ft',
+      weight: 16800,
+      location: 'D-05-12'
+    },
+    {
+      id: '6',
+      containerNumber: 'MAEU5556664',
+      driverName: 'Robert Chen',
+      truckNumber: 'MNO-678',
+      client: 'Maersk Line',
+      timestamp: '2024-01-15 09:20:00',
+      status: 'completed',
+      containerType: '40ft Reefer',
+      containerSize: '40ft',
+      weight: 28500,
+      location: 'A-18-05',
+      notes: 'Temperature monitoring required'
     }
   ];
 
@@ -156,13 +205,54 @@ export const GateIn: React.FC = () => {
       containerType: '40ft High Cube',
       containerSize: '40ft',
       priority: 'normal'
+    },
+    {
+      id: 'p4',
+      containerNumber: 'SHIP3334449',
+      driverName: 'Maria Rodriguez',
+      truckNumber: 'STU-234',
+      client: 'Shipping Solutions Inc',
+      expectedTime: '2024-01-15 17:45:00',
+      status: 'pending',
+      containerType: '20ft Standard',
+      containerSize: '20ft',
+      priority: 'normal',
+      notes: 'Standard empty container return'
+    },
+    {
+      id: 'p5',
+      containerNumber: 'CMDU7890123',
+      driverName: 'Ahmed Hassan',
+      truckNumber: 'VWX-567',
+      client: 'CMA CGM',
+      expectedTime: '2024-01-15 18:00:00',
+      status: 'pending',
+      containerType: '40ft Standard',
+      containerSize: '40ft',
+      priority: 'high',
+      assignedTo: 'Gate Officer 3',
+      notes: 'Priority shipment - expedite processing'
     }
   ];
 
   useEffect(() => {
-    setOperations(mockOperations);
-    setPendingOperations(mockPendingOperations);
-  }, []);
+    // Filter operations based on user permissions
+    const clientFilter = getClientFilter();
+    let filteredOps = mockOperations;
+    let filteredPending = mockPendingOperations;
+    
+    if (clientFilter) {
+      filteredOps = mockOperations.filter(op => 
+        op.client.toLowerCase().includes(clientFilter.toLowerCase())
+      );
+      filteredPending = mockPendingOperations.filter(op => 
+        op.client.toLowerCase().includes(clientFilter.toLowerCase())
+      );
+    }
+    
+    setOperations(filteredOps);
+    setPendingOperations(filteredPending);
+  }, [getClientFilter]);
 
   const filteredOperations = operations.filter(op =>
     op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -225,6 +315,54 @@ export const GateIn: React.FC = () => {
     }
   };
 
+  const handleNewGateIn = () => {
+    setShowForm(true);
+  };
+
+  const handleGateInSubmit = async (data: GateInFormData) => {
+    setIsProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const newOperation: GateInOperation = {
+        id: `${Date.now()}`,
+        containerNumber: data.containerNumber,
+        driverName: data.driverName,
+        truckNumber: data.truckNumber,
+        client: data.clientName,
+        timestamp: new Date().toLocaleString(),
+        status: 'completed',
+        containerType: `${data.containerSize} ${data.status === 'FULL' ? 'Full' : 'Empty'}`,
+        containerSize: data.containerSize,
+        bookingReference: data.bookingReference,
+        location: `Auto-assigned-${Math.floor(Math.random() * 100)}`,
+        notes: data.notes || 'Gate in processed successfully'
+      };
+      
+      setOperations(prev => [newOperation, ...prev]);
+      setShowForm(false);
+      
+      alert(`Gate In completed successfully for container ${data.containerNumber}`);
+    } catch (error) {
+      alert(`Error processing gate in: ${error}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
+  const showClientNotice = !canViewAllData() && user?.role === 'client';
+
+  if (!canPerformGateIn) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+        <p className="text-gray-600">You don't have permission to perform gate in operations.</p>
+      </div>
+    );
+  }
+
   const OperationsView = () => (
     <div className="space-y-4">
       {filteredOperations.map((operation) => (
@@ -260,7 +398,9 @@ export const GateIn: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Package className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{operation.client}</span>
+              <span className="text-sm text-gray-600">
+                {canViewAllData() ? operation.client : 'Your Company'}
+              </span>
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="w-4 h-4 text-gray-400" />
@@ -352,7 +492,9 @@ export const GateIn: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Package className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{operation.client}</span>
+              <span className="text-sm text-gray-600">
+                {canViewAllData() ? operation.client : 'Your Company'}
+              </span>
             </div>
             <div className="flex items-center space-x-2">
               <Calendar className="w-4 h-4 text-gray-400" />
@@ -405,38 +547,113 @@ export const GateIn: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gate In Operations</h1>
           <p className="text-gray-600">Monitor and manage incoming container operations</p>
+          {showClientNotice && (
+            <div className="flex items-center mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-blue-600 mr-2" />
+              <p className="text-sm text-blue-800">
+                You are viewing gate in operations for <strong>{user?.company}</strong> only.
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-3">
+          {/* View Toggle */}
+          <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setActiveView('operations')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all ${
+                activeView === 'operations'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>Operations</span>
+              <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
+                {filteredOperations.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveView('pending')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all ${
+                activeView === 'pending'
+                  ? 'bg-white text-orange-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              <span>Pending</span>
+              <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">
+                {filteredPendingOperations.length}
+              </span>
+            </button>
+          </div>
+
+          {/* New Gate In Button */}
           <button
-            onClick={() => setActiveView('operations')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all ${
-              activeView === 'operations'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            onClick={handleNewGateIn}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
-            <Package className="w-4 h-4" />
-            <span>Operations</span>
-            <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
-              {filteredOperations.length}
-            </span>
+            <Plus className="h-4 w-4" />
+            <span>New Gate In</span>
           </button>
-          <button
-            onClick={() => setActiveView('pending')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all ${
-              activeView === 'pending'
-                ? 'bg-white text-orange-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Pending</span>
-            <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">
-              {filteredPendingOperations.length}
-            </span>
-          </button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Truck className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Today's Gate Ins</p>
+              <p className="text-lg font-semibold text-gray-900">12</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Completed</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {filteredOperations.filter(o => o.status === 'completed').length}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Clock className="h-5 w-5 text-orange-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Pending</p>
+              <p className="text-lg font-semibold text-gray-900">{filteredPendingOperations.length}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <XCircle className="h-5 w-5 text-red-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Failed</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {filteredOperations.filter(o => o.status === 'failed').length}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -446,11 +663,7 @@ export const GateIn: React.FC = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder={
-              activeView === 'operations'
-                ? "Search containers, drivers, clients, or truck numbers..."
-                : "Search containers, drivers, clients, or truck numbers..."
-            }
+            placeholder="Search containers, drivers, clients, or truck numbers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -479,6 +692,51 @@ export const GateIn: React.FC = () => {
 
       {/* Content */}
       {activeView === 'operations' ? <OperationsView /> : <PendingOperationsView />}
+
+      {/* Gate In Form Modal */}
+      {showForm && (
+        <GateInModal
+          showForm={showForm}
+          setShowForm={setShowForm}
+          formData={{
+            containerNumber: '',
+            secondContainerNumber: '',
+            containerSize: '20ft',
+            containerQuantity: 1,
+            status: 'EMPTY',
+            isDamaged: false,
+            clientId: '',
+            clientCode: '',
+            clientName: '',
+            bookingReference: '',
+            driverName: '',
+            truckNumber: '',
+            transportCompany: '',
+            notes: ''
+          }}
+          setFormData={() => {}}
+          currentStep={1}
+          setCurrentStep={() => {}}
+          isProcessing={isProcessing}
+          autoSaving={false}
+          validateStep={() => true}
+          handleSubmit={handleGateInSubmit}
+          handleNextStep={() => {}}
+          handlePrevStep={() => {}}
+          handleInputChange={() => {}}
+          handleContainerSizeChange={() => {}}
+          handleQuantityChange={() => {}}
+          handleStatusChange={() => {}}
+          handleDamageChange={() => {}}
+          handleClientChange={() => {}}
+          mockClients={[
+            { id: '1', code: 'MAEU', name: 'Maersk Line' },
+            { id: '2', code: 'MSCU', name: 'MSC Mediterranean' },
+            { id: '3', code: 'CMDU', name: 'CMA CGM' },
+            { id: '4', code: 'SHIP001', name: 'Shipping Solutions Inc' }
+          ]}
+        />
+      )}
     </div>
   );
 };
