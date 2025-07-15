@@ -3,6 +3,7 @@ import { X, Loader, Package, User, Truck, MapPin, Calendar, CheckCircle, AlertTr
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInFormData } from './GateIn';
+import { ClientSearchField } from '../Common/ClientSearchField';
 
 interface GateInModalProps {
   showForm: boolean;
@@ -189,19 +190,13 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Client *
                       </label>
-                      <select
-                        value={formData.clientId}
-                        onChange={(e) => handleClientChange(e.target.value)}
-                        className="form-input w-full"
+                      <ClientSearchField
+                        clients={mockClients}
+                        selectedClientId={formData.clientId}
+                        onClientSelect={handleClientChange}
+                        placeholder="Search client by name or code..."
                         required
-                      >
-                        <option value="">Select a client...</option>
-                        {mockClients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.code} - {client.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     {/* Booking Reference - Only for FULL containers */}

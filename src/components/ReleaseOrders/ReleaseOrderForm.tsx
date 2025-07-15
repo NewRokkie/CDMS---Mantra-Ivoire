@@ -18,7 +18,8 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
 }) => {
   const { user, getClientFilter } = useAuth();
   const [formData, setFormData] = useState({
-    clientName: order?.clientName || user?.company || '',
+    clientId: order?.clientId || '',
+    clientName: order?.clientName || '',
     clientCode: order?.clientCode || user?.clientCode || '',
     transportCompany: order?.transportCompany || '',
     driverName: order?.driverName || '',
