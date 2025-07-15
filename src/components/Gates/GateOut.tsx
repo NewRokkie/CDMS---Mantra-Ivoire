@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Search, Filter, CheckCircle, Clock, AlertCircle, Truck, FileText, Eye, Package, Calendar } from 'lucide-react';
+import { Search, Filter, CheckCircle, Clock, AlertCircle, Truck, FileText, Eye, Package, Calendar, Plus } from 'lucide-react';
 import { Container, ReleaseOrder, ReleaseOrderContainer } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { GateOutModal } from './GateOutModal';
 
 interface GateOutFormData {
   releaseOrderId: string;
@@ -127,6 +128,8 @@ export const GateOut: React.FC = () => {
   const [selectedReleaseOrder, setSelectedReleaseOrder] = useState<ReleaseOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showGateOutModal, setShowGateOutModal] = useState(false);
+  const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
   const [formData, setFormData] = useState<GateOutFormData>({
     releaseOrderId: '',
     selectedContainers: [],
@@ -263,6 +266,22 @@ export const GateOut: React.FC = () => {
             </div>
           )}
         </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setActiveView('pending')}
+            className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            <Clock className="h-4 w-4" />
+            <span>Pending</span>
+          </button>
+          <button
+            onClick={() => setShowGateOutModal(true)}
+            className="btn-success flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Gate Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -384,10 +403,6 @@ export const GateOut: React.FC = () => {
                       {order.estimatedReleaseDate.toLocaleDateString()}
                     </span>
                   )}
-                </div>
-                
-                <div className="mt-2 text-xs text-gray-400">
-                  Driver: {order.driverName} • Vehicle: {order.vehicleNumber}
                 </div>
               </div>
             ))}
@@ -542,6 +557,17 @@ export const GateOut: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Gate Out Modal */}
+      {showGateOutModal && (
+        <GateOutModal
+          showModal={showGateOutModal}
+          setShowModal={setShowGateOutModal}
+          availableReleaseOrders={filteredReleaseOrders}
+          onSubmit={handleSubmit}
+          isProcessing={isProcessing}
+        />
+      )}
 
       {/* Recent Gate Outs */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
