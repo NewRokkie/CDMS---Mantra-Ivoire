@@ -117,6 +117,35 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     estimatedReleaseDate: new Date('2025-01-12T10:00:00'),
     notes: 'Multiple containers - partial release allowed'
   }
+  ,
+  {
+    id: 'RO-2025-004',
+    clientId: '2',
+    clientCode: 'CMA',
+    clientName: 'CMA CGM',
+    containers: [
+      {
+        id: 'roc-9',
+        containerId: '10',
+        containerNumber: 'CMAU-444555-8',
+        containerType: 'dry',
+        containerSize: '20ft',
+        currentLocation: 'Block B-15',
+        status: 'ready',
+        addedAt: new Date('2025-01-11T11:00:00')
+      }
+    ],
+    transportCompany: 'Global Logistics',
+    driverName: 'Robert Johnson',
+    vehicleNumber: 'XYZ-789',
+    status: 'validated',
+    createdBy: 'Sarah Client',
+    validatedBy: 'Mike Supervisor',
+    createdAt: new Date('2025-01-11T11:00:00'),
+    validatedAt: new Date('2025-01-11T12:30:00'),
+    estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
+    notes: 'Single container - urgent delivery required'
+  }
 ];
 
 // Mock data for recent gate outs
