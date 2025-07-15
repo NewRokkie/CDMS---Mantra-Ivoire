@@ -74,12 +74,11 @@ export const useAuthProvider = () => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('Starting login process for:', email);
     setIsLoading(true);
     
     try {
-      // Mock login - in production, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Simulate network delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       const mockUsers: { [key: string]: User } = {
         'admin@depot.com': {
@@ -213,7 +212,7 @@ export const useAuthProvider = () => {
 
       const mockUser = mockUsers[email];
       if (mockUser && password === 'demo123') {
-        // Generate a mock JWT token (in production, this comes from the server)
+        // Generate mock JWT token
         const tokenPayload = {
           userId: mockUser.id,
           email: mockUser.email,
@@ -228,18 +227,12 @@ export const useAuthProvider = () => {
         localStorage.setItem('depot_user', JSON.stringify(mockUser));
         localStorage.setItem('depot_token', mockToken);
         
-        console.log('Setting user state for:', mockUser.name);
-        
-        // Update state synchronously
         setUser(mockUser);
         setIsAuthenticated(true);
-        
-        console.log('Login successful - user authenticated');
       } else {
-        throw new Error('Invalid email or password');
+        throw new Error('Invalid credentials. Please check your email and password.');
       }
     } catch (error) {
-      console.error('Login error:', error);
       setUser(null);
       setIsAuthenticated(false);
       throw error;
@@ -249,20 +242,14 @@ export const useAuthProvider = () => {
   };
 
   const logout = () => {
-    console.log('Logging out user');
-    
-    // Clear user state immediately
     setUser(null);
     setIsAuthenticated(false);
     
-    // Clear all authentication data from localStorage
+    // Clear authentication data
     localStorage.removeItem('depot_user');
     localStorage.removeItem('depot_token');
     localStorage.removeItem('depot_preferences');
     localStorage.removeItem('language');
-    
-    // Force a complete page reload to ensure clean state
-    window.location.reload();
   };
 
   const hasModuleAccess = (module: keyof ModuleAccess): boolean => {
