@@ -482,5 +482,3 @@ const GateIn: React.FC = () => {
     </div>
   );
 };
-
-export default GateIn;
