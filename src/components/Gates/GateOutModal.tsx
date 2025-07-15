@@ -275,15 +275,15 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                       </button>
                     </div>
                     
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                    <div className="space-y-3 max-h-48 overflow-y-auto">
                       {selectedReleaseOrder.containers.map((container) => (
                         <div
                           key={container.id}
                           onClick={() => container.status === 'ready' && handleContainerSelection(container.id)}
-                          className={`p-2 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                          className={`p-3 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
                             container.status === 'ready' 
                               ? formData.selectedContainers.includes(container.id)
-                                ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]'
+                                ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.01]'
                                 : 'border-green-200 bg-white hover:border-green-300 hover:shadow-sm'
                               : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
                           }`}
