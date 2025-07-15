@@ -26,7 +26,7 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
   isLoading = false
 }) => {
   const [activeTab, setActiveTab] = useState<'empty' | 'full'>('empty');
-  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedContainers, setSelectedContainers] = useState<Container[]>([]);
   const [containerSearch, setContainerSearch] = useState('');
   const [isContainerSelectorOpen, setIsContainerSelectorOpen] = useState(false);
@@ -38,6 +38,21 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
     notes: ''
   });
   const [autoSaving, setAutoSaving] = useState(false);
+
+  // Mock client data - replace with actual data source
+  const mockClients = [
+    { id: '1', name: 'Maersk Line', code: 'MAEU', type: 'Shipping Line', status: 'active' },
+    { id: '2', name: 'MSC Mediterranean', code: 'MSCU', type: 'Shipping Line', status: 'active' },
+    { id: '3', name: 'CMA CGM', code: 'CMDU', type: 'Shipping Line', status: 'active' },
+    { id: '4', name: 'COSCO Shipping', code: 'COSU', type: 'Shipping Line', status: 'active' },
+    { id: '5', name: 'Hapag-Lloyd', code: 'HLCU', type: 'Shipping Line', status: 'active' },
+    { id: '6', name: 'ONE (Ocean Network Express)', code: 'ONEY', type: 'Shipping Line', status: 'active' },
+    { id: '7', name: 'Evergreen Marine', code: 'EGLV', type: 'Shipping Line', status: 'active' },
+    { id: '8', name: 'Yang Ming Marine', code: 'YMLU', type: 'Shipping Line', status: 'active' },
+  ];
+
+  // Derive selected client object from ID
+  const selectedClient = mockClients.find(client => client.id === selectedClientId) || null;
 
   // Mock container data - replace with actual data source
   const mockContainers: Container[] = [
@@ -86,12 +101,12 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
 
   // Auto-save simulation
   useEffect(() => {
-    if (selectedClient || selectedContainers.length > 0) {
+    if (selectedClientId || selectedContainers.length > 0) {
       setAutoSaving(true);
       const timer = setTimeout(() => setAutoSaving(false), 1000);
       return () => clearTimeout(timer);
     }
-  }, [selectedClient, selectedContainers, transportInfo]);
+  }, [selectedClientId, selectedContainers, transportInfo]);
 
   if (!isOpen) return null;
 
@@ -144,8 +159,9 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
                   Select Client *
                 </label>
                 <ClientSearchField
-                  onClientSelect={setSelectedClient}
-                  selectedClient={selectedClient}
+                  clients={mockClients}
+                  selectedClientId={selectedClientId}
+                  onClientSelect={setSelectedClientId}
                   placeholder="Search and select client..."
                 />
               </div>
