@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, Calendar, MapPin, Check, Info } from 'lucide-react';
+import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, CalendarDays, MapPin, Check, Info, Ship, Clock, Box, Ruler, CheckSquare, Square, AlertCircle, ListChecks, XCircle, Package } from 'lucide-react';
 import { ReleaseOrder } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
