@@ -722,10 +722,6 @@ const GateOutCompletionModal: React.FC<{
               <h4 className="font-medium text-gray-900 mb-3">Operation Summary</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Release Order:</span>
-                  <span className="font-medium">{operation.releaseOrderId}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-gray-600">Client:</span>
                   <span className="font-medium">
                     {canViewAllData() ? operation.releaseOrder.clientName : 'Your Company'}
@@ -736,8 +732,16 @@ const GateOutCompletionModal: React.FC<{
                   <span className="font-medium">{operation.selectedContainers.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Created:</span>
-                  <span className="font-medium">{operation.createdAt.toLocaleString()}</span>
+                  <span className="text-gray-600">Driver:</span>
+                  <span className="font-medium">{operation.releaseOrder.driverName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Truck Number:</span>
+                  <span className="font-medium">{operation.releaseOrder.vehicleNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Transport Company:</span>
+                  <span className="font-medium">{operation.releaseOrder.transportCompany}</span>
                 </div>
               </div>
             </div>
@@ -772,18 +776,6 @@ const GateOutCompletionModal: React.FC<{
                   className="form-input w-full"
                   placeholder="Re-enter container number"
                 />
-              </div>
-
-              {/* Available Containers */}
-              <div className="bg-blue-50 rounded-lg p-3">
-                <p className="text-sm font-medium text-blue-900 mb-2">Available Containers:</p>
-                <div className="space-y-1">
-                  {operation.selectedContainers.map((container) => (
-                    <div key={container.id} className="text-sm text-blue-800">
-                      • {container.containerNumber} ({container.containerType} - {container.containerSize})
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
 
