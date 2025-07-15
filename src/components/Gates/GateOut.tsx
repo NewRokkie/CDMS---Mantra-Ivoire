@@ -194,7 +194,7 @@ export const GateOut: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Rest of the component code... */}
+      {/* Rest of the component JSX */}
     </div>
   );
 };
