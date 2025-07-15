@@ -370,10 +370,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
       {/* Detail Modal */}
       {showDetailModal && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-lg max-w-3xl w-full h-[90vh] flex flex-col overflow-hidden">
+            {/* Fixed Header */}
+            <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-white rounded-t-lg">
+              <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
                     Release Order Details - {selectedOrder.id}
@@ -389,7 +389,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   <X className="h-6 w-6" />
                 </button>
               </div>
+            </div>
 
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6">
               {/* Order Information and Notes - 2 Column Layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Order Information */}
@@ -534,9 +537,11 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   </table>
                 </div>
               </div>
+            </div>
 
-              {/* Modal Footer */}
-              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
+            {/* Fixed Footer */}
+            <div className="flex-shrink-0 p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+              <div className="flex justify-end">
                 <button
                   onClick={() => setShowDetailModal(false)}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
