@@ -66,75 +66,6 @@ export interface GateInFormData {
 }
 
 export const GateIn: React.FC = () => {
-import React, { useState, useEffect } from 'react';
-import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye, Plus, ArrowLeft } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { GateInModal } from './GateInModal';
-import { PendingGateInView } from './PendingGateInView';
-
-interface Container {
-  id: string;
-  number: string;
-  type: string;
-  size: string;
-  status: 'empty' | 'full';
-  location?: string;
-  client?: string;
-  bookingRef?: string;
-  weight?: number;
-  lastMovement?: string;
-}
-
-interface GateInOperation {
-  id: string;
-  containerNumber: string;
-  driverName: string;
-  truckNumber: string;
-  client: string;
-  timestamp: string;
-  status: 'completed' | 'pending' | 'failed';
-  notes?: string;
-  containerType: string;
-  containerSize: string;
-  bookingReference?: string;
-  weight?: number;
-  damageReport?: boolean;
-  location?: string;
-}
-
-interface PendingOperation {
-  id: string;
-  containerNumber: string;
-  driverName: string;
-  truckNumber: string;
-  client: string;
-  expectedTime: string;
-  status: 'pending' | 'in-progress';
-  notes?: string;
-  containerType: string;
-  containerSize: string;
-  priority: 'normal' | 'high' | 'urgent';
-  assignedTo?: string;
-}
-
-export interface GateInFormData {
-  containerNumber: string;
-  secondContainerNumber: string;
-  containerSize: '20ft' | '40ft';
-  containerQuantity: 1 | 2;
-  status: 'EMPTY' | 'FULL';
-  isDamaged: boolean;
-  clientId: string;
-  clientCode: string;
-  clientName: string;
-  bookingReference: string;
-  driverName: string;
-  truckNumber: string;
-  transportCompany: string;
-  notes: string;
-}
-
-export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOperation, setSelectedOperation] = useState<GateInOperation | null>(null);
@@ -601,6 +532,77 @@ export const GateIn: React.FC = () => {
           </div>
         </div>
 
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Total Pending</p>
+                <p className="text-lg font-semibold text-gray-900">{operations.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">In Progress</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.status === 'in-progress').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Urgent Priority</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.priority === 'urgent').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <User className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Assigned</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.assignedTo).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search pending operations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input pl-10 w-full"
+            />
+          </div>
+        </div>
+
         {/* Pending Operations Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
@@ -677,7 +679,9 @@ export const GateIn: React.FC = () => {
             <div className="text-center py-12">
               <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No pending operations</h3>
-              <p className="text-gray-600">All gate in operations have been processed.</p>
+              <p className="text-gray-600">
+                {searchTerm ? "No operations match your search criteria." : "All gate in operations have been processed."}
+              </p>
             </div>
           )}
         </div>
@@ -820,4 +824,115 @@ export const GateIn: React.FC = () => {
       {activeView === 'pending' ? (
         <PendingGateInView 
           operations={pendingOperations} 
+          onBack={() => setActiveView('overview')} 
+        />
+      ) : (
+        /* Recent Gate In Operations Table */
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Gate In Operations</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Container
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver & Transport
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gate In Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOperations.map((operation) => (
+                  <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                      <div className="text-sm text-gray-500">{operation.containerType}</div>
+                      {operation.bookingReference && (
+                        <div className="text-xs text-blue-600">{operation.bookingReference}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {canViewAllData() ? operation.client : 'Your Company'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(operation.timestamp).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(operation.status)}`}>
+                          {operation.status}
+                        </span>
+                        {operation.damageReport && (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+                            Damage
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {operation.location || 'N/A'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {filteredOperations.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
+              <p className="text-gray-600">
+                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been recorded yet."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Gate In Form Modal */}
+      {showForm && (
+        <GateInModal
+          showForm={showForm}
+          setShowForm={setShowForm}
+          formData={formData}
+          setFormData={setFormData}
+          currentStep={currentStep}
+          setCurrentStep={setCurrentStep}
+          isProcessing={isProcessing}
+          autoSaving={autoSaving}
+          validateStep={validateStep}
+          handleSubmit={handleGateInSubmit}
+          handleNextStep={handleNextStep}
+          handlePrevStep={handlePrevStep}
+          handleInputChange={handleInputChange}
+          handleContainerSizeChange={handleContainerSizeChange}
+          handleQuantityChange={handleQuantityChange}
+          handleStatusChange={handleStatusChange}
+          handleDamageChange={handleDamageChange}
+          handleClientChange={handleClientChange}
+          mockClients={mockClients}
+        />
+      )}
+    </div>
+  );
 };
