@@ -282,10 +282,13 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => handleViewDetails(order)}
-                      className="inline-flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors group relative"
+                      title="View Details"
                     >
                       <Eye className="h-4 w-4" />
-                      <span>View Details</span>
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                        View Details
+                      </span>
                     </button>
                   </td>
                 </tr>
