@@ -323,14 +323,18 @@ export const ReleaseOrderList: React.FC = () => {
       {/* Release Order Form Modal */}
       {showForm && (
         <ReleaseOrderForm
-          order={selectedOrder}
-          availableContainers={mockAvailableContainers}
-          onClose={() => setShowForm(false)}
-          onSave={(order) => {
+          isOpen={showForm}
+          onClose={() => {
+            setShowForm(false);
+            setSelectedOrder(null);
+          }}
+          onSubmit={(order) => {
             console.log('Saving release order:', order);
             setShowForm(false);
+            setSelectedOrder(null);
             // In a real app, this would update the orders list
           }}
+          isLoading={false}
         />
       )}
     </div>
