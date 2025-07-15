@@ -68,6 +68,13 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
   );
 
   const handleContainerToggle = (container: Container) => {
+    // Prevent mixing container types - only allow containers of the current tab type
+    const containerType = container.status === 'empty' ? 'empty' : 'full';
+    if (containerType !== activeTab) {
+      alert(`Cannot select ${containerType} container in ${activeTab} containers tab. Please switch to the appropriate tab.`);
+      return;
+    }
+
     setSelectedContainers(prev => {
       const isSelected = prev.some(c => c.id === container.id);
       if (isSelected) {
@@ -78,9 +85,34 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
     });
   };
 
+  const handleTabChange = (newTab: 'empty' | 'full') => {
+    if (newTab !== activeTab) {
+      // Reset all selections when switching tabs
+      setSelectedContainers([]);
+      setBookingReference('');
+      setIsContainerSelectorOpen(false);
+      setContainerSearch('');
+      setActiveTab(newTab);
+      
+      // Trigger auto-save to reflect the reset
+      setAutoSaving(true);
+      setTimeout(() => setAutoSaving(false), 1000);
+    }
+  };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate that selected containers match the active tab
+    const hasInvalidContainers = selectedContainers.some(container => {
+      const containerType = container.status === 'empty' ? 'empty' : 'full';
+      return containerType !== activeTab;
+    });
+    
+    if (hasInvalidContainers) {
+      alert('Invalid container selection. Please ensure all selected containers match the active tab type.');
+      return;
+    }
+
     const formData = {
       client: selectedClient,
       containerType: activeTab,
@@ -97,7 +129,12 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
     transportInfo.driverName && 
     transportInfo.truckNumber && 
     transportInfo.transportCompany &&
-    (activeTab === 'empty' || bookingReference);
+    (activeTab === 'empty' || bookingReference) &&
+    // Ensure all selected containers match the active tab type
+    selectedContainers.every(container => {
+      const containerType = container.status === 'empty' ? 'empty' : 'full';
+      return containerType === activeTab;
+    });
 
   // Auto-save simulation
   useEffect(() => {
@@ -179,10 +216,10 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
               </div>
 
               {/* Tab Navigation */}
-              <div className="flex space-x-1 mb-6">
+              <div className="flex space-x-4 mb-6">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('empty')}
+                  onClick={() => handleTabChange('empty')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     activeTab === 'empty'
                       ? 'bg-purple-600 text-white shadow-md'
@@ -194,7 +231,7 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('full')}
+                  onClick={() => handleTabChange('full')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     activeTab === 'full'
                       ? 'bg-purple-600 text-white shadow-md'
