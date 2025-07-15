@@ -123,12 +123,29 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   const handleSubmit = () => {
     if (!validateStep(currentStep)) return;
     
+    // Validate that we have all required data
+    if (!selectedReleaseOrder || formData.selectedContainers.length === 0) {
+      alert('Please select a release order and at least one container.');
+      return;
+    }
+
+    if (!formData.driverName || !formData.vehicleNumber || !formData.transportCompany) {
+      alert('Please fill in all transport information.');
+      return;
+    }
+
+    if (!formData.gateOutDate || !formData.gateOutTime) {
+      alert('Please specify gate out date and time.');
+      return;
+    }
+    
     const submitData = {
       ...formData,
       releaseOrder: selectedReleaseOrder,
       selectedContainerDetails: selectedReleaseOrder?.containers.filter(c => 
         formData.selectedContainers.includes(c.id)
-      )
+      ),
+      gateOutDateTime: `${formData.gateOutDate}T${formData.gateOutTime}:00`
     };
     
     onSubmit(submitData);

@@ -503,7 +503,7 @@ export const GateOut: React.FC = () => {
           showModal={showGateOutModal}
           setShowModal={setShowGateOutModal}
           availableReleaseOrders={filteredReleaseOrders}
-          onSubmit={handleSubmit}
+          onSubmit={handleGateOutSubmit}
           isProcessing={isProcessing}
         />
       )}
