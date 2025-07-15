@@ -293,7 +293,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
 {selectedReleaseOrder && (
   <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
     <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-3">
         <div className="p-2 bg-blue-50 rounded-lg">
           <Package className="h-5 w-5 text-blue-600" />
         </div>
@@ -307,29 +307,38 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
       <button
         type="button"
         onClick={handleSelectAllContainers}
-        className="text-sm font-medium text-blue-600 hover:text-blue-800 px-3 py-1 hover:bg-blue-50 rounded-md transition-colors"
+        className="text-sm font-medium text-blue-600 hover:text-blue-800 px-3 py-1 hover:bg-blue-50 rounded-md transition-colors flex items-center"
       >
-        {formData.selectedContainers.length === selectedReleaseOrder.containers.filter(c => c.status === 'ready').length 
-          ? 'Deselect All' : 'Select All Ready'}
+        {formData.selectedContainers.length === selectedReleaseOrder.containers.filter(c => c.status === 'ready').length ? (
+          <>
+            <Square className="w-4 h-4 mr-1.5" /> Deselect All
+          </>
+        ) : (
+          <>
+            <CheckSquare className="w-4 h-4 mr-1.5" /> Select All Ready
+          </>
+        )}
       </button>
     </div>
     
-    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
       {selectedReleaseOrder.containers.map((container) => (
         <div
           key={container.id}
           onClick={() => container.status === 'ready' && handleContainerSelection(container.id)}
-          className={`p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
-            container.status === 'ready' 
-              ? formData.selectedContainers.includes(container.id)
-                ? 'border-blue-300 bg-blue-50 shadow-sm ring-2 ring-blue-100'
-                : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50'
-              : 'border-gray-100 bg-gray-50 cursor-not-allowed'
+          className={`p-4 border rounded-lg transition-all duration-200 ${
+            container.status === 'ready' ? 'cursor-pointer' : 'cursor-not-allowed'
+          } ${
+            formData.selectedContainers.includes(container.id)
+              ? 'border-blue-300 bg-blue-50 shadow-sm ring-2 ring-blue-100'
+              : container.status === 'ready'
+              ? 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50'
+              : 'border-gray-100 bg-gray-50'
           }`}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-start space-x-3">
-              {/* Custom checkbox */}
+              {/* Custom checkbox with Lucide icons */}
               <div className={`mt-1 flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all ${
                 formData.selectedContainers.includes(container.id)
                   ? 'bg-blue-600 border-blue-600'
@@ -343,28 +352,42 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
               </div>
               
               <div className="flex-1">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center flex-wrap gap-2">
                   <span className="font-medium text-gray-900">{container.containerNumber}</span>
-                  <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${
                     container.status === 'ready' ? 'bg-green-100 text-green-800' :
                     container.status === 'released' ? 'bg-blue-100 text-blue-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
+                    {container.status === 'ready' ? (
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                    ) : container.status === 'released' ? (
+                      <Ship className="w-3 h-3 mr-1" />
+                    ) : (
+                      <Clock className="w-3 h-3 mr-1" />
+                    )}
                     {container.status.charAt(0).toUpperCase() + container.status.slice(1)}
                   </span>
                 </div>
                 
-                <div className="text-sm text-gray-600 mt-1">
-                  {container.containerType} • {container.containerSize}
+                <div className="text-sm text-gray-600 mt-1 flex items-center flex-wrap gap-2">
+                  <span className="flex items-center">
+                    <Box className="w-4 h-4 mr-1 text-gray-400" />
+                    {container.containerType}
+                  </span>
+                  <span className="flex items-center">
+                    <Ruler className="w-4 h-4 mr-1 text-gray-400" />
+                    {container.containerSize}
+                  </span>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-2 mt-2">
+                <div className="flex flex-wrap items-center gap-3 mt-2">
                   <div className="flex items-center text-xs text-gray-500">
-                    <MapPin className="w-3 h-3 mr-1" />
+                    <MapPin className="w-3 h-3 mr-1.5 text-gray-400" />
                     {container.currentLocation}
                   </div>
                   <div className="flex items-center text-xs text-gray-500">
-                    <Calendar className="w-3 h-3 mr-1" />
+                    <CalendarDays className="w-3 h-3 mr-1.5 text-gray-400" />
                     Added {container.addedAt.toLocaleDateString()}
                   </div>
                 </div>
@@ -383,8 +406,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
           </div>
           
           {container.status !== 'ready' && (
-            <div className="mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded inline-flex items-center">
-              <Info className="w-3 h-3 mr-1" />
+            <div className="mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1.5 rounded inline-flex items-center">
+              <AlertCircle className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
               Not available for release
             </div>
           )}
@@ -395,14 +418,16 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     {/* Selected count footer */}
     {formData.selectedContainers.length > 0 && (
       <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-gray-700 flex items-center">
+          <ListChecks className="w-4 h-4 mr-2 text-blue-500" />
           {formData.selectedContainers.length} container{formData.selectedContainers.length !== 1 ? 's' : ''} selected
         </span>
         <button 
           type="button"
           onClick={() => setFormData({...formData, selectedContainers: []})}
-          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
         >
+          <XCircle className="w-4 h-4 mr-1" />
           Clear selection
         </button>
       </div>
