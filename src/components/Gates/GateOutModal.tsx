@@ -18,8 +18,6 @@ interface GateOutFormData {
   driverName: string;
   vehicleNumber: string;
   transportCompany: string;
-  gateOutDate: string;
-  gateOutTime: string;
   notes: string;
 }
 
@@ -40,8 +38,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     driverName: '',
     vehicleNumber: '',
     transportCompany: '',
-    gateOutDate: new Date().toISOString().split('T')[0],
-    gateOutTime: new Date().toTimeString().slice(0, 5),
     notes: ''
   });
 
@@ -104,8 +100,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         return formData.selectedReleaseOrderId !== '' && formData.selectedContainers.length > 0;
       case 2:
         return formData.driverName !== '' && formData.vehicleNumber !== '' && 
-               formData.transportCompany !== '' && formData.gateOutDate !== '' && 
-               formData.gateOutTime !== '';
+               formData.transportCompany !== '';
       default:
         return true;
     }
@@ -135,18 +130,12 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
       return;
     }
 
-    if (!formData.gateOutDate || !formData.gateOutTime) {
-      alert('Please specify gate out date and time.');
-      return;
-    }
-    
     const submitData = {
       ...formData,
       releaseOrder: selectedReleaseOrder,
       selectedContainerDetails: selectedReleaseOrder?.containers.filter(c => 
         formData.selectedContainers.includes(c.id)
-      ),
-      gateOutDateTime: `${formData.gateOutDate}T${formData.gateOutTime}:00`
+      )
     };
     
     onSubmit(submitData);
@@ -163,7 +152,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-bold text-gray-900">New Gate Out Process</h3>
-              <p className="text-sm text-gray-600 mt-1">Step {currentStep} of 2</p>
+              <p className="text-sm text-gray-600 mt-1">Step {currentStep} of 2 - Create Pending Operation</p>
             </div>
             <div className="flex items-center space-x-3">
               {autoSaving && (
@@ -512,42 +501,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                   </div>
                 </div>
 
-                {/* Gate Out Date & Time */}
-                <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                  <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Gate Out Date & Time
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Gate Out Date *
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={formData.gateOutDate}
-                        onChange={(e) => handleInputChange('gateOutDate', e.target.value)}
-                        className="form-input w-full"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Gate Out Time *
-                      </label>
-                      <input
-                        type="time"
-                        required
-                        value={formData.gateOutTime}
-                        onChange={(e) => handleInputChange('gateOutTime', e.target.value)}
-                        className="form-input w-full"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 {/* Operation Summary */}
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <h4 className="font-semibold text-gray-900 mb-4">Operation Summary</h4>
@@ -571,15 +524,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                     <div>
                       <span className="text-gray-600">Transport Company:</span>
                       <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Gate Out:</span>
-                      <div className="font-medium">
-                        {formData.gateOutDate && formData.gateOutTime 
-                          ? `${formData.gateOutDate} at ${formData.gateOutTime}`
-                          : 'Not specified'
-                        }
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -650,7 +594,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4" />
-                      <span>Process Gate Out</span>
+                      <span>Create Pending Operation</span>
                     </>
                   )}
                 </button>
