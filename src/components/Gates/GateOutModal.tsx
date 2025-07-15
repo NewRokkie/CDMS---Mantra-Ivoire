@@ -290,92 +290,125 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                 </div>
 
                 {/* Container Selection */}
-                {selectedReleaseOrder && (
-                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-green-900 flex items-center">
-                        <Package className="h-5 w-5 mr-2" />
-                        Select Containers ({formData.selectedContainers.length} selected)
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={handleSelectAllContainers}
-                        className="text-sm text-green-600 hover:text-green-800"
-                      >
-                        {formData.selectedContainers.length === selectedReleaseOrder.containers.filter(c => c.status === 'ready').length 
-                          ? 'Deselect All' : 'Select All Ready'}
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-thin">
-                      {selectedReleaseOrder.containers.map((container) => (
-                        <div
-                          key={container.id}
-                          onClick={() => container.status === 'ready' && handleContainerSelection(container.id)}
-                          className={`p-3 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                            container.status === 'ready' 
-                              ? formData.selectedContainers.includes(container.id)
-                                ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.01]'
-                                : 'border-green-200 bg-white hover:border-green-300 hover:shadow-sm'
-                              : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              {/* Selection Indicator */}
-                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                formData.selectedContainers.includes(container.id)
-                                  ? 'border-blue-500 bg-blue-500'
-                                  : container.status === 'ready'
-                                  ? 'border-gray-300 hover:border-blue-300'
-                                  : 'border-gray-200'
-                              }`}>
-                                {formData.selectedContainers.includes(container.id) && (
-                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{container.containerNumber}</div>
-                                <div className="text-xs text-gray-600">
-                                  {container.containerType} • {container.containerSize} • {container.currentLocation}
-                                </div>
-                                <div className="flex items-center space-x-2 mt-1">
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    container.status === 'ready' ? 'bg-green-100 text-green-800' :
-                                    container.status === 'released' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                    {container.status}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    Added {container.addedAt.toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Selection Status Indicator */}
-                            {formData.selectedContainers.includes(container.id) && (
-                              <div className="flex items-center space-x-2">
-                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                                  Selected
-                                </span>
-                              </div>
-                            )}
-                            
-                            {container.status !== 'ready' && (
-                              <div className="text-xs text-gray-500 italic">
-                                Not available for release
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+{selectedReleaseOrder && (
+  <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center space-x-2">
+        <div className="p-2 bg-blue-50 rounded-lg">
+          <Package className="h-5 w-5 text-blue-600" />
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-800">Select Containers</h4>
+          <p className="text-xs text-gray-500">
+            {formData.selectedContainers.length} of {selectedReleaseOrder.containers.filter(c => c.status === 'ready').length} ready containers selected
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={handleSelectAllContainers}
+        className="text-sm font-medium text-blue-600 hover:text-blue-800 px-3 py-1 hover:bg-blue-50 rounded-md transition-colors"
+      >
+        {formData.selectedContainers.length === selectedReleaseOrder.containers.filter(c => c.status === 'ready').length 
+          ? 'Deselect All' : 'Select All Ready'}
+      </button>
+    </div>
+    
+    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+      {selectedReleaseOrder.containers.map((container) => (
+        <div
+          key={container.id}
+          onClick={() => container.status === 'ready' && handleContainerSelection(container.id)}
+          className={`p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
+            container.status === 'ready' 
+              ? formData.selectedContainers.includes(container.id)
+                ? 'border-blue-300 bg-blue-50 shadow-sm ring-2 ring-blue-100'
+                : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50'
+              : 'border-gray-100 bg-gray-50 cursor-not-allowed'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-3">
+              {/* Custom checkbox */}
+              <div className={`mt-1 flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all ${
+                formData.selectedContainers.includes(container.id)
+                  ? 'bg-blue-600 border-blue-600'
+                  : container.status === 'ready'
+                  ? 'border-gray-300 bg-white hover:border-blue-400'
+                  : 'border-gray-200 bg-gray-100'
+              }`}>
+                {formData.selectedContainers.includes(container.id) && (
+                  <Check className="w-3.5 h-3.5 text-white" />
                 )}
+              </div>
+              
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-gray-900">{container.containerNumber}</span>
+                  <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                    container.status === 'ready' ? 'bg-green-100 text-green-800' :
+                    container.status === 'released' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {container.status.charAt(0).toUpperCase() + container.status.slice(1)}
+                  </span>
+                </div>
+                
+                <div className="text-sm text-gray-600 mt-1">
+                  {container.containerType} • {container.containerSize}
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <div className="flex items-center text-xs text-gray-500">
+                    <MapPin className="w-3 h-3 mr-1" />
+                    {container.currentLocation}
+                  </div>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    Added {container.addedAt.toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Selection indicator */}
+            {formData.selectedContainers.includes(container.id) && (
+              <div className="flex items-center">
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center">
+                  <Check className="w-3 h-3 mr-1" />
+                  Selected
+                </span>
+              </div>
+            )}
+          </div>
+          
+          {container.status !== 'ready' && (
+            <div className="mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded inline-flex items-center">
+              <Info className="w-3 h-3 mr-1" />
+              Not available for release
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+    
+    {/* Selected count footer */}
+    {formData.selectedContainers.length > 0 && (
+      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+        <span className="text-sm font-medium text-gray-700">
+          {formData.selectedContainers.length} container{formData.selectedContainers.length !== 1 ? 's' : ''} selected
+        </span>
+        <button 
+          type="button"
+          onClick={() => setFormData({...formData, selectedContainers: []})}
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+        >
+          Clear selection
+        </button>
+      </div>
+    )}
+  </div>
+)}
 
                 {/* Validation Messages */}
                 {!formData.selectedReleaseOrderId && (
