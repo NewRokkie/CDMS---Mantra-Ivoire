@@ -20,11 +20,11 @@ function AppContent() {
   const { user, isLoading, isAuthenticated, hasModuleAccess } = useAuthProvider();
   const [activeModule, setActiveModule] = useState('dashboard');
 
-  console.log('App render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user?.name);
+  console.log('App render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user?.name, 'activeModule:', activeModule);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
-    console.log('App is loading, checking authentication...');
+    console.log('App is loading, showing loading spinner...');
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -37,11 +37,11 @@ function AppContent() {
 
   // Show login form if not authenticated
   if (!isAuthenticated || !user) {
-    console.log('User not authenticated, showing login form');
+    console.log('User not authenticated, showing login form. isAuthenticated:', isAuthenticated, 'user:', !!user);
     return <LoginForm />;
   }
 
-  console.log('User is authenticated, showing main application for:', user.name);
+  console.log('User is authenticated, showing main application for:', user.name, 'with role:', user.role);
 
   const renderModule = () => {
     // Check module access before rendering

@@ -13,23 +13,29 @@ export const LoginForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isSubmitting || isLoading) return;
+    if (isSubmitting) return;
     
     setError('');
     setIsSubmitting(true);
+    console.log('Form submitted, attempting login...');
     
     try {
       await login(email, password);
+      console.log('Login successful, should redirect to dashboard');
+      // The redirect happens automatically via App.tsx when isAuthenticated becomes true
     } catch (err) {
+      console.error('Login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setIsSubmitting(false);
+      console.log('Login process completed');
     }
   };
 
   const handleDemoLogin = async (demoEmail: string, demoPassword: string) => {
-    if (isSubmitting || isLoading) return;
+    if (isSubmitting) return;
     
+    console.log('Demo login for:', demoEmail);
     setEmail(demoEmail);
     setPassword(demoPassword);
     setError('');
@@ -37,8 +43,11 @@ export const LoginForm: React.FC = () => {
     
     try {
       await login(demoEmail, demoPassword);
+      console.log('Demo login successful');
     } catch (err) {
+      console.error('Demo login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };

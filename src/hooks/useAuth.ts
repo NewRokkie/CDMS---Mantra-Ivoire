@@ -74,11 +74,11 @@ export const useAuthProvider = () => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
+    console.log('Login attempt for:', email);
     
     try {
       // Simulate network delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const mockUsers: { [key: string]: User } = {
         'admin@depot.com': {
@@ -212,6 +212,8 @@ export const useAuthProvider = () => {
 
       const mockUser = mockUsers[email];
       if (mockUser && password === 'demo123') {
+        console.log('Authentication successful for:', mockUser.name);
+        
         // Generate mock JWT token
         const tokenPayload = {
           userId: mockUser.id,
@@ -229,15 +231,16 @@ export const useAuthProvider = () => {
         
         setUser(mockUser);
         setIsAuthenticated(true);
+        console.log('User state updated, authentication complete');
       } else {
+        console.log('Authentication failed: Invalid credentials');
         throw new Error('Invalid credentials. Please check your email and password.');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setUser(null);
       setIsAuthenticated(false);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
