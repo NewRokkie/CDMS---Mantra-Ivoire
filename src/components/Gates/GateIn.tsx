@@ -46,7 +46,7 @@ interface PendingOperation {
   assignedTo?: string;
 }
 
-const GateIn: React.FC = () => {
+export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'operations' | 'pending'>('operations');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOperation, setSelectedOperation] = useState<GateInOperation | null>(null);
