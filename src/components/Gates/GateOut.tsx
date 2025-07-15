@@ -174,70 +174,9 @@ export const GateOut: React.FC = () => {
       releaseOrderId: order.id,
       selectedContainers: [], // Start with no containers selected
       transportCompany: order.transportCompany,
-      driverName: order.driverName,
-      vehicleNumber: order.vehicleNumber,
-      notes: ''
-    });
-  };
-
-  const handleContainerSelection = (containerId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedContainers: prev.selectedContainers.includes(containerId)
-        ? prev.selectedContainers.filter(id => id !== containerId)
-        : [...prev.selectedContainers, containerId]
-    }));
-  };
-
-  const handleSelectAllContainers = () => {
-    if (!selectedReleaseOrder) return;
-    
-    const readyContainerIds = selectedReleaseOrder.containers
-      .filter(c => c.status === 'ready')
-      .map(c => c.id);
-    
-    setFormData(prev => ({
-      ...prev,
-      selectedContainers: prev.selectedContainers.length === readyContainerIds.length 
-        ? [] 
-        : readyContainerIds
-    }));
-  };
-
-  const handleInputChange = (field: keyof GateOutFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canPerformGateOut || !selectedReleaseOrder || formData.selectedContainers.length === 0) return;
-
-    setIsProcessing(true);
-    try {
-      const selectedContainerNumbers = selectedReleaseOrder.containers
-        .filter(c => formData.selectedContainers.includes(c.id))
-        .map(c => c.containerNumber);
-
-      alert(`Successfully processed gate out for containers: ${selectedContainerNumbers.join(', ')}`);
-      
-      // Reset form
-      setSelectedReleaseOrder(null);
-      setFormData({
-        releaseOrderId: '',
-        selectedContainers: [],
-        transportCompany: '',
-        driverName: '',
-        vehicleNumber: '',
-        notes: ''
-      });
-    } catch (error) {
-      alert(`Error processing gate out: ${error}`);
-    } finally {
-      setIsProcessing(false);
-    }
+    // This function is for Gate In, not Gate Out
+    // Gate Out submission is handled by the modal
+    console.log('Gate Out submission should be handled by GateOutModal');
   };
 
   const showClientNotice = !canViewAllData() && user?.role === 'client';
