@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye, Plus } from 'lucide-react';
+import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye, Plus, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInModal } from './GateInModal';
 
@@ -66,7 +66,7 @@ export interface GateInFormData {
 }
 
 export const GateIn: React.FC = () => {
-  const [activeView, setActiveView] = useState<'operations' | 'pending'>('operations');
+  const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOperation, setSelectedOperation] = useState<GateInOperation | null>(null);
   const [operations, setOperations] = useState<GateInOperation[]>([]);
@@ -363,182 +363,117 @@ export const GateIn: React.FC = () => {
     );
   }
 
-  const OperationsView = () => (
-    <div className="space-y-4">
-      {filteredOperations.map((operation) => (
-        <div key={operation.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              {getStatusIcon(operation.status)}
-              <div>
-                <h3 className="font-semibold text-gray-900">{operation.containerNumber}</h3>
-                <p className="text-sm text-gray-600">{operation.containerType}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(operation.status)}`}>
-                {operation.status.charAt(0).toUpperCase() + operation.status.slice(1)}
-              </span>
-              {operation.damageReport && (
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Damage Report
-                </span>
-              )}
-            </div>
-          </div>
+  // Pending Gate In Operations View Component
+  const PendingGateInView: React.FC<{
+    operations: PendingOperation[];
+    onBack: () => void;
+  }> = ({ operations, onBack }) => {
+    const [searchTerm, setSearchTerm] = useState('');
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <User className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{operation.driverName}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Truck className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{operation.truckNumber}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Package className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">
-                {canViewAllData() ? operation.client : 'Your Company'}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{new Date(operation.timestamp).toLocaleString()}</span>
-            </div>
-          </div>
+    const filteredOperations = operations.filter(op =>
+      op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.client.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-          {operation.location && (
-            <div className="flex items-center space-x-2 mb-2">
-              <MapPin className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">Location: {operation.location}</span>
-            </div>
-          )}
-
-          {operation.weight && (
-            <div className="flex items-center space-x-2 mb-2">
-              <Package className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">Weight: {operation.weight.toLocaleString()} kg</span>
-            </div>
-          )}
-
-          {operation.bookingReference && (
-            <div className="flex items-center space-x-2 mb-2">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">Booking: {operation.bookingReference}</span>
-            </div>
-          )}
-
-          {operation.notes && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-700">{operation.notes}</p>
-            </div>
-          )}
-
-          <div className="mt-4 flex justify-end">
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
             <button
-              onClick={() => setSelectedOperation(operation)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={onBack}
+              className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <Eye className="w-4 h-4" />
-              <span>View Details</span>
+              <ArrowLeft className="h-5 w-5" />
             </button>
+            <h2 className="text-2xl font-bold text-gray-900">Pending Gate In Operations</h2>
           </div>
         </div>
-      ))}
 
-      {filteredOperations.length === 0 && (
-        <div className="text-center py-12">
-          <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
-          <p className="text-gray-600">
-            {searchTerm ? 'Try adjusting your search terms' : 'No gate in operations recorded yet'}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-
-  const PendingOperationsView = () => (
-    <div className="space-y-4">
-      {filteredPendingOperations.map((operation) => (
-        <div key={operation.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              {getStatusIcon(operation.status)}
-              <div>
-                <h3 className="font-semibold text-gray-900">{operation.containerNumber}</h3>
-                <p className="text-sm text-gray-600">{operation.containerType}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(operation.status)}`}>
-                {operation.status.charAt(0).toUpperCase() + operation.status.slice(1).replace('-', ' ')}
-              </span>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(operation.priority)}`}>
-                {operation.priority.charAt(0).toUpperCase() + operation.priority.slice(1)}
-              </span>
-            </div>
+        {/* Pending Operations Table */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Operations Awaiting Processing</h3>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <User className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{operation.driverName}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Truck className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">{operation.truckNumber}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Package className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">
-                {canViewAllData() ? operation.client : 'Your Company'}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">ETA: {new Date(operation.expectedTime).toLocaleString()}</span>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Container
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver & Transport
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Expected Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOperations.map((operation) => (
+                  <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                      <div className="text-sm text-gray-500">{operation.containerType}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {canViewAllData() ? operation.client : 'Your Company'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(operation.expectedTime).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(operation.priority)}`}>
+                        {operation.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(operation.status)}`}>
+                        {operation.status.replace('-', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button className="text-green-600 hover:text-green-900 text-sm font-medium">
+                          Process →
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {operation.assignedTo && (
-            <div className="flex items-center space-x-2 mb-2">
-              <User className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">Assigned to: {operation.assignedTo}</span>
+          
+          {filteredOperations.length === 0 && (
+            <div className="text-center py-12">
+              <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No pending operations</h3>
+              <p className="text-gray-600">All gate in operations have been processed.</p>
             </div>
           )}
-
-          {operation.notes && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-700">{operation.notes}</p>
-            </div>
-          )}
-
-          <div className="mt-4 flex justify-end space-x-2">
-            <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-              <CheckCircle className="w-4 h-4" />
-              <span>Process</span>
-            </button>
-            <button className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-              <Eye className="w-4 h-4" />
-              <span>Details</span>
-            </button>
-          </div>
         </div>
-      ))}
-
-      {filteredPendingOperations.length === 0 && (
-        <div className="text-center py-12">
-          <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No pending operations</h3>
-          <p className="text-gray-600">
-            {searchTerm ? 'Try adjusting your search terms' : 'All operations are up to date'}
-          </p>
-        </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -559,42 +494,18 @@ export const GateIn: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-3">
-          {/* View Toggle */}
-          <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setActiveView('operations')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all ${
-                activeView === 'operations'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Package className="w-4 h-4" />
-              <span>Operations</span>
-              <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
-                {filteredOperations.length}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveView('pending')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all ${
-                activeView === 'pending'
-                  ? 'bg-white text-orange-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              <span>Pending</span>
-              <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">
-                {filteredPendingOperations.length}
-              </span>
-            </button>
-          </div>
+          <button
+            onClick={() => setActiveView('pending')}
+            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
+            <Clock className="h-4 w-4" />
+            <span>Pending ({pendingOperations.length})</span>
+          </button>
 
           {/* New Gate In Button */}
           <button
             onClick={handleNewGateIn}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="btn-success flex items-center space-x-2"
           >
             <Plus className="h-4 w-4" />
             <span>New Gate In</span>
@@ -657,41 +568,127 @@ export const GateIn: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search containers, drivers, clients, or truck numbers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          {searchTerm && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-5 h-5" />
+      {/* Search and Filter */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder={activeView === 'pending' 
+                ? "Search pending operations..." 
+                : "Search containers, drivers, clients, or truck numbers..."
+              }
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input pl-10 pr-4 w-full"
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="btn-secondary flex items-center space-x-2">
+              <Filter className="h-4 w-4" />
+              <span>Filter</span>
             </button>
-          )}
-        </div>
-        <div className="flex items-center space-x-2">
-          {searchTerm && (
-            <span className="text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg">
-              {activeView === 'operations' ? filteredOperations.length : filteredPendingOperations.length} results
-            </span>
-          )}
-          <button className="flex items-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-            <Filter className="w-4 h-4" />
-            <span>Filter</span>
-          </button>
+            {searchTerm && (
+              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                {activeView === 'overview' ? filteredOperations.length : filteredPendingOperations.length} result{(activeView === 'overview' ? filteredOperations.length : filteredPendingOperations.length) !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      {activeView === 'operations' ? <OperationsView /> : <PendingOperationsView />}
+      {activeView === 'pending' ? <PendingGateInView operations={pendingOperations} onBack={() => setActiveView('overview')} /> : (
+        /* Recent Gate In Operations Table */
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Gate In Operations</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Container
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver & Transport
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gate In Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOperations.map((operation) => (
+                  <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                      <div className="text-sm text-gray-500">{operation.containerType}</div>
+                      {operation.bookingReference && (
+                        <div className="text-xs text-blue-600">{operation.bookingReference}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {canViewAllData() ? operation.client : 'Your Company'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(operation.timestamp).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(operation.status)}`}>
+                          {operation.status}
+                        </span>
+                        {operation.damageReport && (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+                            Damage
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {operation.location || 'N/A'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {filteredOperations.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
+              <p className="text-gray-600">
+                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been recorded yet."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Gate In Form Modal */}
       {showForm && (
