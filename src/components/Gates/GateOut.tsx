@@ -139,10 +139,44 @@ const mockRecentGateOuts = [
   }
 ];
 
+// Mock pending gate out operations
+const mockPendingGateOutOperations = [
+  {
+    id: 'PGO-001',
+    releaseOrderId: 'RO-2025-001',
+    releaseOrder: mockValidatedReleaseOrders[0],
+    selectedContainers: mockValidatedReleaseOrders[0].containers,
+    createdAt: new Date('2025-01-11T14:30:00'),
+    createdBy: 'Jane Operator',
+    status: 'pending' as const,
+    notes: 'Priority shipment - handle with care'
+  },
+  {
+    id: 'PGO-002',
+    releaseOrderId: 'RO-2025-005',
+    releaseOrder: mockValidatedReleaseOrders[1],
+    selectedContainers: mockValidatedReleaseOrders[1].containers.slice(0, 2), // Only first 2 containers
+    createdAt: new Date('2025-01-11T15:45:00'),
+    createdBy: 'Mike Supervisor',
+    status: 'pending' as const,
+    notes: 'Partial release - 2 of 3 containers'
+  },
+  {
+    id: 'PGO-003',
+    releaseOrderId: 'RO-2025-004',
+    releaseOrder: mockValidatedReleaseOrders[2],
+    selectedContainers: mockValidatedReleaseOrders[2].containers,
+    createdAt: new Date('2025-01-11T16:20:00'),
+    createdBy: 'Sarah Client',
+    status: 'pending' as const,
+    notes: 'Single container release - urgent'
+  }
+];
+
 export const GateOut: React.FC = () => {
   const [selectedReleaseOrder, setSelectedReleaseOrder] = useState<ReleaseOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [pendingOperations, setPendingOperations] = useState<PendingGateOut[]>([]);
+  const [pendingOperations, setPendingOperations] = useState<PendingGateOut[]>(mockPendingGateOutOperations);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showGateOutModal, setShowGateOutModal] = useState(false);
   const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
@@ -266,7 +300,7 @@ export const GateOut: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             onClick={handlePendingView}
-            className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
           >
             <Clock className="h-4 w-4" />
             <span>Pending ({pendingOperations.length})</span>
@@ -336,7 +370,7 @@ export const GateOut: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Pending Operations</p>
-              <p className="text-lg font-semibold text-gray-900">3</p>
+              <p className="text-lg font-semibold text-gray-900">{pendingOperations.length}</p>
             </div>
           </div>
         </div>
@@ -344,21 +378,36 @@ export const GateOut: React.FC = () => {
 
       {/* Search and Filter */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
               type="text"
-              placeholder="Search release orders..."
+              placeholder="Search release orders, containers, drivers, or clients..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-input pl-10 w-full"
+              className="form-input pl-10 pr-4 w-full"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          <button className="btn-secondary flex items-center space-x-2">
-            <Filter className="h-4 w-4" />
-            <span>Filter</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button className="btn-secondary flex items-center space-x-2">
+              <Filter className="h-4 w-4" />
+              <span>Filter</span>
+            </button>
+            {searchTerm && (
+              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                {filteredReleaseOrders.length} result{filteredReleaseOrders.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
