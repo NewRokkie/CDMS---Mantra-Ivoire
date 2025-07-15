@@ -66,6 +66,75 @@ export interface GateInFormData {
 }
 
 export const GateIn: React.FC = () => {
+import React, { useState, useEffect } from 'react';
+import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye, Plus, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { GateInModal } from './GateInModal';
+import { PendingGateInView } from './PendingGateInView';
+
+interface Container {
+  id: string;
+  number: string;
+  type: string;
+  size: string;
+  status: 'empty' | 'full';
+  location?: string;
+  client?: string;
+  bookingRef?: string;
+  weight?: number;
+  lastMovement?: string;
+}
+
+interface GateInOperation {
+  id: string;
+  containerNumber: string;
+  driverName: string;
+  truckNumber: string;
+  client: string;
+  timestamp: string;
+  status: 'completed' | 'pending' | 'failed';
+  notes?: string;
+  containerType: string;
+  containerSize: string;
+  bookingReference?: string;
+  weight?: number;
+  damageReport?: boolean;
+  location?: string;
+}
+
+interface PendingOperation {
+  id: string;
+  containerNumber: string;
+  driverName: string;
+  truckNumber: string;
+  client: string;
+  expectedTime: string;
+  status: 'pending' | 'in-progress';
+  notes?: string;
+  containerType: string;
+  containerSize: string;
+  priority: 'normal' | 'high' | 'urgent';
+  assignedTo?: string;
+}
+
+export interface GateInFormData {
+  containerNumber: string;
+  secondContainerNumber: string;
+  containerSize: '20ft' | '40ft';
+  containerQuantity: 1 | 2;
+  status: 'EMPTY' | 'FULL';
+  isDamaged: boolean;
+  clientId: string;
+  clientCode: string;
+  clientName: string;
+  bookingReference: string;
+  driverName: string;
+  truckNumber: string;
+  transportCompany: string;
+  notes: string;
+}
+
+export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOperation, setSelectedOperation] = useState<GateInOperation | null>(null);
@@ -74,7 +143,37 @@ export const GateIn: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [formData, setFormData] = useState<GateInFormData>({
+    containerNumber: '',
+    secondContainerNumber: '',
+    containerSize: '20ft',
+    containerQuantity: 1,
+    status: 'EMPTY',
+    isDamaged: false,
+    clientId: '',
+    clientCode: '',
+    clientName: '',
+    bookingReference: '',
+    driverName: '',
+    truckNumber: '',
+    transportCompany: '',
+    notes: ''
+  });
+  const [currentStep, setCurrentStep] = useState(1);
+  const [autoSaving, setAutoSaving] = useState(false);
   const { user, canViewAllData, getClientFilter } = useAuth();
+
+  // Mock client data
+  const mockClients = [
+    { id: '1', code: 'MAEU', name: 'Maersk Line' },
+    { id: '2', code: 'MSCU', name: 'MSC Mediterranean' },
+    { id: '3', code: 'CMDU', name: 'CMA CGM' },
+    { id: '4', code: 'SHIP001', name: 'Shipping Solutions Inc' },
+    { id: '5', code: 'HLCU', name: 'Hapag-Lloyd' },
+    { id: '6', code: 'ONEY', name: 'ONE (Ocean Network Express)' },
+    { id: '7', code: 'EGLV', name: 'Evergreen Marine' },
+    { id: '8', code: 'YMLU', name: 'Yang Ming Marine' }
+  ];
 
   // Mock data for operations
   const mockOperations: GateInOperation[] = [
@@ -316,6 +415,24 @@ export const GateIn: React.FC = () => {
   };
 
   const handleNewGateIn = () => {
+    // Reset form data when opening new gate in
+    setFormData({
+      containerNumber: '',
+      secondContainerNumber: '',
+      containerSize: '20ft',
+      containerQuantity: 1,
+      status: 'EMPTY',
+      isDamaged: false,
+      clientId: '',
+      clientCode: '',
+      clientName: '',
+      bookingReference: '',
+      driverName: '',
+      truckNumber: '',
+      transportCompany: '',
+      notes: ''
+    });
+    setCurrentStep(1);
     setShowForm(true);
   };
 
@@ -323,34 +440,123 @@ export const GateIn: React.FC = () => {
     setActiveView('pending');
   };
 
-  const handleGateInSubmit = async (data: GateInFormData) => {
+  const handleGateInSubmit = async () => {
     setIsProcessing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const newOperation: GateInOperation = {
         id: `${Date.now()}`,
-        containerNumber: data.containerNumber,
-        driverName: data.driverName,
-        truckNumber: data.truckNumber,
-        client: data.clientName,
+        containerNumber: formData.containerNumber,
+        driverName: formData.driverName,
+        truckNumber: formData.truckNumber,
+        client: formData.clientName,
         timestamp: new Date().toLocaleString(),
         status: 'completed',
-        containerType: `${data.containerSize} ${data.status === 'FULL' ? 'Full' : 'Empty'}`,
-        containerSize: data.containerSize,
-        bookingReference: data.bookingReference,
+        containerType: `${formData.containerSize} ${formData.status === 'FULL' ? 'Full' : 'Empty'}`,
+        containerSize: formData.containerSize,
+        bookingReference: formData.bookingReference,
         location: `Auto-assigned-${Math.floor(Math.random() * 100)}`,
-        notes: data.notes || 'Gate in processed successfully'
+        notes: formData.notes || 'Gate in processed successfully'
       };
       
       setOperations(prev => [newOperation, ...prev]);
       setShowForm(false);
       
-      alert(`Gate In completed successfully for container ${data.containerNumber}`);
+      alert(`Gate In completed successfully for container ${formData.containerNumber}`);
     } catch (error) {
       alert(`Error processing gate in: ${error}`);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof GateInFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Trigger auto-save
+    setAutoSaving(true);
+    setTimeout(() => setAutoSaving(false), 1000);
+  };
+
+  const handleClientChange = (clientId: string) => {
+    const selectedClient = mockClients.find(client => client.id === clientId);
+    if (selectedClient) {
+      setFormData(prev => ({
+        ...prev,
+        clientId: selectedClient.id,
+        clientCode: selectedClient.code,
+        clientName: selectedClient.name
+      }));
+      
+      // Trigger auto-save
+      setAutoSaving(true);
+      setTimeout(() => setAutoSaving(false), 1000);
+      
+      console.log('Client selected:', selectedClient);
+    }
+  };
+
+  const handleContainerSizeChange = (size: '20ft' | '40ft') => {
+    setFormData(prev => ({
+      ...prev,
+      containerSize: size,
+      // Reset quantity to 1 if switching to 40ft
+      containerQuantity: size === '40ft' ? 1 : prev.containerQuantity
+    }));
+  };
+
+  const handleQuantityChange = (quantity: 1 | 2) => {
+    setFormData(prev => ({
+      ...prev,
+      containerQuantity: quantity,
+      // Clear second container number if switching to single
+      secondContainerNumber: quantity === 1 ? '' : prev.secondContainerNumber
+    }));
+  };
+
+  const handleStatusChange = (isFullStatus: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      status: isFullStatus ? 'FULL' : 'EMPTY',
+      // Clear booking reference if switching to empty
+      bookingReference: isFullStatus ? prev.bookingReference : ''
+    }));
+  };
+
+  const handleDamageChange = (isDamaged: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      isDamaged
+    }));
+  };
+
+  const handleNextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(2, prev + 1));
+    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(prev => Math.max(1, prev - 1));
+  };
+
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        return formData.containerNumber !== '' && 
+               formData.clientId !== '' &&
+               (formData.containerQuantity === 1 || formData.secondContainerNumber !== '') &&
+               (formData.status === 'EMPTY' || formData.bookingReference !== '');
+      case 2:
+        return formData.driverName !== '' && 
+               formData.truckNumber !== '' && 
+               formData.transportCompany !== '';
+      default:
+        return true;
     }
   };
 
@@ -611,157 +817,7 @@ export const GateIn: React.FC = () => {
       </div>
 
       {/* Content */}
-      {activeView === 'pending' ? <PendingGateInView operations={pendingOperations} onBack={() => setActiveView('overview')} /> : (
-        /* Recent Gate In Operations Table */
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Gate In Operations</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Container
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Driver & Transport
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Gate In Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOperations.map((operation) => (
-                  <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
-                      <div className="text-sm text-gray-500">{operation.containerType}</div>
-                      {operation.bookingReference && (
-                        <div className="text-xs text-blue-600">{operation.bookingReference}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
-                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {canViewAllData() ? operation.client : 'Your Company'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(operation.timestamp).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(operation.status)}`}>
-                          {operation.status}
-                        </span>
-                        {operation.damageReport && (
-                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                            Damage
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {operation.location || 'N/A'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {filteredOperations.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
-              <p className="text-gray-600">
-                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been recorded yet."}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Gate In Form Modal */}
-      {showForm && (
-        <GateInModal
-          showForm={showForm}
-          setShowForm={setShowForm}
-          formData={{
-            containerNumber: '',
-            secondContainerNumber: '',
-            containerSize: '20ft',
-            containerQuantity: 1,
-            status: 'EMPTY',
-            isDamaged: false,
-            clientId: '',
-            clientCode: '',
-            clientName: '',
-            bookingReference: '',
-            driverName: '',
-            truckNumber: '',
-            transportCompany: '',
-            notes: ''
-          }}
-          setFormData={(data) => {
-            // Handle form data updates
-            console.log('Form data updated:', data);
-          }}
-          currentStep={1}
-          setCurrentStep={(step) => {
-            console.log('Step changed to:', step);
-          }}
-          isProcessing={isProcessing}
-          autoSaving={false}
-          validateStep={(step) => {
-            // Basic validation for each step
-            return step === 1 || step === 2;
-          }}
-          handleSubmit={handleGateInSubmit}
-          handleNextStep={() => {
-            console.log('Next step');
-          }}
-          handlePrevStep={() => {
-            console.log('Previous step');
-          }}
-          handleInputChange={(field, value) => {
-            console.log('Input changed:', field, value);
-          }}
-          handleContainerSizeChange={(size) => {
-            console.log('Container size changed:', size);
-          }}
-          handleQuantityChange={(quantity) => {
-            console.log('Quantity changed:', quantity);
-          }}
-          handleStatusChange={(isFullStatus) => {
-            console.log('Status changed:', isFullStatus ? 'FULL' : 'EMPTY');
-          }}
-          handleDamageChange={(isDamaged) => {
-            console.log('Damage status changed:', isDamaged);
-          }}
-          handleClientChange={(clientId) => {
-            console.log('Client changed:', clientId);
-          }}
-          mockClients={[
-            { id: '1', code: 'MAEU', name: 'Maersk Line' },
-            { id: '2', code: 'MSCU', name: 'MSC Mediterranean' },
-            { id: '3', code: 'CMDU', name: 'CMA CGM' },
-            { id: '4', code: 'SHIP001', name: 'Shipping Solutions Inc' }
-          ]}
-        />
-      )}
-    </div>
-  );
+      {activeView === 'pending' ? (
+        <PendingGateInView 
+          operations={pendingOperations} 
 };
