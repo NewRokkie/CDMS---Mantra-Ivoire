@@ -319,6 +319,10 @@ export const GateIn: React.FC = () => {
     setShowForm(true);
   };
 
+  const handlePendingView = () => {
+    setActiveView('pending');
+  };
+
   const handleGateInSubmit = async (data: GateInFormData) => {
     setIsProcessing(true);
     try {
@@ -495,7 +499,7 @@ export const GateIn: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => setActiveView('pending')}
+            onClick={handlePendingView}
             className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
           >
             <Clock className="h-4 w-4" />
@@ -711,21 +715,45 @@ export const GateIn: React.FC = () => {
             transportCompany: '',
             notes: ''
           }}
-          setFormData={() => {}}
+          setFormData={(data) => {
+            // Handle form data updates
+            console.log('Form data updated:', data);
+          }}
           currentStep={1}
-          setCurrentStep={() => {}}
+          setCurrentStep={(step) => {
+            console.log('Step changed to:', step);
+          }}
           isProcessing={isProcessing}
           autoSaving={false}
-          validateStep={() => true}
+          validateStep={(step) => {
+            // Basic validation for each step
+            return step === 1 || step === 2;
+          }}
           handleSubmit={handleGateInSubmit}
-          handleNextStep={() => {}}
-          handlePrevStep={() => {}}
-          handleInputChange={() => {}}
-          handleContainerSizeChange={() => {}}
-          handleQuantityChange={() => {}}
-          handleStatusChange={() => {}}
-          handleDamageChange={() => {}}
-          handleClientChange={() => {}}
+          handleNextStep={() => {
+            console.log('Next step');
+          }}
+          handlePrevStep={() => {
+            console.log('Previous step');
+          }}
+          handleInputChange={(field, value) => {
+            console.log('Input changed:', field, value);
+          }}
+          handleContainerSizeChange={(size) => {
+            console.log('Container size changed:', size);
+          }}
+          handleQuantityChange={(quantity) => {
+            console.log('Quantity changed:', quantity);
+          }}
+          handleStatusChange={(isFullStatus) => {
+            console.log('Status changed:', isFullStatus ? 'FULL' : 'EMPTY');
+          }}
+          handleDamageChange={(isDamaged) => {
+            console.log('Damage status changed:', isDamaged);
+          }}
+          handleClientChange={(clientId) => {
+            console.log('Client changed:', clientId);
+          }}
           mockClients={[
             { id: '1', code: 'MAEU', name: 'Maersk Line' },
             { id: '2', code: 'MSCU', name: 'MSC Mediterranean' },
