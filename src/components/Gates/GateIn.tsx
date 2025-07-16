@@ -766,6 +766,19 @@ export const GateIn: React.FC = () => {
       op.client.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const getPriorityColor = (priority: string) => {
+      switch (priority) {
+        case 'urgent':
+          return 'bg-red-100 text-red-800';
+        case 'high':
+          return 'bg-orange-100 text-orange-800';
+        case 'normal':
+          return 'bg-green-100 text-green-800';
+        default:
+          return 'bg-gray-100 text-gray-800';
+      }
+    };
+
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
