@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye, Plus, ArrowLeft, Loader } from 'lucide-react';
+import { Search, X, Truck, Package, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, Filter, Calendar, FileText, Eye, Plus, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInModal } from './GateInModal';
 
@@ -64,348 +64,6 @@ export interface GateInFormData {
   transportCompany: string;
   notes: string;
 }
-
-const PendingGateInView: React.FC<{
-  operations: PendingOperation[];
-  onBack: () => void;
-  onProcess: (operationId: string) => void;
-}> = ({ operations, onBack, onProcess }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
-  const [showProcessingModal, setShowProcessingModal] = useState(false);
-  const { canViewAllData } = useAuth();
-
-  const filteredOperations = operations.filter(op =>
-    op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.client.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleOperationClick = (operation: PendingOperation) => {
-    setSelectedOperation(operation);
-    setShowProcessingModal(true);
-  };
-
-  const handleProcessOperation = (operationId: string) => {
-    onProcess(operationId);
-    setShowProcessingModal(false);
-    setSelectedOperation(null);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'in-progress':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'normal':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={onBack}
-            className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h2 className="text-2xl font-bold text-gray-900">Pending Gate In Operations</h2>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Search pending operations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-input pl-10 w-full"
-          />
-        </div>
-      </div>
-
-      {/* Pending Operations Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Operations Awaiting Processing</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Container
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Driver & Transport
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Expected Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOperations.map((operation) => (
-                <tr 
-                  key={operation.id} 
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => handleOperationClick(operation)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
-                    <div className="text-sm text-gray-500">{operation.containerType}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
-                    <div className="text-sm text-gray-500">{operation.truckNumber}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {canViewAllData() ? operation.client : 'Your Company'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(operation.expectedTime).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(operation.priority)}`}>
-                      {operation.priority}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(operation.status)}`}>
-                      {operation.status.replace('-', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button 
-                      className="text-green-600 hover:text-green-900 text-sm font-medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOperationClick(operation);
-                      }}
-                    >
-                      Process →
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {filteredOperations.length === 0 && (
-          <div className="text-center py-12">
-            <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No pending operations</h3>
-            <p className="text-gray-600">
-              {searchTerm ? "No operations match your search criteria." : "All gate in operations have been processed."}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Processing Modal */}
-      {showProcessingModal && selectedOperation && (
-        <GateInProcessingModal
-          operation={selectedOperation}
-          onClose={() => {
-            setShowProcessingModal(false);
-            setSelectedOperation(null);
-          }}
-          onProcess={handleProcessOperation}
-        />
-      )}
-    </div>
-  );
-};
-
-const GateInProcessingModal: React.FC<{
-  operation: PendingOperation;
-  onClose: () => void;
-  onProcess: (operationId: string) => void;
-}> = ({ operation, onClose, onProcess }) => {
-  const [containerNumber, setContainerNumber] = useState(operation.containerNumber);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { canViewAllData } = useAuth();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (containerNumber !== operation.containerNumber) {
-      alert('Container number does not match the pending operation.');
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      onProcess(operation.id);
-    } catch (error) {
-      alert(`Error processing gate in: ${error}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
-        
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">Process Gate In</h3>
-              <p className="text-sm text-gray-600">Container: {operation.containerNumber}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Operation Summary */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-3">Operation Summary</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Client:</span>
-                  <span className="font-medium">
-                    {canViewAllData() ? operation.client : 'Your Company'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Driver:</span>
-                  <span className="font-medium">{operation.driverName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Truck Number:</span>
-                  <span className="font-medium">{operation.truckNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Container Type:</span>
-                  <span className="font-medium">{operation.containerType}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Priority:</span>
-                  <span className="font-medium capitalize">{operation.priority}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Container Verification */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-gray-900">Container Verification</h4>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Verify Container Number *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={containerNumber}
-                  onChange={(e) => setContainerNumber(e.target.value.toUpperCase())}
-                  className="form-input w-full"
-                  placeholder="Enter container number"
-                />
-              </div>
-            </div>
-
-            {/* Validation Message */}
-            {containerNumber && containerNumber !== operation.containerNumber && (
-              <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                <p className="text-sm text-red-800">Container number doesn't match the pending operation.</p>
-              </div>
-            )}
-
-            {containerNumber && containerNumber === operation.containerNumber && (
-              <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <p className="text-sm text-green-800">Container verified. Ready to process.</p>
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isProcessing || containerNumber !== operation.containerNumber}
-              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Process Gate In</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
@@ -612,16 +270,16 @@ export const GateIn: React.FC = () => {
     const clientFilter = getClientFilter();
     let filteredOps = mockOperations;
     let filteredPending = mockPendingOperations;
-    
+
     if (clientFilter) {
-      filteredOps = mockOperations.filter(op => 
+      filteredOps = mockOperations.filter(op =>
         op.client.toLowerCase().includes(clientFilter.toLowerCase())
       );
-      filteredPending = mockPendingOperations.filter(op => 
+      filteredPending = mockPendingOperations.filter(op =>
         op.client.toLowerCase().includes(clientFilter.toLowerCase())
       );
     }
-    
+
     setOperations(filteredOps);
     setPendingOperations(filteredPending);
   }, [getClientFilter]);
@@ -688,6 +346,7 @@ export const GateIn: React.FC = () => {
   };
 
   const handleNewGateIn = () => {
+    // Reset form data when opening new gate in
     setFormData({
       containerNumber: '',
       secondContainerNumber: '',
@@ -709,8 +368,6 @@ export const GateIn: React.FC = () => {
   };
 
   const handlePendingView = () => {
-    console.log('Switching to pending view');
-    console.log('Pending operations count:', pendingOperations.length);
     setActiveView('pending');
   };
 
@@ -718,7 +375,7 @@ export const GateIn: React.FC = () => {
     setIsProcessing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       const newOperation: GateInOperation = {
         id: `${Date.now()}`,
         containerNumber: formData.containerNumber,
@@ -733,10 +390,10 @@ export const GateIn: React.FC = () => {
         location: `Auto-assigned-${Math.floor(Math.random() * 100)}`,
         notes: formData.notes || 'Gate in processed successfully'
       };
-      
+
       setOperations(prev => [newOperation, ...prev]);
       setShowForm(false);
-      
+
       alert(`Gate In completed successfully for container ${formData.containerNumber}`);
     } catch (error) {
       alert(`Error processing gate in: ${error}`);
@@ -750,7 +407,7 @@ export const GateIn: React.FC = () => {
       ...prev,
       [field]: value
     }));
-    
+
     // Trigger auto-save
     setAutoSaving(true);
     setTimeout(() => setAutoSaving(false), 1000);
@@ -765,11 +422,11 @@ export const GateIn: React.FC = () => {
         clientCode: selectedClient.code,
         clientName: selectedClient.name
       }));
-      
+
       // Trigger auto-save
       setAutoSaving(true);
       setTimeout(() => setAutoSaving(false), 1000);
-      
+
       console.log('Client selected:', selectedClient);
     }
   };
@@ -821,27 +478,23 @@ export const GateIn: React.FC = () => {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return formData.containerNumber !== '' && 
+        return formData.containerNumber !== '' &&
                formData.clientId !== '' &&
                (formData.containerQuantity === 1 || formData.secondContainerNumber !== '') &&
                (formData.status === 'EMPTY' || formData.bookingReference !== '');
       case 2:
-        return formData.driverName !== '' && 
-               formData.truckNumber !== '' && 
+        return formData.driverName !== '' &&
+               formData.truckNumber !== '' &&
                formData.transportCompany !== '';
       default:
         return true;
     }
   };
 
-  const handleProcessPendingOperation = (operationId: string) => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      setPendingOperations(prev => prev.filter(op => op.id !== operationId));
-      setIsProcessing(false);
-      alert('Gate In operation processed successfully!');
-    }, 1000);
-  };
+  // Pending Operations View
+  if (activeView === 'pending') {
+    return <PendingGateInView operations={pendingOperations} onBack={() => setActiveView('overview')} onComplete={handleCompletePendingOperation} />;
+  }
 
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
   const showClientNotice = !canViewAllData() && user?.role === 'client';
@@ -855,6 +508,191 @@ export const GateIn: React.FC = () => {
       </div>
     );
   }
+
+  // Pending Gate In Operations View Component
+  const PendingGateInView: React.FC<{
+    operations: PendingOperation[];
+    onBack: () => void;
+  }> = ({ operations, onBack }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredOperations = operations.filter(op =>
+      op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.client.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={onBack}
+              className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-gray-900">Pending Gate In Operations</h2>
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Total Pending</p>
+                <p className="text-lg font-semibold text-gray-900">{operations.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">In Progress</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.status === 'in-progress').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Urgent Priority</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.priority === 'urgent').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <User className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Assigned</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.assignedTo).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search pending operations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input pl-10 w-full"
+            />
+          </div>
+        </div>
+
+        {/* Pending Operations Table */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Operations Awaiting Processing</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Container
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver & Transport
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Expected Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOperations.map((operation) => (
+                  <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                      <div className="text-sm text-gray-500">{operation.containerType}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {canViewAllData() ? operation.client : 'Your Company'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(operation.expectedTime).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(operation.priority)}`}>
+                        {operation.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(operation.status)}`}>
+                        {operation.status.replace('-', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button className="text-green-600 hover:text-green-900 text-sm font-medium">
+                          Process →
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredOperations.length === 0 && (
+            <div className="text-center py-12">
+              <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No pending operations</h3>
+              <p className="text-gray-600">
+                {searchTerm ? "No operations match your search criteria." : "All gate in operations have been processed."}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -907,7 +745,7 @@ export const GateIn: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -921,7 +759,7 @@ export const GateIn: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 rounded-lg">
@@ -933,7 +771,7 @@ export const GateIn: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-red-100 rounded-lg">
@@ -956,8 +794,8 @@ export const GateIn: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
               type="text"
-              placeholder={activeView === 'pending' 
-                ? "Search pending operations..." 
+              placeholder={activeView === 'pending'
+                ? "Search pending operations..."
                 : "Search containers, drivers, clients, or truck numbers..."
               }
               value={searchTerm}
@@ -989,10 +827,9 @@ export const GateIn: React.FC = () => {
 
       {/* Content */}
       {activeView === 'pending' ? (
-        <PendingGateInView 
-          operations={pendingOperations} 
+        <PendingGateInView
+          operations={pendingOperations}
           onBack={() => setActiveView('overview')}
-          onProcess={handleProcessPendingOperation}
         />
       ) : (
         /* Recent Gate In Operations Table */
@@ -1064,7 +901,7 @@ export const GateIn: React.FC = () => {
               </tbody>
             </table>
           </div>
-          
+
           {filteredOperations.length === 0 && (
             <div className="text-center py-12">
               <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
