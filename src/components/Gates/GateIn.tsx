@@ -641,7 +641,6 @@ export const GateIn: React.FC = () => {
       </div>
 
       {/* Content */}
-        /* Recent Gate In Operations Table */
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Recent Gate In Operations</h3>
