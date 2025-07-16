@@ -17,19 +17,19 @@ export interface GateInFormData {
   bookingReference: string;
   containerNumber: string;
   secondContainerNumber: string; // For when quantity is 2
-  
+
   // Step 2: Transport Details
   driverName: string;
   truckNumber: string;
   transportCompany: string;
-  
+
   // Location & Validation (Step 3)
   assignedLocation: string;
   truckArrivalDate: string;
   truckArrivalTime: string;
   truckDepartureDate: string;
   truckDepartureTime: string;
-  
+
   // Additional fields
   notes: string;
   operationStatus: 'pending' | 'completed';
@@ -193,7 +193,7 @@ export const GateIn: React.FC = () => {
   const [autoSaving, setAutoSaving] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(mockPendingOperations);
   const [completedOperations, setCompletedOperations] = useState(mockCompletedOperations);
-  
+
   const [formData, setFormData] = useState<GateInFormData>({
     containerSize: '20ft',
     containerQuantity: 1,
@@ -223,7 +223,7 @@ export const GateIn: React.FC = () => {
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 
   // Combine all operations for unified display
-  const allOperations = [...pendingOperations, ...completedOperations].sort((a, b) => 
+  const allOperations = [...pendingOperations, ...completedOperations].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
@@ -232,7 +232,7 @@ export const GateIn: React.FC = () => {
       ...prev,
       [field]: value
     }));
-    
+
     // Trigger auto-save
     setAutoSaving(true);
     setTimeout(() => setAutoSaving(false), 1000);
@@ -337,15 +337,15 @@ export const GateIn: React.FC = () => {
         truckDepartureDate: '',
         truckDepartureTime: ''
       };
-      
+
       // Simulate processing
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Add to pending operations
       setPendingOperations(prev => [newOperation, ...prev]);
-      
+
       alert(`Gate In operation submitted for container ${formData.containerNumber}${formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''}`);
-      
+
       // Reset form
       setFormData({
         containerSize: '20ft',
@@ -387,7 +387,7 @@ export const GateIn: React.FC = () => {
     setIsProcessing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Move from pending to completed
       const completedOperation = {
         ...operation,
@@ -399,11 +399,11 @@ export const GateIn: React.FC = () => {
         truckDepartureTime: locationData.truckDepartureTime,
         completedAt: new Date()
       };
-      
+
       // Remove from pending and add to completed
       setPendingOperations(prev => prev.filter(op => op.id !== operation.id));
       setCompletedOperations(prev => [completedOperation, ...prev]);
-      
+
       alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
       setActiveView('overview');
       setSelectedOperation(null);
@@ -419,7 +419,7 @@ export const GateIn: React.FC = () => {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       completed: { color: 'bg-green-100 text-green-800', label: 'Completed' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig];
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
@@ -513,7 +513,7 @@ export const GateIn: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -525,7 +525,7 @@ export const GateIn: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -537,7 +537,7 @@ export const GateIn: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
@@ -620,7 +620,7 @@ export const GateIn: React.FC = () => {
                       <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
                     )}
                     <div className="text-sm text-gray-500">
-                      {operation.containerSize} • Qty: {operation.containerQuantity}
+                      {operation.containerSize}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -663,7 +663,7 @@ export const GateIn: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
+
         {filteredOperations.length === 0 && (
           <div className="text-center py-12">
             <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
@@ -773,8 +773,8 @@ const PendingOperationsView: React.FC<{
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {operations.map((operation) => (
-                <tr 
-                  key={operation.id} 
+                <tr
+                  key={operation.id}
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => onOperationClick(operation)}
                 >
@@ -787,7 +787,7 @@ const PendingOperationsView: React.FC<{
                       <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
                     )}
                     <div className="text-sm text-gray-500">
-                      {operation.containerSize} • Qty: {operation.containerQuantity}
+                      {operation.containerSize}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -854,8 +854,8 @@ const LocationValidationView: React.FC<{
     }
   }, [operation.isDamaged]);
 
-  const availableLocations = operation.isDamaged 
-    ? mockLocations.damage 
+  const availableLocations = operation.isDamaged
+    ? mockLocations.damage
     : mockLocations[operation.containerSize] || [];
 
   const filteredLocations = availableLocations.filter((loc: any) =>
@@ -883,8 +883,8 @@ const LocationValidationView: React.FC<{
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button 
-            onClick={onBack} 
+          <button
+            onClick={onBack}
             className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -949,7 +949,7 @@ const LocationValidationView: React.FC<{
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           {operation.isDamaged ? 'Auto-Assigned to Damage Stack' : 'Stack Selection'}
         </h3>
-        
+
         {!operation.isDamaged && (
           <div className="mb-4">
             <div className="relative">
