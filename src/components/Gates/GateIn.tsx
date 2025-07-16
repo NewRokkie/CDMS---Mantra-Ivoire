@@ -757,6 +757,7 @@ export const GateIn: React.FC = () => {
     onBack: () => void;
   }> = ({ operations, onBack }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const { user, canViewAllData } = useAuth();
 
     const filteredOperations = operations.filter(op =>
       op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
