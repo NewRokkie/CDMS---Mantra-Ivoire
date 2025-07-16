@@ -532,20 +532,6 @@ export const GateIn: React.FC = () => {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search pending operations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-input pl-10 w-full"
-            />
-          </div>
-        </div>
-
         {/* Pending Operations Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
