@@ -537,6 +537,63 @@ export const GateIn: React.FC = () => {
           </div>
         </div>
 
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Total Pending</p>
+                <p className="text-lg font-semibold text-gray-900">{operations.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">In Progress</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.status === 'in-progress').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Urgent Priority</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.priority === 'urgent').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <User className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Assigned</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {operations.filter(o => o.assignedTo).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Search */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="relative">
