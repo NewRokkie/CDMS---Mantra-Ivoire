@@ -491,11 +491,6 @@ export const GateIn: React.FC = () => {
     }
   };
 
-  // Pending Operations View
-  if (activeView === 'pending') {
-    return <PendingGateInView operations={pendingOperations} onBack={() => setActiveView('overview')} onComplete={handleCompletePendingOperation} />;
-  }
-
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
   const showClientNotice = !canViewAllData() && user?.role === 'client';
 
