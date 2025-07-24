@@ -251,50 +251,50 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-[9998] animate-fade-in"
+            className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-[9998] animate-fade-in"
             onClick={handleCancel}
           />
           
           {/* Centered Time Picker Overlay */}
           <div
             ref={overlayRef}
-            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-scale-in"
+            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fade-scale-in"
             style={{ 
-              maxWidth: '90vw', 
-              maxHeight: '90vh',
-              minWidth: '320px'
+              maxWidth: '280px', 
+              maxHeight: '320px',
+              minWidth: '280px'
             }}
           >
-            <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
+            <div className="bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
               {/* Header */}
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Select time</h3>
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Select time</h3>
                 <button
                   type="button"
                   onClick={handleCurrentTime}
-                  className="text-blue-600 hover:text-blue-800 font-medium px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1 hover:bg-blue-50 rounded-md transition-colors text-sm"
                 >
                   Current time
                 </button>
               </div>
 
               {/* Time Selection Interface */}
-              <div className={`flex justify-center items-center ${includeSeconds ? 'space-x-8' : 'space-x-12'} mb-8`}>
+              <div className={`flex justify-center items-center ${includeSeconds ? 'space-x-4' : 'space-x-6'} mb-4`}>
                 
                 {/* Hours Column */}
-                <div className="flex flex-col items-center space-y-4">
-                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">Hours</span>
-                  <div className="flex flex-col items-center space-y-3">
+                <div className="flex flex-col items-center space-y-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</span>
+                  <div className="flex flex-col items-center space-y-2">
                     <button
                       type="button"
                       onClick={() => adjustHours('up')}
-                      className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
                     >
-                      <ChevronUp className="h-6 w-6" />
+                      <ChevronUp className="h-4 w-4" />
                     </button>
                     
-                    <div className="bg-gray-100 rounded-2xl px-6 py-4 min-w-[80px] text-center">
-                      <span className="text-4xl font-bold text-gray-900">
+                    <div className="bg-gray-100 rounded-xl px-4 py-3 min-w-[60px] text-center">
+                      <span className="text-2xl font-bold text-gray-900">
                         {hours.toString().padStart(2, '0')}
                       </span>
                     </div>
@@ -302,32 +302,32 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                     <button
                       type="button"
                       onClick={() => adjustHours('down')}
-                      className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
                     >
-                      <ChevronDown className="h-6 w-6" />
+                      <ChevronDown className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
                 {/* Separator */}
-                <div className="flex items-center pt-8">
-                  <span className="text-4xl font-bold text-gray-400">:</span>
+                <div className="flex items-center pt-6">
+                  <span className="text-2xl font-bold text-gray-400">:</span>
                 </div>
 
                 {/* Minutes Column */}
-                <div className="flex flex-col items-center space-y-4">
-                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">Minutes</span>
-                  <div className="flex flex-col items-center space-y-3">
+                <div className="flex flex-col items-center space-y-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Minutes</span>
+                  <div className="flex flex-col items-center space-y-2">
                     <button
                       type="button"
                       onClick={() => adjustMinutes('up')}
-                      className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
                     >
-                      <ChevronUp className="h-6 w-6" />
+                      <ChevronUp className="h-4 w-4" />
                     </button>
                     
-                    <div className="bg-gray-100 rounded-2xl px-6 py-4 min-w-[80px] text-center">
-                      <span className="text-4xl font-bold text-gray-900">
+                    <div className="bg-gray-100 rounded-xl px-4 py-3 min-w-[60px] text-center">
+                      <span className="text-2xl font-bold text-gray-900">
                         {minutes.toString().padStart(2, '0')}
                       </span>
                     </div>
@@ -335,9 +335,9 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                     <button
                       type="button"
                       onClick={() => adjustMinutes('down')}
-                      className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
                     >
-                      <ChevronDown className="h-6 w-6" />
+                      <ChevronDown className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -345,23 +345,23 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 {/* Seconds Column - Only shown when includeSeconds is true */}
                 {includeSeconds && (
                   <>
-                    <div className="flex items-center pt-8">
-                      <span className="text-4xl font-bold text-gray-400">:</span>
+                    <div className="flex items-center pt-6">
+                      <span className="text-2xl font-bold text-gray-400">:</span>
                     </div>
                     
-                    <div className="flex flex-col items-center space-y-4">
-                      <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">Seconds</span>
-                      <div className="flex flex-col items-center space-y-3">
+                    <div className="flex flex-col items-center space-y-2">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Seconds</span>
+                      <div className="flex flex-col items-center space-y-2">
                         <button
                           type="button"
                           onClick={() => adjustSeconds('up')}
-                          className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
                         >
-                          <ChevronUp className="h-6 w-6" />
+                          <ChevronUp className="h-4 w-4" />
                         </button>
                         
-                        <div className="bg-gray-100 rounded-2xl px-6 py-4 min-w-[80px] text-center">
-                          <span className="text-4xl font-bold text-gray-900">
+                        <div className="bg-gray-100 rounded-xl px-4 py-3 min-w-[60px] text-center">
+                          <span className="text-2xl font-bold text-gray-900">
                             {seconds.toString().padStart(2, '0')}
                           </span>
                         </div>
@@ -369,9 +369,9 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                         <button
                           type="button"
                           onClick={() => adjustSeconds('down')}
-                          className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
                         >
-                          <ChevronDown className="h-6 w-6" />
+                          <ChevronDown className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -380,11 +380,11 @@ export const TimePicker: React.FC<TimePickerProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-8 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-xl hover:bg-gray-100"
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
                 >
                   Cancel
                 </button>
@@ -392,7 +392,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="px-8 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   Save
                 </button>
