@@ -1056,24 +1056,20 @@ const LocationValidationView: React.FC<{
             <h4 className="font-medium text-gray-900 mb-3">Truck Departure</h4>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date
-                </label>
                 <DatePicker
                   value={truckDepartureDate}
                   onChange={setTruckDepartureDate}
                   placeholder="Select departure date"
+                  label="Date"
                   minDate={truckArrivalDate}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time
-                </label>
                 <TimePicker
                   value={truckDepartureTime}
                   onChange={setTruckDepartureTime}
                   placeholder="Select departure time"
+                  label="Time"
                 />
               </div>
             </div>
