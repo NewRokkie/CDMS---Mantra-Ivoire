@@ -152,9 +152,14 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     setHours(originalTime.hours);
     setMinutes(originalTime.minutes);
     setSeconds(originalTime.seconds);
+    setIsFocused(false);
     setIsOpen(false);
     setIsFocused(false);
   };
+  const handleBackdropClick = () => {
+    handleCancel(); // Reset state when clicking outside
+  };
+
 
   // Time adjustment functions with proper bounds checking
   const adjustHours = (direction: 'up' | 'down') => {
@@ -252,7 +257,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           {/* Backdrop */}
           <div 
             className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-[9998] animate-fade-in"
-            onClick={handleCancel}
+            onClick={handleBackdropClick}
           />
           
           {/* Centered Time Picker Overlay */}
@@ -380,11 +385,11 @@ export const TimePicker: React.FC<TimePickerProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100 px-2">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
                 >
                   Cancel
                 </button>
@@ -392,7 +397,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   Save
                 </button>

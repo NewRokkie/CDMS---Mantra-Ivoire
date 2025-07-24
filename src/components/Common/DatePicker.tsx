@@ -132,6 +132,33 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     onChange('');
   };
 
+  const handleSave = () => {
+    if (selectedDate) {
+      onChange(formatDateValue(selectedDate));
+    }
+    setIsOpen(false);
+  };
+
+  const handleCancel = () => {
+    // Reset to original values from props
+    if (value) {
+      const originalDate = new Date(value);
+      setSelectedDate(originalDate);
+      setCurrentMonth(originalDate.getMonth());
+      setCurrentYear(originalDate.getFullYear());
+    } else {
+      setSelectedDate(null);
+      setCurrentMonth(new Date().getMonth());
+      setCurrentYear(new Date().getFullYear());
+    }
+    setShowYearSelector(false);
+    setIsOpen(false);
+  };
+
+  const handleBackdropClick = () => {
+    handleCancel(); // Reset state when clicking outside
+  };
+
   const navigateMonth = (direction: 'prev' | 'next') => {
     if (direction === 'next' && isMonthNavigationDisabled('next')) return;
     
@@ -278,7 +305,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           {/* Backdrop */}
           <div 
             className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm z-[9998] animate-fade-in"
-            onClick={() => setIsOpen(false)}
+            onClick={handleBackdropClick}
           />
           
           {/* Centered Calendar Overlay */}
@@ -386,27 +413,22 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 )}
               </div>
 
-              {/* Calendar Footer */}
-              <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+              {/* Calendar Footer - Always Visible */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
                 <div className="flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
+                    onClick={handleCancel}
+                    className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
                   >
                     Cancel
                   </button>
                   
                   <button
                     type="button"
-                    onClick={() => {
-                      if (selectedDate) {
-                        onChange(formatDateValue(selectedDate));
-                      }
-                      setIsOpen(false);
-                    }}
+                    onClick={handleSave}
                     disabled={!selectedDate}
-                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Save
                   </button>
