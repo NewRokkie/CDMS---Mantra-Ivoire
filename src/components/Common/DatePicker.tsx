@@ -451,26 +451,27 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 )}
               </div>
 
-              {/* Calendar Footer - Always Visible */}
-              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={!selectedDate}
-                    className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Save
-                  </button>
-                </div>
+            </div>
+
+            {/* Calendar Footer - Always Visible Outside Content Area */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!selectedDate}
+                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save
+                </button>
               </div>
             </div>
           </div>
