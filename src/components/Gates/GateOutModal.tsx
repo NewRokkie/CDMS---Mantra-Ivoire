@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, CalendarDays, MapPin, Check, Info, Ship, Clock, Box, Ruler, CheckSquare, Square, ListChecks, XCircle, Calendar } from 'lucide-react';
+import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, CalendarDays, MapPin, Check, Info, Ship, Clock, Box, Ruler, CheckSquare, Square, ListChecks, XCircle } from 'lucide-react';
 import { ReleaseOrder } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
-import { DatePicker } from '../Common/DatePicker';
 
 interface GateOutModalProps {
   showModal: boolean;
@@ -19,7 +18,6 @@ interface GateOutFormData {
   driverName: string;
   vehicleNumber: string;
   transportCompany: string;
-  gateOutDate: Date | null;
   notes: string;
 }
 
@@ -40,7 +38,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     driverName: '',
     vehicleNumber: '',
     transportCompany: '',
-    gateOutDate: null,
     notes: ''
   });
 
@@ -532,17 +529,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                 </div>
 
                 {/* Additional Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Gate Out Date
-                  </label>
-                  <DatePicker
-                    value={formData.gateOutDate}
-                    onChange={(date) => handleInputChange('gateOutDate', date)}
-                    placeholder="Select gate out date"
-                  />
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Additional Notes

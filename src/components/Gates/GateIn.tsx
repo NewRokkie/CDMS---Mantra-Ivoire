@@ -3,6 +3,8 @@ import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Contain
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInModal } from './GateInModal';
+import { DatePicker } from '../Common/DatePicker';
+import { TimePicker } from '../Common/TimePicker';
 
 // Enhanced interface for the new gate-in process
 export interface GateInFormData {

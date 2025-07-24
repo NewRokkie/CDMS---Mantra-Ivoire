@@ -4,6 +4,8 @@ import { Container, ReleaseOrder, ReleaseOrderContainer } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateOutModal } from './GateOutModal';
+import { DatePicker } from '../Common/DatePicker';
+import { TimePicker } from '../Common/TimePicker';
 
 interface GateOutFormData {
   releaseOrderId: string;
@@ -866,12 +868,11 @@ const GateOutCompletionModal: React.FC<{
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Gate Out Date *
                   </label>
-                  <input
-                    type="date"
-                    required
+                  <DatePicker
                     value={gateOutDate}
-                    onChange={(e) => setGateOutDate(e.target.value)}
-                    className="form-input w-full"
+                    onChange={setGateOutDate}
+                    placeholder="Select gate out date"
+                    required
                   />
                 </div>
 
@@ -879,12 +880,11 @@ const GateOutCompletionModal: React.FC<{
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Gate Out Time *
                   </label>
-                  <input
-                    type="time"
-                    required
+                  <TimePicker
                     value={gateOutTime}
-                    onChange={(e) => setGateOutTime(e.target.value)}
-                    className="form-input w-full"
+                    onChange={setGateOutTime}
+                    placeholder="Select gate out time"
+                    required
                   />
                 </div>
               </div>
