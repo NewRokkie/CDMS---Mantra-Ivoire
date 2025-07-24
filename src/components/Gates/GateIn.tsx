@@ -314,6 +314,28 @@ export const GateIn: React.FC = () => {
 
     setIsProcessing(true);
     try {
+      // Use client pool service to find optimal stack assignment
+      const { clientPoolService } = await import('../../services/clientPoolService');
+      
+      // Create container assignment request
+      const assignmentRequest = {
+        containerId: `temp-${Date.now()}`,
+        containerNumber: formData.containerNumber,
+        clientCode: formData.clientCode,
+        containerSize: formData.containerSize,
+        requiresSpecialHandling: formData.isDamaged
+      };
+
+      // Find optimal stack assignment
+      const optimalStack = clientPoolService.findOptimalStackForContainer(
+        assignmentRequest,
+        { sections: [] } as any, // Would use actual yard data
+        [] // Would use actual container data
+      );
+
+      // Simulate processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       // Create new operation
       const newOperation = {
         id: `PO-${Date.now()}`,
@@ -338,11 +360,21 @@ export const GateIn: React.FC = () => {
         truckDepartureTime: ''
       };
 
-      // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       // Add to pending operations
       setPendingOperations(prev => [newOperation, ...prev]);
+      
+      // Update client pool occupancy if stack was assigned
+      if (optimalStack && !formData.isDamaged) {
+        try {
+          await clientPoolService.assignContainerToClientStack(
+            assignmentRequest,
+            { sections: [] } as any,
+            []
+          );
+        } catch (error) {
+          console.warn('Could not update client pool occupancy:', error);
+        }
+      }
 
       alert(`Gate In operation submitted for container ${formData.containerNumber}${formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''}`);
 

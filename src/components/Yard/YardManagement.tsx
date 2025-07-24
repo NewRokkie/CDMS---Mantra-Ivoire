@@ -3,6 +3,7 @@ import { YardCanvas2D5 } from './YardCanvas2D5';
 import { YardSearchPanel } from './YardSearchPanel';
 import { Yard, Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { clientPoolService } from '../../services/clientPoolService';
 
 // Mock containers with specific positions in the Tantarelli yard
 const mockContainers: Container[] = [
@@ -128,10 +129,21 @@ export const YardManagement: React.FC = () => {
     let containers = mockContainers;
     
     if (clientFilter) {
-      containers = containers.filter(container => 
-        container.clientCode === clientFilter || 
-        container.client.toLowerCase().includes(clientFilter.toLowerCase())
-      );
+      // Use client pool service to filter containers
+      const clientStacks = clientPoolService.getClientStacks(clientFilter);
+      containers = containers.filter(container => {
+        // Check if container is in client's assigned stacks
+        const containerStackMatch = container.location.match(/Stack S(\d+)/);
+        if (containerStackMatch) {
+          const stackNumber = parseInt(containerStackMatch[1]);
+          const stackId = `stack-${stackNumber}`;
+          return clientStacks.includes(stackId);
+        }
+        
+        // Fallback to original filtering
+        return container.clientCode === clientFilter || 
+               container.client.toLowerCase().includes(clientFilter.toLowerCase());
+      });
     }
     
     return containers;

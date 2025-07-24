@@ -15,6 +15,7 @@ import { UserManagement } from './components/Users/UserManagement';
 import { YardManagement } from './components/Yard/YardManagement';
 import { StackManagement } from './components/Yard/StackManagement';
 import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessManagement';
+import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
 
 function AppContent() {
   const { user, isLoading, isAuthenticated, hasModuleAccess } = useAuthProvider();
@@ -66,6 +67,8 @@ function AppContent() {
         return hasModuleAccess('yard') ? <YardManagement /> : <AccessDenied />;
       case 'stack-management':
         return hasModuleAccess('yard') ? <StackManagementModule /> : <AccessDenied />;
+      case 'client-pools':
+        return hasModuleAccess('clients') ? <ClientPoolManagement /> : <AccessDenied />;
       case 'module-access':
         return hasModuleAccess('moduleAccess') ? <ModuleAccessManagement /> : <AccessDenied />;
       case 'reports':

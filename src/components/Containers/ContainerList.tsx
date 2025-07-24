@@ -3,6 +3,7 @@ import { Search, Filter, Download, Eye, Edit, AlertTriangle } from 'lucide-react
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { clientPoolService } from '../../services/clientPoolService';
 
 // Mock data with client codes
 const mockContainers: Container[] = [
@@ -98,11 +99,22 @@ export const ContainerList: React.FC = () => {
     // Apply client filter for client users
     const clientFilter = getClientFilter();
     if (clientFilter) {
-      containers = containers.filter(container => 
-        container.clientCode === clientFilter || 
-        container.client === user?.company ||
-        container.client.toLowerCase().includes(clientFilter.toLowerCase())
-      );
+      // Use client pool service to filter containers by assigned stacks
+      const clientStacks = clientPoolService.getClientStacks(clientFilter);
+      containers = containers.filter(container => {
+        // Check if container is in client's assigned stacks
+        const containerStackMatch = container.location.match(/Stack S(\d+)/);
+        if (containerStackMatch) {
+          const stackNumber = parseInt(containerStackMatch[1]);
+          const stackId = `stack-${stackNumber}`;
+          return clientStacks.includes(stackId);
+        }
+        
+        // Fallback to original filtering
+        return container.clientCode === clientFilter || 
+               container.client === user?.company ||
+               container.client.toLowerCase().includes(clientFilter.toLowerCase());
+      });
     }
     
     // Apply search and status filters
