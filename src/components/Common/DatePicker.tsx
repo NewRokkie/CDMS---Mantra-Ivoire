@@ -107,12 +107,15 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                            label?.toLowerCase().includes('end date') ||
                            placeholder?.toLowerCase().includes('departure') || 
                            label?.toLowerCase().includes('departure');
+    if (direction === 'next') {
+      const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
       const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
       const nextMonthDate = new Date(nextYear, nextMonth, 1);
       return nextMonthDate > currentDateOnly;
     }
     return false;
   };
+  
   const isToday = (date: Date): boolean => {
     return date.toDateString() === today.toDateString();
   };
@@ -400,9 +403,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                     <div className="grid grid-cols-4 gap-2">
                       {(() => {
                         const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
-                                               label?.toLowerCase().includes('end date') ||
-                                               placeholder?.toLowerCase().includes('departure') || 
-                                               label?.toLowerCase().includes('departure');
+                                               label?.toLowerCase().includes('end date');
                         const startYear = today.getFullYear() - 20;
                         const endYear = isEndDateField ? today.getFullYear() + 10 : today.getFullYear();
                         const yearRange = endYear - startYear + 1;
@@ -412,9 +413,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                         const isCurrentYear = year === today.getFullYear();
                         const isSelectedYear = year === currentYear;
                         const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
-                                               label?.toLowerCase().includes('end date') ||
-                                               placeholder?.toLowerCase().includes('departure') || 
-                                               label?.toLowerCase().includes('departure');
+                                               label?.toLowerCase().includes('end date');
                         const isFutureYear = !isEndDateField && year > today.getFullYear();
                         
                         return (
