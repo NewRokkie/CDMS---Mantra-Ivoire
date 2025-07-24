@@ -533,12 +533,11 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Additional Notes
                   </label>
-                  <textarea
-                    value={formData.notes}
+                  <DatePicker
+                    value={gateOutDate}
+                    onChange={setGateOutDate}
+                    placeholder="Select gate out date"
                     onChange={(e) => handleInputChange('notes', e.target.value)}
-                    rows={3}
-                    className="form-input w-full"
-                    placeholder="Any additional notes or special instructions..."
                   />
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Save, Loader, Building, Package, Calendar, Search, Check, ChevronDown, Grid3X3 } from 'lucide-react';
+import { DatePicker } from '../Common/DatePicker';
 import { ClientPool } from '../../types/clientPool';
 import { Yard, YardStack } from '../../types';
 import { clientPoolService } from '../../services/clientPoolService';
@@ -193,8 +194,10 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
 
   const availableStacks = getAvailableStacks();
   const filteredStacks = availableStacks.filter(stack =>
-    stack.stackNumber.toString().toLowerCase().includes(stackSearchTerm.toLowerCase()) ||
+    stackSearchTerm === '' || 
+    stack.stackNumber.toString().includes(stackSearchTerm) ||
     `s${stack.stackNumber}`.toLowerCase().includes(stackSearchTerm.toLowerCase()) ||
+    `stack ${stack.stackNumber}`.toLowerCase().includes(stackSearchTerm.toLowerCase()) ||
     yard.sections.find(s => s.id === stack.sectionId)?.name.toLowerCase().includes(stackSearchTerm.toLowerCase())
   );
 
@@ -348,29 +351,28 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                     <label className="block text-sm font-medium text-blue-800 mb-2">
                       Contract Start Date *
                     </label>
-                    <input
-                      type="date"
-                      required
+                    <DatePicker
                       value={formData.contractStartDate}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, contractStartDate: e.target.value }));
+                      onChange={(date) => {
+                        setFormData(prev => ({ ...prev, contractStartDate: date }));
                         triggerAutoSave();
                       }}
-                      className="form-input w-full"
+                      required
+                      placeholder="Select contract start date"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-2">
                       Contract End Date
                     </label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={formData.contractEndDate}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, contractEndDate: e.target.value }));
+                      onChange={(date) => {
+                        setFormData(prev => ({ ...prev, contractEndDate: date }));
                         triggerAutoSave();
                       }}
-                      className="form-input w-full"
+                      placeholder="Select contract end date"
+                      minDate={formData.contractStartDate}
                     />
                   </div>
                 </div>

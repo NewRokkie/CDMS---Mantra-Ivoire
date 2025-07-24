@@ -1034,11 +1034,10 @@ const LocationValidationView: React.FC<{
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={truckArrivalDate}
-                  onChange={(e) => setTruckArrivalDate(e.target.value)}
-                  className="form-input w-full"
+                  onChange={setTruckArrivalDate}
+                  placeholder="Select arrival date"
                   required
                 />
               </div>
@@ -1063,11 +1062,11 @@ const LocationValidationView: React.FC<{
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={truckDepartureDate}
-                  onChange={(e) => setTruckDepartureDate(e.target.value)}
-                  className="form-input w-full"
+                  onChange={setTruckDepartureDate}
+                  placeholder="Select departure date"
+                  minDate={truckArrivalDate}
                 />
               </div>
               <div>
