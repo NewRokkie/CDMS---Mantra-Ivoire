@@ -128,7 +128,12 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Clear the selected date and reset calendar to current date
+    const today = new Date();
     setSelectedDate(null);
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+    setShowYearSelector(false);
     onChange('');
   };
 
@@ -140,7 +145,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const handleCancel = () => {
-    // Reset to original values from props
+    // Reset to current date when no value is set, or to original values
+    const today = new Date();
     if (value) {
       const originalDate = new Date(value);
       setSelectedDate(originalDate);
@@ -148,15 +154,47 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       setCurrentYear(originalDate.getFullYear());
     } else {
       setSelectedDate(null);
-      setCurrentMonth(new Date().getMonth());
-      setCurrentYear(new Date().getFullYear());
+      setCurrentMonth(today.getMonth());
+      setCurrentYear(today.getFullYear());
     }
     setShowYearSelector(false);
     setIsOpen(false);
   };
 
   const handleBackdropClick = () => {
-    handleCancel(); // Reset state when clicking outside
+    // Reset to current date when clicking outside if no value is set
+    const today = new Date();
+    if (value) {
+      const originalDate = new Date(value);
+      setSelectedDate(originalDate);
+      setCurrentMonth(originalDate.getMonth());
+      setCurrentYear(originalDate.getFullYear());
+    } else {
+      setSelectedDate(null);
+      setCurrentMonth(today.getMonth());
+      setCurrentYear(today.getFullYear());
+    }
+    setShowYearSelector(false);
+    setIsOpen(false);
+    setIsFocused(false);
+  };
+
+  const handleInputClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!disabled) {
+      // When opening, reset to current date if no value is set
+      const today = new Date();
+      if (!value) {
+        setCurrentMonth(today.getMonth());
+        setCurrentYear(today.getFullYear());
+        setSelectedDate(null);
+      }
+      setShowYearSelector(false);
+      setIsFocused(true);
+      setIsOpen(true);
+    }
+  };
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -252,7 +290,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         <button
           ref={inputRef}
           type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={handleInputClick}
           disabled={disabled}
           className={`
             w-full flex items-center justify-between px-4 py-3 bg-white border-2 rounded-xl
@@ -413,26 +451,27 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 )}
               </div>
 
-              {/* Calendar Footer - Always Visible */}
-              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={!selectedDate}
-                    className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Save
-                  </button>
-                </div>
+            </div>
+
+            {/* Calendar Footer - Always Visible Outside Content Area */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!selectedDate}
+                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save
+                </button>
               </div>
             </div>
           </div>
