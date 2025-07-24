@@ -290,7 +290,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         <button
           ref={inputRef}
           type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={handleInputClick}
           disabled={disabled}
           className={`
             w-full flex items-center justify-between px-4 py-3 bg-white border-2 rounded-xl
