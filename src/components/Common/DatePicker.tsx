@@ -42,6 +42,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Get current date for restrictions
+  const today = new Date();
+  const currentDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,13 +91,24 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const isDateDisabled = (date: Date): boolean => {
+    // Disable future dates
+    if (date > currentDateOnly) return true;
     if (minDate && date < new Date(minDate)) return true;
     if (maxDate && date > new Date(maxDate)) return true;
     return false;
   };
 
+  const isMonthNavigationDisabled = (direction: 'prev' | 'next'): boolean => {
+    if (direction === 'next') {
+      // Disable next if it would go to future months
+      const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+      const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+      const nextMonthDate = new Date(nextYear, nextMonth, 1);
+      return nextMonthDate > currentDateOnly;
+    }
+    return false;
+  };
   const isToday = (date: Date): boolean => {
-    const today = new Date();
     return date.toDateString() === today.toDateString();
   };
 
@@ -119,6 +133,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'next' && isMonthNavigationDisabled('next')) return;
+    
     if (direction === 'prev') {
       if (currentMonth === 0) {
         setCurrentMonth(11);
@@ -188,10 +204,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const handleCurrentDate = () => {
-    const now = new Date();
-    setSelectedDate(now);
-    setCurrentMonth(now.getMonth());
-    setCurrentYear(now.getFullYear());
+    setSelectedDate(today);
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+    onChange(formatDateValue(today));
   };
 
   const displayValue = selectedDate ? formatDate(selectedDate) : '';
@@ -292,7 +308,12 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                   <button
                     type="button"
                     onClick={() => navigateMonth('next')}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    disabled={isMonthNavigationDisabled('next')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isMonthNavigationDisabled('next')
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
                   >
                     <ChevronRight className="h-4 w-4 text-gray-600" />
                   </button>
@@ -313,24 +334,29 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                   /* Year Selector */
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-gray-700 text-center">Select Year</h3>
-                    <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                      {Array.from({ length: 21 }, (_, i) => currentYear - 10 + i).map(year => {
-                        const isCurrentYear = year === new Date().getFullYear();
+                    <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto scrollbar-thin">
+                      {Array.from({ length: 21 }, (_, i) => today.getFullYear() - 20 + i).map(year => {
+                        const isCurrentYear = year === today.getFullYear();
                         const isSelectedYear = year === currentYear;
+                        const isFutureYear = year > today.getFullYear();
                         
                         return (
                           <button
                             key={year}
                             type="button"
                             onClick={() => {
+                              if (isFutureYear) return;
                               setCurrentYear(year);
                               setShowYearSelector(false);
                             }}
+                            disabled={isFutureYear}
                             className={`p-2 text-sm rounded-lg transition-all duration-200 ${
                               isSelectedYear
                                 ? 'bg-blue-600 text-white shadow-md'
                                 : isCurrentYear
                                 ? 'bg-blue-50 text-blue-600 border-2 border-blue-200'
+                                : isFutureYear
+                                ? 'text-gray-300 cursor-not-allowed'
                                 : 'text-gray-700 hover:bg-gray-100'
                             }`}
                           >
