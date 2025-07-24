@@ -137,7 +137,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const renderCalendarDays = () => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
-    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+    // Adjust first day to start with Monday (0 = Monday, 6 = Sunday)
+    const firstDayRaw = getFirstDayOfMonth(currentMonth, currentYear);
+    const firstDay = firstDayRaw === 0 ? 6 : firstDayRaw - 1;
     const days = [];
 
     // Empty cells for days before the first day of the month
@@ -182,6 +184,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     }
 
     return days;
+  };
+
+  const handleCurrentDate = () => {
+    const now = new Date();
+    setSelectedDate(now);
+    setCurrentMonth(now.getMonth());
+    setCurrentYear(now.getFullYear());
   };
 
   const displayValue = selectedDate ? formatDate(selectedDate) : '';
@@ -247,6 +256,139 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       </div>
 
       {/* Calendar Dropdown */}
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm z-[9998] animate-fade-in"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Centered Calendar Overlay */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fade-scale-in">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-80 max-h-96 overflow-hidden">
+              {/* Calendar Header */}
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    type="button"
+                    onClick={() => navigateMonth('prev')}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronLeft className="h-4 w-4 text-gray-600" />
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowYearSelector(!showYearSelector)}
+                    className="px-3 py-1 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <span className="font-semibold text-gray-900">
+                      {MONTHS[currentMonth]} {currentYear}
+                    </span>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => navigateMonth('next')}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </button>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={handleCurrentDate}
+                  className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1 hover:bg-blue-50 rounded-md transition-colors text-sm"
+                >
+                  Today
+                </button>
+              </div>
+
+              {/* Calendar Content */}
+              <div className="p-4">
+                {showYearSelector ? (
+                  /* Year Selector */
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-gray-700 text-center">Select Year</h3>
+                    <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                      {Array.from({ length: 21 }, (_, i) => currentYear - 10 + i).map(year => {
+                        const isCurrentYear = year === new Date().getFullYear();
+                        const isSelectedYear = year === currentYear;
+                        
+                        return (
+                          <button
+                            key={year}
+                            type="button"
+                            onClick={() => {
+                              setCurrentYear(year);
+                              setShowYearSelector(false);
+                            }}
+                            className={`p-2 text-sm rounded-lg transition-all duration-200 ${
+                              isSelectedYear
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : isCurrentYear
+                                ? 'bg-blue-50 text-blue-600 border-2 border-blue-200'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            {year}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* Calendar Grid */
+                  <div className="space-y-3">
+                    {/* Days of Week Header - Starting with Monday */}
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                        <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Calendar Days Grid */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {renderCalendarDays()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Calendar Footer */}
+              <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedDate) {
+                        onChange(formatDateValue(selectedDate));
+                      }
+                      setIsOpen(false);
+                    }}
+                    disabled={!selectedDate}
+                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
