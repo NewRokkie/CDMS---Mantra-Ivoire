@@ -483,7 +483,7 @@ export class ClientPoolService {
     clientName: string,
     assignedStacks: string[],
     maxCapacity: number,
-    priority: 'high' | 'medium' | 'low' = 'medium',
+    priority: 'high' | 'medium' | 'low',
     contractStartDate: Date,
     contractEndDate?: Date,
     notes?: string
@@ -507,6 +507,12 @@ export class ClientPoolService {
 
     this.clientPools.set(clientCode, pool);
     this.clientStackMap.set(clientCode, assignedStacks);
+
+    // Create stack assignments for each assigned stack
+    assignedStacks.forEach(stackId => {
+      const stackNumber = this.extractStackNumber(stackId);
+      this.assignStackToClient(stackId, stackNumber, clientCode, 'System', true, 2);
+    });
 
     console.log(`Created new client pool for ${clientName} (${clientCode})`);
     return pool;

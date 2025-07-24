@@ -135,31 +135,31 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                           <span className="absolute inset-x-0 -bottom-1.5 mx-auto h-0.5 w-5 bg-blue-500"></span>
                         )}
                       </button>
-                        <button
-                          onClick={() => onContainerSizeChange(config.stackId, '40feet')}
-                          disabled={config.containerSize === '40feet' || config.isSpecialStack || !can40Feet}
-                          className={`relative px-4 py-1 text-sm rounded-full transition-all duration-200 ${
-                            config.containerSize === '40feet'
-                              ? 'bg-white text-gray-800 shadow-sm font-medium'
-                              : config.isSpecialStack || !can40Feet
-                              ? 'text-gray-400 cursor-not-allowed'
-                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                          }`}
-                          title={
-                            config.isSpecialStack 
-                              ? 'Special stacks cannot be set to 40feet' 
-                              : !can40Feet 
-                              ? 'No adjacent regular stack available for 40feet assignment'
-                              : adjacentStack
-                              ? `Will also update Stack ${adjacentStack.toString().padStart(2, '0')}`
-                              : ''
-                          }
-                        >
-                          40ft
-                          {config.containerSize === '40feet' && (
-                            <span className="absolute inset-x-0 -bottom-1.5 mx-auto h-0.5 w-5 bg-orange-500"></span>
-                          )}
-                        </button>
+                      <button
+                        onClick={() => onContainerSizeChange(config.stackId, '40feet')}
+                        disabled={config.containerSize === '40feet' || config.isSpecialStack || !can40Feet}
+                        className={`relative px-4 py-1 text-sm rounded-full transition-all duration-200 ${
+                          config.containerSize === '40feet'
+                            ? 'bg-white text-gray-800 shadow-sm font-medium'
+                            : config.isSpecialStack || !can40Feet
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                        }`}
+                        title={
+                          config.isSpecialStack 
+                            ? 'Special stacks cannot be set to 40feet' 
+                            : !can40Feet 
+                            ? 'No adjacent regular stack available for 40feet assignment'
+                            : adjacentStack
+                            ? `Will also update Stack ${adjacentStack.toString().padStart(2, '0')}`
+                            : ''
+                        }
+                      >
+                        40ft
+                        {config.containerSize === '40feet' && (
+                          <span className="absolute inset-x-0 -bottom-1.5 mx-auto h-0.5 w-5 bg-orange-500"></span>
+                        )}
+                      </button>
                     </div>
                   </td>
                 </tr>
