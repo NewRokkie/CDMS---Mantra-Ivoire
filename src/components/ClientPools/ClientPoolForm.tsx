@@ -193,7 +193,8 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
 
   const availableStacks = getAvailableStacks();
   const filteredStacks = availableStacks.filter(stack =>
-    stack.stackNumber.toString().includes(stackSearchTerm) ||
+    stack.stackNumber.toString().toLowerCase().includes(stackSearchTerm.toLowerCase()) ||
+    `s${stack.stackNumber}`.toLowerCase().includes(stackSearchTerm.toLowerCase()) ||
     yard.sections.find(s => s.id === stack.sectionId)?.name.toLowerCase().includes(stackSearchTerm.toLowerCase())
   );
 
@@ -553,18 +554,6 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                     className="text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium"
                   >
                     Select High Capacity (6+ rows)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Select by section
-                      const topSectionStacks = availableStacks.filter(s => s.sectionId === 'section-top');
-                      setSelectedStacks(new Set(topSectionStacks.map(s => s.id)));
-                      triggerAutoSave();
-                    }}
-                    className="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
-                  >
-                    Select Top Section
                   </button>
                   <button
                     type="button"
