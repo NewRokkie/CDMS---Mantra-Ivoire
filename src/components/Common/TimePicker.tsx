@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Clock, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 
 interface TimePickerProps {
   value: string;
@@ -58,23 +58,10 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  const handleTimeChange = (newHours: number, newMinutes: number) => {
-    const clampedHours = Math.max(0, Math.min(23, newHours));
-    const clampedMinutes = Math.max(0, Math.min(59, newMinutes));
-    
-    setHours(clampedHours);
-    setMinutes(clampedMinutes);
-    onChange(formatTime(clampedHours, clampedMinutes));
-  };
-
-  const handleHourChange = (delta: number) => {
-    const newHours = (hours + delta + 24) % 24;
-    handleTimeChange(newHours, minutes);
-  };
-
-  const handleMinuteChange = (delta: number) => {
-    const newMinutes = (minutes + delta + 60) % 60;
-    handleTimeChange(hours, newMinutes);
+  const handleTimeSelect = (newHours: number, newMinutes: number) => {
+    setHours(newHours);
+    setMinutes(newMinutes);
+    onChange(formatTime(newHours, newMinutes));
   };
 
   const handleInputFocus = () => {
@@ -97,13 +84,30 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     onChange('');
   };
 
-  const handleQuickTime = (h: number, m: number) => {
-    handleTimeChange(h, m);
+  const handleSave = () => {
+    onChange(formatTime(hours, minutes));
     setIsOpen(false);
     setIsFocused(false);
   };
 
+  const handleCancel = () => {
+    setIsOpen(false);
+    setIsFocused(false);
+  };
+
+  const handleCurrentTime = () => {
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    setHours(currentHours);
+    setMinutes(currentMinutes);
+  };
+
   const displayValue = value ? formatDisplayTime(hours, minutes) : '';
+
+  // Generate hour and minute options
+  const hourOptions = Array.from({ length: 24 }, (_, i) => i);
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5); // 5-minute intervals
 
   return (
     <div className={`relative w-full ${className}`} ref={dropdownRef}>
@@ -177,127 +181,97 @@ export const TimePicker: React.FC<TimePickerProps> = ({
 
       {/* Time Picker Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 w-80 animate-slide-in-up">
+        <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-3xl shadow-2xl p-8 w-80 animate-slide-in-up">
           {/* Header */}
-          <div className="text-center mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Select Time</h3>
-            <p className="text-sm text-gray-500">24-hour format</p>
-          </div>
-
-          {/* Time Display */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl px-8 py-4 border-2 border-blue-200">
-              <span className="text-4xl font-bold text-gray-900 tracking-wider">
-                {formatDisplayTime(hours, minutes)}
-              </span>
-            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Select time</h3>
           </div>
 
-          {/* Time Controls */}
-          <div className="flex items-center justify-center space-x-8 mb-8">
-            {/* Hours Control */}
-            <div className="flex flex-col items-center space-y-3">
-              <button
-                type="button"
-                onClick={() => handleHourChange(1)}
-                className="p-3 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:scale-110 group"
-              >
-                <ChevronUp className="h-5 w-5 text-blue-600 group-hover:text-blue-700" />
-              </button>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-2xl font-bold text-white">
-                    {hours.toString().padStart(2, '0')}
-                  </span>
-                </div>
-                <span className="text-xs font-medium text-gray-500 mt-2 block">Hours</span>
+          {/* Time Selection Grid */}
+          <div className="space-y-8">
+            {/* Hours Grid */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-600 mb-4 text-center">Hours</h4>
+              <div className="grid grid-cols-6 gap-3">
+                {hourOptions.map((hour) => (
+                  <button
+                    key={hour}
+                    type="button"
+                    onClick={() => setHours(hour)}
+                    className={`
+                      w-12 h-12 rounded-2xl text-lg font-bold transition-all duration-200
+                      ${hours === hour
+                        ? 'bg-gray-900 text-white shadow-lg scale-110'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
+                      }
+                    `}
+                  >
+                    {hour.toString().padStart(2, '0')}
+                  </button>
+                ))}
               </div>
-              
-              <button
-                type="button"
-                onClick={() => handleHourChange(-1)}
-                className="p-3 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:scale-110 group"
-              >
-                <ChevronDown className="h-5 w-5 text-blue-600 group-hover:text-blue-700" />
-              </button>
             </div>
 
-            {/* Separator */}
-            <div className="text-3xl font-bold text-gray-400">:</div>
-
-            {/* Minutes Control */}
-            <div className="flex flex-col items-center space-y-3">
-              <button
-                type="button"
-                onClick={() => handleMinuteChange(5)}
-                className="p-3 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:scale-110 group"
-              >
-                <ChevronUp className="h-5 w-5 text-blue-600 group-hover:text-blue-700" />
-              </button>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-2xl font-bold text-white">
-                    {minutes.toString().padStart(2, '0')}
-                  </span>
-                </div>
-                <span className="text-xs font-medium text-gray-500 mt-2 block">Minutes</span>
+            {/* Minutes Grid */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-600 mb-4 text-center">Minutes</h4>
+              <div className="grid grid-cols-6 gap-3">
+                {minuteOptions.map((minute) => (
+                  <button
+                    key={minute}
+                    type="button"
+                    onClick={() => setMinutes(minute)}
+                    className={`
+                      w-12 h-12 rounded-2xl text-lg font-bold transition-all duration-200
+                      ${minutes === minute
+                        ? 'bg-gray-900 text-white shadow-lg scale-110'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
+                      }
+                    `}
+                  >
+                    {minute.toString().padStart(2, '0')}
+                  </button>
+                ))}
               </div>
-              
+            </div>
+
+            {/* Selected Time Display */}
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center bg-gray-50 rounded-3xl px-8 py-4 border-2 border-gray-200">
+                <span className="text-4xl font-bold text-gray-900 tracking-wider">
+                  {formatDisplayTime(hours, minutes)}
+                </span>
+              </div>
+            </div>
+
+            {/* Current Time Button */}
+            <div className="text-center">
               <button
                 type="button"
-                onClick={() => handleMinuteChange(-5)}
-                className="p-3 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:scale-110 group"
+                onClick={handleCurrentTime}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors"
               >
-                <ChevronDown className="h-5 w-5 text-blue-600 group-hover:text-blue-700" />
+                Current Time
               </button>
             </div>
-          </div>
-
-          {/* Quick Time Buttons */}
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            {[
-              { label: '09:00', h: 9, m: 0 },
-              { label: '12:00', h: 12, m: 0 },
-              { label: '15:00', h: 15, m: 0 },
-              { label: '18:00', h: 18, m: 0 },
-              { label: 'Now', h: new Date().getHours(), m: new Date().getMinutes() },
-              { label: '23:59', h: 23, m: 59 }
-            ].map((time) => (
-              <button
-                key={time.label}
-                type="button"
-                onClick={() => handleQuickTime(time.h, time.m)}
-                className="px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 hover:scale-105"
-              >
-                {time.label}
-              </button>
-            ))}
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
             <button
               type="button"
-              onClick={() => {
-                const now = new Date();
-                handleTimeChange(now.getHours(), now.getMinutes());
-              }}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 px-3 py-2 hover:bg-blue-50 rounded-lg transition-colors"
+              onClick={handleCancel}
+              className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors"
             >
-              Current Time
+              Cancel
             </button>
             
             <button
               type="button"
-              onClick={() => {
-                setIsOpen(false);
-                setIsFocused(false);
-              }}
-              className="text-sm font-medium text-gray-600 hover:text-gray-800 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              onClick={handleSave}
+              className="px-8 py-3 bg-gray-900 text-white font-medium rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              Done
+              Save
             </button>
           </div>
         </div>

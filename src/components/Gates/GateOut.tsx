@@ -865,25 +865,21 @@ const GateOutCompletionModal: React.FC<{
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Gate Out Date *
-                  </label>
                   <DatePicker
                     value={gateOutDate}
                     onChange={setGateOutDate}
                     placeholder="Select gate out date"
+                    label="Gate Out Date *"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Gate Out Time *
-                  </label>
                   <TimePicker
                     value={gateOutTime}
                     onChange={setGateOutTime}
                     placeholder="Select gate out time"
+                    label="Gate Out Time *"
                     required
                   />
                 </div>
