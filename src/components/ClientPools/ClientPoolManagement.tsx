@@ -157,6 +157,14 @@ export const ClientPoolManagement: React.FC = () => {
     };
     
     const { color, label } = config[priority];
+    
+    return (
+      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${color}`}>
+        {label}
+      </span>
+    );
+  };
+
   const handleCreatePool = (data: any) => {
     try {
       const newPool = clientPoolService.createClientPool(
@@ -165,7 +173,6 @@ export const ClientPoolManagement: React.FC = () => {
         data.clientName,
         data.assignedStacks,
         data.maxCapacity,
-        'medium', // Default priority
         new Date(data.contractStartDate),
         data.contractEndDate ? new Date(data.contractEndDate) : undefined,
         data.notes
@@ -208,12 +215,6 @@ export const ClientPoolManagement: React.FC = () => {
     }
   };
 
-    return (
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${color}`}>
-        {label}
-      </span>
-    );
-  };
 
   if (!canManageClientPools) {
     return (
