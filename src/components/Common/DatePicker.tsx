@@ -92,17 +92,21 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const isDateDisabled = (date: Date): boolean => {
-    // Disable future dates
-    if (date > currentDateOnly) return true;
-    if (minDate && date < new Date(minDate)) return true;
+    // Check if this is an end date or departure field (allow future dates)
+    const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+                           label?.toLowerCase().includes('end date') ||
+                           placeholder?.toLowerCase().includes('departure') || 
+                           label?.toLowerCase().includes('departure');
     if (maxDate && date > new Date(maxDate)) return true;
     return false;
   };
 
   const isMonthNavigationDisabled = (direction: 'prev' | 'next'): boolean => {
-    if (direction === 'next') {
-      // Disable next if it would go to future months
-      const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    // Check if this is an end date or departure field
+    const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+                           label?.toLowerCase().includes('end date') ||
+                           placeholder?.toLowerCase().includes('departure') || 
+                           label?.toLowerCase().includes('departure');
       const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
       const nextMonthDate = new Date(nextYear, nextMonth, 1);
       return nextMonthDate > currentDateOnly;
@@ -396,7 +400,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                     <div className="grid grid-cols-4 gap-2">
                       {(() => {
                         const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
-                                               label?.toLowerCase().includes('end date');
+                                               label?.toLowerCase().includes('end date') ||
+                                               placeholder?.toLowerCase().includes('departure') || 
+                                               label?.toLowerCase().includes('departure');
                         const startYear = today.getFullYear() - 20;
                         const endYear = isEndDateField ? today.getFullYear() + 10 : today.getFullYear();
                         const yearRange = endYear - startYear + 1;
@@ -406,7 +412,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                         const isCurrentYear = year === today.getFullYear();
                         const isSelectedYear = year === currentYear;
                         const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
-                                               label?.toLowerCase().includes('end date');
+                                               label?.toLowerCase().includes('end date') ||
+                                               placeholder?.toLowerCase().includes('departure') || 
+                                               label?.toLowerCase().includes('departure');
                         const isFutureYear = !isEndDateField && year > today.getFullYear();
                         
                         return (

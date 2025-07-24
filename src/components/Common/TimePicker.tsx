@@ -25,9 +25,24 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   
+  // Check if this is an end date or departure field (allow future times)
+  const isEndOrDepartureField = placeholder?.toLowerCase().includes('end') || 
+                                 label?.toLowerCase().includes('end') ||
+                                 placeholder?.toLowerCase().includes('departure') || 
+                                 label?.toLowerCase().includes('departure');
+  
   // Parse initial time values from the value prop
   const parseTimeValue = (timeString: string) => {
-    if (!timeString) return { hours: 9, minutes: 0, seconds: 0 };
+    if (!timeString) {
+      // For end/departure fields, default to a reasonable future time
+      // For regular fields, default to current time
+      if (isEndOrDepartureField) {
+        return { hours: 17, minutes: 0, seconds: 0 }; // 5 PM default for end times
+      } else {
+        const now = new Date();
+        return { hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds() };
+      }
+    }
     
     const parts = timeString.split(':');
     return {
@@ -108,18 +123,32 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     e.preventDefault();
     e.stopPropagation();
     if (!disabled) {
-      // When opening, reset to current time context
-      const now = new Date();
-      setHours(now.getHours());
-      setMinutes(now.getMinutes());
-      setSeconds(now.getSeconds());
-      
-      // If there's an existing value, use that instead
-      if (value) {
-        const existingTime = parseTimeValue(value);
-        setHours(existingTime.hours);
-        setMinutes(existingTime.minutes);
-        setSeconds(existingTime.seconds);
+      // When opening, set appropriate default time
+      if (isEndOrDepartureField) {
+        // For end/departure fields, use reasonable default or existing value
+        if (value) {
+          const existingTime = parseTimeValue(value);
+          setHours(existingTime.hours);
+          setMinutes(existingTime.minutes);
+          setSeconds(existingTime.seconds);
+        } else {
+          setHours(17); // 5 PM default for end times
+          setMinutes(0);
+          setSeconds(0);
+        }
+      } else {
+        // For regular fields, use current time or existing value
+        if (value) {
+          const existingTime = parseTimeValue(value);
+          setHours(existingTime.hours);
+          setMinutes(existingTime.minutes);
+          setSeconds(existingTime.seconds);
+        } else {
+          const now = new Date();
+          setHours(now.getHours());
+          setMinutes(now.getMinutes());
+          setSeconds(now.getSeconds());
+        }
       }
       
       setIsFocused(true);
@@ -130,11 +159,17 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const handleClear = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Clear the time value and reset to current time context
-    const now = new Date();
-    setHours(now.getHours());
-    setMinutes(now.getMinutes());
-    setSeconds(now.getSeconds());
+    // Clear the time value and reset to appropriate context
+    if (isEndOrDepartureField) {
+      setHours(17); // 5 PM default for end times
+      setMinutes(0);
+      setSeconds(0);
+    } else {
+      const now = new Date();
+      setHours(now.getHours());
+      setMinutes(now.getMinutes());
+      setSeconds(now.getSeconds());
+    }
     setIsFocused(false);
     onChange('');
     setIsOpen(false);
@@ -161,20 +196,50 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   };
 
   const handleCancel = () => {
-    // Reset to current time context
-    const now = new Date();
-    setHours(now.getHours());
-    setMinutes(now.getMinutes());
-    setSeconds(now.getSeconds());
+    // Reset to appropriate time context
+    if (value) {
+      // If there's an existing value, restore it
+      const existingTime = parseTimeValue(value);
+      setHours(existingTime.hours);
+      setMinutes(existingTime.minutes);
+      setSeconds(existingTime.seconds);
+    } else {
+      // If no value, reset to appropriate default
+      if (isEndOrDepartureField) {
+        setHours(17); // 5 PM default for end times
+        setMinutes(0);
+        setSeconds(0);
+      } else {
+        const now = new Date();
+        setHours(now.getHours());
+        setMinutes(now.getMinutes());
+        setSeconds(now.getSeconds());
+      }
+    }
     setIsFocused(false);
     setIsOpen(false);
   };
   const handleBackdropClick = () => {
-    // Reset to current time context when clicking outside
-    const now = new Date();
-    setHours(now.getHours());
-    setMinutes(now.getMinutes());
-    setSeconds(now.getSeconds());
+    // Reset to appropriate time context when clicking outside
+    if (value) {
+      // If there's an existing value, restore it
+      const existingTime = parseTimeValue(value);
+      setHours(existingTime.hours);
+      setMinutes(existingTime.minutes);
+      setSeconds(existingTime.seconds);
+    } else {
+      // If no value, reset to appropriate default
+      if (isEndOrDepartureField) {
+        setHours(17); // 5 PM default for end times
+        setMinutes(0);
+        setSeconds(0);
+      } else {
+        const now = new Date();
+        setHours(now.getHours());
+        setMinutes(now.getMinutes());
+        setSeconds(now.getSeconds());
+      }
+    }
     setIsFocused(false);
     setIsOpen(false);
   };
