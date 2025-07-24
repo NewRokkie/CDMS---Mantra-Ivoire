@@ -469,28 +469,24 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                                 : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white shadow-sm hover:shadow-md'
                             }`}
                           >
-                            <div className="text-center space-y-1">
-                              <div className={`font-bold text-xs ${
+                            <div className="text-center space-y-2 min-h-[60px] flex flex-col justify-center">
+                              <div className={`font-bold text-sm ${
                                 isSelected ? 'text-purple-900' : 'text-gray-700 group-hover:text-purple-700'
                               }`}>
                                 S{stack.stackNumber.toString().padStart(2, '0')}
                               </div>
-                              <div className={`text-xs ${
+                              <div className={`text-xs leading-tight ${
                                 isSelected ? 'text-purple-700' : 'text-gray-500 group-hover:text-purple-600'
                               }`}>
-                                Cap: {capacity}
-                              </div>
-                              <div className={`text-xs font-medium ${
-                                isSelected ? 'text-purple-800' : 'text-gray-600 group-hover:text-purple-700'
-                              }`}>
-                                {stack.rows}R×{stack.maxTiers}T
+                                <div>Cap: {capacity}</div>
+                                <div className="mt-1">{stack.rows}R×{stack.maxTiers}T</div>
                               </div>
                             </div>
                             
                             {/* Selection Indicator */}
                             {isSelected && (
-                              <div className="absolute -top-1 -right-1 bg-purple-500 text-white rounded-full p-1 shadow-lg animate-bounce-in ring-2 ring-white">
-                                <Check className="h-3 w-3" />
+                              <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1.5 shadow-lg animate-bounce-in ring-2 ring-white">
+                                <Check className="h-3.5 w-3.5" />
                               </div>
                             )}
                             
@@ -502,7 +498,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                             }`}></div>
                             
                             {/* Hover Tooltip */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-20 shadow-lg">
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-20 shadow-lg">
                               <div className="font-medium">Stack {stack.stackNumber}</div>
                               <div className="text-gray-300">{stack.rows} Rows × {stack.maxTiers} Tiers</div>
                               <div className="text-purple-300">Capacity: {capacity} containers</div>
