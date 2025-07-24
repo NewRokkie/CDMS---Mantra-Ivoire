@@ -113,6 +113,11 @@
     scrollbar-width: none;
   }
 
+  /* Hide scrollbar for time picker columns */
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Smooth scrolling for all elements */
   html {
     scroll-behavior: smooth;

@@ -9,6 +9,7 @@ interface TimePickerProps {
   disabled?: boolean;
   label?: string;
   className?: string;
+  includeSeconds?: boolean;
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -18,15 +19,20 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   required = false,
   disabled = false,
   label,
-  className = ""
+  className = "",
+  includeSeconds = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hours, setHours] = useState(value ? parseInt(value.split(':')[0]) : 12);
+  const [hours, setHours] = useState(value ? parseInt(value.split(':')[0]) : 0);
   const [minutes, setMinutes] = useState(value ? parseInt(value.split(':')[1]) : 0);
+  const [seconds, setSeconds] = useState(value && includeSeconds ? parseInt(value.split(':')[2] || '0') : 0);
   const [isFocused, setIsFocused] = useState(false);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hoursScrollRef = useRef<HTMLDivElement>(null);
+  const minutesScrollRef = useRef<HTMLDivElement>(null);
+  const secondsScrollRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -44,24 +50,44 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   // Update internal state when value prop changes
   useEffect(() => {
     if (value) {
-      const [h, m] = value.split(':').map(Number);
-      setHours(h);
-      setMinutes(m);
+      const parts = value.split(':');
+      setHours(parseInt(parts[0]));
+      setMinutes(parseInt(parts[1]));
+      if (includeSeconds && parts[2]) {
+        setSeconds(parseInt(parts[2]));
+      }
     }
-  }, [value]);
+  }, [value, includeSeconds]);
 
-  const formatTime = (h: number, m: number): string => {
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  // Scroll to selected value when picker opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        scrollToValue(hoursScrollRef, hours, 24);
+        scrollToValue(minutesScrollRef, minutes, 60);
+        if (includeSeconds) {
+          scrollToValue(secondsScrollRef, seconds, 60);
+        }
+      }, 100);
+    }
+  }, [isOpen, hours, minutes, seconds, includeSeconds]);
+
+  const scrollToValue = (ref: React.RefObject<HTMLDivElement>, value: number, max: number) => {
+    if (ref.current) {
+      const itemHeight = 48; // Height of each time item
+      const containerHeight = ref.current.clientHeight;
+      const scrollTop = (value * itemHeight) - (containerHeight / 2) + (itemHeight / 2);
+      ref.current.scrollTo({ top: scrollTop, behavior: 'smooth' });
+    }
   };
 
-  const formatDisplayTime = (h: number, m: number): string => {
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  const formatTime = (h: number, m: number, s?: number): string => {
+    const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    return includeSeconds ? `${timeString}:${s?.toString().padStart(2, '0')}` : timeString;
   };
 
-  const handleTimeSelect = (newHours: number, newMinutes: number) => {
-    setHours(newHours);
-    setMinutes(newMinutes);
-    onChange(formatTime(newHours, newMinutes));
+  const formatDisplayTime = (h: number, m: number, s?: number): string => {
+    return formatTime(h, m, s);
   };
 
   const handleInputFocus = () => {
@@ -77,20 +103,33 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     }, 150);
   };
 
+  // FIX: Clear functionality - only clears value, doesn't open picker
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setHours(12);
+    e.preventDefault();
+    setHours(0);
     setMinutes(0);
+    setSeconds(0);
     onChange('');
+    // Don't open the picker when clearing
   };
 
   const handleSave = () => {
-    onChange(formatTime(hours, minutes));
+    onChange(formatTime(hours, minutes, includeSeconds ? seconds : undefined));
     setIsOpen(false);
     setIsFocused(false);
   };
 
   const handleCancel = () => {
+    // Reset to original values
+    if (value) {
+      const parts = value.split(':');
+      setHours(parseInt(parts[0]));
+      setMinutes(parseInt(parts[1]));
+      if (includeSeconds && parts[2]) {
+        setSeconds(parseInt(parts[2]));
+      }
+    }
     setIsOpen(false);
     setIsFocused(false);
   };
@@ -99,15 +138,92 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     const now = new Date();
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();
+    const currentSeconds = now.getSeconds();
+    
     setHours(currentHours);
     setMinutes(currentMinutes);
+    if (includeSeconds) {
+      setSeconds(currentSeconds);
+    }
+    
+    // Scroll to current time
+    setTimeout(() => {
+      scrollToValue(hoursScrollRef, currentHours, 24);
+      scrollToValue(minutesScrollRef, currentMinutes, 60);
+      if (includeSeconds) {
+        scrollToValue(secondsScrollRef, currentSeconds, 60);
+      }
+    }, 100);
   };
 
-  const displayValue = value ? formatDisplayTime(hours, minutes) : '';
+  const displayValue = value ? formatDisplayTime(hours, minutes, includeSeconds ? seconds : undefined) : '';
 
-  // Generate hour and minute options
-  const hourOptions = Array.from({ length: 24 }, (_, i) => i);
-  const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5); // 5-minute intervals
+  // Generate time arrays
+  const hoursArray = Array.from({ length: 24 }, (_, i) => i);
+  const minutesArray = Array.from({ length: 60 }, (_, i) => i);
+  const secondsArray = Array.from({ length: 60 }, (_, i) => i);
+
+  // Responsive: Check if mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  const TimeColumn: React.FC<{
+    title: string;
+    values: number[];
+    selectedValue: number;
+    onValueChange: (value: number) => void;
+    scrollRef: React.RefObject<HTMLDivElement>;
+  }> = ({ title, values, selectedValue, onValueChange, scrollRef }) => {
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+      const container = e.currentTarget;
+      const itemHeight = 48;
+      const scrollTop = container.scrollTop;
+      const centerIndex = Math.round(scrollTop / itemHeight);
+      const newValue = values[centerIndex];
+      
+      if (newValue !== undefined && newValue !== selectedValue) {
+        onValueChange(newValue);
+      }
+    };
+
+    return (
+      <div className="flex-1 flex flex-col items-center">
+        <div className="text-sm font-medium text-gray-600 mb-3">{title}</div>
+        <div 
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="h-48 overflow-y-auto scrollbar-none relative"
+          style={{ scrollSnapType: 'y mandatory' }}
+        >
+          {/* Padding items for proper centering */}
+          <div className="h-24"></div>
+          
+          {values.map((val) => (
+            <div
+              key={val}
+              className={`h-12 flex items-center justify-center text-2xl font-bold transition-all duration-300 cursor-pointer ${
+                val === selectedValue
+                  ? 'text-gray-900 scale-110'
+                  : 'text-gray-300 hover:text-gray-500'
+              }`}
+              style={{ scrollSnapAlign: 'center' }}
+              onClick={() => {
+                onValueChange(val);
+                scrollToValue(scrollRef, val, values.length);
+              }}
+            >
+              {val.toString().padStart(2, '0')}
+            </div>
+          ))}
+          
+          {/* Padding items for proper centering */}
+          <div className="h-24"></div>
+          
+          {/* Center indicator line */}
+          <div className="absolute top-1/2 left-0 right-0 h-12 border-t border-b border-gray-200 pointer-events-none transform -translate-y-1/2 bg-gray-50 bg-opacity-50"></div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className={`relative w-full ${className}`} ref={dropdownRef}>
@@ -157,10 +273,10 @@ export const TimePicker: React.FC<TimePickerProps> = ({
               <button
                 type="button"
                 onClick={handleClear}
-                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200"
+                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200 group z-10"
                 title="Clear time"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4 group-hover:scale-110 transition-transform" />
               </button>
             )}
           </div>
@@ -179,102 +295,153 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         )}
       </div>
 
-      {/* Time Picker Dropdown */}
+      {/* Time Picker Dropdown - Responsive Design */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-3xl shadow-2xl p-8 w-80 animate-slide-in-up">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Select time</h3>
-          </div>
-
-          {/* Time Selection Grid */}
-          <div className="space-y-8">
-            {/* Hours Grid */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-600 mb-4 text-center">Hours</h4>
-              <div className="grid grid-cols-6 gap-3">
-                {hourOptions.map((hour) => (
+        <>
+          {/* Mobile: Bottom Sheet */}
+          {isMobile ? (
+            <>
+              {/* Backdrop */}
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-fade-in" />
+              
+              {/* Bottom Sheet */}
+              <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 animate-slide-in-up max-h-[80vh] overflow-hidden">
+                {/* Handle */}
+                <div className="flex justify-center pt-4 pb-2">
+                  <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+                </div>
+                
+                {/* Header */}
+                <div className="text-center px-6 py-4 border-b border-gray-100">
+                  <h3 className="text-xl font-bold text-gray-900">Select time</h3>
                   <button
-                    key={hour}
-                    type="button"
-                    onClick={() => setHours(hour)}
-                    className={`
-                      w-12 h-12 rounded-2xl text-lg font-bold transition-all duration-200
-                      ${hours === hour
-                        ? 'bg-gray-900 text-white shadow-lg scale-110'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
-                      }
-                    `}
+                    onClick={handleCurrentTime}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
                   >
-                    {hour.toString().padStart(2, '0')}
+                    Current time
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Minutes Grid */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-600 mb-4 text-center">Minutes</h4>
-              <div className="grid grid-cols-6 gap-3">
-                {minuteOptions.map((minute) => (
+                {/* Time Selection */}
+                <div className="px-6 py-6">
+                  <div className={`flex ${includeSeconds ? 'space-x-4' : 'space-x-8'}`}>
+                    <TimeColumn
+                      title="Hours"
+                      values={hoursArray}
+                      selectedValue={hours}
+                      onValueChange={setHours}
+                      scrollRef={hoursScrollRef}
+                    />
+                    <TimeColumn
+                      title="Minutes"
+                      values={minutesArray}
+                      selectedValue={minutes}
+                      onValueChange={setMinutes}
+                      scrollRef={minutesScrollRef}
+                    />
+                    {includeSeconds && (
+                      <TimeColumn
+                        title="Seconds"
+                        values={secondsArray}
+                        selectedValue={seconds}
+                        onValueChange={setSeconds}
+                        scrollRef={secondsScrollRef}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
                   <button
-                    key={minute}
                     type="button"
-                    onClick={() => setMinutes(minute)}
-                    className={`
-                      w-12 h-12 rounded-2xl text-lg font-bold transition-all duration-200
-                      ${minutes === minute
-                        ? 'bg-gray-900 text-white shadow-lg scale-110'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
-                      }
-                    `}
+                    onClick={handleCancel}
+                    className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-xl hover:bg-gray-100"
                   >
-                    {minute.toString().padStart(2, '0')}
+                    Cancel
                   </button>
-                ))}
+                  
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="px-8 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Desktop: Dropdown */
+            <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-3xl shadow-2xl p-8 w-96 animate-slide-in-up">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Select time</h3>
+                <button
+                  onClick={handleCurrentTime}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  Current time
+                </button>
+              </div>
+
+              {/* Time Selection */}
+              <div className={`flex ${includeSeconds ? 'space-x-6' : 'space-x-8'} mb-8`}>
+                <TimeColumn
+                  title="Hours"
+                  values={hoursArray}
+                  selectedValue={hours}
+                  onValueChange={setHours}
+                  scrollRef={hoursScrollRef}
+                />
+                <TimeColumn
+                  title="Minutes"
+                  values={minutesArray}
+                  selectedValue={minutes}
+                  onValueChange={setMinutes}
+                  scrollRef={minutesScrollRef}
+                />
+                {includeSeconds && (
+                  <TimeColumn
+                    title="Seconds"
+                    values={secondsArray}
+                    selectedValue={seconds}
+                    onValueChange={setSeconds}
+                    scrollRef={secondsScrollRef}
+                  />
+                )}
+              </div>
+
+              {/* Selected Time Display */}
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center bg-gray-50 rounded-3xl px-8 py-4 border-2 border-gray-200">
+                  <span className="text-4xl font-bold text-gray-900 tracking-wider">
+                    {formatDisplayTime(hours, minutes, includeSeconds ? seconds : undefined)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-xl hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="px-8 py-3 bg-gray-900 text-white font-medium rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  Save
+                </button>
               </div>
             </div>
-
-            {/* Selected Time Display */}
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center bg-gray-50 rounded-3xl px-8 py-4 border-2 border-gray-200">
-                <span className="text-4xl font-bold text-gray-900 tracking-wider">
-                  {formatDisplayTime(hours, minutes)}
-                </span>
-              </div>
-            </div>
-
-            {/* Current Time Button */}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={handleCurrentTime}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                Current Time
-              </button>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            
-            <button
-              type="button"
-              onClick={handleSave}
-              className="px-8 py-3 bg-gray-900 text-white font-medium rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Save
-            </button>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );
