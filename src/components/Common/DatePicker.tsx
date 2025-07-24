@@ -394,10 +394,20 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-gray-700 text-center">Select Year</h3>
                     <div className="grid grid-cols-4 gap-2">
-                      {Array.from({ length: 21 }, (_, i) => today.getFullYear() - 20 + i).map(year => {
+                      {(() => {
+                        const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+                                               label?.toLowerCase().includes('end date');
+                        const startYear = today.getFullYear() - 20;
+                        const endYear = isEndDateField ? today.getFullYear() + 10 : today.getFullYear();
+                        const yearRange = endYear - startYear + 1;
+                        
+                        return Array.from({ length: yearRange }, (_, i) => startYear + i);
+                      })().map(year => {
                         const isCurrentYear = year === today.getFullYear();
                         const isSelectedYear = year === currentYear;
-                        const isFutureYear = year > today.getFullYear();
+                        const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+                                               label?.toLowerCase().includes('end date');
+                        const isFutureYear = !isEndDateField && year > today.getFullYear();
                         
                         return (
                           <button

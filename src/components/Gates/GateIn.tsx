@@ -1047,6 +1047,7 @@ const LocationValidationView: React.FC<{
                   onChange={setTruckArrivalTime}
                   placeholder="Select arrival time"
                   label="Time"
+                  includeSeconds={true}
                   required
                 />
               </div>
@@ -1070,6 +1071,7 @@ const LocationValidationView: React.FC<{
                   onChange={setTruckDepartureTime}
                   placeholder="Select departure time"
                   label="Time"
+                  includeSeconds={true}
                 />
               </div>
             </div>
