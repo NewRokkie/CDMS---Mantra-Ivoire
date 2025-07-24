@@ -13,7 +13,10 @@ import {
   CheckCircle,
   BarChart3,
   TrendingUp,
-  Building
+  Building,
+  X,
+  Loader,
+  Calendar
 } from 'lucide-react';
 import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { useAuth } from '../../hooks/useAuth';

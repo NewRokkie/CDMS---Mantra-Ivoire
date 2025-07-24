@@ -1,5 +1,6 @@
 import React from 'react';
 import { Settings, Shield } from 'lucide-react';
+import { clientPoolService } from '../../../services/clientPoolService';
 
 interface StackConfiguration {
   stackId: string;
@@ -45,6 +46,9 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                 Container Size
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Assigned Client
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -54,6 +58,10 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
               const can40Feet = canAssign40Feet(config.stackNumber);
               const adjacentStack = getAdjacentStackNumber(config.stackNumber);
               const adjacentConfig = adjacentStack ? configurations.find(c => c.stackNumber === adjacentStack) : null;
+              
+              // Get assigned client for this stack
+              const stackAssignments = clientPoolService.getStackAssignments(config.stackId);
+              const assignedClient = stackAssignments.length > 0 ? stackAssignments[0] : null;
               
               return (
                 <tr key={config.stackId} className="hover:bg-gray-50 transition-colors">
@@ -96,6 +104,20 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                     }`}>
                       {config.containerSize}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {assignedClient ? (
+                      <div className="flex items-center space-x-2">
+                        <span className="inline-flex px-3 py-1 text-sm font-medium rounded-lg bg-blue-100 text-blue-800">
+                          {assignedClient.clientCode}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {assignedClient.isExclusive ? 'Exclusive' : 'Shared'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400 italic">Unassigned</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="relative inline-flex items-center bg-gray-200 rounded-full p-1">
