@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Save, Loader, Building, Package, Calendar, Search, Check, ChevronDown, Grid3X3 } from 'lucide-react';
 import { ClientPool } from '../../types/clientPool';
 import { Yard, YardStack } from '../../types';
@@ -518,6 +518,20 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                 <div className="mt-6 p-4 bg-white rounded-xl border-2 border-purple-300 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
+                      <div className="text-sm font-medium text-purple-800">Selected Stacks Summary</div>
+                      <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                        {selectedStacks.size} stacks
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-16 gap-2">
+                    {Array.from(selectedStacks).slice(0, 10).map(stackId => {
+                      const stack = getAllStacks().find(s => s.id === stackId);
+                      const isSelected = selectedStacks.has(stackId);
+                      
+                      return (
+                        <StackCard
+                          key={stackId}
                           stack={stack}
                           isSelected={isSelected}
                           onToggle={() => handleStackToggle(stack.id)}
@@ -670,6 +684,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
     </div>
   );
 };
+
 // Smart Tooltip Component with Viewport-Based Positioning
 const SmartTooltip: React.FC<{
   children: React.ReactNode;
