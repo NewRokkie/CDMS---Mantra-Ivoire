@@ -129,12 +129,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Clear the selected date and reset calendar to current date
+    // Clear the selected date completely
     const today = new Date();
     setSelectedDate(null);
     setCurrentMonth(today.getMonth());
     setCurrentYear(today.getFullYear());
     setShowYearSelector(false);
+    setIsFocused(false);
     onChange('');
   };
 
@@ -146,52 +147,45 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const handleCancel = () => {
-    // Reset to current date when no value is set, or to original values
+    // Reset to current date context and close
     const today = new Date();
-    if (value) {
-      const originalDate = new Date(value);
-      setSelectedDate(originalDate);
-      setCurrentMonth(originalDate.getMonth());
-      setCurrentYear(originalDate.getFullYear());
-    } else {
-      setSelectedDate(null);
-      setCurrentMonth(today.getMonth());
-      setCurrentYear(today.getFullYear());
-    }
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
     setShowYearSelector(false);
+    setIsFocused(false);
     setIsOpen(false);
   };
 
   const handleBackdropClick = () => {
-    // Reset to current date when clicking outside if no value is set
+    // Reset to current date context when clicking outside
     const today = new Date();
-    if (value) {
-      const originalDate = new Date(value);
-      setSelectedDate(originalDate);
-      setCurrentMonth(originalDate.getMonth());
-      setCurrentYear(originalDate.getFullYear());
-    } else {
-      setSelectedDate(null);
-      setCurrentMonth(today.getMonth());
-      setCurrentYear(today.getFullYear());
-    }
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
     setShowYearSelector(false);
-    setIsOpen(false);
     setIsFocused(false);
+    setIsOpen(false);
   };
 
   const handleInputClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!disabled) {
-      // When opening, reset to current date if no value is set
+      // When opening, always reset to current date context and main view
       const today = new Date();
-      if (!value) {
-        setCurrentMonth(today.getMonth());
-        setCurrentYear(today.getFullYear());
+      setCurrentMonth(today.getMonth());
+      setCurrentYear(today.getFullYear());
+      setShowYearSelector(false);
+      
+      // Set selected date based on current value
+      if (value) {
+        const existingDate = new Date(value);
+        setSelectedDate(existingDate);
+        setCurrentMonth(existingDate.getMonth());
+        setCurrentYear(existingDate.getFullYear());
+      } else {
         setSelectedDate(null);
       }
-      setShowYearSelector(false);
+      
       setIsFocused(true);
       setIsOpen(true);
     }
@@ -348,7 +342,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           
           {/* Centered Calendar Overlay */}
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fade-scale-in">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-80 max-h-96 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-80 overflow-hidden">
               {/* Calendar Header */}
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center justify-between mb-3">
@@ -394,12 +388,12 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               </div>
 
               {/* Calendar Content */}
-              <div className="p-4">
+              <div className="p-4 max-h-80 overflow-y-auto">
                 {showYearSelector ? (
                   /* Year Selector */
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-gray-700 text-center">Select Year</h3>
-                    <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto scrollbar-thin">
+                    <div className="grid grid-cols-4 gap-2">
                       {Array.from({ length: 21 }, (_, i) => today.getFullYear() - 20 + i).map(year => {
                         const isCurrentYear = year === today.getFullYear();
                         const isSelectedYear = year === currentYear;
@@ -451,27 +445,28 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 )}
               </div>
 
-            </div>
 
-            {/* Calendar Footer - Always Visible Outside Content Area */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!selectedDate}
-                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save
-                </button>
+
+              {/* Calendar Footer - Inside Picker */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!selectedDate}
+                    className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
             </div>
           </div>

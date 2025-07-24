@@ -108,6 +108,20 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     e.preventDefault();
     e.stopPropagation();
     if (!disabled) {
+      // When opening, reset to current time context
+      const now = new Date();
+      setHours(now.getHours());
+      setMinutes(now.getMinutes());
+      setSeconds(now.getSeconds());
+      
+      // If there's an existing value, use that instead
+      if (value) {
+        const existingTime = parseTimeValue(value);
+        setHours(existingTime.hours);
+        setMinutes(existingTime.minutes);
+        setSeconds(existingTime.seconds);
+      }
+      
       setIsFocused(true);
       setIsOpen(true);
     }
@@ -116,14 +130,14 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const handleClear = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Clear the time value without opening the picker
-    setHours(0);
-    setMinutes(0);
-    setSeconds(0);
-    onChange('');
-    // Ensure picker doesn't open
-    setIsOpen(false);
+    // Clear the time value and reset to current time context
+    const now = new Date();
+    setHours(now.getHours());
+    setMinutes(now.getMinutes());
+    setSeconds(now.getSeconds());
     setIsFocused(false);
+    onChange('');
+    setIsOpen(false);
   };
 
   const handleCurrentTime = () => {
@@ -147,17 +161,22 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   };
 
   const handleCancel = () => {
-    // Reset to original values from props
-    const originalTime = parseTimeValue(value);
-    setHours(originalTime.hours);
-    setMinutes(originalTime.minutes);
-    setSeconds(originalTime.seconds);
+    // Reset to current time context
+    const now = new Date();
+    setHours(now.getHours());
+    setMinutes(now.getMinutes());
+    setSeconds(now.getSeconds());
     setIsFocused(false);
     setIsOpen(false);
-    setIsFocused(false);
   };
   const handleBackdropClick = () => {
-    handleCancel(); // Reset state when clicking outside
+    // Reset to current time context when clicking outside
+    const now = new Date();
+    setHours(now.getHours());
+    setMinutes(now.getMinutes());
+    setSeconds(now.getSeconds());
+    setIsFocused(false);
+    setIsOpen(false);
   };
 
 
