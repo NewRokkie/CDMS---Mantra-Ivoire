@@ -880,6 +880,7 @@ const GateOutCompletionModal: React.FC<{
                     onChange={setGateOutTime}
                     placeholder="Select gate out time"
                     label="Gate Out Time *"
+                   includeSeconds={true}
                     required
                   />
                 </div>
