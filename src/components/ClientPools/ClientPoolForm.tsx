@@ -414,18 +414,46 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
               </div>
 
               {/* Modern Stack Selection Grid */}
-              <div className="space-y-6 max-h-80 overflow-y-auto scrollbar-thin">
+              <div className="space-y-6">
                 {stacksBySection.map(({ section, stacks }) => (
-                  <div key={section.id} className="space-y-3">
-                    <div className="flex items-center space-x-2">
+                  <div key={section.id} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
                       <Grid3X3 className="h-4 w-4 text-purple-600" />
                       <h5 className="font-medium text-purple-800">{section.name}</h5>
                       <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
                         {stacks.filter(s => selectedStacks.has(s.id)).length}/{stacks.length} selected
                       </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sectionStackIds = stacks.map(s => s.id);
+                          const allSelected = sectionStackIds.every(id => selectedStacks.has(id));
+                          setSelectedStacks(prev => {
+                            const newSet = new Set(prev);
+                            if (allSelected) {
+                              sectionStackIds.forEach(id => newSet.delete(id));
+                            } else {
+                              sectionStackIds.forEach(id => newSet.add(id));
+                            }
+                            return newSet;
+                          });
+                          triggerAutoSave();
+                        }}
+                        className="text-xs font-medium text-purple-600 hover:text-purple-800 px-2 py-1 hover:bg-purple-100 rounded-md transition-colors"
+                      >
+                        {stacks.every(s => selectedStacks.has(s.id)) ? 'Deselect Section' : 'Select Section'}
+                      </button>
                     </div>
                     
-                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                    {/* Responsive Grid with Optimal Spacing */}
+                    <div className={`grid gap-3 ${
+                      stacks.length <= 8 ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8' :
+                      stacks.length <= 12 ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12' :
+                      stacks.length <= 16 ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 xl:grid-cols-16' :
+                      'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-16'
+                    }`}>
                       {stacks.map((stack) => {
                         const isSelected = selectedStacks.has(stack.id);
                         const capacity = stack.rows * stack.maxTiers;
@@ -435,35 +463,51 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                             key={stack.id}
                             type="button"
                             onClick={() => handleStackToggle(stack.id)}
-                            className={`relative group p-3 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                            className={`relative group p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                               isSelected
-                                ? 'border-purple-500 bg-purple-100 shadow-lg shadow-purple-500/20'
-                                : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50 shadow-sm hover:shadow-md'
+                                ? 'border-purple-500 bg-gradient-to-br from-purple-100 to-purple-50 shadow-lg shadow-purple-500/30 ring-2 ring-purple-200'
+                                : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white shadow-sm hover:shadow-md'
                             }`}
                           >
-                            <div className="text-center">
-                              <div className={`font-bold text-sm ${
+                            <div className="text-center space-y-1">
+                              <div className={`font-bold text-xs ${
                                 isSelected ? 'text-purple-900' : 'text-gray-700 group-hover:text-purple-700'
                               }`}>
                                 S{stack.stackNumber.toString().padStart(2, '0')}
                               </div>
-                              <div className={`text-xs mt-1 ${
+                              <div className={`text-xs ${
                                 isSelected ? 'text-purple-700' : 'text-gray-500 group-hover:text-purple-600'
                               }`}>
-                                {capacity}
+                                Cap: {capacity}
+                              </div>
+                              <div className={`text-xs font-medium ${
+                                isSelected ? 'text-purple-800' : 'text-gray-600 group-hover:text-purple-700'
+                              }`}>
+                                {stack.rows}R×{stack.maxTiers}T
                               </div>
                             </div>
                             
                             {/* Selection Indicator */}
                             {isSelected && (
-                              <div className="absolute -top-1 -right-1 bg-purple-500 text-white rounded-full p-1 shadow-lg animate-bounce-in">
+                              <div className="absolute -top-1 -right-1 bg-purple-500 text-white rounded-full p-1 shadow-lg animate-bounce-in ring-2 ring-white">
                                 <Check className="h-3 w-3" />
                               </div>
                             )}
                             
+                            {/* Hover Glow Effect */}
+                            <div className={`absolute inset-0 rounded-xl transition-opacity duration-300 ${
+                              isSelected 
+                                ? 'bg-gradient-to-br from-purple-400/20 to-purple-600/20 opacity-100' 
+                                : 'bg-gradient-to-br from-purple-400/10 to-purple-600/10 opacity-0 group-hover:opacity-100'
+                            }`}></div>
+                            
                             {/* Hover Tooltip */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                              Stack {stack.stackNumber} • {stack.rows}R×{stack.maxTiers}T • Cap: {capacity}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-20 shadow-lg">
+                              <div className="font-medium">Stack {stack.stackNumber}</div>
+                              <div className="text-gray-300">{stack.rows} Rows × {stack.maxTiers} Tiers</div>
+                              <div className="text-purple-300">Capacity: {capacity} containers</div>
+                              {/* Tooltip Arrow */}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                             </div>
                           </button>
                         );
@@ -475,10 +519,205 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
 
               {/* Selection Summary */}
               {selectedStacks.size > 0 && (
-                <div className="mt-4 p-4 bg-white rounded-lg border border-purple-300">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-medium text-purple-800">
+                <div className="mt-6 p-4 bg-white rounded-xl border-2 border-purple-300 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Package className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-purple-900">
+                          {selectedStacks.size} stacks selected
+                        </span>
+                        <div className="text-xs text-purple-700">
+                          Total capacity: {formData.maxCapacity} containers
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStacks(new Set());
+                        triggerAutoSave();
+                      }}
+                      className="flex items-center space-x-1 text-sm text-purple-600 hover:text-purple-800 font-medium px-3 py-1 hover:bg-purple-100 rounded-lg transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                      <span>Clear All</span>
+                    </button>
+                  </div>
+                  
+                  {/* Selected Stacks Preview */}
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(selectedStacks).slice(0, 10).map(stackId => {
+                      const stack = getAllStacks().find(s => s.id === stackId);
+                      if (!stack) return null;
+                      
+                      return (
+                        <span
+                          key={stackId}
+                          className="inline-flex items-center space-x-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full"
+                        >
+                          <span>S{stack.stackNumber.toString().padStart(2, '0')}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleStackToggle(stackId)}
+                            className="hover:bg-purple-200 rounded-full p-0.5 transition-colors"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                    {selectedStacks.size > 10 && (
+                      <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                        +{selectedStacks.size - 10} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Selection Actions */}
+              {availableStacks.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Select high-capacity stacks (6 rows)
+                      const highCapacityStacks = availableStacks.filter(s => s.rows >= 6);
+                      setSelectedStacks(new Set(highCapacityStacks.map(s => s.id)));
+                      triggerAutoSave();
+                    }}
+                    className="text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium"
+                  >
+                    Select High Capacity (6+ rows)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Select by section
+                      const topSectionStacks = availableStacks.filter(s => s.sectionId === 'section-top');
+                      setSelectedStacks(new Set(topSectionStacks.map(s => s.id)));
+                      triggerAutoSave();
+                    }}
+                    className="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
+                  >
+                    Select Top Section
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Select medium capacity stacks (4-5 rows)
+                      const mediumCapacityStacks = availableStacks.filter(s => s.rows >= 4 && s.rows <= 5);
+                      setSelectedStacks(new Set(mediumCapacityStacks.map(s => s.id)));
+                      triggerAutoSave();
+                    }}
+                    className="text-xs px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors font-medium"
+                  >
+                    Select Medium Capacity (4-5 rows)
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Enhanced Empty State */}
+            {availableStacks.length === 0 && (
+              <div className="text-center py-12 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border-2 border-purple-200">
+                <div className="p-4 bg-white rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center shadow-lg">
+                  <Package className="h-10 w-10 text-purple-400" />
+                </div>
+                <h3 className="text-lg font-bold text-purple-900 mb-2">No Available Stacks</h3>
+                <p className="text-purple-700 mb-4">All stacks are currently assigned to other clients</p>
+                <div className="text-sm text-purple-600 bg-white px-4 py-2 rounded-lg inline-block">
+                  Contact administrator to reassign stacks or create new yard sections
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Enhanced Additional Information Section */}
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-gray-600 text-white rounded-lg">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <h4 className="text-lg font-semibold text-gray-900">Additional Information</h4>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notes & Special Instructions
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, notes: e.target.value }));
+                triggerAutoSave();
+              }}
+              rows={3}
+              className="form-input w-full resize-none"
+              placeholder="Enter any special instructions, handling requirements, or notes about this client pool..."
+            />
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {/* Enhanced Modal Footer */}
+    <div className="px-8 py-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 rounded-b-2xl flex-shrink-0">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          {/* Form Progress Indicator */}
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className={`w-2 h-2 rounded-full ${selectedClient ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <span>Client Selected</span>
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className={`w-2 h-2 rounded-full ${selectedStacks.size > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <span>Stacks Assigned</span>
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className={`w-2 h-2 rounded-full ${formData.contractStartDate ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <span>Contract Date Set</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            disabled={isLoading || !isFormValid}
+            className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          >
+            {isLoading ? (
+              <>
+                <Loader className="h-4 w-4 animate-spin" />
+                <span>{selectedPool ? 'Updating...' : 'Creating...'}</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span>{selectedPool ? 'Update Pool' : 'Create Pool'}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+);
+};
+
                         {selectedStacks.size} stacks selected
                       </span>
                       <span className="text-sm text-purple-600 ml-2">
@@ -497,7 +736,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
               )}
 
               {availableStacks.length === 0 && (
-                <div className="text-center py-8 text-purple-600 bg-purple-100 rounded-lg">
+                <div className="text-center py-6 text-purple-600 bg-purple-100 rounded-lg">
                   <Package className="h-8 w-8 mx-auto mb-2" />
                   <p className="font-medium">No available stacks</p>
                   <p className="text-sm">All stacks are already assigned to other clients</p>
@@ -506,7 +745,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
             </div>
 
             {/* Additional Information */}
-            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-2 bg-gray-600 text-white rounded-lg">
                   <Calendar className="h-5 w-5" />
@@ -524,7 +763,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                     setFormData(prev => ({ ...prev, notes: e.target.value }));
                     triggerAutoSave();
                   }}
-                  rows={3}
+                  rows={2}
                   className="form-input w-full"
                   placeholder="Additional notes about this client pool..."
                 />
@@ -534,7 +773,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
         </div>
 
         {/* Modal Footer - Fixed */}
-        <div className="px-8 py-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+        <div className="px-8 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
           <div className="flex items-center justify-end space-x-3">
             <button
               type="button"
