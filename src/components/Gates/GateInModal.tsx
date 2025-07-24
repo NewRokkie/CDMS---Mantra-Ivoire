@@ -4,6 +4,7 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInFormData } from './GateIn';
 import { ClientSearchField } from '../Common/ClientSearchField';
+import { TimePicker } from '../Common/TimePicker';
 
 interface GateInModalProps {
   showForm: boolean;

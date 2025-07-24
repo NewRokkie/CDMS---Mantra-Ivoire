@@ -1047,11 +1047,10 @@ const LocationValidationView: React.FC<{
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Time
                 </label>
-                <input
-                  type="time"
+                <TimePicker
                   value={truckArrivalTime}
-                  onChange={(e) => setTruckArrivalTime(e.target.value)}
-                  className="form-input w-full"
+                  onChange={setTruckArrivalTime}
+                  placeholder="Select arrival time"
                   required
                 />
               </div>
@@ -1075,11 +1074,10 @@ const LocationValidationView: React.FC<{
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Time
                 </label>
-                <input
-                  type="time"
+                <TimePicker
                   value={truckDepartureTime}
-                  onChange={(e) => setTruckDepartureTime(e.target.value)}
-                  className="form-input w-full"
+                  onChange={setTruckDepartureTime}
+                  placeholder="Select departure time"
                 />
               </div>
             </div>
