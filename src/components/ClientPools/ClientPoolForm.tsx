@@ -419,11 +419,11 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                   <div key={section.id} className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                      <Grid3X3 className="h-4 w-4 text-purple-600" />
-                      <h5 className="font-medium text-purple-800">{section.name}</h5>
-                      <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                        {stacks.filter(s => selectedStacks.has(s.id)).length}/{stacks.length} selected
-                      </span>
+                        <Grid3X3 className="h-4 w-4 text-purple-600" />
+                        <h5 className="font-medium text-purple-800">{section.name}</h5>
+                        <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                          {stacks.filter(s => selectedStacks.has(s.id)).length}/{stacks.length} selected
+                        </span>
                       </div>
                       <button
                         type="button"
@@ -634,118 +634,9 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Enhanced Additional Information Section */}
-        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-gray-600 text-white rounded-lg">
-              <Calendar className="h-5 w-5" />
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900">Additional Information</h4>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Notes & Special Instructions
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, notes: e.target.value }));
-                triggerAutoSave();
-              }}
-              rows={3}
-              className="form-input w-full resize-none"
-              placeholder="Enter any special instructions, handling requirements, or notes about this client pool..."
-            />
-          </div>
-        </div>
-      </form>
-    </div>
-
-    {/* Enhanced Modal Footer */}
-    <div className="px-8 py-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 rounded-b-2xl flex-shrink-0">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {/* Form Progress Indicator */}
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <div className={`w-2 h-2 rounded-full ${selectedClient ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span>Client Selected</span>
-          </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <div className={`w-2 h-2 rounded-full ${selectedStacks.size > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span>Stacks Assigned</span>
-          </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <div className={`w-2 h-2 rounded-full ${formData.contractStartDate ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span>Contract Date Set</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={isLoading || !isFormValid}
-            className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-          >
-            {isLoading ? (
-              <>
-                <Loader className="h-4 w-4 animate-spin" />
-                <span>{selectedPool ? 'Updating...' : 'Creating...'}</span>
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                <span>{selectedPool ? 'Update Pool' : 'Create Pool'}</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-);
-};
-
-                        {selectedStacks.size} stacks selected
-                      </span>
-                      <span className="text-sm text-purple-600 ml-2">
-                        • Total capacity: {formData.maxCapacity} containers
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStacks(new Set())}
-                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {availableStacks.length === 0 && (
-                <div className="text-center py-6 text-purple-600 bg-purple-100 rounded-lg">
-                  <Package className="h-8 w-8 mx-auto mb-2" />
-                  <p className="font-medium">No available stacks</p>
-                  <p className="text-sm">All stacks are already assigned to other clients</p>
-                </div>
-              )}
-            </div>
-
-            {/* Additional Information */}
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            {/* Enhanced Additional Information Section */}
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-2 bg-gray-600 text-white rounded-lg">
                   <Calendar className="h-5 w-5" />
@@ -755,7 +646,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes
+                  Notes & Special Instructions
                 </label>
                 <textarea
                   value={formData.notes}
@@ -763,43 +654,61 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                     setFormData(prev => ({ ...prev, notes: e.target.value }));
                     triggerAutoSave();
                   }}
-                  rows={2}
-                  className="form-input w-full"
-                  placeholder="Additional notes about this client pool..."
+                  rows={3}
+                  className="form-input w-full resize-none"
+                  placeholder="Enter any special instructions, handling requirements, or notes about this client pool..."
                 />
               </div>
             </div>
           </form>
         </div>
 
-        {/* Modal Footer - Fixed */}
-        <div className="px-8 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isLoading || !isFormValid}
-              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              {isLoading ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span>{selectedPool ? 'Updating...' : 'Creating...'}</span>
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>{selectedPool ? 'Update Pool' : 'Create Pool'}</span>
-                </>
-              )}
-            </button>
+        {/* Enhanced Modal Footer */}
+        <div className="px-8 py-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {/* Form Progress Indicator */}
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className={`w-2 h-2 rounded-full ${selectedClient ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span>Client Selected</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className={`w-2 h-2 rounded-full ${selectedStacks.size > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span>Stacks Assigned</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className={`w-2 h-2 rounded-full ${formData.contractStartDate ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span>Contract Date Set</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                disabled={isLoading || !isFormValid}
+                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span>{selectedPool ? 'Updating...' : 'Creating...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>{selectedPool ? 'Update Pool' : 'Create Pool'}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
