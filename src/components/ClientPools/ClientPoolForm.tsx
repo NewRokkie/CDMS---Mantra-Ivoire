@@ -77,8 +77,8 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
         clientName: selectedPool.clientName,
         assignedStacks: selectedPool.assignedStacks,
         maxCapacity: selectedPool.maxCapacity,
-        contractStartDate: selectedPool.contractStartDate.toISOString().split('T')[0],
-        contractEndDate: selectedPool.contractEndDate?.toISOString().split('T')[0] || '',
+        contractStartDate: new Date(selectedPool.contractStartDate).toISOString().split('T')[0],
+        contractEndDate: selectedPool.contractEndDate ? new Date(selectedPool.contractEndDate).toISOString().split('T')[0] : '',
         notes: selectedPool.notes || ''
       });
       setSelectedStacks(new Set(selectedPool.assignedStacks));
