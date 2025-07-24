@@ -518,51 +518,10 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                 <div className="mt-6 p-4 bg-white rounded-xl border-2 border-purple-300 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <Package className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div>
-                        <span className="text-sm font-bold text-purple-900">
-                          {selectedStacks.size} stacks selected
-                        </span>
-                        <div className="text-xs text-purple-700">
-                          Total capacity: {formData.maxCapacity} containers
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedStacks(new Set());
-                        triggerAutoSave();
-                      }}
-                      className="flex items-center space-x-1 text-sm text-purple-600 hover:text-purple-800 font-medium px-3 py-1 hover:bg-purple-100 rounded-lg transition-colors"
-                    >
-                      <X className="h-3 w-3" />
-                      <span>Clear All</span>
-                    </button>
-                  </div>
-                  
-                  {/* Selected Stacks Preview */}
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from(selectedStacks).slice(0, 10).map(stackId => {
-                      const stack = getAllStacks().find(s => s.id === stackId);
-                      if (!stack) return null;
-                      
-                      return (
-                        <span
-                          key={stackId}
-                          className="inline-flex items-center space-x-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full"
-                        >
-                          <span>S{stack.stackNumber.toString().padStart(2, '0')}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleStackToggle(stackId)}
-                            className="hover:bg-purple-200 rounded-full p-0.5 transition-colors"
-                          >
-                            <X className="h-2.5 w-2.5" />
-                          </button>
-                        </span>
+                          stack={stack}
+                          isSelected={isSelected}
+                          onToggle={() => handleStackToggle(stack.id)}
+                        />
                       );
                     })}
                     {selectedStacks.size > 10 && (
@@ -709,5 +668,166 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+// Smart Tooltip Component with Viewport-Based Positioning
+const SmartTooltip: React.FC<{
+  children: React.ReactNode;
+  content: React.ReactNode;
+  stackNumber: number;
+}> = ({ children, content, stackNumber }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [position, setPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+
+  const calculatePosition = useCallback(() => {
+    if (!triggerRef.current || !tooltipRef.current) return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+
+    // Calculate available space in each direction
+    const spaceTop = triggerRect.top;
+    const spaceBottom = viewport.height - triggerRect.bottom;
+    const spaceLeft = triggerRect.left;
+    const spaceRight = viewport.width - triggerRect.right;
+
+    // Determine best position based on available space
+    if (spaceTop >= 80 && spaceTop >= spaceBottom) {
+      setPosition('top');
+    } else if (spaceBottom >= 80) {
+      setPosition('bottom');
+    } else if (spaceRight >= 200) {
+      setPosition('right');
+    } else if (spaceLeft >= 200) {
+      setPosition('left');
+    } else {
+      // Fallback to position with most space
+      const maxSpace = Math.max(spaceTop, spaceBottom, spaceLeft, spaceRight);
+      if (maxSpace === spaceTop) setPosition('top');
+      else if (maxSpace === spaceBottom) setPosition('bottom');
+      else if (maxSpace === spaceRight) setPosition('right');
+      else setPosition('left');
+    }
+  }, []);
+
+  const handleMouseEnter = () => {
+    setShowTooltip(true);
+    setTimeout(calculatePosition, 10);
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  const getTooltipClasses = () => {
+    const baseClasses = "absolute z-50 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-xl transition-all duration-300 pointer-events-none whitespace-nowrap";
+    
+    switch (position) {
+      case 'top':
+        return `${baseClasses} bottom-full left-1/2 transform -translate-x-1/2 mb-2`;
+      case 'bottom':
+        return `${baseClasses} top-full left-1/2 transform -translate-x-1/2 mt-2`;
+      case 'left':
+        return `${baseClasses} right-full top-1/2 transform -translate-y-1/2 mr-2`;
+      case 'right':
+        return `${baseClasses} left-full top-1/2 transform -translate-y-1/2 ml-2`;
+      default:
+        return `${baseClasses} bottom-full left-1/2 transform -translate-x-1/2 mb-2`;
+    }
+  };
+
+  const getArrowClasses = () => {
+    switch (position) {
+      case 'top':
+        return "absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900";
+      case 'bottom':
+        return "absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900";
+      case 'left':
+        return "absolute right-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-gray-900";
+      case 'right':
+        return "absolute left-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-gray-900";
+      default:
+        return "absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900";
+    }
+  };
+
+  return (
+    <div
+      ref={triggerRef}
+      className="relative inline-block"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {children}
+      {showTooltip && (
+        <div
+          ref={tooltipRef}
+          className={`${getTooltipClasses()} ${showTooltip ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+        >
+          {content}
+          <div className={getArrowClasses()}></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Enhanced Stack Card Component
+const StackCard: React.FC<{
+  stack: any;
+  isSelected: boolean;
+  onToggle: () => void;
+}> = ({ stack, isSelected, onToggle }) => {
+  const capacity = stack.rows * stack.maxTiers;
+  
+  const tooltipContent = (
+    <div className="space-y-1">
+      <div className="font-medium">Stack {stack.stackNumber}</div>
+      <div className="text-gray-300">{stack.rows} Rows × {stack.maxTiers} Tiers</div>
+      <div className="text-purple-300">Capacity: {capacity} containers</div>
+    </div>
+  );
+
+  return (
+    <SmartTooltip content={tooltipContent} stackNumber={stack.stackNumber}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`relative group w-full aspect-square rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+          isSelected
+            ? 'border-purple-500 bg-gradient-to-br from-purple-100 to-purple-50 shadow-lg shadow-purple-500/30 ring-2 ring-purple-200'
+            : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white shadow-sm hover:shadow-md'
+        }`}
+      >
+        {/* Simplified Content - Only Stack Number */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className={`font-bold text-lg ${
+            isSelected ? 'text-purple-900' : 'text-gray-700 group-hover:text-purple-700'
+          }`}>
+            S{stack.stackNumber.toString().padStart(2, '0')}
+          </div>
+        </div>
+        
+        {/* Selection Indicator */}
+        {isSelected && (
+          <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1.5 shadow-lg animate-bounce-in ring-2 ring-white">
+            <Check className="h-4 w-4" />
+          </div>
+        )}
+        
+        {/* Hover Glow Effect */}
+        <div className={`absolute inset-0 rounded-xl transition-opacity duration-300 ${
+          isSelected 
+            ? 'bg-gradient-to-br from-purple-400/20 to-purple-600/20 opacity-100' 
+            : 'bg-gradient-to-br from-purple-400/10 to-purple-600/10 opacity-0 group-hover:opacity-100'
+        }`}></div>
+      </button>
+    </SmartTooltip>
   );
 };
