@@ -37,6 +37,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     value ? new Date(value) : null
   );
+  const [showYearSelector, setShowYearSelector] = useState(false);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
