@@ -21,6 +21,7 @@ import {
 import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/clientPoolService';
+import { ClientPoolForm } from './ClientPoolForm';
 
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
@@ -32,6 +33,84 @@ export const ClientPoolManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
+  // Mock yard data for the form
+  const mockYard = {
+    id: 'depot-tantarelli',
+    name: 'Depot Tantarelli',
+    description: 'Main container depot',
+    location: 'Tantarelli Port Complex',
+    isActive: true,
+    totalCapacity: 2500,
+    currentOccupancy: 1847,
+    sections: [
+      {
+        id: 'section-top',
+        name: 'Top Section',
+        yardId: 'depot-tantarelli',
+        stacks: Array.from({ length: 16 }, (_, i) => ({
+          id: `stack-${[1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31][i]}`,
+          stackNumber: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31][i],
+          sectionId: 'section-top',
+          rows: i === 0 || i === 15 ? (i === 0 ? 4 : 7) : 5,
+          maxTiers: 5,
+          currentOccupancy: Math.floor(Math.random() * 25),
+          capacity: (i === 0 ? 4 : i === 15 ? 7 : 5) * 5,
+          position: { x: 0, y: 0, z: 0 },
+          dimensions: { width: 12, length: 6 },
+          containerPositions: [],
+          isOddStack: true
+        })),
+        position: { x: 0, y: 0, z: 0 },
+        dimensions: { width: 400, length: 120 },
+        color: '#3b82f6'
+      },
+      {
+        id: 'section-center',
+        name: 'Center Section',
+        yardId: 'depot-tantarelli',
+        stacks: Array.from({ length: 12 }, (_, i) => ({
+          id: `stack-${[33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55][i]}`,
+          stackNumber: [33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55][i],
+          sectionId: 'section-center',
+          rows: i < 4 ? 5 : 4,
+          maxTiers: 5,
+          currentOccupancy: Math.floor(Math.random() * 25),
+          capacity: (i < 4 ? 5 : 4) * 5,
+          position: { x: 0, y: 0, z: 0 },
+          dimensions: { width: 12, length: 6 },
+          containerPositions: [],
+          isOddStack: true
+        })),
+        position: { x: 0, y: 140, z: 0 },
+        dimensions: { width: 400, length: 100 },
+        color: '#f59e0b'
+      },
+      {
+        id: 'section-bottom',
+        name: 'Bottom Section',
+        yardId: 'depot-tantarelli',
+        stacks: Array.from({ length: 22 }, (_, i) => ({
+          id: `stack-${[61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103][i]}`,
+          stackNumber: [61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103][i],
+          sectionId: 'section-bottom',
+          rows: i < 6 ? 6 : i < 18 ? 4 : (i === 20 ? 1 : 2),
+          maxTiers: 5,
+          currentOccupancy: Math.floor(Math.random() * 30),
+          capacity: (i < 6 ? 6 : i < 18 ? 4 : (i === 20 ? 1 : 2)) * 5,
+          position: { x: 0, y: 0, z: 0 },
+          dimensions: { width: 12, length: 6 },
+          containerPositions: [],
+          isOddStack: true
+        })),
+        position: { x: 0, y: 260, z: 0 },
+        dimensions: { width: 400, length: 140 },
+        color: '#10b981'
+      }
+    ],
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date(),
+    layout: 'tantarelli' as const
+  };
   const canManageClientPools = user?.role === 'admin' || user?.role === 'supervisor';
 
   useEffect(() => {
@@ -78,6 +157,57 @@ export const ClientPoolManagement: React.FC = () => {
     };
     
     const { color, label } = config[priority];
+  const handleCreatePool = (data: any) => {
+    try {
+      const newPool = clientPoolService.createClientPool(
+        data.clientId,
+        data.clientCode,
+        data.clientName,
+        data.assignedStacks,
+        data.maxCapacity,
+        'medium', // Default priority
+        new Date(data.contractStartDate),
+        data.contractEndDate ? new Date(data.contractEndDate) : undefined,
+        data.notes
+      );
+      
+      // Assign stacks to the client
+      clientPoolService.bulkAssignStacksToClient(
+        data.assignedStacks,
+        data.clientCode,
+        user?.name || 'System'
+      );
+      
+      loadClientPools();
+      setShowForm(false);
+      setSelectedPool(null);
+      alert(`Client pool created successfully for ${data.clientName}!`);
+    } catch (error) {
+      alert(`Error creating client pool: ${error}`);
+    }
+  };
+
+  const handleUpdatePool = (data: any) => {
+    if (!selectedPool) return;
+    
+    try {
+      clientPoolService.updateClientPool(selectedPool.clientCode, {
+        assignedStacks: data.assignedStacks,
+        maxCapacity: data.maxCapacity,
+        contractStartDate: new Date(data.contractStartDate),
+        contractEndDate: data.contractEndDate ? new Date(data.contractEndDate) : undefined,
+        notes: data.notes
+      });
+      
+      loadClientPools();
+      setShowForm(false);
+      setSelectedPool(null);
+      alert(`Client pool updated successfully for ${data.clientName}!`);
+    } catch (error) {
+      alert(`Error updating client pool: ${error}`);
+    }
+  };
+
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${color}`}>
         {label}
@@ -349,6 +479,21 @@ export const ClientPoolManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Client Pool Form Modal */}
+      {showForm && (
+        <ClientPoolForm
+          isOpen={showForm}
+          onClose={() => {
+            setShowForm(false);
+            setSelectedPool(null);
+          }}
+          onSubmit={selectedPool ? handleUpdatePool : handleCreatePool}
+          selectedPool={selectedPool}
+          yard={mockYard}
+          isLoading={false}
+        />
+      )}
 
       {/* Utilization Overview */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
