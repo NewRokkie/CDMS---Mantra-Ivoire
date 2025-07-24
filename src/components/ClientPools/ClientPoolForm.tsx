@@ -448,64 +448,56 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                     </div>
                     
                     {/* Responsive Grid with Optimal Spacing */}
-                    <div className={`grid gap-3 ${
-                      stacks.length <= 8 ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8' :
-                      stacks.length <= 12 ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12' :
-                      stacks.length <= 16 ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 xl:grid-cols-16' :
-                      'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-16'
-                    }`}>
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-9 lg:grid-cols-12 gap-4">
                       {stacks.map((stack) => {
                         const isSelected = selectedStacks.has(stack.id);
                         const capacity = stack.rows * stack.maxTiers;
                         
                         return (
-                          <button
+                          <SmartTooltip
                             key={stack.id}
-                            type="button"
-                            onClick={() => handleStackToggle(stack.id)}
-                            className={`relative group p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
-                              isSelected
-                                ? 'border-purple-500 bg-gradient-to-br from-purple-100 to-purple-50 shadow-lg shadow-purple-500/30 ring-2 ring-purple-200'
-                                : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white shadow-sm hover:shadow-md'
-                            }`}
+                            content={
+                              <div className="space-y-1">
+                                <div className="font-medium">Stack {stack.stackNumber}</div>
+                                <div className="text-gray-300">{stack.rows} Rows × {stack.maxTiers} Tiers</div>
+                                <div className="text-purple-300">Capacity: {capacity} containers</div>
+                              </div>
+                            }
+                            stackNumber={stack.stackNumber}
                           >
-                            <div className="text-center space-y-2 min-h-[60px] flex flex-col justify-center">
-                              <div className={`font-bold text-sm ${
-                                isSelected ? 'text-purple-900' : 'text-gray-700 group-hover:text-purple-700'
-                              }`}>
-                                S{stack.stackNumber.toString().padStart(2, '0')}
+                            <button
+                              type="button"
+                              onClick={() => handleStackToggle(stack.id)}
+                              className={`relative group w-full aspect-square rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                                isSelected
+                                  ? 'border-purple-500 bg-gradient-to-br from-purple-100 to-purple-50 shadow-lg shadow-purple-500/30 ring-2 ring-purple-200'
+                                  : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white shadow-sm hover:shadow-md'
+                              }`}
+                            >
+                              {/* Simplified Content - Only Stack Number */}
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className={`font-bold text-lg ${
+                                  isSelected ? 'text-purple-900' : 'text-gray-700 group-hover:text-purple-700'
+                                }`}>
+                                  S{stack.stackNumber.toString().padStart(2, '0')}
+                                </div>
                               </div>
-                              <div className={`text-xs leading-tight ${
-                                isSelected ? 'text-purple-700' : 'text-gray-500 group-hover:text-purple-600'
-                              }`}>
-                                <div>Cap: {capacity}</div>
-                                <div className="mt-1">{stack.rows}R×{stack.maxTiers}T</div>
-                              </div>
-                            </div>
-                            
-                            {/* Selection Indicator */}
-                            {isSelected && (
-                              <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1.5 shadow-lg animate-bounce-in ring-2 ring-white">
-                                <Check className="h-3.5 w-3.5" />
-                              </div>
-                            )}
-                            
-                            {/* Hover Glow Effect */}
-                            <div className={`absolute inset-0 rounded-xl transition-opacity duration-300 ${
-                              isSelected 
-                                ? 'bg-gradient-to-br from-purple-400/20 to-purple-600/20 opacity-100' 
-                                : 'bg-gradient-to-br from-purple-400/10 to-purple-600/10 opacity-0 group-hover:opacity-100'
-                            }`}></div>
-                            
-                            {/* Hover Tooltip */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-20 shadow-lg">
-                              <div className="font-medium">Stack {stack.stackNumber}</div>
-                              <div className="text-gray-300">{stack.rows} Rows × {stack.maxTiers} Tiers</div>
-                              <div className="text-purple-300">Capacity: {capacity} containers</div>
-                              {/* Tooltip Arrow */}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                            </div>
-                          </button>
+                              
+                              {/* Selection Indicator */}
+                              {isSelected && (
+                                <div className="absolute -top-2 -right-2 bg-purple-500 text-white rounded-full p-1.5 shadow-lg animate-bounce-in ring-2 ring-white">
+                                  <Check className="h-4 w-4" />
+                                </div>
+                              )}
+                              
+                              {/* Hover Glow Effect */}
+                              <div className={`absolute inset-0 rounded-xl transition-opacity duration-300 ${
+                                isSelected 
+                                  ? 'bg-gradient-to-br from-purple-400/20 to-purple-600/20 opacity-100' 
+                                  : 'bg-gradient-to-br from-purple-400/10 to-purple-600/10 opacity-0 group-hover:opacity-100'
+                              }`}></div>
+                            </button>
+                          </SmartTooltip>
                         );
                       })}
                     </div>
