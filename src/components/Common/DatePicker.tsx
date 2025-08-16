@@ -106,12 +106,20 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                            label?.toLowerCase().includes('end date') ||
                            placeholder?.toLowerCase().includes('departure') || 
                            label?.toLowerCase().includes('departure');
+    
+    // For end date fields, allow unlimited future navigation
+    if (isEndDateField) {
+      return false;
+    }
+    
+    // For regular fields, only restrict future navigation
     if (direction === 'next') {
       const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
       const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
       const nextMonthDate = new Date(nextYear, nextMonth, 1);
       return nextMonthDate > currentDateOnly;
     }
+    
     return false;
   };
   
