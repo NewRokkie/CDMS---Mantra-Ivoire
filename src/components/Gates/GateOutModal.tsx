@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, CalendarDays, MapPin, Check, Info, Ship, Clock, Box, Ruler, CheckSquare, Square, ListChecks, XCircle } from 'lucide-react';
 import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
+import { useAuth } from '../../hooks/useAuth';
 
 interface GateOutModalProps {
   showModal: boolean;
