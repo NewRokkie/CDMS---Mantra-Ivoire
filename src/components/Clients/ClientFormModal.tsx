@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader, Building, Mail, Phone, MapPin, Calendar, DollarSign, Clock, User, FileText } from 'lucide-react';
+import { X, Save, Loader, Building, Mail, Phone, MapPin, Calendar, DollarSign, Clock, User, FileText, Calculator } from 'lucide-react';
 import { Client } from '../../types';
 
 interface ClientFormModalProps {
