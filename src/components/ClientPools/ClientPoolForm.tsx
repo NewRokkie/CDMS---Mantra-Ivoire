@@ -214,28 +214,33 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
       <div className="bg-white rounded-2xl w-full max-w-4xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
         
         {/* Modal Header */}
-        <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-600 text-white rounded-lg">
+                <Building className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
                 {selectedPool ? 'Edit Client Pool' : 'Create Client Pool'}
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
+                </h3>
+                <p className="text-xs text-gray-600">
                 {selectedPool ? 'Update client pool configuration' : 'Assign dedicated stacks to a client'}
-              </p>
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-3">
               {autoSaving && (
                 <div className="flex items-center space-x-2 text-green-600">
                   <Loader className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Auto-saving...</span>
+                  <span className="text-xs">Auto-saving...</span>
                 </div>
               )}
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors"
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-white/50 transition-colors"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>

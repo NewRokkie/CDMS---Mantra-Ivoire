@@ -152,30 +152,30 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in fade-in-0 slide-in-from-bottom-4 duration-300">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-3 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <FileText className="w-6 h-6" />
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <FileText className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold">Create Release Order</h2>
-                <p className="text-blue-100 text-sm">Generate new container release order</p>
+                <h2 className="text-lg font-semibold">Create Release Order</h2>
+                <p className="text-blue-100 text-xs">Generate new container release order</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               {autoSaving && (
                 <div className="flex items-center space-x-2 text-blue-100">
                   <Loader className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Auto-saving...</span>
+                  <span className="text-xs">Auto-saving...</span>
                 </div>
               )}
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>

@@ -147,48 +147,48 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up max-h-[90vh] overflow-hidden flex flex-col">
         
         {/* Modal Header */}
-        <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">New Gate Out Process</h3>
-              <p className="text-sm text-gray-600 mt-1">Step {currentStep} of 2 - Create Pending Operation</p>
+              <h3 className="text-lg font-bold text-gray-900">New Gate Out Process</h3>
+              <p className="text-xs text-gray-600">Step {currentStep} of 2 - Create Pending Operation</p>
             </div>
             <div className="flex items-center space-x-3">
               {autoSaving && (
                 <div className="flex items-center space-x-2 text-green-600">
                   <Loader className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Auto-saving...</span>
+                  <span className="text-xs">Auto-saving...</span>
                 </div>
               )}
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors"
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-white/50 transition-colors"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
           
           {/* Progress Bar */}
-          <div className="mt-6">
+          <div className="mt-3">
             <div className="relative">
-              <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 z-0"></div>
+              <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
               <div 
-                className="absolute top-4 left-0 h-1 bg-blue-600 z-10 transition-all duration-300" 
+                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300" 
                 style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
               ></div>
               
               <div className="flex justify-between relative z-20">
                 {[1, 2].map((step) => (
                   <div key={step} className="flex flex-col items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
                       step <= currentStep 
-                        ? 'bg-blue-600 text-white border-2 border-blue-600' 
-                        : 'bg-white text-gray-500 border-2 border-gray-300'
+                        ? 'bg-blue-600 text-white border border-blue-600' 
+                        : 'bg-white text-gray-500 border border-gray-300'
                     }`}>
                       {step}
                     </div>
-                    <span className={`mt-3 text-xs font-medium transition-colors duration-300 ${
+                    <span className={`mt-1.5 text-xs font-medium transition-colors duration-300 ${
                       step <= currentStep ? 'text-blue-600' : 'text-gray-500'
                     }`}>
                       {step === 1 && 'Release Order & Containers'}
