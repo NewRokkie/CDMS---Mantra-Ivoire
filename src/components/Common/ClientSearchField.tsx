@@ -178,7 +178,7 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
             required={required}
             disabled={disabled}
             className={`
-             w-full pl-11 pr-20 py-4 bg-transparent text-gray-900 placeholder-gray-400
+            w-full pl-12 pr-20 py-4 bg-transparent text-gray-900 placeholder-gray-400
               focus:outline-none transition-all duration-300
               ${disabled ? 'cursor-not-allowed text-gray-500' : ''}
               text-sm md:text-base font-medium
