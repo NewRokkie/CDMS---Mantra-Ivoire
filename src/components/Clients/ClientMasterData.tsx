@@ -28,6 +28,9 @@ const mockClients: Client[] = [
     taxId: 'US123456789',
     creditLimit: 500000,
     paymentTerms: 30,
+    freeDaysAllowed: 3,
+    dailyStorageRate: 45.00,
+    currency: 'USD',
     isActive: true,
     createdAt: new Date('2024-01-15'),
     updatedAt: new Date('2025-01-10'),
@@ -55,6 +58,9 @@ const mockClients: Client[] = [
     taxId: 'US987654321',
     creditLimit: 750000,
     paymentTerms: 45,
+    freeDaysAllowed: 2,
+    dailyStorageRate: 42.00,
+    currency: 'USD',
     isActive: true,
     createdAt: new Date('2024-02-20'),
     updatedAt: new Date('2025-01-08'),
@@ -82,6 +88,9 @@ const mockClients: Client[] = [
     taxId: 'US456789123',
     creditLimit: 600000,
     paymentTerms: 30,
+    freeDaysAllowed: 4,
+    dailyStorageRate: 48.00,
+    currency: 'USD',
     isActive: true,
     createdAt: new Date('2024-03-10'),
     updatedAt: new Date('2025-01-05')
@@ -262,6 +271,12 @@ export const ClientMasterData: React.FC = () => {
                   Payment Terms
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Free Days
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Daily Rate
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -296,6 +311,14 @@ export const ClientMasterData: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {client.paymentTerms} days
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                      {client.freeDaysAllowed} days
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatCurrency(client.dailyStorageRate)}/day
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -478,7 +501,7 @@ export const ClientMasterData: React.FC = () => {
                 {/* Financial Information */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">Financial Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Credit Limit ($)
@@ -511,6 +534,46 @@ export const ClientMasterData: React.FC = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="US123456789"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Free Storage Days
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="30"
+                        defaultValue={selectedClient?.freeDaysAllowed || 3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="3"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Daily Storage Rate ($)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={selectedClient?.dailyStorageRate || 45.00}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="45.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Currency
+                      </label>
+                      <select
+                        defaultValue={selectedClient?.currency || 'USD'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="CAD">CAD - Canadian Dollar</option>
+                      </select>
                     </div>
                   </div>
                 </div>

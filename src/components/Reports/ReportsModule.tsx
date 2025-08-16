@@ -44,7 +44,7 @@ interface ContainerBilling {
   location: string;
 }
 
-// Mock client free days configuration
+// Import client data from Client Master Data
 const mockClientFreeDays: ClientFreeDays[] = [
   { clientCode: 'MAEU', clientName: 'Maersk Line', freeDaysAllowed: 3, dailyRate: 45.00, currency: 'USD' },
   { clientCode: 'MSCU', clientName: 'MSC Mediterranean Shipping', freeDaysAllowed: 2, dailyRate: 42.00, currency: 'USD' },

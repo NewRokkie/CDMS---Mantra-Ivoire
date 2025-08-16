@@ -66,6 +66,9 @@ export interface Client {
   taxId?: string;
   creditLimit: number;
   paymentTerms: number; // days
+  freeDaysAllowed: number; // Free storage days
+  dailyStorageRate: number; // USD per day after free days
+  currency: string; // Currency for billing
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
