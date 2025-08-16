@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { DatePicker } from '../Common/DatePicker';
+import { AnalyticsTab } from './AnalyticsTab';
+import { OperationsTab } from './OperationsTab';
 
 interface ClientFreeDays {
   clientCode: string;
@@ -493,24 +495,12 @@ export const ReportsModule: React.FC = () => {
 
       {/* Analytics Tab */}
       {activeTab === 'analytics' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-8">
-          <div className="text-center">
-            <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Dashboard</h3>
-            <p className="text-gray-600">Advanced analytics and charts coming soon...</p>
-          </div>
-        </div>
+        <AnalyticsTab />
       )}
 
       {/* Operations Tab */}
       {activeTab === 'operations' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-8">
-          <div className="text-center">
-            <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Operations Reports</h3>
-            <p className="text-gray-600">Operational metrics and performance reports coming soon...</p>
-          </div>
-        </div>
+        <OperationsTab />
       )}
 
       {/* Billing Detail Modal */}
