@@ -3,6 +3,7 @@ import { Plus, Search, Filter, Edit, Eye, Trash2, Building, Mail, Phone, MapPin,
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { ClientSearchField } from '../Common/ClientSearchField';
+import { ClientFormModal } from './ClientFormModal';
 
 // Mock data
 const mockClients: Client[] = [
