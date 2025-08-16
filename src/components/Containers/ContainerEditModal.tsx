@@ -331,8 +331,8 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                                 <MapPin className="h-4 w-4" />
                               </div>
                               <div className="flex-1">
-                                <div className="font-medium text-gray-900">{location.name}</div>
-                                <div className="text-sm text-gray-600">{location.section}</div>
+                                <div className="font-medium text-gray-900">{client.name}</div>
+                                <div className="text-sm text-gray-600">{client.code}</div>
                               </div>
                               {formData.location === location.name && (
                                 <Check className="h-4 w-4 text-green-600" />
@@ -376,8 +376,8 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                         <div className="text-left">
                           {selectedClient ? (
                             <>
-                              <div className="font-medium text-gray-900">{selectedClient.code}</div>
-                              <div className="text-sm text-gray-600">{selectedClient.name}</div>
+                              <div className="font-medium text-gray-900">{selectedClient.name}</div>
+                              <div className="text-sm text-gray-600">{selectedClient.code}</div>
                             </>
                           ) : (
                             <div className="text-gray-500">Select client...</div>
