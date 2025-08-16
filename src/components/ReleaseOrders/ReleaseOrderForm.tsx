@@ -298,7 +298,7 @@ export const ReleaseOrderForm: React.FC<ReleaseOrderFormProps> = ({
                             type="text"
                             value={containerSearch}
                             onChange={(e) => setContainerSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             placeholder={`Search ${activeTab} containers...`}
                           />
                         </div>

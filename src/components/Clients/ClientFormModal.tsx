@@ -274,7 +274,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           required
                           value={formData.email}
                           onChange={(e) => handleInputChange('email', e.target.value)}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="contact@entreprise.ci"
                         />
                       </div>
@@ -291,7 +291,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           required
                           value={formData.phone}
                           onChange={(e) => handleInputChange('phone', e.target.value)}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="+225 XX XX XX XX XX"
                         />
                       </div>
@@ -307,7 +307,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           type="text"
                           value={formData.taxId}
                           onChange={(e) => handleInputChange('taxId', e.target.value)}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="CI-XXXXXXXXX"
                         />
                       </div>
@@ -446,7 +446,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           required
                           value={formData.contactPerson.email}
                           onChange={(e) => handleNestedInputChange('contactPerson', 'email', e.target.value)}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="jean.kouassi@entreprise.ci"
                         />
                       </div>
@@ -463,7 +463,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           required
                           value={formData.contactPerson.phone}
                           onChange={(e) => handleNestedInputChange('contactPerson', 'phone', e.target.value)}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="+225 XX XX XX XX XX"
                         />
                       </div>
@@ -560,7 +560,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           max="90"
                           value={formData.paymentTerms}
                           onChange={(e) => handleInputChange('paymentTerms', parseInt(e.target.value))}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="30"
                         />
                       </div>
@@ -580,7 +580,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           max="30"
                           value={formData.freeDaysAllowed}
                           onChange={(e) => handleInputChange('freeDaysAllowed', parseInt(e.target.value))}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="3"
                         />
                       </div>
@@ -600,7 +600,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           step="500"
                           value={formData.dailyStorageRate}
                           onChange={(e) => handleInputChange('dailyStorageRate', parseInt(e.target.value))}
-                          className="form-input w-full pl-11"
+                          className="form-input w-full pl-12"
                           placeholder="15000"
                         />
                       </div>

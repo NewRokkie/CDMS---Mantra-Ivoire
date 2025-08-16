@@ -400,7 +400,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                               placeholder="Search clients..."
                               value={clientSearch}
                               onChange={(e) => setClientSearch(e.target.value)}
-                              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="w-full pl-12 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                             />
                           </div>
                         </div>
