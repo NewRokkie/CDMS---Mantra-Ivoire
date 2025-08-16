@@ -308,7 +308,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                               placeholder="Search clients..."
                               value={clientSearchTerm}
                               onChange={(e) => setClientSearchTerm(e.target.value)}
-                              className="w-full pl-12 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
                         </div>
@@ -416,7 +416,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                     placeholder="Search stacks by number or section..."
                     value={stackSearchTerm}
                     onChange={(e) => setStackSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full pl-10 pr-4 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
               </div>
