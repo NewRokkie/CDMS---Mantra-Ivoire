@@ -452,8 +452,8 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                     className="form-input w-full"
                     placeholder="e.g., MAEU"
                     readOnly
+                    disabled
                   />
-                  <p className="text-xs text-purple-600 mt-1">Auto-filled when client is selected</p>
                 </div>
               </div>
             </div>
