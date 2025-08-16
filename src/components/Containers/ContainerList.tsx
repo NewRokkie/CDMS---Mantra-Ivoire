@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, Eye, Edit, AlertTriangle } from 'lucide-react';
+import { Search, Filter, Download, Eye, Edit, AlertTriangle, X, Save, Loader, Package, MapPin, Calendar, User, Truck, FileText } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/clientPoolService';
+import { ContainerViewModal } from './ContainerViewModal';
+import { ContainerEditModal } from './ContainerEditModal';
 
 // Mock data with client codes
 const mockContainers: Container[] = [
@@ -71,7 +73,9 @@ const mockContainers: Container[] = [
 export const ContainerList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedContainers, setSelectedContainers] = useState<string[]>([]);
+  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const { t } = useLanguage();
   const { user, canViewAllData, getClientFilter } = useAuth();
 
@@ -129,6 +133,24 @@ export const ContainerList: React.FC = () => {
   const filteredContainers = getFilteredContainers();
   const canEditContainers = user?.role === 'admin' || user?.role === 'supervisor';
 
+  const handleViewContainer = (container: Container) => {
+    setSelectedContainer(container);
+    setShowViewModal(true);
+  };
+
+  const handleEditContainer = (container: Container) => {
+    setSelectedContainer(container);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateContainer = (updatedContainer: Container) => {
+    // In a real app, this would update the backend
+    console.log('Updating container:', updatedContainer);
+    setShowEditModal(false);
+    setSelectedContainer(null);
+    alert('Container updated successfully!');
+  };
+
   // Show client restriction notice
   const showClientNotice = !canViewAllData() && user?.role === 'client';
 
@@ -147,6 +169,29 @@ export const ContainerList: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Container View Modal */}
+      {showViewModal && selectedContainer && (
+        <ContainerViewModal
+          container={selectedContainer}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedContainer(null);
+          }}
+        />
+      )}
+
+      {/* Container Edit Modal */}
+      {showEditModal && selectedContainer && (
+        <ContainerEditModal
+          container={selectedContainer}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedContainer(null);
+          }}
+          onSave={handleUpdateContainer}
+        />
+      )}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -326,10 +371,16 @@ export const ContainerList: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
                       <button className="text-blue-600 hover:text-blue-900 p-1 rounded">
+                        title="View Details"
+                        onClick={() => handleViewContainer(container)}
                         <Eye className="h-4 w-4" />
                       </button>
                       {canEditContainers && (
-                        <button className="text-gray-600 hover:text-gray-900 p-1 rounded">
+                        <button 
+                          onClick={() => handleEditContainer(container)}
+                          className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                          title="Edit Container"
+                        >
                           <Edit className="h-4 w-4" />
                         </button>
                       )}
