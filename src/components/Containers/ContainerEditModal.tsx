@@ -377,7 +377,6 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                           {selectedClient ? (
                             <>
                               <div className="font-medium text-gray-900">{selectedClient.name}</div>
-                              <div className="text-sm text-gray-600">{selectedClient.code}</div>
                             </>
                           ) : (
                             <div className="text-gray-500">Select client...</div>
