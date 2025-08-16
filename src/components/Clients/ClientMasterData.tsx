@@ -381,3 +381,4 @@ export const ClientMasterData: React.FC = () => {
       )}
     </div>
   );
+};
