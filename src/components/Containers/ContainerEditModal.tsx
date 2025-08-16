@@ -428,8 +428,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                                   <Building className="h-4 w-4" />
                                 </div>
                                 <div className="flex-1">
-                                  <div className="font-medium text-gray-900">{client.code}</div>
-                                  <div className="text-sm text-gray-600">{client.name}</div>
+                                  <div className="font-medium text-gray-900">{client.name}</div>
                                 </div>
                                 {selectedClient?.id === client.id && (
                                   <Check className="h-4 w-4 text-purple-600" />
