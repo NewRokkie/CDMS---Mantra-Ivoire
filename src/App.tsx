@@ -16,6 +16,7 @@ import { YardManagement } from './components/Yard/YardManagement';
 import { StackManagement } from './components/Yard/StackManagement';
 import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessManagement';
 import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
+import { ReportsModule } from './components/Reports/ReportsModule';
 
 function AppContent() {
   const { user, isLoading, isAuthenticated, hasModuleAccess } = useAuthProvider();
@@ -72,12 +73,7 @@ function AppContent() {
       case 'module-access':
         return hasModuleAccess('moduleAccess') ? <ModuleAccessManagement /> : <AccessDenied />;
       case 'reports':
-        return hasModuleAccess('reports') ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Reports Module</h3>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        ) : <AccessDenied />;
+        return hasModuleAccess('reports') ? <ReportsModule /> : <AccessDenied />;
       default:
         return <DashboardOverview />;
     }
