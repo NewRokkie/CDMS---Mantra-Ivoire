@@ -372,8 +372,7 @@ export const ContainerList: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <button className="text-blue-600 hover:text-blue-900 p-1 rounded">
                         title="View Details"
-                        onClick={() => handleViewContainer(container)}
-                        <Eye className="h-4 w-4" />
+                        title="View Details"
                       </button>
                       {canEditContainers && (
                         <button 

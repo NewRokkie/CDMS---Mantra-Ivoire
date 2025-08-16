@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Loader, Package, MapPin, AlertTriangle, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Loader, Package, MapPin, AlertTriangle, Plus, Trash2, ChevronDown, Search, Check, Building } from 'lucide-react';
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -28,6 +28,71 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   });
 
   const [newDamage, setNewDamage] = useState('');
+  const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+
+  // Mock location data
+  const mockLocations = [
+    { id: 'block-a-01', name: 'Block A-01', section: 'Storage Area A', type: 'storage' },
+    { id: 'block-a-12', name: 'Block A-12', section: 'Storage Area A', type: 'storage' },
+    { id: 'block-b-05', name: 'Block B-05', section: 'Storage Area B', type: 'storage' },
+    { id: 'block-c-08', name: 'Block C-08', section: 'Storage Area C', type: 'storage' },
+    { id: 'stack-s1', name: 'Stack S1-Row 1-Tier 1', section: 'Top Section', type: 'stack' },
+    { id: 'stack-s3', name: 'Stack S3-Row 2-Tier 1', section: 'Top Section', type: 'stack' },
+    { id: 'stack-s31', name: 'Stack S31-Row 1-Tier 2', section: 'Top Section', type: 'stack' },
+    { id: 'stack-s61', name: 'Stack S61-Row 2-Tier 3', section: 'Bottom Section', type: 'stack' },
+    { id: 'workshop-1', name: 'Workshop 1', section: 'Maintenance', type: 'workshop' },
+    { id: 'workshop-2', name: 'Workshop 2', section: 'Maintenance', type: 'workshop' },
+    { id: 'gate-1', name: 'Gate 1', section: 'Entry/Exit', type: 'gate' },
+    { id: 'gate-2', name: 'Gate 2', section: 'Entry/Exit', type: 'gate' }
+  ];
+
+  // Mock client data
+  const mockClients = [
+    { id: '1', code: 'MAEU', name: 'Maersk Line' },
+    { id: '2', code: 'MSCU', name: 'MSC Mediterranean Shipping' },
+    { id: '3', code: 'CMDU', name: 'CMA CGM' },
+    { id: '4', code: 'SHIP001', name: 'Shipping Solutions Inc' },
+    { id: '5', code: 'HLCU', name: 'Hapag-Lloyd' },
+    { id: '6', code: 'ONEY', name: 'Ocean Network Express' },
+    { id: '7', code: 'EGLV', name: 'Evergreen Marine' },
+    { id: '8', code: 'YMLU', name: 'Yang Ming Marine' }
+  ];
+
+  const filteredLocations = mockLocations.filter(location =>
+    location.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
+    location.section.toLowerCase().includes(locationSearch.toLowerCase())
+  );
+
+  const filteredClients = mockClients.filter(client =>
+    client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    client.code.toLowerCase().includes(clientSearch.toLowerCase())
+  );
+
+  const selectedClient = mockClients.find(client => 
+    client.name === formData.client || client.code === formData.clientCode
+  );
+
+  const handleLocationSelect = (location: any) => {
+    setFormData(prev => ({
+      ...prev,
+      location: location.name
+    }));
+    setIsLocationDropdownOpen(false);
+    setLocationSearch('');
+  };
+
+  const handleClientSelect = (client: any) => {
+    setFormData(prev => ({
+      ...prev,
+      client: client.name,
+      clientCode: client.code
+    }));
+    setIsClientDropdownOpen(false);
+    setClientSearch('');
+  };
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -200,21 +265,92 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                 <label className="block text-sm font-medium text-green-800 mb-2">
                   Current Location *
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  className="form-input w-full"
-                  placeholder="e.g., Block A-12, Stack S1-Row 1-Tier 1"
-                />
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
+                    className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${
+                      isLocationDropdownOpen 
+                        ? 'border-green-500 shadow-lg shadow-green-500/20 ring-4 ring-green-500/10' 
+                        : formData.location 
+                        ? 'border-green-400 shadow-md shadow-green-400/10' 
+                        : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <MapPin className={`h-5 w-5 ${formData.location ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="text-left">
+                        {formData.location ? (
+                          <div className="font-medium text-gray-900">{formData.location}</div>
+                        ) : (
+                          <div className="text-gray-500">Select location...</div>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${
+                      isLocationDropdownOpen ? 'rotate-180' : ''
+                    }`} />
+                  </button>
+
+                  {/* Location Dropdown */}
+                  {isLocationDropdownOpen && (
+                    <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-hidden animate-slide-in-up">
+                      {/* Search */}
+                      <div className="p-3 border-b border-gray-100">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <input
+                            type="text"
+                            placeholder="Search locations..."
+                            value={locationSearch}
+                            onChange={(e) => setLocationSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Location List */}
+                      <div className="max-h-48 overflow-y-auto">
+                        {filteredLocations.map((location) => (
+                          <button
+                            key={location.id}
+                            type="button"
+                            onClick={() => handleLocationSelect(location)}
+                            className={`w-full text-left p-4 transition-all duration-200 group ${
+                              formData.location === location.name
+                                ? 'bg-green-50 border-l-4 border-green-500'
+                                : 'hover:bg-gray-50 border-l-4 border-transparent'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`p-2 rounded-lg transition-all duration-200 ${
+                                formData.location === location.name
+                                  ? 'bg-green-100 text-green-600'
+                                  : 'bg-gray-100 text-gray-500 group-hover:bg-green-100 group-hover:text-green-600'
+                              }`}>
+                                <MapPin className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{location.name}</div>
+                                <div className="text-sm text-gray-600">{location.section}</div>
+                              </div>
+                              {formData.location === location.name && (
+                                <Check className="h-4 w-4 text-green-600" />
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Client Information */}
             <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
               <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
-                <Package className="h-5 w-5 mr-2" />
+                <Building className="h-5 w-5 mr-2" />
                 Client Information
               </h4>
               
@@ -223,14 +359,88 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                   <label className="block text-sm font-medium text-purple-800 mb-2">
                     Client Name *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.client}
-                    onChange={(e) => handleInputChange('client', e.target.value)}
-                    className="form-input w-full"
-                    placeholder="e.g., Maersk Line"
-                  />
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                      className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${
+                        isClientDropdownOpen 
+                          ? 'border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-500/10' 
+                          : selectedClient 
+                          ? 'border-purple-400 shadow-md shadow-purple-400/10' 
+                          : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Building className={`h-5 w-5 ${selectedClient ? 'text-purple-600' : 'text-gray-400'}`} />
+                        <div className="text-left">
+                          {selectedClient ? (
+                            <>
+                              <div className="font-medium text-gray-900">{selectedClient.code}</div>
+                              <div className="text-sm text-gray-600">{selectedClient.name}</div>
+                            </>
+                          ) : (
+                            <div className="text-gray-500">Select client...</div>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${
+                        isClientDropdownOpen ? 'rotate-180' : ''
+                      }`} />
+                    </button>
+
+                    {/* Client Dropdown */}
+                    {isClientDropdownOpen && (
+                      <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-hidden animate-slide-in-up">
+                        {/* Search */}
+                        <div className="p-3 border-b border-gray-100">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            <input
+                              type="text"
+                              placeholder="Search clients..."
+                              value={clientSearch}
+                              onChange={(e) => setClientSearch(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Client List */}
+                        <div className="max-h-48 overflow-y-auto">
+                          {filteredClients.map((client) => (
+                            <button
+                              key={client.id}
+                              type="button"
+                              onClick={() => handleClientSelect(client)}
+                              className={`w-full text-left p-4 transition-all duration-200 group ${
+                                selectedClient?.id === client.id
+                                  ? 'bg-purple-50 border-l-4 border-purple-500'
+                                  : 'hover:bg-gray-50 border-l-4 border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className={`p-2 rounded-lg transition-all duration-200 ${
+                                  selectedClient?.id === client.id
+                                    ? 'bg-purple-100 text-purple-600'
+                                    : 'bg-gray-100 text-gray-500 group-hover:bg-purple-100 group-hover:text-purple-600'
+                                }`}>
+                                  <Building className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="font-medium text-gray-900">{client.code}</div>
+                                  <div className="text-sm text-gray-600">{client.name}</div>
+                                </div>
+                                {selectedClient?.id === client.id && (
+                                  <Check className="h-4 w-4 text-purple-600" />
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -243,7 +453,9 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                     onChange={(e) => handleInputChange('clientCode', e.target.value)}
                     className="form-input w-full"
                     placeholder="e.g., MAEU"
+                    readOnly
                   />
+                  <p className="text-xs text-purple-600 mt-1">Auto-filled when client is selected</p>
                 </div>
               </div>
             </div>
