@@ -74,6 +74,7 @@ const mockPendingOperations = [
     containerNumber: 'MSKU1234567',
     secondContainerNumber: '',
     containerSize: '40ft',
+    containerType: 'dry',
     containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
@@ -96,6 +97,7 @@ const mockPendingOperations = [
     containerNumber: 'TCLU9876543',
     secondContainerNumber: 'TCLU9876544',
     containerSize: '20ft',
+    containerType: 'reefer',
     containerQuantity: 2,
     status: 'EMPTY',
     isDamaged: true,
@@ -118,6 +120,7 @@ const mockPendingOperations = [
     containerNumber: 'GESU4567891',
     secondContainerNumber: '',
     containerSize: '40ft',
+    containerType: 'dry',
     containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
@@ -144,6 +147,7 @@ const mockCompletedOperations = [
     containerNumber: 'SHIP1112228',
     secondContainerNumber: '',
     containerSize: '20ft',
+    containerType: 'dry',
     containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
@@ -167,6 +171,7 @@ const mockCompletedOperations = [
     containerNumber: 'MAEU7778889',
     secondContainerNumber: 'MAEU7778890',
     containerSize: '20ft',
+    containerType: 'dry',
     containerQuantity: 2,
     status: 'EMPTY',
     isDamaged: false,
@@ -658,6 +663,9 @@ export const GateIn: React.FC = () => {
                     )}
                     <div className="text-sm text-gray-500">
                       {operation.containerSize}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {operation.containerType?.charAt(0).toUpperCase() + operation.containerType?.slice(1).replace('_', ' ')}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
