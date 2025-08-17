@@ -141,6 +141,26 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Container Type *
+                        </label>
+                        <select
+                          required
+                          value={formData.containerType}
+                          onChange={(e) => handleInputChange('containerType', e.target.value)}
+                          className="form-input w-full"
+                        >
+                          <option value="dry">Dry Container</option>
+                          <option value="reefer">Reefer Container</option>
+                          <option value="tank">Tank Container</option>
+                          <option value="flat_rack">Flat Rack</option>
+                          <option value="open_top">Open Top</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Quantity *
                         </label>
                         <Switch
@@ -339,6 +359,10 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     <div>
                       <span className="text-gray-600">Size & Quantity:</span>
                       <div className="font-medium">{formData.containerSize} • Qty: {formData.containerQuantity}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Type:</span>
+                      <div className="font-medium">{formData.containerType.charAt(0).toUpperCase() + formData.containerType.slice(1).replace('_', ' ')}</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Client:</span>

@@ -10,6 +10,7 @@ import { TimePicker } from '../Common/TimePicker';
 export interface GateInFormData {
   // Step 1: Container Information
   containerSize: '20ft' | '40ft';
+  containerType: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   containerQuantity: 1 | 2;
   status: 'FULL' | 'EMPTY';
   isDamaged: boolean;
@@ -345,6 +346,7 @@ export const GateIn: React.FC = () => {
         containerNumber: formData.containerNumber,
         secondContainerNumber: formData.secondContainerNumber,
         containerSize: formData.containerSize,
+        containerType: formData.containerType,
         containerQuantity: formData.containerQuantity,
         status: formData.status,
         isDamaged: formData.isDamaged,
@@ -383,6 +385,7 @@ export const GateIn: React.FC = () => {
       // Reset form
       setFormData({
         containerSize: '20ft',
+        containerType: 'dry',
         containerQuantity: 1,
         status: 'FULL',
         isDamaged: false,
