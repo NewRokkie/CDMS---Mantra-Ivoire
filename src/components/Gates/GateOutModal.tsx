@@ -73,7 +73,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         const available20ft = getAvailableContainersForClient(order.clientCode || '', '20ft');
         const available40ft = getAvailableContainersForClient(order.clientCode || '', '40ft');
         
-        let defaultSize: '20ft' | '40ft';
+        let defaultSize: '20ft' | '40ft' | null;
         let defaultQuantity = 1;
         
         // Auto-select based on availability
@@ -91,7 +91,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
           defaultQuantity = 1;
         } else {
           // No containers available - default to 20ft but will be disabled
-          defaultSize = '20ft';
+          defaultSize = null;
           defaultQuantity = 0; // Set to 0 to indicate no containers available
         }
         
