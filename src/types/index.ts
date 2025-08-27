@@ -172,7 +172,7 @@ export interface Container {
   id: string;
   number: string;
   type: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
-  size: '20ft' | '40ft' | '45ft';
+  size: '20ft' | '40ft';
   status: 'in_depot' | 'out_depot' | 'in_service' | 'maintenance' | 'cleaning';
   location: string;
   yardPosition?: YardPosition;
@@ -201,7 +201,6 @@ export interface ReleaseOrderContainer {
 export interface ContainerQuantityBySize {
   size20ft: number;
   size40ft: number;
-  size45ft: number;
 }
 
 export interface BookingReference {
