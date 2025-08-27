@@ -279,7 +279,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const displayValue = value ? formatDisplayTime(hours, minutes, includeSeconds ? seconds : undefined) : '';
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative w-full ${className}`}>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {label} {required && <span className="text-red-500">*</span>}
@@ -287,6 +287,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
       )}
       
       {/* Input Field - No wrapper divs to avoid modal deformation */}
+      <div className="relative">
       <button
         ref={inputRef}
         type="button"
@@ -327,6 +328,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           </button>
         )}
       </button>
+      </div>
 
       {/* Selected Time Indicator */}
       {value && (
