@@ -479,7 +479,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 </button>
                 
                 <button
-            <Clock className={`h-5 w-5 flex-shrink-0 transition-colors duration-300 ${
+                  type="button"
                   onClick={handleSave}
                   className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
