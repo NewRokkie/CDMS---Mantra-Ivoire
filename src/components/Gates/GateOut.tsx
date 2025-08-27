@@ -1099,7 +1099,7 @@ const GateOutCompletionModal: React.FC<{
                             className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                             title="Remove container"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-6 w-6" />
                           </button>
                         )}
                       </div>
