@@ -305,7 +305,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         `}
       >
         <div className="flex items-center space-x-3">
-          <Clock className={`h-5 w-5 transition-colors duration-300 ${
+          <Clock className={`h-5 w-5 flex-shrink-0 transition-colors duration-300 ${
             isOpen || isFocused ? 'text-blue-500' : value ? 'text-green-500' : 'text-gray-400'
           }`} />
           <span className={`transition-colors duration-300 font-medium ${
