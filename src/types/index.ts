@@ -198,15 +198,42 @@ export interface ReleaseOrderContainer {
   notes?: string;
 }
 
-export interface ReleaseOrder {
+export interface ContainerQuantityBySize {
+  size20ft: number;
+  size40ft: number;
+  size45ft: number;
+}
+
+export interface BookingReference {
   id: string;
+  bookingNumber: string;
   clientId: string;
   clientCode?: string;
   clientName: string;
-  containers: ReleaseOrderContainer[]; // Multiple containers
-  transportCompany: string;
-  driverName: string;
-  vehicleNumber: string;
+  containerQuantities: ContainerQuantityBySize;
+  totalContainers: number;
+  maxQuantityThreshold: number;
+  requiresDetailedBreakdown: boolean;
+  status: 'draft' | 'pending' | 'validated' | 'partial' | 'completed' | 'cancelled';
+  createdBy: string;
+  validatedBy?: string;
+  createdAt: Date;
+  validatedAt?: Date;
+  completedAt?: Date;
+  notes?: string;
+  estimatedReleaseDate?: Date;
+}
+
+export interface ReleaseOrder {
+  id: string;
+  bookingNumber: string;
+  clientId: string;
+  clientCode?: string;
+  clientName: string;
+  containerQuantities: ContainerQuantityBySize;
+  totalContainers: number;
+  maxQuantityThreshold: number;
+  requiresDetailedBreakdown: boolean;
   status: 'draft' | 'pending' | 'validated' | 'partial' | 'completed' | 'cancelled';
   createdBy: string;
   validatedBy?: string;

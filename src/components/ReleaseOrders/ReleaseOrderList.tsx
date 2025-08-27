@@ -46,44 +46,28 @@ const mockAvailableContainers: Container[] = [
 ];
 
 // Enhanced mock data with multiple containers per release order
-const mockReleaseOrders: ReleaseOrder[] = [
+const mockBookingReferences: ReleaseOrder[] = [
   {
     id: 'RO-2025-001',
+    bookingNumber: 'BK-MAEU-2025-001',
     clientId: '1',
     clientCode: 'MAEU',
     clientName: 'Maersk Line',
-    containers: [
-      {
-        id: 'roc-1',
-        containerId: '1',
-        containerNumber: 'MSKU-123456-7',
-        containerType: 'dry',
-        containerSize: '40ft',
-        currentLocation: 'Block A-12',
-        status: 'ready',
-        addedAt: new Date('2025-01-11T09:00:00')
-      },
-      {
-        id: 'roc-2',
-        containerId: '6',
-        containerNumber: 'MAEU-555666-4',
-        containerType: 'reefer',
-        containerSize: '40ft',
-        currentLocation: 'Block A-08',
-        status: 'ready',
-        addedAt: new Date('2025-01-11T09:05:00')
-      }
-    ],
-    transportCompany: 'Swift Transport Ltd',
-    driverName: 'John Smith',
-    vehicleNumber: 'ABC-123',
+    containerQuantities: {
+      size20ft: 2,
+      size40ft: 3,
+      size45ft: 0
+    },
+    totalContainers: 5,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     status: 'validated',
     createdBy: 'Jane Operator',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
     validatedAt: new Date('2025-01-11T10:30:00'),
     estimatedReleaseDate: new Date('2025-01-12T14:00:00'),
-    notes: 'Handle with care'
+    notes: 'Priority booking - handle with care'
   },
   {
     id: 'RO-2025-002',
@@ -153,79 +137,47 @@ const mockReleaseOrders: ReleaseOrder[] = [
   },
   {
     id: 'RO-2025-004',
-    clientId: '1',
-    clientCode: 'MAEU',
-    clientName: 'Maersk Line',
-    containers: [
-      {
-        id: 'roc-6',
-        containerId: '7',
-        containerNumber: 'MAEU-777888-5',
-        containerType: 'dry',
-        containerSize: '40ft',
-        currentLocation: 'Block A-15',
-        status: 'ready',
-        addedAt: new Date('2025-01-12T08:00:00')
-      }
-    ],
-    transportCompany: 'Express Logistics',
-    driverName: 'Sarah Wilson',
-    vehicleNumber: 'DEF-789',
+    bookingNumber: 'BK-CMA-2025-004',
+    clientId: '2',
+    clientCode: 'CMA',
+    clientName: 'CMA CGM',
+    containerQuantities: {
+      size20ft: 1,
+      size40ft: 0,
+      size45ft: 0
+    },
+    totalContainers: 1,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     status: 'validated',
-    createdBy: 'Tom Operator',
+    createdBy: 'Sarah Client',
     validatedBy: 'Mike Supervisor',
-    createdAt: new Date('2025-01-12T08:00:00'),
-    validatedAt: new Date('2025-01-12T09:15:00'),
-    estimatedReleaseDate: new Date('2025-01-13T11:00:00'),
-    notes: 'Single container release'
+    createdAt: new Date('2025-01-11T11:00:00'),
+    validatedAt: new Date('2025-01-11T12:30:00'),
+    estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
+    notes: 'Single container booking - urgent processing required'
   },
   {
     id: 'RO-2025-005',
+    bookingNumber: 'BK-SHIP-2025-005',
     clientId: '4',
     clientCode: 'SHIP001',
     clientName: 'Shipping Solutions Inc',
-    containers: [
-      {
-        id: 'roc-7',
-        containerId: '8',
-        containerNumber: 'SHIP-999000-6',
-        containerType: 'dry',
-        containerSize: '40ft',
-        currentLocation: 'Block C-05',
-        status: 'ready',
-        addedAt: new Date('2025-01-10T16:00:00')
-      },
-      {
-        id: 'roc-8',
-        containerId: '9',
-        containerNumber: 'SHIP-111333-7',
-        containerType: 'reefer',
-        containerSize: '20ft',
-        currentLocation: 'Block D-01',
-        status: 'ready',
-        addedAt: new Date('2025-01-10T16:05:00')
-      },
-      {
-        id: 'roc-9',
-        containerId: '10',
-        containerNumber: 'SHIP-444555-8',
-        containerType: 'dry',
-        containerSize: '20ft',
-        currentLocation: 'Block C-08',
-        status: 'ready',
-        addedAt: new Date('2025-01-10T16:10:00')
-      }
-    ],
-    transportCompany: 'Express Delivery',
-    driverName: 'Lisa Green',
-    vehicleNumber: 'JKL-345',
+    containerQuantities: {
+      size20ft: 8,
+      size40ft: 4,
+      size45ft: 1
+    },
+    totalContainers: 13,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: true,
     status: 'validated',
     createdBy: 'Sarah Client',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-10T16:00:00'),
     validatedAt: new Date('2025-01-11T08:15:00'),
     estimatedReleaseDate: new Date('2025-01-12T10:00:00'),
-    notes: 'Multiple containers - partial release allowed'
+    notes: 'Large booking - requires detailed breakdown processing'
   },
   {
     id: 'RO-2025-006',
@@ -263,7 +215,7 @@ export const ReleaseOrderList: React.FC = () => {
 
   // Filter release orders based on user permissions
   const getFilteredOrders = () => {
-    let orders = mockReleaseOrders;
+    let orders = mockBookingReferences;
     
     // Apply client filter for client users
     const clientFilter = getClientFilter();
@@ -291,10 +243,8 @@ export const ReleaseOrderList: React.FC = () => {
       pending: filteredOrders.filter(o => o.status === 'pending').length,
       validated: filteredOrders.filter(o => o.status === 'validated').length,
       completed: filteredOrders.filter(o => o.status === 'completed').length,
-      totalContainers: filteredOrders.reduce((sum, o) => sum + o.containers.length, 0),
-      readyContainers: filteredOrders.reduce((sum, o) => 
-        sum + o.containers.filter(c => c.status === 'ready').length, 0
-      )
+      totalContainers: filteredOrders.reduce((sum, o) => sum + o.totalContainers, 0),
+      readyContainers: filteredOrders.reduce((sum, o) => sum + o.totalContainers, 0)
     };
   };
 
