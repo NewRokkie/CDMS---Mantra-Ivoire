@@ -34,10 +34,18 @@ interface PendingGateOut {
 // Mock data for validated release orders ready for gate out
 const mockValidatedReleaseOrders: ReleaseOrder[] = [
   {
-    id: 'RO-2025-001',
+    id: 'BK-MAEU-2025-001',
+    bookingNumber: 'BK-MAEU-2025-001',
     clientId: '1',
     clientCode: 'MAEU',
     clientName: 'Maersk Line',
+    containerQuantities: {
+      size20ft: 0,
+      size40ft: 2
+    },
+    totalContainers: 2,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     containers: [
       {
         id: 'roc-1',
@@ -72,10 +80,18 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     notes: 'Handle with care'
   },
   {
-    id: 'RO-2025-005',
+    id: 'BK-SHIP-2025-005',
+    bookingNumber: 'BK-SHIP-2025-005',
     clientId: '4',
     clientCode: 'SHIP001',
     clientName: 'Shipping Solutions Inc',
+    containerQuantities: {
+      size20ft: 1,
+      size40ft: 2
+    },
+    totalContainers: 3,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     containers: [
       {
         id: 'roc-6',
@@ -102,7 +118,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
         containerId: '9',
         containerNumber: 'SHIP-111333-7',
         containerType: 'reefer',
-        containerSize: '20ft',
+        containerSize: '40ft',
         currentLocation: 'Block D-01',
         status: 'ready',
         addedAt: new Date('2025-01-10T16:10:00')
@@ -121,10 +137,18 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
   }
   ,
   {
-    id: 'RO-2025-004',
+    id: 'BK-CMA-2025-004',
+    bookingNumber: 'BK-CMA-2025-004',
     clientId: '2',
     clientCode: 'CMA',
     clientName: 'CMA CGM',
+    containerQuantities: {
+      size20ft: 1,
+      size40ft: 0
+    },
+    totalContainers: 1,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     containers: [
       {
         id: 'roc-9',
@@ -157,7 +181,7 @@ const mockRecentGateOuts = [
     containerNumbers: ['GESU-456789-1'],
     clientName: 'CMA CGM',
     gateOutTime: new Date('2025-01-11T13:45:00'),
-    releaseOrderId: 'RO-2025-003',
+    releaseOrderId: 'BK-CMA-2025-003',
     status: 'completed'
   },
   {
@@ -165,7 +189,7 @@ const mockRecentGateOuts = [
     containerNumbers: ['TCLU-987654-3'],
     clientName: 'MSC',
     gateOutTime: new Date('2025-01-11T11:30:00'),
-    releaseOrderId: 'RO-2025-002',
+    releaseOrderId: 'BK-MSCU-2025-002',
     status: 'completed'
   }
 ];
@@ -174,7 +198,7 @@ const mockRecentGateOuts = [
 const mockPendingGateOutOperations = [
   {
     id: 'PGO-001',
-    releaseOrderId: 'RO-2025-001',
+    releaseOrderId: 'BK-MAEU-2025-001',
     releaseOrder: mockValidatedReleaseOrders[0],
     selectedContainers: mockValidatedReleaseOrders[0].containers,
     createdAt: new Date('2025-01-11T14:30:00'),
@@ -184,7 +208,7 @@ const mockPendingGateOutOperations = [
   },
   {
     id: 'PGO-002',
-    releaseOrderId: 'RO-2025-005',
+    releaseOrderId: 'BK-SHIP-2025-005',
     releaseOrder: mockValidatedReleaseOrders[1],
     selectedContainers: mockValidatedReleaseOrders[1].containers.slice(0, 2), // Only first 2 containers
     createdAt: new Date('2025-01-11T15:45:00'),
@@ -194,7 +218,7 @@ const mockPendingGateOutOperations = [
   },
   {
     id: 'PGO-003',
-    releaseOrderId: 'RO-2025-004',
+    releaseOrderId: 'BK-CMA-2025-004',
     releaseOrder: mockValidatedReleaseOrders[2],
     selectedContainers: mockValidatedReleaseOrders[2].containers,
     createdAt: new Date('2025-01-11T16:20:00'),
@@ -459,7 +483,7 @@ export const GateOut: React.FC = () => {
                   onClick={() => handleSelectReleaseOrder(order)}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="font-medium text-gray-900">{order.id}</span>
+                    <span className="font-medium text-gray-900">{order.bookingNumber || order.id}</span>
                     <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
                       {order.status}
                     </span>
@@ -677,7 +701,7 @@ const PendingGateOutView: React.FC<{
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.releaseOrderId}</div>
+                    <div className="text-sm font-medium text-gray-900">{operation.releaseOrder.bookingNumber || operation.releaseOrderId}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -782,7 +806,7 @@ const GateOutCompletionModal: React.FC<{
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-gray-900">Complete Gate Out</h3>
-              <p className="text-sm text-gray-600">{operation.releaseOrderId}</p>
+              <p className="text-sm text-gray-600">{operation.releaseOrder.bookingNumber || operation.releaseOrderId}</p>
             </div>
             <button
               onClick={onClose}

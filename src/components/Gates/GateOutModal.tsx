@@ -236,7 +236,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Order ID:</span>
-                            <span className="font-medium">{selectedReleaseOrder.id}</span>
+                            <span className="font-medium">{selectedReleaseOrder.bookingNumber || selectedReleaseOrder.id}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Client:</span>

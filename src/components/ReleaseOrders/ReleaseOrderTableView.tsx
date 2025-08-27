@@ -234,8 +234,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               {paginatedOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.bookingNumber}</div>
-                    <div className="text-sm text-gray-500">{order.id}</div>
+                    <div className="text-sm font-medium text-gray-900">{order.bookingNumber || order.id}</div>
                     <div className="text-sm text-gray-500">
                       Created {order.createdAt.toLocaleDateString()}
                     </div>
@@ -357,7 +356,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
-                    Booking Reference Details - {selectedOrder.bookingNumber}
+                    Booking Reference Details - {selectedOrder.bookingNumber || selectedOrder.id}
                   </h3>
                   <div className="flex items-center space-x-3 mt-2">
                     {getStatusBadge(selectedOrder.status)}
@@ -386,14 +385,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                       <FileText className="h-4 w-4 text-gray-400" />
                       <div>
                         <span className="text-sm text-gray-600">Booking Number:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.bookingNumber}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <FileText className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Reference ID:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.id}</span>
+                        <span className="ml-2 font-medium">{selectedOrder.bookingNumber || selectedOrder.id}</span>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
