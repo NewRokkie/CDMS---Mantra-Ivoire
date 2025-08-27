@@ -13,7 +13,8 @@ import {
   User,
   FileText,
   MapPin,
-  Clock
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { ReleaseOrder } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -459,11 +460,11 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   {selectedOrder.notes ? (
                     <div className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm leading-relaxed">
                       {selectedOrder.notes}
-                  {order.containerQuantities?.size40ft && order.containerQuantities.size40ft > 0 && (
-                    <span className="mr-3">{order.containerQuantities.size40ft} × 40"</span>
+                    </div>
+                  ) : (
                     <div className="text-gray-500 italic text-sm">
-                  {order.containerQuantities?.size45ft && order.containerQuantities.size45ft > 0 && (
-                    <span className="mr-3">{order.containerQuantities.size45ft} × 45"</span>
+                      No notes available
+                    </div>
                   )}
                 </div>
               </div>
