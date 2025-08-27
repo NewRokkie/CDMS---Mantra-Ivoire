@@ -459,7 +459,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                             <div className="text-sm text-gray-600">
                               Container{formData.quantity !== 1 ? 's' : ''}
                             </div>
-                                  {available40ft === 0 ? 'Not available' : 'High Capacity'}
+                          </div>
                           
                           <button
                             type="button"
