@@ -299,8 +299,8 @@ export const GateOut: React.FC = () => {
       selectedContainers: [], // Start with no containers selected
       transportCompany: order.transportCompany,
       driverName: order.driverName,
-      // Only show pending and in_process orders that are ready for gate out
-      const isValidStatus = order.status === 'pending' || order.status === 'in_process';
+      vehicleNumber: order.vehicleNumber,
+      gateOutDate: new Date().toISOString().split('T')[0],
       gateOutTime: new Date().toTimeString().slice(0, 5),
       notes: ''
     });
@@ -981,7 +981,22 @@ const GateOutCompletionModal: React.FC<{
       // Simulate system updates
       console.log('Freeing location space for containers:', validatedContainers.map(c => c.containerNumber));
       console.log('Decrementing booking reference container count');
-      console.log('Updating booking status if all containers processed');
+      
+      // Update booking reference status based on remaining containers
+      const processedCount = validatedContainers.length;
+      const currentRemaining = operation.releaseOrder.remainingContainers || operation.releaseOrder.totalContainers;
+      const newRemaining = Math.max(0, currentRemaining - processedCount);
+      
+      let newStatus: ReleaseOrder['status'];
+      if (newRemaining === 0) {
+        newStatus = 'completed'; // All containers processed
+      } else if (newRemaining < operation.releaseOrder.totalContainers) {
+        newStatus = 'in_process'; // Some containers processed
+      } else {
+        newStatus = 'pending'; // No containers processed yet
+      }
+      
+      console.log(`Updating booking status to: ${newStatus} (${newRemaining}/${operation.releaseOrder.totalContainers} remaining)`);
       
       onComplete(operation.id);
     } catch (error) {
