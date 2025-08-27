@@ -162,7 +162,7 @@ export interface YardPosition {
   isOccupied: boolean;
   containerId?: string;
   containerNumber?: string;
-  containerSize?: '20ft' | '40ft' | '45ft';
+  containerSize?: '20ft' | '40ft';
   reservedUntil?: Date;
   clientCode?: string;
   placedAt?: Date;
