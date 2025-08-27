@@ -128,13 +128,14 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
     const statusConfig = {
       draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+      in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
       validated: { color: 'bg-green-100 text-green-800', label: 'Validated' },
       partial: { color: 'bg-blue-100 text-blue-800', label: 'Partial Release' },
       completed: { color: 'bg-blue-600 text-white', label: 'Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
     };
     
-    const config = statusConfig[status];
+    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
         {config.label}
