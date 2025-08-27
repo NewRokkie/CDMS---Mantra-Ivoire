@@ -1127,7 +1127,7 @@ const GateOutCompletionModal: React.FC<{
                       <h5 className="font-medium text-orange-900">Container Verification Required</h5>
                     </div>
                     <p className="text-sm text-orange-800">
-                      Please re-enter the container number to verify: <strong>{containers[currentVerifyingIndex]?.number}</strong>
+                      Please re-enter the container number to verify</strong>
                     </p>
                   </div>
 
@@ -1181,7 +1181,7 @@ const GateOutCompletionModal: React.FC<{
                       onClick={cancelVerification}
                       className="flex-1 btn-secondary"
                     >
-                      Cancel Verification
+                      Cancel
                     </button>
                     <button
                       type="button"
@@ -1194,7 +1194,7 @@ const GateOutCompletionModal: React.FC<{
                       disabled={containers[currentVerifyingIndex]?.number !== containers[currentVerifyingIndex]?.confirmNumber}
                       className="flex-1 btn-success disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Confirm Verification
+                      Confirm
                     </button>
                   </div>
                 </div>
