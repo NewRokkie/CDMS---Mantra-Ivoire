@@ -58,9 +58,10 @@ const mockBookingReferences: ReleaseOrder[] = [
       size40ft: 3
     },
     totalContainers: 5,
+    remainingContainers: 5, // Track remaining containers for status
     maxQuantityThreshold: 10,
     requiresDetailedBreakdown: false,
-    status: 'validated',
+    status: 'pending', // 0 containers processed yet
     createdBy: 'Jane Operator',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
@@ -79,6 +80,7 @@ const mockBookingReferences: ReleaseOrder[] = [
       size40ft: 0
     },
     totalContainers: 1,
+    remainingContainers: 0, // All containers processed
     maxQuantityThreshold: 10,
     requiresDetailedBreakdown: false,
     containers: [
@@ -116,6 +118,7 @@ const mockBookingReferences: ReleaseOrder[] = [
       size40ft: 1
     },
     totalContainers: 2,
+    remainingContainers: 1, // 1 container processed, 1 remaining
     maxQuantityThreshold: 10,
     requiresDetailedBreakdown: false,
     containers: [
@@ -144,7 +147,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     transportCompany: 'Local Transport Co',
     driverName: 'David Brown',
     vehicleNumber: 'GHI-012',
-    status: 'pending',
+    status: 'in_process', // Some containers processed
     createdBy: 'Sarah Client',
     createdAt: new Date('2025-01-11T11:30:00'),
     estimatedReleaseDate: new Date('2025-01-13T09:00:00'),
@@ -161,9 +164,10 @@ const mockBookingReferences: ReleaseOrder[] = [
       size40ft: 0
     },
     totalContainers: 1,
+    remainingContainers: 1, // No containers processed yet
     maxQuantityThreshold: 10,
     requiresDetailedBreakdown: false,
-    status: 'validated',
+    status: 'pending', // 0 containers processed yet
     createdBy: 'Sarah Client',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T11:00:00'),
@@ -182,9 +186,10 @@ const mockBookingReferences: ReleaseOrder[] = [
       size40ft: 4
     },
     totalContainers: 12,
+    remainingContainers: 12, // No containers processed yet
     maxQuantityThreshold: 10,
     requiresDetailedBreakdown: true,
-    status: 'validated',
+    status: 'pending', // 0 containers processed yet
     createdBy: 'Sarah Client',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-10T16:00:00'),
@@ -203,6 +208,7 @@ const mockBookingReferences: ReleaseOrder[] = [
       size40ft: 1
     },
     totalContainers: 1,
+    remainingContainers: 1, // No containers processed yet
     maxQuantityThreshold: 10,
     requiresDetailedBreakdown: false,
     containers: [
@@ -220,7 +226,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     transportCompany: 'Ocean Transport',
     driverName: 'Robert Chen',
     vehicleNumber: 'MNO-678',
-    status: 'draft',
+    status: 'pending', // 0 containers processed yet
     createdBy: 'Alex Operator',
     createdAt: new Date('2025-01-12T10:00:00'),
     estimatedReleaseDate: new Date('2025-01-14T15:00:00'),

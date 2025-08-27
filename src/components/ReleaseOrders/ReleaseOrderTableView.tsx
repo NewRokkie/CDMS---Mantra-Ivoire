@@ -183,10 +183,8 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-auto min-w-0 md:min-w-[120px]"
               >
                 <option value="all">All Status</option>
-                <option value="draft">Draft</option>
                 <option value="pending">Pending</option>
-                <option value="validated">Validated</option>
-                <option value="partial">Partial Release</option>
+                <option value="in_process">In Process</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
