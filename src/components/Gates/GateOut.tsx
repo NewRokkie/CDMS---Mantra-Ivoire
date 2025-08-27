@@ -1076,6 +1076,7 @@ const GateOutCompletionModal: React.FC<{
                     <div className="relative">
                       <input
                         type={isInConfirmationMode ? "password" : "text"}
+                        onFocus={() => setIsInConfirmationMode(false)}
                         value={input.containerNumber}
                         onChange={(e) => handleContainerNumberChange(input.id, e.target.value)}
                         className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ${
@@ -1103,8 +1104,7 @@ const GateOutCompletionModal: React.FC<{
                       <div className="relative">
                         <input
                           type="text"
-                          onFocusIn={() => setIsInConfirmationMode(true)}
-                          onFocusOut={() => setIsInConfirmationMode(false)}
+                          onFocus={() => setIsInConfirmationMode(true)}
                           value={input.confirmationNumber || ''}
                           onChange={(e) => handleContainerConfirmationChange(input.id, e.target.value)}
                           className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ${
