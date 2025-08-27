@@ -1103,7 +1103,7 @@ const GateOutCompletionModal: React.FC<{
                       <div className="relative">
                         <input
                           type="text"
-                          onfocus={setIsInConfirmationMode(true)}
+                          onFocus={() => setIsInConfirmationMode(true)}
                           value={input.confirmationNumber || ''}
                           onChange={(e) => handleContainerConfirmationChange(input.id, e.target.value)}
                           className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ${
