@@ -60,41 +60,47 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   const handleReleaseOrderChange = (releaseOrderId: string) => {
     const order = availableReleaseOrders.find(o => o.id === releaseOrderId);
     if (order) {
-      // Smart auto-selection based on availability
-      const available20ft = getAvailableContainersForClient(order.clientCode || '', '20ft');
-      const available40ft = getAvailableContainersForClient(order.clientCode || '', '40ft');
-      
-      let defaultSize: '20ft' | '40ft';
-      let defaultQuantity = 1;
-      
-      // Auto-select based on availability
-      if (available20ft === 0 && available40ft > 0) {
-        // Only 40ft available
-        defaultSize = '40ft';
-        defaultQuantity = 1;
-      } else if (available40ft === 0 && available20ft > 0) {
-        // Only 20ft available
-        defaultSize = '20ft';
-        defaultQuantity = 1;
-      } else if (available20ft > 0 && available40ft > 0) {
-        // Both sizes available - randomly select one
-        defaultSize = Math.random() < 0.5 ? '20ft' : '40ft';
-        defaultQuantity = 1;
-      } else {
-        // No containers available - default to 20ft but will be disabled
-        defaultSize = '20ft';
-        defaultQuantity = 1;
-      }
-      
       setFormData(prev => ({
         ...prev,
         selectedReleaseOrderId: releaseOrderId,
-        containerSize: defaultSize,
-        quantity: defaultQuantity,
         driverName: order.driverName || '',
         vehicleNumber: order.vehicleNumber || '',
         transportCompany: order.transportCompany || ''
       }));
+      
+      // Smart auto-selection based on availability - do this after state update
+      setTimeout(() => {
+        const available20ft = getAvailableContainersForClient(order.clientCode || '', '20ft');
+        const available40ft = getAvailableContainersForClient(order.clientCode || '', '40ft');
+        
+        let defaultSize: '20ft' | '40ft';
+        let defaultQuantity = 1;
+        
+        // Auto-select based on availability
+        if (available20ft === 0 && available40ft > 0) {
+          // Only 40ft available
+          defaultSize = '40ft';
+          defaultQuantity = 1;
+        } else if (available40ft === 0 && available20ft > 0) {
+          // Only 20ft available
+          defaultSize = '20ft';
+          defaultQuantity = 1;
+        } else if (available20ft > 0 && available40ft > 0) {
+          // Both sizes available - randomly select one
+          defaultSize = Math.random() < 0.5 ? '20ft' : '40ft';
+          defaultQuantity = 1;
+        } else {
+          // No containers available - default to 20ft but will be disabled
+          defaultSize = '20ft';
+          defaultQuantity = 0; // Set to 0 to indicate no containers available
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          containerSize: defaultSize,
+          quantity: defaultQuantity
+        }));
+      }, 100);
     }
   };
 
@@ -150,12 +156,17 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     switch (step) {
       case 1:
         const hasReleaseOrder = formData.selectedReleaseOrderId !== '';
+        if (!hasReleaseOrder) return false;
+        
         const hasValidQuantity = formData.quantity > 0;
         const hasAvailableContainers = availableContainers >= formData.quantity;
         const withinTruckLimit = formData.quantity <= getMaxQuantityForSize(formData.containerSize);
-        const hasValidContainerSize = availableContainers > 0; // Ensure selected size has containers
+        const hasValidContainerSize = getAvailableContainersForClient(
+          selectedReleaseOrder?.clientCode || '', 
+          formData.containerSize
+        ) > 0;
         
-        return hasReleaseOrder && hasValidQuantity && hasAvailableContainers && withinTruckLimit && hasValidContainerSize;
+        return hasValidQuantity && hasAvailableContainers && withinTruckLimit && hasValidContainerSize;
       case 2:
         return formData.driverName !== '' && formData.vehicleNumber !== '' && 
                formData.transportCompany !== '';
