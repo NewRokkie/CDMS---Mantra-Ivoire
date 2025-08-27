@@ -58,8 +58,24 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   };
 
   const handleReleaseOrderChange = (releaseOrderId: string) => {
+    // Handle reset case (empty releaseOrderId)
+    if (!releaseOrderId) {
+      setFormData(prev => ({
+        ...prev,
+        selectedReleaseOrderId: '',
+        containerSize: '20ft', // Reset to default
+        quantity: 1, // Reset to default
+        driverName: '',
+        vehicleNumber: '',
+        transportCompany: ''
+      }));
+      return;
+    }
+
+    // Handle selection case
     const order = availableReleaseOrders.find(o => o.id === releaseOrderId);
     if (order) {
+      // First update the basic form data
       setFormData(prev => ({
         ...prev,
         selectedReleaseOrderId: releaseOrderId,
@@ -68,40 +84,47 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         transportCompany: order.transportCompany || ''
       }));
       
-      // Smart auto-selection based on availability - do this after state update
-      setTimeout(() => {
-        const available20ft = getAvailableContainersForClient(order.clientCode || '', '20ft');
-        const available40ft = getAvailableContainersForClient(order.clientCode || '', '40ft');
-        
-        let defaultSize: '20ft' | '40ft' | null;
-        let defaultQuantity = 1;
-        
-        // Auto-select based on availability
-        if (available20ft === 0 && available40ft > 0) {
-          // Only 40ft available
-          defaultSize = '40ft';
-          defaultQuantity = 1;
-        } else if (available40ft === 0 && available20ft > 0) {
-          // Only 20ft available
-          defaultSize = '20ft';
-          defaultQuantity = 1;
-        } else if (available20ft > 0 && available40ft > 0) {
-          // Both sizes available - randomly select one
-          defaultSize = Math.random() < 0.5 ? '20ft' : '40ft';
-          defaultQuantity = 1;
-        } else {
-          // No containers available - default to 20ft but will be disabled
-          defaultSize = null;
-          defaultQuantity = 0; // Set to 0 to indicate no containers available
-        }
-        
-        setFormData(prev => ({
-          ...prev,
-          containerSize: defaultSize,
-          quantity: defaultQuantity
-        }));
-      }, 100);
+      // Execute auto-selection logic after state update
+      executeAutoSelection(order);
     }
+  };
+
+  // Separate function for auto-selection logic
+  const executeAutoSelection = (order: ReleaseOrder) => {
+    setTimeout(() => {
+      const available20ft = getAvailableContainersForClient(order.clientCode || '', '20ft');
+      const available40ft = getAvailableContainersForClient(order.clientCode || '', '40ft');
+      
+      let selectedSize: '20ft' | '40ft';
+      let selectedQuantity: number;
+      
+      // Smart auto-selection based on availability
+      if (available20ft === 0 && available40ft > 0) {
+        // Only 40ft available - select 40ft
+        selectedSize = '40ft';
+        selectedQuantity = 1;
+      } else if (available40ft === 0 && available20ft > 0) {
+        // Only 20ft available - select 20ft
+        selectedSize = '20ft';
+        selectedQuantity = 1;
+      } else if (available20ft > 0 && available40ft > 0) {
+        // Both sizes available - randomly select one
+        selectedSize = Math.random() < 0.5 ? '20ft' : '40ft';
+        selectedQuantity = 1;
+      } else {
+        // No containers available - default to 20ft with quantity 0
+        selectedSize = '20ft';
+        selectedQuantity = 0;
+      }
+      
+      console.log(`Auto-selecting: ${selectedSize} (20ft: ${available20ft}, 40ft: ${available40ft})`);
+      
+      setFormData(prev => ({
+        ...prev,
+        containerSize: selectedSize,
+        quantity: selectedQuantity
+      }));
+    }, 50); // Small delay to ensure state is updated
   };
 
   const handleContainerSizeChange = (size: '20ft' | '40ft') => {

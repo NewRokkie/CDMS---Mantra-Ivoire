@@ -137,7 +137,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
 
   const handleClearSelection = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onOrderSelect('');
+    onOrderSelect(''); // This will trigger the reset logic in parent
     setSearchTerm('');
     setIsOpen(false);
     inputRef.current?.focus();
