@@ -236,7 +236,9 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(90vh-140px)] overflow-y-auto">
+        {/* Modal Body - Scrollable */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Step 1: Booking Number & Client Information */}
           {currentStep === 1 && (
@@ -519,10 +521,69 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
               </div>
             </div>
           )}
-        </form>
+          </form>
+        </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="btn-secondary"
+                >
+                  Previous
+                </button>
+              )}
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              
+              {currentStep < 2 ? (
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={!validateStep(currentStep)}
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next Step
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={!isFormValid || isLoading}
+                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader className="w-5 h-5 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      <span>Create Booking Reference</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
           <div className="flex items-center space-x-3">
             {currentStep > 1 && (
               <button
