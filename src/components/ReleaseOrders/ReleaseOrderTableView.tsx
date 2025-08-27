@@ -250,7 +250,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                     <div className="text-xs text-gray-500">
                       {order.containerQuantities.size20ft > 0 && `${order.containerQuantities.size20ft}×20" `}
                       {order.containerQuantities.size40ft > 0 && `${order.containerQuantities.size40ft}×40" `}
-                      {order.containerQuantities.size45ft > 0 && `${order.containerQuantities.size45ft}×45"`}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

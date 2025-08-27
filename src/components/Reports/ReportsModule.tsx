@@ -688,25 +688,6 @@ const BillingDetailModal: React.FC<{
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Free days allowed:</span>
                       <span className="font-medium text-green-600">
-                        -{clientConfig?.freeDaysAllowed || 0} days
-                      </span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
-                      <span className="text-gray-600 font-medium">Billable days:</span>
-                      <span className="font-bold text-gray-900">{container.billableDays} days</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Daily rate:</span>
-                      <span className="font-medium text-gray-900">
-                        {formatCurrency(container.dailyRate)}
-                      </span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
-                      <span className="text-gray-600 font-medium">Total amount:</span>
-                      <span className="font-bold text-green-600 text-lg">
-                        {formatCurrency(container.totalAmount)}
-                      </span>
-                    </div>
                   </div>
                 </div>
 

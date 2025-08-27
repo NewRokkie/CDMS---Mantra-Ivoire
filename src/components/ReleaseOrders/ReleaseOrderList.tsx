@@ -55,8 +55,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientName: 'Maersk Line',
     containerQuantities: {
       size20ft: 2,
-      size40ft: 3,
-      size45ft: 0
+      size40ft: 3
     },
     totalContainers: 5,
     maxQuantityThreshold: 10,
@@ -77,8 +76,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientName: 'MSC',
     containerQuantities: {
       size20ft: 1,
-      size40ft: 0,
-      size45ft: 0
+      size40ft: 0
     },
     totalContainers: 1,
     maxQuantityThreshold: 10,
@@ -115,8 +113,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientName: 'Shipping Solutions Inc',
     containerQuantities: {
       size20ft: 1,
-      size40ft: 1,
-      size45ft: 0
+      size40ft: 1
     },
     totalContainers: 2,
     maxQuantityThreshold: 10,
@@ -161,8 +158,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientName: 'CMA CGM',
     containerQuantities: {
       size20ft: 1,
-      size40ft: 0,
-      size45ft: 0
+      size40ft: 0
     },
     totalContainers: 1,
     maxQuantityThreshold: 10,
@@ -183,10 +179,9 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientName: 'Shipping Solutions Inc',
     containerQuantities: {
       size20ft: 8,
-      size40ft: 4,
-      size45ft: 1
+      size40ft: 4
     },
-    totalContainers: 13,
+    totalContainers: 12,
     maxQuantityThreshold: 10,
     requiresDetailedBreakdown: true,
     status: 'validated',
@@ -205,8 +200,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientName: 'CMA CGM',
     containerQuantities: {
       size20ft: 0,
-      size40ft: 1,
-      size45ft: 0
+      size40ft: 1
     },
     totalContainers: 1,
     maxQuantityThreshold: 10,

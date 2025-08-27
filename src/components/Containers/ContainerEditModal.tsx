@@ -230,7 +230,6 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                   >
                     <option value="20ft">20 feet</option>
                     <option value="40ft">40 feet</option>
-                    <option value="45ft">45 feet</option>
                   </select>
                 </div>
 
