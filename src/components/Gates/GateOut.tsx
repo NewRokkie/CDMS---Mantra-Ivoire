@@ -1096,7 +1096,7 @@ const GateOutCompletionModal: React.FC<{
                           <button
                             type="button"
                             onClick={() => removeContainer(index)}
-                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-500 rounded-lg transition-colors"
+                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-200 rounded-lg transition-colors"
                             title="Remove container"
                           >
                             <X className="h-4 w-4" />
