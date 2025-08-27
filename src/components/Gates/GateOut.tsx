@@ -34,6 +34,13 @@ interface PendingGateOut {
   actualQuantity: number;
 }
 
+interface ContainerEntry {
+  number: string;
+  confirmationNumber: string;
+  validationState: 'pending' | 'valid' | 'invalid';
+  validationMessage: string;
+}
+
 // Mock data for validated release orders ready for gate out
 const mockValidatedReleaseOrders: ReleaseOrder[] = [
   {
@@ -800,15 +807,13 @@ const GateOutCompletionModal: React.FC<{
   onClose: () => void;
   onComplete: (operationId: string) => void;
 }> = ({ operation, onClose, onComplete }) => {
-  const [containers, setContainers] = useState<Array<{
-    id: string;
-    number: string;
-    confirmNumber: string;
-    isValidated: boolean;
-    isVerifying: boolean;
-    validationError: string;
-  }>>([
-    { id: '1', number: '', confirmNumber: '', isValidated: false, isVerifying: false, validationError: '' }
+  const [containers, setContainers] = useState<ContainerEntry[]>([
+    {
+      number: '',
+      confirmationNumber: '',
+      validationState: 'pending',
+      validationMessage: '',
+    }
   ]);
   const [isInVerificationMode, setIsInVerificationMode] = useState(false);
   const [currentVerifyingIndex, setCurrentVerifyingIndex] = useState(-1);
@@ -827,91 +832,84 @@ const GateOutCompletionModal: React.FC<{
     { number: 'CMAU-444555-8', clientCode: 'CMA', bookingRef: 'BK-CMA-2025-004', location: 'Block B-15', status: 'ready' }
   ];
 
-  const validateContainer = (containerNumber: string): { isValid: boolean; error: string } => {
+  const validateContainer = (containerNumber: string, selectedReleaseOrder?: ReleaseOrder): { isValid: boolean; message: string } => {
     if (!containerNumber.trim()) {
-      return { isValid: false, error: 'Container number is required' };
+      return { isValid: false, message: 'Container number is required' };
     }
 
     const container = mockYardContainers.find(c => c.number === containerNumber);
     
     if (!container) {
-      return { isValid: false, error: 'Container not found in yard database' };
+      return { isValid: false, message: 'Container not found in yard database' };
     }
 
-    if (container.bookingRef !== operation.releaseOrder.bookingNumber) {
-      return { isValid: false, error: 'Container not linked to this booking reference' };
+    if (selectedReleaseOrder && container.bookingRef !== selectedReleaseOrder.bookingNumber) {
+      return { isValid: false, message: 'Container not linked to this booking reference' };
     }
 
-    if (container.clientCode !== operation.releaseOrder.clientCode) {
-      return { isValid: false, error: 'Container not associated with correct client' };
+    if (selectedReleaseOrder && container.clientCode !== selectedReleaseOrder.clientCode) {
+      return { isValid: false, message: 'Container not associated with correct client' };
     }
 
     if (container.status !== 'ready') {
-      return { isValid: false, error: 'Container not available for gate out processing' };
+      return { isValid: false, message: 'Container not available for gate out processing' };
     }
 
     // Check if container is already added
-    const isDuplicate = containers.some(c => c.number === containerNumber && c.id !== containers[0].id);
+    const isDuplicate = containers.some(c => c.number === containerNumber);
     if (isDuplicate) {
-      return { isValid: false, error: 'Container already added to this transaction' };
+      return { isValid: false, message: 'Container already added to this transaction' };
     }
 
-    return { isValid: true, error: '' };
+    return { isValid: true, message: 'Container validated successfully' };
   };
 
-  const handleContainerNumberChange = (index: number, value: string) => {
-    const upperValue = value.toUpperCase();
-    setContainers(prev => prev.map((container, i) => {
-      if (i === index) {
-        const validation = validateContainer(upperValue);
-        return {
-          ...container,
-          number: upperValue,
-          isValidated: validation.isValid,
-          validationError: validation.error
-        };
-      }
-      return container;
-    }));
-  };
-
-  const handleConfirmNumberChange = (index: number, value: string) => {
-    const upperValue = value.toUpperCase();
-    setContainers(prev => prev.map((container, i) => {
-      if (i === index) {
-        return {
-          ...container,
-          confirmNumber: upperValue
-        };
-      }
-      return container;
-    }));
-  };
-
-  const addContainer = () => {
+  const handleAddContainer = () => {
     if (containers.length < 2) {
-      setContainers(prev => [
-        ...prev,
-        { 
-          id: Date.now().toString(), 
-          number: '', 
-          confirmNumber: '', 
-          isValidated: false, 
-          isVerifying: false, 
-          validationError: '' 
-        }
-      ]);
+      setContainers(prev => [...prev, {
+        number: '',
+        confirmationNumber: '',
+        validationState: 'pending',
+        validationMessage: '',
+      }]);
     }
   };
 
-  const removeContainer = (index: number) => {
+  const handleContainerChange = (index: number, field: keyof ContainerEntry, value: string) => {
+    setContainers(prev => prev.map((container, i) => {
+      if (i === index) {
+        const updatedContainer = { 
+          ...container, 
+          [field]: value,
+          // Reset verification when main number changes
+          ...(field === 'number' ? { confirmationNumber: '' } : {})
+        };
+        
+        // Validate container when number changes and has value
+        if (field === 'number' && value.trim()) {
+          const validation = validateContainer(value, operation.releaseOrder);
+          updatedContainer.validationState = validation.isValid ? 'valid' : 'invalid';
+          updatedContainer.validationMessage = validation.message;
+        } else if (field === 'number' && !value.trim()) {
+          // Clear validation when number is empty
+          updatedContainer.validationState = 'pending';
+          updatedContainer.validationMessage = '';
+        }
+        
+        return updatedContainer;
+      }
+      return container;
+    }));
+  };
+
+  const handleRemoveContainer = (index: number) => {
     if (containers.length > 1) {
       setContainers(prev => prev.filter((_, i) => i !== index));
     }
   };
 
   const startVerification = (index: number) => {
-    if (!containers[index].isValidated) {
+    if (containers[index].validationState !== 'valid') {
       alert('Please enter a valid container number first');
       return;
     }
@@ -919,7 +917,7 @@ const GateOutCompletionModal: React.FC<{
     setCurrentVerifyingIndex(index);
     setIsInVerificationMode(true);
     setContainers(prev => prev.map((container, i) => 
-      i === index ? { ...container, isVerifying: true, confirmNumber: '' } : container
+      i === index ? { ...container, confirmationNumber: '' } : container
     ));
   };
 
@@ -928,27 +926,28 @@ const GateOutCompletionModal: React.FC<{
     setCurrentVerifyingIndex(-1);
     setContainers(prev => prev.map(container => ({ 
       ...container, 
-      isVerifying: false, 
-      confirmNumber: '' 
+      confirmationNumber: '' 
     })));
   };
 
-  const getValidationIcon = (container: any) => {
-    if (container.validationError) {
+  const getValidationIcon = (container: ContainerEntry) => {
+    if (container.validationState === 'invalid') {
       return <AlertTriangle className="h-4 w-4 text-red-500" />;
     }
-    if (container.isValidated) {
+    if (container.validationState === 'valid') {
       return <CheckCircle className="h-4 w-4 text-green-500" />;
     }
     return <Package className="h-4 w-4 text-gray-400" />;
   };
 
   const isFormValid = () => {
-    const validContainers = containers.filter(c => c.number && c.isValidated);
-    const allVerified = validContainers.every(c => 
-      c.confirmNumber && c.number === c.confirmNumber
+    // All containers must be validated and confirmed
+    return containers.every(container => 
+      container.validationState === 'valid' && 
+      container.number && 
+      container.confirmationNumber &&
+      container.number === container.confirmationNumber
     );
-    return validContainers.length > 0 && allVerified && gateOutDate && gateOutTime;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -959,7 +958,7 @@ const GateOutCompletionModal: React.FC<{
       return;
     }
 
-    const validatedContainers = containers.filter(c => c.number && c.isValidated && c.confirmNumber);
+    const validatedContainers = containers.filter(c => c.number && c.validationState === 'valid' && c.confirmationNumber);
 
     setIsProcessing(true);
     try {
@@ -1029,132 +1028,176 @@ const GateOutCompletionModal: React.FC<{
 
             {/* Container Selection & Verification System */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-              <div className="flex items-center justify-end mb-4">
-                {containers.length < 2 && (
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-blue-900 flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Container Selection & Verification
+                </h4>
+                {!isInVerificationMode && containers.length < 2 && (
                   <button
                     type="button"
-                    onClick={addContainer}
-                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    title="Add another container (max 2)"
+                    onClick={handleAddContainer}
+                    className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-6 w-4" />
                   </button>
                 )}
               </div>
               
-              <div className="space-y-4">
-                {containers.map((container, index) => (
-                  <div key={index} className="space-y-4">
-                    {/* Container Entry */}
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Enter Container Number *
-                      </label>
-                      <div className="relative">
-                        <Package className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
-                        <input
-                          type="text"
-                          required
-                          value={container.number}
-                          onChange={(e) => handleContainerChange(index, 'number', e.target.value.toUpperCase())}
-                          className={`w-full pl-12 pr-12 py-3 border-2 rounded-xl transition-all duration-300 ${
-                            container.validationState === 'valid' 
-                              ? 'border-green-400 bg-green-50 focus:ring-green-500' 
-                              : container.validationState === 'invalid'
-                              ? 'border-red-400 bg-red-50 focus:ring-red-500'
-                              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                          }`}
-                          placeholder="e.g., MSKU-123456-7"
-                        />
-                        {container.validationState === 'valid' && (
-                          <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500 h-5 w-5" />
-                        )}
-                        {container.validationState === 'invalid' && (
-                          <AlertTriangle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-red-500 h-5 w-5" />
-                        )}
-                      </div>
-                      
-                      {/* Validation Messages */}
-                      {container.validationMessage && (
-                        <div className={`mt-2 flex items-center space-x-2 text-sm ${
-                          container.validationState === 'valid' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {container.validationState === 'valid' ? (
-                            <CheckCircle className="h-4 w-4" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4" />
-                          )}
-                          <span>{container.validationMessage}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Container Confirmation */}
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Confirm Container Number *
-                      </label>
-                      <div className="relative">
-                        <Package className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
-                        <input
-                          type="text"
-                          required
-                          value={container.confirmationNumber}
-                          onChange={(e) => handleContainerChange(index, 'confirmationNumber', e.target.value.toUpperCase())}
-                          className={`w-full pl-12 pr-12 py-3 border-2 rounded-xl transition-all duration-300 ${
-                            container.number && container.confirmationNumber
-                              ? container.number === container.confirmationNumber
-                                ? 'border-green-400 bg-green-50 focus:ring-green-500'
-                                : 'border-red-400 bg-red-50 focus:ring-red-500'
-                              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                          }`}
-                          placeholder="Re-enter container number to confirm"
-                        />
-                        {container.number && container.confirmationNumber && (
-                          container.number === container.confirmationNumber ? (
-                            <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500 h-5 w-5" />
-                          ) : (
-                            <AlertTriangle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-red-500 h-5 w-5" />
-                          )
-                        )}
-                      </div>
-                      
-                      {/* Confirmation Messages */}
-                      {container.number && container.confirmationNumber && (
-                        <div className={`mt-2 flex items-center space-x-2 text-sm ${
-                          container.number === container.confirmationNumber ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {container.number === container.confirmationNumber ? (
-                            <>
-                              <CheckCircle className="h-4 w-4" />
-                              <span>Container numbers match - verified successfully</span>
-                            </>
-                          ) : (
-                            <>
+              {!isInVerificationMode ? (
+                /* Container Entry Mode */
+                <div className="space-y-4">
+                  {containers.map((container, index) => (
+                    <div key={index} className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-blue-800 mb-2">
+                            Enter Container Number {containers.length > 1 ? `#${index + 1}` : ''} *
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              required
+                              value={container.number}
+                              onChange={(e) => handleContainerChange(index, 'number', e.target.value.toUpperCase())}
+                              className={`form-input w-full pr-12 ${
+                                container.validationState === 'invalid'
+                                  ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' 
+                                  : container.validationState === 'valid'
+                                  ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
+                                  : ''
+                              }`}
+                              placeholder="e.g., MSKU1234567"
+                            />
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              {getValidationIcon(container)}
+                            </div>
+                          </div>
+                          
+                          {/* Validation Messages */}
+                          {container.validationState === 'invalid' && (
+                            <div className="mt-2 flex items-center space-x-2 text-sm text-red-600">
                               <AlertTriangle className="h-4 w-4" />
-                              <span>Container numbers don't match - please check and re-enter</span>
-                            </>
+                              <span>{container.validationMessage}</span>
+                            </div>
+                          )}
+                          
+                          {container.validationState === 'valid' && (
+                            <div className="mt-2 flex items-center space-x-2 text-sm text-green-600">
+                              <CheckCircle className="h-4 w-4" />
+                              <span>{container.validationMessage}</span>
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Remove Container Button */}
-                    {containers.length > 1 && (
-                      <div className="flex justify-end">
+                        
+                        {/* Remove Container Button */}
+                        {containers.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveContainer(index)}
+                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-200 rounded-lg transition-colors"
+                            title="Remove container"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Verify Button */}
+                      {container.validationState === 'valid' && (
                         <button
                           type="button"
-                          onClick={() => removeContainer(index)}
-                          className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors text-sm"
+                          onClick={() => startVerification(index)}
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
                         >
-                          <X className="h-4 w-4" />
-                          <span>Remove Container</span>
+                          <CheckSquare className="h-4 w-4" />
+                          <span>Verify Container {containers.length > 1 ? `#${index + 1}` : ''}</span>
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Verification Mode */
+                <div className="space-y-4">
+                  <div className="bg-orange-100 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertTriangle className="h-5 w-5 text-orange-600" />
+                      <h5 className="font-medium text-orange-900">Container Verification Required</h5>
+                    </div>
+                    <p className="text-sm text-orange-800">
+                      Please re-enter the container number to verify
+                    </p>
                   </div>
-                ))}
-              </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirm Container Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={containers[currentVerifyingIndex]?.confirmationNumber || ''}
+                      onChange={(e) => handleContainerChange(currentVerifyingIndex, 'confirmationNumber', e.target.value.toUpperCase())}
+                      className={`form-input w-full ${
+                        containers[currentVerifyingIndex]?.confirmationNumber && 
+                        containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmationNumber
+                          ? 'border-green-300 bg-green-50'
+                          : containers[currentVerifyingIndex]?.confirmationNumber
+                          ? 'border-red-300 bg-red-50'
+                          : ''
+                      }`}
+                      placeholder="Re-enter container number for verification"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Verification Status */}
+                  {containers[currentVerifyingIndex]?.confirmationNumber && (
+                    <div className={`flex items-center space-x-2 p-3 rounded-lg ${
+                      containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmationNumber
+                        ? 'bg-green-50 border border-green-200'
+                        : 'bg-red-50 border border-red-200'
+                    }`}>
+                      {containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmationNumber ? (
+                        <>
+                          <CheckSquare className="h-5 w-5 text-green-600" />
+                          <p className="text-sm text-green-800 font-medium">Container numbers match! Ready to process.</p>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                          <p className="text-sm text-red-800">Container numbers do not match. Please verify and try again.</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Verification Actions */}
+                  <div className="flex items-center space-x-3">
+                    <button
+                      type="button"
+                      onClick={cancelVerification}
+                      className="flex-1 btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmationNumber) {
+                          setIsInVerificationMode(false);
+                          setCurrentVerifyingIndex(-1);
+                        }
+                      }}
+                      disabled={containers[currentVerifyingIndex]?.number !== containers[currentVerifyingIndex]?.confirmationNumber}
+                      className="flex-1 btn-success disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Gate Out Date & Time */}
