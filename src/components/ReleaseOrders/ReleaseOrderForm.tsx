@@ -237,7 +237,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
         </div>
 
         {/* Modal Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6">
           <form className="space-y-6">
             
             {/* Step 1: Booking Number & Client Information */}
@@ -451,7 +451,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
         </div>
 
         {/* Modal Footer - Fixed */}
-        <div className="px-8 py-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {currentStep > 1 && (

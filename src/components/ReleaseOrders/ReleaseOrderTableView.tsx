@@ -512,25 +512,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                       </div>
                     </div>
                   </div>
-
-                  {/* 45ft Containers */}
-                  <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <Package className="h-6 w-6 text-purple-600" />
-                      <div>
-                        <h5 className="font-semibold text-purple-900">45" Containers</h5>
-                        <p className="text-sm text-purple-700">Extended Size</p>
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-purple-900 mb-2">
-                        {selectedOrder.containerQuantities.size45ft}
-                      </div>
-                      <div className="text-sm text-purple-700">
-                        {selectedOrder.containerQuantities.size45ft === 1 ? 'Container' : 'Containers'}
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Summary */}
