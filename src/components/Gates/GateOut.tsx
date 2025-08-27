@@ -1041,7 +1041,6 @@ const GateOutCompletionModal: React.FC<{
                     className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>Add Container</span>
                   </button>
                 )}
               </div>
