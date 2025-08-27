@@ -318,7 +318,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                 </div>
 
                 {/* Container Specifications */}
-                <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+                {selectedReleaseOrder && (
+                  <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
                   <h4 className="font-semibold text-orange-900 mb-4 flex items-center">
                     <Package className="h-5 w-5 mr-2" />
                     Container Specifications
@@ -359,9 +360,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                               <div className={`text-sm ${available20ft === 0 ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Standard Size
                               </div>
-                              <div className={`text-xs ${available20ft === 0 ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {available20ft === 0 ? 'Not available' : 'Max 2 per truck'}
-                              </div>
                             </div>
                           </div>
                           {formData.containerSize === '20ft' && (
@@ -399,9 +397,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                               <div className={`text-sm ${available40ft === 0 ? 'text-gray-400' : 'text-gray-600'}`}>
                                 High Capacity
                               </div>
-                              <div className={`text-xs ${available40ft === 0 ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {available40ft === 0 ? 'Not available' : 'Max 1 per truck'}
-                              </div>
                             </div>
                           </div>
                           {formData.containerSize === '40ft' && (
@@ -410,24 +405,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                             </div>
                           )}
                         </button>
-                      </div>
-                      
-                      {/* Container Availability Info */}
-                      <div className="mt-4 p-3 bg-white rounded-lg border border-orange-300">
-                        <div className="text-sm text-gray-700 space-y-1">
-                          <div className="flex justify-between">
-                            <span>Available 20" containers:</span>
-                            <span className={`font-medium ${available20ft > 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                              {available20ft}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Available 40" containers:</span>
-                            <span className={`font-medium ${available40ft > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {available40ft}
-                            </span>
-                          </div>
-                        </div>
                       </div>
                     </div>
 
@@ -438,16 +415,6 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                       </label>
                       
                       <div className="bg-white rounded-lg p-4 border border-orange-300">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="text-sm text-gray-600">
-                            <div>Selected: {formData.containerSize}</div>
-                            <div>Available: {availableContainers} containers</div>
-                            <div className="text-xs text-orange-600 mt-1">
-                              Truck limit: {getMaxQuantityForSize(formData.containerSize)} container{getMaxQuantityForSize(formData.containerSize) !== 1 ? 's' : ''}
-                            </div>
-                          </div>
-                        </div>
-                        
                         <div className="flex items-center justify-center space-x-4">
                           <button
                             type="button"
@@ -492,7 +459,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                       </div>
                     </div>
                   </div>
-                </div>
+                  </div>
+                )}
 
                 {/* Enhanced Validation Messages */}
                 <div className="space-y-3">
