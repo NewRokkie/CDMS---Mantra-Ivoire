@@ -1127,7 +1127,7 @@ const GateOutCompletionModal: React.FC<{
                       <h5 className="font-medium text-orange-900">Container Verification Required</h5>
                     </div>
                     <p className="text-sm text-orange-800">
-                      Please re-enter the container number to verify</strong>
+                      Please re-enter the container number to verify
                     </p>
                   </div>
 
