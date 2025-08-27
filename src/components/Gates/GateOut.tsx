@@ -1051,6 +1051,7 @@ const GateOutCompletionModal: React.FC<{
                   title="Add Container (Max 2)"
                 >
                   <Plus className="h-4 w-4" />
+                  Add Container
                 </button>
               </div>
               
