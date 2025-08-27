@@ -657,11 +657,11 @@ const PendingGateOutView: React.FC<{
   const { user, canViewAllData } = useAuth();
 
   const filteredOperations = operations.filter(op =>
-    op.releaseOrderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (op.releaseOrder.vehicleNumber && op.releaseOrder.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (op.releaseOrder.driverName && op.releaseOrder.driverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (op.releaseOrder.bookingNumber && op.releaseOrder.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     op.releaseOrder.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.selectedContainers.some(c => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
+    op.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase())
   const handleOperationClick = (operation: PendingGateOut) => {
     setSelectedOperation(operation);
     setShowCompletionModal(true);
@@ -693,10 +693,10 @@ const PendingGateOutView: React.FC<{
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <input
             type="text"
-            placeholder="Search pending operations..."
+            placeholder="Search by truck number, driver name, booking number, or client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-input pl-10 w-full"
+            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
