@@ -299,8 +299,8 @@ export const GateOut: React.FC = () => {
       selectedContainers: [], // Start with no containers selected
       transportCompany: order.transportCompany,
       driverName: order.driverName,
-      vehicleNumber: order.vehicleNumber,
-      gateOutDate: new Date().toISOString().split('T')[0],
+      // Only show pending and in_process orders that are ready for gate out
+      const isValidStatus = order.status === 'pending' || order.status === 'in_process';
       gateOutTime: new Date().toTimeString().slice(0, 5),
       notes: ''
     });
