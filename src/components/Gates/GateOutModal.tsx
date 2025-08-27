@@ -234,23 +234,15 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-gray-900">New Gate Out Process</h3>
-         if (available40ft > 0 && available20ft === 0) {
-           // Only 40ft available - auto-select 40ft
-           defaultSize = '40ft';
-           defaultQuantity = 1;
-         } else if (available20ft > 0 && available40ft === 0) {
-           // Only 20ft available - auto-select 20ft
-           defaultSize = '20ft';
-           defaultQuantity = 1;
-         } else if (available20ft > 0 && available40ft > 0) {
-           // Both sizes available - randomly select one
-           defaultSize = Math.random() < 0.5 ? '20ft' : '40ft';
-           defaultQuantity = 1;
-         } else {
-           // No containers available - default to 20ft but quantity will be 0
-           defaultSize = '20ft';
-           defaultQuantity = 0;
-         }
+              <p className="text-sm text-gray-600 mt-1">Process containers for gate out operations</p>
+            </div>
+            <button
+              onClick={() => setShowModal(false)}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
           
           {/* Progress Bar */}
           <div className="mt-3">
