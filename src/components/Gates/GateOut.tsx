@@ -1029,182 +1029,132 @@ const GateOutCompletionModal: React.FC<{
 
             {/* Container Selection & Verification System */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-blue-900 flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Container Selection & Verification
-                </h4>
-                {!isInVerificationMode && containers.length < 2 && (
+              <div className="flex items-center justify-end mb-4">
+                {containers.length < 2 && (
                   <button
                     type="button"
                     onClick={addContainer}
-                    className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    title="Add another container (max 2)"
                   >
-                    <Plus className="h-6 w-4" />
+                    <Plus className="h-4 w-4" />
                   </button>
                 )}
               </div>
               
-              {!isInVerificationMode ? (
-                /* Container Entry Mode */
-                <div className="space-y-4">
-                  {containers.map((container, index) => (
-                    <div key={container.id} className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium text-blue-800 mb-2">
-                            Enter Container Number {containers.length > 1 ? `#${index + 1}` : ''} *
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={container.isVerifying ? "password" : "text"}
-                              required
-                              value={container.number}
-                              onChange={(e) => handleContainerNumberChange(index, e.target.value)}
-                              className={`form-input w-full pr-12 ${
-                                container.validationError 
-                                  ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' 
-                                  : container.isValidated 
-                                  ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
-                                  : ''
-                              }`}
-                              placeholder="e.g., MSKU1234567"
-                              onFocus={() => setContainers(prev => prev.map((c, i) => 
-                                i === index ? { ...c, isVerifying: true } : c
-                              ))}
-                              onBlur={() => setContainers(prev => prev.map((c, i) => 
-                                i === index ? { ...c, isVerifying: false } : c
-                              ))}
-                            />
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              {getValidationIcon(container)}
-                            </div>
-                          </div>
-                          
-                          {/* Validation Messages */}
-                          {container.validationError && (
-                            <div className="mt-2 flex items-center space-x-2 text-sm text-red-600">
-                              <AlertTriangle className="h-4 w-4" />
-                              <span>{container.validationError}</span>
-                            </div>
-                          )}
-                          
-                          {container.isValidated && !container.validationError && (
-                            <div className="mt-2 flex items-center space-x-2 text-sm text-green-600">
-                              <CheckCircle className="h-4 w-4" />
-                              <span>Container validated successfully</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Remove Container Button */}
-                        {containers.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeContainer(index)}
-                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-200 rounded-lg transition-colors"
-                            title="Remove container"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
+              <div className="space-y-4">
+                {containers.map((container, index) => (
+                  <div key={index} className="space-y-4">
+                    {/* Container Entry */}
+                    <div>
+                      <label className="block text-sm font-medium text-blue-800 mb-2">
+                        Enter Container Number *
+                      </label>
+                      <div className="relative">
+                        <Package className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+                        <input
+                          type="text"
+                          required
+                          value={container.number}
+                          onChange={(e) => handleContainerChange(index, 'number', e.target.value.toUpperCase())}
+                          className={`w-full pl-12 pr-12 py-3 border-2 rounded-xl transition-all duration-300 ${
+                            container.validationState === 'valid' 
+                              ? 'border-green-400 bg-green-50 focus:ring-green-500' 
+                              : container.validationState === 'invalid'
+                              ? 'border-red-400 bg-red-50 focus:ring-red-500'
+                              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                          }`}
+                          placeholder="e.g., MSKU-123456-7"
+                        />
+                        {container.validationState === 'valid' && (
+                          <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500 h-5 w-5" />
+                        )}
+                        {container.validationState === 'invalid' && (
+                          <AlertTriangle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-red-500 h-5 w-5" />
                         )}
                       </div>
                       
-                      {/* Verify Button */}
-                      {container.isValidated && (
+                      {/* Validation Messages */}
+                      {container.validationMessage && (
+                        <div className={`mt-2 flex items-center space-x-2 text-sm ${
+                          container.validationState === 'valid' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {container.validationState === 'valid' ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4" />
+                          )}
+                          <span>{container.validationMessage}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Container Confirmation */}
+                    <div>
+                      <label className="block text-sm font-medium text-blue-800 mb-2">
+                        Confirm Container Number *
+                      </label>
+                      <div className="relative">
+                        <Package className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+                        <input
+                          type="text"
+                          required
+                          value={container.confirmationNumber}
+                          onChange={(e) => handleContainerChange(index, 'confirmationNumber', e.target.value.toUpperCase())}
+                          className={`w-full pl-12 pr-12 py-3 border-2 rounded-xl transition-all duration-300 ${
+                            container.number && container.confirmationNumber
+                              ? container.number === container.confirmationNumber
+                                ? 'border-green-400 bg-green-50 focus:ring-green-500'
+                                : 'border-red-400 bg-red-50 focus:ring-red-500'
+                              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                          }`}
+                          placeholder="Re-enter container number to confirm"
+                        />
+                        {container.number && container.confirmationNumber && (
+                          container.number === container.confirmationNumber ? (
+                            <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500 h-5 w-5" />
+                          ) : (
+                            <AlertTriangle className="absolute right-4 top-1/2 transform -translate-y-1/2 text-red-500 h-5 w-5" />
+                          )
+                        )}
+                      </div>
+                      
+                      {/* Confirmation Messages */}
+                      {container.number && container.confirmationNumber && (
+                        <div className={`mt-2 flex items-center space-x-2 text-sm ${
+                          container.number === container.confirmationNumber ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {container.number === container.confirmationNumber ? (
+                            <>
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Container numbers match - verified successfully</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="h-4 w-4" />
+                              <span>Container numbers don't match - please check and re-enter</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Remove Container Button */}
+                    {containers.length > 1 && (
+                      <div className="flex justify-end">
                         <button
                           type="button"
-                          onClick={() => startVerification(index)}
-                          className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                          onClick={() => removeContainer(index)}
+                          className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors text-sm"
                         >
-                          <CheckSquare className="h-4 w-4" />
-                          <span>Verify Container {containers.length > 1 ? `#${index + 1}` : ''}</span>
+                          <X className="h-4 w-4" />
+                          <span>Remove Container</span>
                         </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Verification Mode */
-                <div className="space-y-4">
-                  <div className="bg-orange-100 border border-orange-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <AlertTriangle className="h-5 w-5 text-orange-600" />
-                      <h5 className="font-medium text-orange-900">Container Verification Required</h5>
-                    </div>
-                    <p className="text-sm text-orange-800">
-                      Please re-enter the container number to verify
-                    </p>
+                      </div>
+                    )}
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirm Container Number *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={containers[currentVerifyingIndex]?.confirmNumber || ''}
-                      onChange={(e) => handleConfirmNumberChange(currentVerifyingIndex, e.target.value)}
-                      className={`form-input w-full ${
-                        containers[currentVerifyingIndex]?.confirmNumber && 
-                        containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmNumber
-                          ? 'border-green-300 bg-green-50'
-                          : containers[currentVerifyingIndex]?.confirmNumber
-                          ? 'border-red-300 bg-red-50'
-                          : ''
-                      }`}
-                      placeholder="Re-enter container number for verification"
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* Verification Status */}
-                  {containers[currentVerifyingIndex]?.confirmNumber && (
-                    <div className={`flex items-center space-x-2 p-3 rounded-lg ${
-                      containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmNumber
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-red-50 border border-red-200'
-                    }`}>
-                      {containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmNumber ? (
-                        <>
-                          <CheckSquare className="h-5 w-5 text-green-600" />
-                          <p className="text-sm text-green-800 font-medium">Container numbers match! Ready to process.</p>
-                        </>
-                      ) : (
-                        <>
-                          <AlertTriangle className="h-5 w-5 text-red-600" />
-                          <p className="text-sm text-red-800">Container numbers do not match. Please verify and try again.</p>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Verification Actions */}
-                  <div className="flex items-center space-x-3">
-                    <button
-                      type="button"
-                      onClick={cancelVerification}
-                      className="flex-1 btn-secondary"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (containers[currentVerifyingIndex]?.number === containers[currentVerifyingIndex]?.confirmNumber) {
-                          setIsInVerificationMode(false);
-                          setCurrentVerifyingIndex(-1);
-                        }
-                      }}
-                      disabled={containers[currentVerifyingIndex]?.number !== containers[currentVerifyingIndex]?.confirmNumber}
-                      className="flex-1 btn-success disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
 
             {/* Gate Out Date & Time */}
