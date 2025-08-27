@@ -688,6 +688,9 @@ const BillingDetailModal: React.FC<{
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Free days allowed:</span>
                       <span className="font-medium text-green-600">
+                        {clientConfig?.freeDaysAllowed || 0} days
+                      </span>
+                    </div>
                   </div>
                 </div>
 
