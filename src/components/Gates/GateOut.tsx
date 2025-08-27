@@ -1042,10 +1042,6 @@ const GateOutCompletionModal: React.FC<{
             {/* Container Selection & Verification System */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-blue-900 flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Container Selection & Verification
-                </h4>
                 <button
                   type="button"
                   onClick={handleAddContainer}
