@@ -412,15 +412,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                         <span className="ml-2 font-medium">{selectedOrder.createdBy}</span>
                       </div>
                     </div>
-                    {selectedOrder.validatedBy && (
-                      <div className="flex items-center space-x-3">
-                        <User className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="text-sm text-gray-600">Validated by:</span>
-                          <span className="ml-2 font-medium">{selectedOrder.validatedBy}</span>
-                        </div>
-                      </div>
-                    )}
                     <div className="flex items-center space-x-3">
                       <Package className="h-4 w-4 text-gray-400" />
                       <div>
