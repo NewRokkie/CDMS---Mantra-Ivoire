@@ -279,7 +279,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const displayValue = value ? formatDisplayTime(hours, minutes, includeSeconds ? seconds : undefined) : '';
 
   return (
-    <div className={`relative w-full ${className}`}>
+    <div className={`relative ${className}`}>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {label} {required && <span className="text-red-500">*</span>}
@@ -331,7 +331,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
       {/* Selected Time Indicator */}
       {value && (
         <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg animate-bounce-in">
-          
+          <Clock className="h-3 w-3" />
         </div>
       )}
 
