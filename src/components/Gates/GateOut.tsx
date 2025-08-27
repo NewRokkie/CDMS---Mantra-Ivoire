@@ -29,6 +29,9 @@ interface PendingGateOut {
   createdBy: string;
   status: 'pending';
   notes?: string;
+  containerSize: '20ft' | '40ft';
+  requestedQuantity: number;
+  actualQuantity: number;
 }
 
 // Mock data for validated release orders ready for gate out
@@ -200,11 +203,14 @@ const mockPendingGateOutOperations = [
     id: 'PGO-001',
     releaseOrderId: 'BK-MAEU-2025-001',
     releaseOrder: mockValidatedReleaseOrders[0],
-    selectedContainers: mockValidatedReleaseOrders[0].containers,
+    selectedContainers: mockValidatedReleaseOrders[0].containers.slice(0, 1),
     createdAt: new Date('2025-01-11T14:30:00'),
     createdBy: 'Jane Operator',
     status: 'pending' as const,
-    notes: 'Priority shipment - handle with care'
+    notes: 'Priority shipment - handle with care',
+    containerSize: '40ft' as const,
+    requestedQuantity: 1,
+    actualQuantity: 1
   },
   {
     id: 'PGO-002',
@@ -214,7 +220,10 @@ const mockPendingGateOutOperations = [
     createdAt: new Date('2025-01-11T15:45:00'),
     createdBy: 'Mike Supervisor',
     status: 'pending' as const,
-    notes: 'Partial release - 2 of 3 containers'
+    notes: 'Partial release - 2 of 3 containers',
+    containerSize: '20ft' as const,
+    requestedQuantity: 2,
+    actualQuantity: 2
   },
   {
     id: 'PGO-003',
@@ -224,7 +233,10 @@ const mockPendingGateOutOperations = [
     createdAt: new Date('2025-01-11T16:20:00'),
     createdBy: 'Sarah Client',
     status: 'pending' as const,
-    notes: 'Single container release - urgent'
+    notes: 'Single container release - urgent',
+    containerSize: '20ft' as const,
+    requestedQuantity: 1,
+    actualQuantity: 1
   }
 ];
 
@@ -299,24 +311,38 @@ export const GateOut: React.FC = () => {
   const handleGateOutSubmit = async (data: any) => {
     setIsProcessing(true);
     try {
+      // Automatically select containers based on size and quantity
+      const selectedContainers = autoSelectContainers(
+        data.releaseOrder,
+        data.containerSize,
+        data.quantity
+      );
+
+      if (selectedContainers.length === 0) {
+        throw new Error(`No available ${data.containerSize} containers found for client ${data.releaseOrder.clientCode}`);
+      }
+
       // Create pending operation instead of completing immediately
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       const pendingOperation: PendingGateOut = {
         id: `PGO-${Date.now()}`,
-        releaseOrderId: data.selectedReleaseOrderId,
+        releaseOrderId: data.releaseOrder.id,
         releaseOrder: data.releaseOrder,
-        selectedContainers: data.selectedContainerDetails || [],
+        selectedContainers: selectedContainers,
         createdAt: new Date(),
         createdBy: user?.name || 'Unknown',
         status: 'pending',
-        notes: data.notes
+        notes: data.notes,
+        containerSize: data.containerSize,
+        requestedQuantity: data.quantity,
+        actualQuantity: selectedContainers.length
       };
       
       setPendingOperations(prev => [pendingOperation, ...prev]);
       
       console.log('Gate Out moved to pending:', pendingOperation);
-      alert(`Gate Out operation created and moved to pending for ${data.selectedContainerDetails?.length || 0} containers`);
+      alert(`Gate Out operation created for ${selectedContainers.length} ${data.containerSize} containers:\n${selectedContainers.map(c => c.containerNumber).join(', ')}`);
       
       setShowGateOutModal(false);
     } catch (error) {
@@ -324,6 +350,23 @@ export const GateOut: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Automatic container selection function
+  const autoSelectContainers = (
+    releaseOrder: ReleaseOrder,
+    containerSize: '20ft' | '40ft',
+    quantity: number
+  ): ReleaseOrderContainer[] => {
+    // Get available containers of the specified size for this client
+    const availableContainers = releaseOrder.containers.filter(c => 
+      c.status === 'ready' && 
+      c.containerSize === containerSize
+    );
+
+    // Randomly shuffle and select the requested quantity
+    const shuffled = [...availableContainers].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, quantity);
   };
 
   const handleCompletePendingOperation = (operationId: string) => {
@@ -671,13 +714,16 @@ const PendingGateOutView: React.FC<{
                   Created Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Release Order
+                  Booking Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Containers
+                  Container Specs
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Selected Containers
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created By
@@ -701,19 +747,29 @@ const PendingGateOutView: React.FC<{
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.releaseOrder.bookingNumber || operation.releaseOrderId}</div>
+                    <div className="text-sm font-medium text-gray-900">{operation.releaseOrder.bookingNumber}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
                       {canViewAllData() ? operation.releaseOrder.clientName : 'Your Company'}
+                    </div>
+                    <div className="text-xs text-gray-500">{operation.releaseOrder.clientCode}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {operation.requestedQuantity}×{operation.containerSize}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Requested: {operation.requestedQuantity} • Selected: {operation.actualQuantity}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {operation.selectedContainers.length} container{operation.selectedContainers.length !== 1 ? 's' : ''}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {operation.selectedContainers.map(c => c.containerNumber).join(', ')}
+                    <div className="text-xs text-gray-500 max-w-xs truncate">
+                      {operation.selectedContainers.map(c => c.containerNumber).slice(0, 2).join(', ')}
+                      {operation.selectedContainers.length > 2 && ` +${operation.selectedContainers.length - 2} more`}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -832,8 +888,12 @@ const GateOutCompletionModal: React.FC<{
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Containers:</span>
-                  <span className="font-medium">{operation.selectedContainers.length}</span>
+                  <span className="text-gray-600">Container Specs:</span>
+                  <span className="font-medium">{operation.requestedQuantity}×{operation.containerSize}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Selected Containers:</span>
+                  <span className="font-medium">{operation.actualQuantity}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Driver:</span>
@@ -846,6 +906,22 @@ const GateOutCompletionModal: React.FC<{
                 <div className="flex justify-between">
                   <span className="text-gray-600">Transport Company:</span>
                   <span className="font-medium">{operation.releaseOrder.transportCompany}</span>
+                </div>
+              </div>
+              
+              {/* Selected Containers List */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <h5 className="text-sm font-medium text-blue-900 mb-2">Auto-Selected Containers:</h5>
+                <div className="space-y-1">
+                  {operation.selectedContainers.map((container, index) => (
+                    <div key={container.id} className="text-xs text-blue-800 flex items-center space-x-2">
+                      <span className="w-4 h-4 bg-blue-200 rounded-full flex items-center justify-center text-blue-800 font-bold">
+                        {index + 1}
+                      </span>
+                      <span className="font-mono">{container.containerNumber}</span>
+                      <span className="text-blue-600">({container.containerSize})</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

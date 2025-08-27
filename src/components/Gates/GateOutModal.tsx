@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, CalendarDays, MapPin, Check, Info, Ship, Clock, Box, Ruler, CheckSquare, Square, ListChecks, XCircle } from 'lucide-react';
+import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, Calculator, Plus, Minus, Box, Ruler } from 'lucide-react';
 import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -13,7 +13,8 @@ interface GateOutModalProps {
 
 interface GateOutFormData {
   selectedReleaseOrderId: string;
-  selectedContainers: string[];
+  containerSize: '20ft' | '40ft';
+  quantity: number;
   driverName: string;
   vehicleNumber: string;
   transportCompany: string;
@@ -33,7 +34,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   
   const [formData, setFormData] = useState<GateOutFormData>({
     selectedReleaseOrderId: '',
-    selectedContainers: [],
+    containerSize: '20ft',
+    quantity: 1,
     driverName: '',
     vehicleNumber: '',
     transportCompany: '',
@@ -61,42 +63,52 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
       setFormData(prev => ({
         ...prev,
         selectedReleaseOrderId: releaseOrderId,
-        selectedContainers: [],
-        driverName: order.driverName,
-        vehicleNumber: order.vehicleNumber,
-        transportCompany: order.transportCompany
+        driverName: order.driverName || '',
+        vehicleNumber: order.vehicleNumber || '',
+        transportCompany: order.transportCompany || ''
       }));
     }
   };
 
-  const handleContainerSelection = (containerId: string) => {
+  const handleContainerSizeChange = (size: '20ft' | '40ft') => {
     setFormData(prev => ({
       ...prev,
-      selectedContainers: prev.selectedContainers.includes(containerId)
-        ? prev.selectedContainers.filter(id => id !== containerId)
-        : [...prev.selectedContainers, containerId]
+      containerSize: size,
+      quantity: 1 // Reset quantity when size changes
     }));
   };
 
-  const handleSelectAllContainers = () => {
-    if (!selectedReleaseOrder) return;
-    
-    const readyContainerIds = selectedReleaseOrder.containers
-      .filter(c => c.status === 'ready')
-      .map(c => c.id);
+  const handleQuantityChange = (newQuantity: number) => {
+    const maxQuantity = getMaxQuantityForSize(formData.containerSize);
+    const validQuantity = Math.max(1, Math.min(maxQuantity, newQuantity));
     
     setFormData(prev => ({
       ...prev,
-      selectedContainers: prev.selectedContainers.length === readyContainerIds.length 
-        ? [] 
-        : readyContainerIds
+      quantity: validQuantity
     }));
+  };
+
+  const getMaxQuantityForSize = (size: '20ft' | '40ft'): number => {
+    // Truck loading constraints
+    return size === '20ft' ? 2 : 1;
+  };
+
+  const getAvailableContainersForClient = (clientCode: string, size: '20ft' | '40ft'): number => {
+    if (!selectedReleaseOrder) return 0;
+    
+    // Count available containers of the specified size for this client
+    return selectedReleaseOrder.containers.filter(c => 
+      c.status === 'ready' && 
+      c.containerSize === size
+    ).length;
   };
 
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return formData.selectedReleaseOrderId !== '' && formData.selectedContainers.length > 0;
+        return formData.selectedReleaseOrderId !== '' && 
+               formData.quantity > 0 && 
+               formData.quantity <= getMaxQuantityForSize(formData.containerSize);
       case 2:
         return formData.driverName !== '' && formData.vehicleNumber !== '' && 
                formData.transportCompany !== '';
@@ -119,8 +131,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     if (!validateStep(currentStep)) return;
     
     // Validate that we have all required data
-    if (!selectedReleaseOrder || formData.selectedContainers.length === 0) {
-      alert('Please select a release order and at least one container.');
+    if (!selectedReleaseOrder) {
+      alert('Please select a release order.');
       return;
     }
 
@@ -129,21 +141,36 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
       return;
     }
 
+    // Check if enough containers are available
+    const availableCount = getAvailableContainersForClient(
+      selectedReleaseOrder.clientCode || '', 
+      formData.containerSize
+    );
+    
+    if (availableCount < formData.quantity) {
+      alert(`Only ${availableCount} containers of size ${formData.containerSize} are available for this client.`);
+      return;
+    }
+
     const submitData = {
       ...formData,
       releaseOrder: selectedReleaseOrder,
-      selectedContainerDetails: selectedReleaseOrder?.containers.filter(c => 
-        formData.selectedContainers.includes(c.id)
-      )
+      // System will automatically select containers based on size and quantity
+      autoSelectContainers: true
     };
     
     onSubmit(submitData);
   };
 
+  const maxQuantity = getMaxQuantityForSize(formData.containerSize);
+  const availableContainers = selectedReleaseOrder ? 
+    getAvailableContainersForClient(selectedReleaseOrder.clientCode || '', formData.containerSize) : 0;
+  const effectiveMaxQuantity = Math.min(maxQuantity, availableContainers);
+
   if (!showModal) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in !mt-0">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up max-h-[90vh] overflow-hidden flex flex-col">
         
         {/* Modal Header */}
@@ -151,7 +178,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-gray-900">New Gate Out Process</h3>
-              <p className="text-xs text-gray-600">Step {currentStep} of 2 - Create Pending Operation</p>
+              <p className="text-xs text-gray-600">Step {currentStep} of 2 - Automated Container Selection</p>
             </div>
             <div className="flex items-center space-x-3">
               {autoSaving && (
@@ -191,8 +218,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                     <span className={`mt-1.5 text-xs font-medium transition-colors duration-300 ${
                       step <= currentStep ? 'text-blue-600' : 'text-gray-500'
                     }`}>
-                      {step === 1 && 'Release Order & Containers'}
-                      {step === 2 && 'Gate Out Details'}
+                      {step === 1 && 'Order & Container Specs'}
+                      {step === 2 && 'Transport Details'}
                     </span>
                   </div>
                 ))}
@@ -202,10 +229,10 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         </div>
 
         {/* Modal Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6">
           <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
             
-            {/* Step 1: Release Order & Container Selection */}
+            {/* Step 1: Release Order & Container Specifications */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-slide-in-right">
                 
@@ -235,8 +262,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                         </h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Order ID:</span>
-                            <span className="font-medium">{selectedReleaseOrder.bookingNumber || selectedReleaseOrder.id}</span>
+                            <span className="text-gray-600">Booking Number:</span>
+                            <span className="font-medium">{selectedReleaseOrder.bookingNumber}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Client:</span>
@@ -253,175 +280,165 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Containers:</span>
-                            <span className="font-medium">
-                              {selectedReleaseOrder.containers.filter(c => c.status === 'ready').length}/
-                              {selectedReleaseOrder.containers.length} ready
+                            <span className="text-gray-600">Available 20":</span>
+                            <span className="font-medium text-blue-600">
+                              {getAvailableContainersForClient(selectedReleaseOrder.clientCode || '', '20ft')} containers
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Available 40":</span>
+                            <span className="font-medium text-green-600">
+                              {getAvailableContainersForClient(selectedReleaseOrder.clientCode || '', '40ft')} containers
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Created:</span>
                             <span className="font-medium">{selectedReleaseOrder.createdAt.toLocaleDateString()}</span>
                           </div>
-                          {selectedReleaseOrder.estimatedReleaseDate && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Est. Release:</span>
-                              <span className="font-medium text-blue-600">
-                                {selectedReleaseOrder.estimatedReleaseDate.toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Container Selection */}
-{selectedReleaseOrder && (
-  <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center space-x-3">
-        <div className="p-2 bg-blue-50 rounded-lg">
-          <Package className="h-5 w-5 text-blue-600" />
-        </div>
-        <div>
-          <h4 className="font-semibold text-gray-800">Select Containers</h4>
-          <p className="text-xs text-gray-500">
-            {formData.selectedContainers.length} of {selectedReleaseOrder.containers.filter(c => c.status === 'ready').length} ready containers selected
-          </p>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={handleSelectAllContainers}
-        className="text-sm font-medium text-blue-600 hover:text-blue-800 px-3 py-1 hover:bg-blue-50 rounded-md transition-colors flex items-center"
-      >
-        {formData.selectedContainers.length === selectedReleaseOrder.containers.filter(c => c.status === 'ready').length ? (
-          <>
-            <Square className="w-4 h-4 mr-1.5" /> Deselect All
-          </>
-        ) : (
-          <>
-            <CheckSquare className="w-4 h-4 mr-1.5" /> Select All Ready
-          </>
-        )}
-      </button>
-    </div>
-    
-    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-      {selectedReleaseOrder.containers.map((container) => (
-        <div
-          key={container.id}
-          onClick={() => container.status === 'ready' && handleContainerSelection(container.id)}
-          className={`p-4 border rounded-lg transition-all duration-200 ${
-            container.status === 'ready' ? 'cursor-pointer' : 'cursor-not-allowed'
-          } ${
-            formData.selectedContainers.includes(container.id)
-              ? 'border-blue-300 bg-blue-50 shadow-sm ring-2 ring-blue-100'
-              : container.status === 'ready'
-              ? 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50'
-              : 'border-gray-100 bg-gray-50'
-          }`}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-3">
-              {/* Custom checkbox with Lucide icons */}
-              <div className={`mt-1 flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all ${
-                formData.selectedContainers.includes(container.id)
-                  ? 'bg-blue-600 border-blue-600'
-                  : container.status === 'ready'
-                  ? 'border-gray-300 bg-white hover:border-blue-400'
-                  : 'border-gray-200 bg-gray-100'
-              }`}>
-                {formData.selectedContainers.includes(container.id) && (
-                  <Check className="w-3.5 h-3.5 text-white" />
-                )}
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex items-center flex-wrap gap-2">
-                  <span className="font-medium text-gray-900">{container.containerNumber}</span>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${
-                    container.status === 'ready' ? 'bg-green-100 text-green-800' :
-                    container.status === 'released' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {container.status === 'ready' ? (
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                    ) : container.status === 'released' ? (
-                      <Ship className="w-3 h-3 mr-1" />
-                    ) : (
-                      <Clock className="w-3 h-3 mr-1" />
-                    )}
-                    {container.status.charAt(0).toUpperCase() + container.status.slice(1)}
-                  </span>
-                </div>
-                
-                <div className="text-sm text-gray-600 mt-1 flex items-center flex-wrap gap-2">
-                  <span className="flex items-center">
-                    <Box className="w-4 h-4 mr-1 text-gray-400" />
-                    {container.containerType}
-                  </span>
-                  <span className="flex items-center">
-                    <Ruler className="w-4 h-4 mr-1 text-gray-400" />
-                    {container.containerSize}
-                  </span>
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-3 mt-2">
-                  <div className="flex items-center text-xs text-gray-500">
-                    <MapPin className="w-3 h-3 mr-1.5 text-gray-400" />
-                    {container.currentLocation}
+                {/* Container Specifications */}
+                <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+                  <h4 className="font-semibold text-orange-900 mb-4 flex items-center">
+                    <Package className="h-5 w-5 mr-2" />
+                    Container Specifications
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Container Size Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-orange-800 mb-3">
+                        Container Size *
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => handleContainerSizeChange('20ft')}
+                          className={`p-4 border-2 rounded-xl transition-all duration-300 ${
+                            formData.containerSize === '20ft'
+                              ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20'
+                              : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Box className={`h-6 w-6 ${
+                              formData.containerSize === '20ft' ? 'text-blue-600' : 'text-gray-400'
+                            }`} />
+                            <div className="text-left">
+                              <div className={`font-medium ${
+                                formData.containerSize === '20ft' ? 'text-blue-900' : 'text-gray-700'
+                              }`}>
+                                20" Containers
+                              </div>
+                              <div className="text-sm text-gray-600">Standard Size</div>
+                              <div className="text-xs text-gray-500">Max 2 per truck</div>
+                            </div>
+                          </div>
+                          {formData.containerSize === '20ft' && (
+                            <div className="absolute top-2 right-2">
+                              <CheckCircle className="h-5 w-5 text-blue-600" />
+                            </div>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleContainerSizeChange('40ft')}
+                          className={`p-4 border-2 rounded-xl transition-all duration-300 relative ${
+                            formData.containerSize === '40ft'
+                              ? 'border-green-500 bg-green-50 shadow-lg shadow-green-500/20'
+                              : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Ruler className={`h-6 w-6 ${
+                              formData.containerSize === '40ft' ? 'text-green-600' : 'text-gray-400'
+                            }`} />
+                            <div className="text-left">
+                              <div className={`font-medium ${
+                                formData.containerSize === '40ft' ? 'text-green-900' : 'text-gray-700'
+                              }`}>
+                                40" Containers
+                              </div>
+                              <div className="text-sm text-gray-600">High Capacity</div>
+                              <div className="text-xs text-gray-500">Max 1 per truck</div>
+                            </div>
+                          </div>
+                          {formData.containerSize === '40ft' && (
+                            <div className="absolute top-2 right-2">
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quantity Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-orange-800 mb-3">
+                        Quantity to Gate Out *
+                      </label>
+                      
+                      <div className="bg-white rounded-lg p-4 border border-orange-300">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="text-sm text-gray-600">
+                            <div>Selected: {formData.containerSize}</div>
+                            <div>Available: {availableContainers} containers</div>
+                            <div className="text-xs text-orange-600 mt-1">
+                              Truck limit: {getMaxQuantityForSize(formData.containerSize)} container{getMaxQuantityForSize(formData.containerSize) !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-center space-x-4">
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(formData.quantity - 1)}
+                            disabled={formData.quantity <= 1}
+                            className="p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Minus className="h-5 w-5" />
+                          </button>
+                          
+                          <div className="bg-gray-100 rounded-xl px-6 py-4 min-w-[100px] text-center">
+                            <div className="text-3xl font-bold text-gray-900">{formData.quantity}</div>
+                            <div className="text-sm text-gray-600">
+                              Container{formData.quantity !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(formData.quantity + 1)}
+                            disabled={formData.quantity >= effectiveMaxQuantity}
+                            className="p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Plus className="h-5 w-5" />
+                          </button>
+                        </div>
+
+                        {/* Truck Loading Info */}
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Truck className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-700">Truck Loading Constraints</span>
+                          </div>
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div>• Maximum 2×20" containers per truck</div>
+                            <div>• Maximum 1×40" container per truck</div>
+                            <div className="text-blue-600 font-medium">
+                              • System will automatically select {formData.quantity} available {formData.containerSize} container{formData.quantity !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center text-xs text-gray-500">
-                    <CalendarDays className="w-3 h-3 mr-1.5 text-gray-400" />
-                    Added {container.addedAt.toLocaleDateString()}
-                  </div>
                 </div>
-              </div>
-            </div>
-            
-            {/* Selection indicator */}
-            {formData.selectedContainers.includes(container.id) && (
-              <div className="flex items-center">
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center">
-                  <Check className="w-3 h-3 mr-1" />
-                  Selected
-                </span>
-              </div>
-            )}
-          </div>
-          
-          {container.status !== 'ready' && (
-            <div className="mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1.5 rounded inline-flex items-center">
-              <AlertCircle className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-              Not available for release
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-    
-    {/* Selected count footer */}
-    {formData.selectedContainers.length > 0 && (
-      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-        <span className="text-sm font-medium text-gray-700 flex items-center">
-          <ListChecks className="w-4 h-4 mr-2 text-blue-500" />
-          {formData.selectedContainers.length} container{formData.selectedContainers.length !== 1 ? 's' : ''} selected
-        </span>
-        <button 
-          type="button"
-          onClick={() => setFormData({...formData, selectedContainers: []})}
-          className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
-        >
-          <XCircle className="w-4 h-4 mr-1" />
-          Clear selection
-        </button>
-      </div>
-    )}
-  </div>
-)}
 
                 {/* Validation Messages */}
                 {!formData.selectedReleaseOrderId && (
@@ -433,18 +450,27 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                   </div>
                 )}
 
-                {formData.selectedReleaseOrderId && formData.selectedContainers.length === 0 && (
+                {formData.selectedReleaseOrderId && availableContainers === 0 && (
+                  <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                    <p className="text-sm text-red-800">
+                      No {formData.containerSize} containers available for this client.
+                    </p>
+                  </div>
+                )}
+
+                {formData.selectedReleaseOrderId && availableContainers > 0 && formData.quantity > availableContainers && (
                   <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
                     <p className="text-sm text-yellow-800">
-                      Please select at least one container for gate out.
+                      Only {availableContainers} {formData.containerSize} container{availableContainers !== 1 ? 's' : ''} available. Quantity adjusted to maximum.
                     </p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Step 2: Gate Out Details */}
+            {/* Step 2: Transport Details */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-slide-in-right">
                 
@@ -502,15 +528,26 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
 
                 {/* Operation Summary */}
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-4">Operation Summary</h4>
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <Calculator className="h-5 w-5 mr-2" />
+                    Operation Summary
+                  </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Release Order:</span>
-                      <div className="font-medium">{formData.selectedReleaseOrderId}</div>
+                      <span className="text-gray-600">Booking Number:</span>
+                      <div className="font-medium">{selectedReleaseOrder?.bookingNumber || 'Not selected'}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Containers:</span>
-                      <div className="font-medium">{formData.selectedContainers.length} selected</div>
+                      <span className="text-gray-600">Container Size:</span>
+                      <div className="font-medium">{formData.containerSize}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Quantity:</span>
+                      <div className="font-medium">{formData.quantity} container{formData.quantity !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Selection Method:</span>
+                      <div className="font-medium text-blue-600">Automatic</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Driver:</span>
@@ -520,10 +557,23 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                       <span className="text-gray-600">Vehicle:</span>
                       <div className="font-medium">{formData.vehicleNumber || 'Not specified'}</div>
                     </div>
-                    <div>
+                    <div className="md:col-span-2">
                       <span className="text-gray-600">Transport Company:</span>
                       <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
                     </div>
+                  </div>
+
+                  {/* Automatic Selection Notice */}
+                  <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Automatic Container Selection</span>
+                    </div>
+                    <p className="text-xs text-blue-700 mt-1">
+                      The system will automatically select {formData.quantity} available {formData.containerSize} container{formData.quantity !== 1 ? 's' : ''} 
+                      from the yard for client {selectedReleaseOrder?.clientCode}. 
+                      Selected containers will be displayed in the final report.
+                    </p>
                   </div>
                 </div>
 
@@ -537,7 +587,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                     onChange={(e) => handleInputChange('notes', e.target.value)}
                     className="form-input w-full"
                     rows={3}
-                    placeholder="Enter any additional notes..."
+                    placeholder="Enter any additional notes or special instructions..."
                   />
                 </div>
               </div>
@@ -546,7 +596,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         </div>
 
         {/* Modal Footer - Fixed */}
-        <div className="px-8 py-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {currentStep > 1 && (
@@ -593,7 +643,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4" />
-                      <span>Create Pending Operation</span>
+                      <span>Create Gate Out Operation</span>
                     </>
                   )}
                 </button>
