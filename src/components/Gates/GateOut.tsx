@@ -714,16 +714,16 @@ const PendingGateOutView: React.FC<{
                   Created Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Truck Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Driver Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Booking Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Container Specs
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Selected Containers
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created By
@@ -747,30 +747,19 @@ const PendingGateOutView: React.FC<{
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.releaseOrder.vehicleNumber || 'Not specified'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.releaseOrder.driverName || 'Not specified'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.releaseOrder.bookingNumber}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm text-gray-900">
                       {canViewAllData() ? operation.releaseOrder.clientName : 'Your Company'}
                     </div>
                     <div className="text-xs text-gray-500">{operation.releaseOrder.clientCode}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {operation.requestedQuantity}×{operation.containerSize}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Requested: {operation.requestedQuantity} • Selected: {operation.actualQuantity}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {operation.selectedContainers.length} container{operation.selectedContainers.length !== 1 ? 's' : ''}
-                    </div>
-                    <div className="text-xs text-gray-500 max-w-xs truncate">
-                      {operation.selectedContainers.map(c => c.containerNumber).slice(0, 2).join(', ')}
-                      {operation.selectedContainers.length > 2 && ` +${operation.selectedContainers.length - 2} more`}
-                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.createdBy}
