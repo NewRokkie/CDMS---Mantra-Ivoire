@@ -419,6 +419,20 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                         <span className="ml-2 font-medium">{selectedOrder.totalContainers}</span>
                       </div>
                     </div>
+                    <div className="flex items-center space-x-3">
+                      <Package className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <span className="text-sm text-gray-600">Processed:</span>
+                        <span className="ml-2 font-medium">{selectedOrder.totalContainers - (selectedOrder.remainingContainers || selectedOrder.totalContainers)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <span className="text-sm text-gray-600">Remaining:</span>
+                        <span className="ml-2 font-medium">{selectedOrder.remainingContainers || selectedOrder.totalContainers}</span>
+                      </div>
+                    </div>
                     {selectedOrder.estimatedReleaseDate && (
                       <div className="flex items-center space-x-3">
                         <Calendar className="h-4 w-4 text-gray-400" />
@@ -456,7 +470,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   Container Quantities Breakdown
                 </h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* 20ft Containers */}
                   <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
                     <div className="flex items-center space-x-3 mb-4">
@@ -468,10 +482,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                     </div>
                     <div className="text-center">
                       <div className="text-3xl font-bold text-blue-900 mb-2">
-                        {selectedOrder.containerQuantities.size20ft}
+                        {selectedOrder.containerQuantities?.size20ft || 0}
                       </div>
                       <div className="text-sm text-blue-700">
-                        {selectedOrder.containerQuantities.size20ft === 1 ? 'Container' : 'Containers'}
+                        {(selectedOrder.containerQuantities?.size20ft || 0) === 1 ? 'Container' : 'Containers'}
                       </div>
                     </div>
                   </div>
@@ -487,10 +501,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                     </div>
                     <div className="text-center">
                       <div className="text-3xl font-bold text-green-900 mb-2">
-                        {selectedOrder.containerQuantities.size40ft}
+                        {selectedOrder.containerQuantities?.size40ft || 0}
                       </div>
                       <div className="text-sm text-green-700">
-                        {selectedOrder.containerQuantities.size40ft === 1 ? 'Container' : 'Containers'}
+                        {(selectedOrder.containerQuantities?.size40ft || 0) === 1 ? 'Container' : 'Containers'}
                       </div>
                     </div>
                   </div>
@@ -501,6 +515,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   <div className="text-center">
                     <div className="text-lg font-semibold text-gray-900 mb-2">
                       Total: {selectedOrder.totalContainers} Container{selectedOrder.totalContainers !== 1 ? 's' : ''}
+                    </div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      Processed: {selectedOrder.totalContainers - (selectedOrder.remainingContainers || selectedOrder.totalContainers)} • 
+                      Remaining: {selectedOrder.remainingContainers || selectedOrder.totalContainers}
                     </div>
                     {selectedOrder.requiresDetailedBreakdown && (
                       <div className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">
