@@ -1040,7 +1040,7 @@ const GateOutCompletionModal: React.FC<{
                     onClick={addContainer}
                     className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Plus className="h-6 w-6" />
                   </button>
                 )}
               </div>
