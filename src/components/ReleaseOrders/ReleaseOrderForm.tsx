@@ -14,7 +14,6 @@ interface BookingReferenceFormData {
   totalContainers: number;
   requiresDetailedBreakdown: boolean;
   estimatedReleaseDate: string;
-  notes: string;
 }
 
 interface BookingReferenceFormProps {
@@ -45,8 +44,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     },
     totalContainers: 0,
     requiresDetailedBreakdown: false,
-    estimatedReleaseDate: '',
-    notes: ''
+    estimatedReleaseDate: ''
   });
 
   // Mock client data
@@ -84,7 +82,18 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   };
 
   const handleQuantityChange = (size: keyof ContainerQuantityBySize, value: number) => {
-    const newValue = Math.max(0, value); // Ensure non-negative
+    const newValue = Math.max(0, value);
+    
+    // Calculate what the new total would be
+    const otherSize = size === 'size20ft' ? 'size40ft' : 'size20ft';
+    const otherValue = formData.containerQuantities[otherSize];
+    const newTotal = newValue + otherValue;
+    
+    // Don't allow exceeding the maximum threshold
+    if (newTotal > formData.maxQuantityThreshold) {
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       containerQuantities: {
@@ -139,10 +148,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     
     if (!validateStep(currentStep)) return;
 
-    const bookingData = {
-      ...formData,
-      containerBreakdown: getContainerBreakdownText()
-    };
+    const bookingData = formData;
 
     onSubmit(bookingData);
   };
@@ -371,7 +377,8 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                         <button
                           type="button"
                           onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft + 1)}
-                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                          disabled={formData.totalContainers >= formData.maxQuantityThreshold}
+                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -410,7 +417,8 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                         <button
                           type="button"
                           onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft + 1)}
-                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                          disabled={formData.totalContainers >= formData.maxQuantityThreshold}
+                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -436,37 +444,6 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                       )}
                     </div>
                   )}
-                </div>
-
-                {/* Additional Information */}
-                <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-4">Additional Information</h4>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Estimated Release Date
-                      </label>
-                      <DatePicker
-                        value={formData.estimatedReleaseDate}
-                        onChange={(date) => handleInputChange('estimatedReleaseDate', date)}
-                        placeholder="Select estimated release date"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Notes & Special Instructions
-                      </label>
-                      <textarea
-                        value={formData.notes}
-                        onChange={(e) => handleInputChange('notes', e.target.value)}
-                        rows={3}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        placeholder="Enter any special instructions or notes..."
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
