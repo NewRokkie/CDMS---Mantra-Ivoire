@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft } from 'lucide-react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft, X } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInModal } from './GateInModal';
@@ -608,7 +608,7 @@ export const GateIn: React.FC = () => {
             />
             {searchTerm && (
               <button
-                onClick={() => onSearchChange('')}
+                onClick={() => setSearchTerm('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
@@ -622,15 +622,10 @@ export const GateIn: React.FC = () => {
             </button>
             {searchTerm && (
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                {operations.length} result{operations.length !== 1 ? 's' : ''}
+                {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
               </span>
             )}
           </div>
-          </div>
-          <button className="btn-secondary flex items-center space-x-2">
-            <Filter className="h-4 w-4" />
-            <span>Filter</span>
-          </button>
         </div>
       </div>
 
@@ -795,14 +790,15 @@ const PendingOperationsView: React.FC<{
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-4">
           <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Search pending operations..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="form-input pl-10 w-full"
-          />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search pending operations..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="form-input pl-10 w-full"
+            />
+          </div>
         </div>
       </div>
 
