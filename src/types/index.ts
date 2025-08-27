@@ -231,13 +231,14 @@ export interface ReleaseOrder {
   clientName: string;
   containerQuantities?: ContainerQuantityBySize;
   totalContainers: number;
+  remainingContainers?: number; // Track remaining containers for status calculation
   maxQuantityThreshold?: number;
   requiresDetailedBreakdown?: boolean;
   containers?: ReleaseOrderContainer[];
   transportCompany?: string;
   driverName?: string;
   vehicleNumber?: string;
-  status: 'draft' | 'pending' | 'validated' | 'partial' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   createdBy: string;
   validatedBy?: string;
   createdAt: Date;
