@@ -355,7 +355,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
-                    Booking Reference Details - {selectedOrder.bookingNumber || selectedOrder.id}
+                    Booking Reference Details
                   </h3>
                   <div className="flex items-center space-x-3 mt-2">
                     {getStatusBadge(selectedOrder.status)}
