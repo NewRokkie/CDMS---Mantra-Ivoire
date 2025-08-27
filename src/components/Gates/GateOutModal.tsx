@@ -150,8 +150,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   // Get available containers for current selection
   const available20ft = selectedReleaseOrder ? getAvailableContainersForClient(selectedReleaseOrder.clientCode || '', '20ft') : 0;
   const available40ft = selectedReleaseOrder ? getAvailableContainersForClient(selectedReleaseOrder.clientCode || '', '40ft') : 0;
-  const availableContainers = selectedRele
-}aseOrder ? getAvailableContainersForClient(selectedReleaseOrder.clientCode || '', formData.containerSize) : 0;
+  const availableContainers = selectedReleaseOrder ? getAvailableContainersForClient(selectedReleaseOrder.clientCode || '', formData.containerSize) : 0;
 
   const validateStep = (step: number): boolean => {
     switch (step) {
