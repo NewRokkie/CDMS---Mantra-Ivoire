@@ -144,7 +144,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
   };
 
   const displayValue = selectedOrder 
-    ? `${selectedOrder.id} - ${selectedOrder.clientName}`
+    ? `${selectedOrder.bookingNumber || selectedOrder.id} - ${selectedOrder.clientName}`
     : searchTerm;
 
   const getStatusColor = (status: ReleaseOrder['status']) => {
