@@ -459,11 +459,11 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   {selectedOrder.notes ? (
                     <div className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm leading-relaxed">
                       {selectedOrder.notes}
-                    </div>
-                  ) : (
+                  {order.containerQuantities?.size40ft && order.containerQuantities.size40ft > 0 && (
+                    <span className="mr-3">{order.containerQuantities.size40ft} × 40"</span>
                     <div className="text-gray-500 italic text-sm">
-                      No notes provided for this booking reference.
-                    </div>
+                  {order.containerQuantities?.size45ft && order.containerQuantities.size45ft > 0 && (
+                    <span className="mr-3">{order.containerQuantities.size45ft} × 45"</span>
                   )}
                 </div>
               </div>

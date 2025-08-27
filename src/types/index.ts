@@ -226,14 +226,18 @@ export interface BookingReference {
 
 export interface ReleaseOrder {
   id: string;
-  bookingNumber: string;
+  bookingNumber?: string;
   clientId: string;
   clientCode?: string;
   clientName: string;
-  containerQuantities: ContainerQuantityBySize;
+  containerQuantities?: ContainerQuantityBySize;
   totalContainers: number;
-  maxQuantityThreshold: number;
-  requiresDetailedBreakdown: boolean;
+  maxQuantityThreshold?: number;
+  requiresDetailedBreakdown?: boolean;
+  containers?: ReleaseOrderContainer[];
+  transportCompany?: string;
+  driverName?: string;
+  vehicleNumber?: string;
   status: 'draft' | 'pending' | 'validated' | 'partial' | 'completed' | 'cancelled';
   createdBy: string;
   validatedBy?: string;

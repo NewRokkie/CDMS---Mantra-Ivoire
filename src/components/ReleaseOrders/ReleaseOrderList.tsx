@@ -71,9 +71,18 @@ const mockBookingReferences: ReleaseOrder[] = [
   },
   {
     id: 'RO-2025-002',
+    bookingNumber: 'BK-MSCU-2025-002',
     clientId: '2',
     clientCode: 'MSCU',
     clientName: 'MSC',
+    containerQuantities: {
+      size20ft: 1,
+      size40ft: 0,
+      size45ft: 0
+    },
+    totalContainers: 1,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     containers: [
       {
         id: 'roc-3',
@@ -100,9 +109,18 @@ const mockBookingReferences: ReleaseOrder[] = [
   },
   {
     id: 'RO-2025-003',
+    bookingNumber: 'BK-SHIP-2025-003',
     clientId: '4',
     clientCode: 'SHIP001',
     clientName: 'Shipping Solutions Inc',
+    containerQuantities: {
+      size20ft: 1,
+      size40ft: 1,
+      size45ft: 0
+    },
+    totalContainers: 2,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     containers: [
       {
         id: 'roc-4',
@@ -181,9 +199,18 @@ const mockBookingReferences: ReleaseOrder[] = [
   },
   {
     id: 'RO-2025-006',
+    bookingNumber: 'BK-CMDU-2025-006',
     clientId: '3',
     clientCode: 'CMDU',
     clientName: 'CMA CGM',
+    containerQuantities: {
+      size20ft: 0,
+      size40ft: 1,
+      size45ft: 0
+    },
+    totalContainers: 1,
+    maxQuantityThreshold: 10,
+    requiresDetailedBreakdown: false,
     containers: [
       {
         id: 'roc-10',
