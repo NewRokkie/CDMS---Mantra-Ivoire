@@ -17,12 +17,12 @@ export const ReleaseOrderHeader: React.FC<ReleaseOrderHeaderProps> = ({ onCreate
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">{t('releases.title')}</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Booking References</h2>
         {showClientNotice && (
           <div className="flex items-center mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <AlertTriangle className="h-4 w-4 text-blue-600 mr-2" />
             <p className="text-sm text-blue-800">
-              You are viewing release orders for <strong>{user?.company}</strong> only.
+              You are viewing booking references for <strong>{user?.company}</strong> only.
             </p>
           </div>
         )}
@@ -33,7 +33,7 @@ export const ReleaseOrderHeader: React.FC<ReleaseOrderHeaderProps> = ({ onCreate
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          <span>Create Release Order</span>
+          <span>Create Booking Reference</span>
         </button>
       )}
     </div>

@@ -26,7 +26,7 @@ export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stat
                 <List className="h-6 w-6 text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600 truncate">Total Orders</p>
+                <p className="text-sm font-medium text-gray-600 truncate">Total Bookings</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>

@@ -213,7 +213,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs">
-                  <SortButton field="id">Release Order #</SortButton>
+                  <SortButton field="id">Booking Reference #</SortButton>
                 </th>
                 <th className="px-6 py-3 text-left text-xs">
                   <SortButton field="containerCount">Containers (Qty)</SortButton>
@@ -233,7 +233,8 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               {paginatedOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.id}</div>
+                    <div className="text-sm font-medium text-gray-900">{order.bookingNumber}</div>
+                    <div className="text-sm text-gray-500">{order.id}</div>
                     <div className="text-sm text-gray-500">
                       Created {order.createdAt.toLocaleDateString()}
                     </div>
@@ -242,11 +243,13 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                     <div className="flex items-center space-x-2">
                       <Package className="h-4 w-4 text-gray-400" />
                       <span className="text-sm font-medium text-gray-900">
-                        {formatContainerCount(order.containers.length)}
+                        {formatContainerCount(order.totalContainers)}
                       </span>
                     </div>
                     <div className="text-xs text-gray-500">
-                      {order.containers.filter(c => c.status === 'ready').length} ready for release
+                      {order.containerQuantities.size20ft > 0 && `${order.containerQuantities.size20ft}×20" `}
+                      {order.containerQuantities.size40ft > 0 && `${order.containerQuantities.size40ft}×40" `}
+                      {order.containerQuantities.size45ft > 0 && `${order.containerQuantities.size45ft}×45"`}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -254,7 +257,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                       {canViewAllData() ? order.clientName : 'Your Company'}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {order.transportCompany}
+                      {order.clientCode}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -282,11 +285,11 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
         {paginatedOrders.length === 0 && (
           <div className="text-center py-12">
             <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No release orders found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No booking references found</h3>
             <p className="text-gray-600">
               {searchTerm || statusFilter !== 'all' 
                 ? "Try adjusting your search criteria or filters."
-                : "No release orders have been created yet."
+                : "No booking references have been created yet."
               }
             </p>
           </div>
@@ -354,7 +357,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
-                    Release Order Details - {selectedOrder.id}
+                    Booking Reference Details - {selectedOrder.bookingNumber}
                   </h3>
                   <div className="flex items-center space-x-3 mt-2">
                     {getStatusBadge(selectedOrder.status)}
@@ -376,13 +379,20 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 {/* Order Information */}
                 <div className="space-y-4 md:col-span-1">
                   <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Order Information
+                    Booking Information
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <FileText className="h-4 w-4 text-gray-400" />
                       <div>
-                        <span className="text-sm text-gray-600">Order ID:</span>
+                        <span className="text-sm text-gray-600">Booking Number:</span>
+                        <span className="ml-2 font-medium">{selectedOrder.bookingNumber}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <FileText className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <span className="text-sm text-gray-600">Reference ID:</span>
                         <span className="ml-2 font-medium">{selectedOrder.id}</span>
                       </div>
                     </div>
@@ -420,6 +430,13 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                         </div>
                       </div>
                     )}
+                    <div className="flex items-center space-x-3">
+                      <Package className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <span className="text-sm text-gray-600">Total Containers:</span>
+                        <span className="ml-2 font-medium">{selectedOrder.totalContainers}</span>
+                      </div>
+                    </div>
                     {selectedOrder.estimatedReleaseDate && (
                       <div className="flex items-center space-x-3">
                         <Calendar className="h-4 w-4 text-gray-400" />
@@ -445,74 +462,90 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                     </div>
                   ) : (
                     <div className="text-gray-500 italic text-sm">
-                      No notes provided for this release order.
+                      No notes provided for this booking reference.
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Container List */}
+              {/* Container Quantities Breakdown */}
               <div className="mt-6">
-                <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">
-                  Containers ({selectedOrder.containers.length})
+                <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-6">
+                  Container Quantities Breakdown
                 </h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Container Number
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type & Size
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Location
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Added
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {selectedOrder.containers.map((container) => (
-                        <tr key={container.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {container.containerNumber}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {container.containerType} • {container.containerSize}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center space-x-1">
-                              <MapPin className="h-3 w-3 text-gray-400" />
-                              <span className="text-sm text-gray-900">{container.currentLocation}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              container.status === 'ready' ? 'bg-green-100 text-green-800' :
-                              container.status === 'released' ? 'bg-blue-100 text-blue-800' :
-                              container.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {container.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {container.addedAt.toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* 20ft Containers */}
+                  <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <Package className="h-6 w-6 text-blue-600" />
+                      <div>
+                        <h5 className="font-semibold text-blue-900">20" Containers</h5>
+                        <p className="text-sm text-blue-700">Standard Size</p>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-blue-900 mb-2">
+                        {selectedOrder.containerQuantities.size20ft}
+                      </div>
+                      <div className="text-sm text-blue-700">
+                        {selectedOrder.containerQuantities.size20ft === 1 ? 'Container' : 'Containers'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 40ft Containers */}
+                  <div className="bg-green-50 rounded-lg p-6 border border-green-200">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <Package className="h-6 w-6 text-green-600" />
+                      <div>
+                        <h5 className="font-semibold text-green-900">40" Containers</h5>
+                        <p className="text-sm text-green-700">High Capacity</p>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-green-900 mb-2">
+                        {selectedOrder.containerQuantities.size40ft}
+                      </div>
+                      <div className="text-sm text-green-700">
+                        {selectedOrder.containerQuantities.size40ft === 1 ? 'Container' : 'Containers'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 45ft Containers */}
+                  <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <Package className="h-6 w-6 text-purple-600" />
+                      <div>
+                        <h5 className="font-semibold text-purple-900">45" Containers</h5>
+                        <p className="text-sm text-purple-700">Extended Size</p>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-purple-900 mb-2">
+                        {selectedOrder.containerQuantities.size45ft}
+                      </div>
+                      <div className="text-sm text-purple-700">
+                        {selectedOrder.containerQuantities.size45ft === 1 ? 'Container' : 'Containers'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-gray-900 mb-2">
+                      Total: {selectedOrder.totalContainers} Container{selectedOrder.totalContainers !== 1 ? 's' : ''}
+                    </div>
+                    {selectedOrder.requiresDetailedBreakdown && (
+                      <div className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">
+                        <AlertTriangle className="h-4 w-4 mr-1" />
+                        Requires Detailed Breakdown
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
