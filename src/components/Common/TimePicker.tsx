@@ -317,7 +317,8 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         </div>
         
         {/* Clear button - Fixed to not open picker */}
-        {value && !disabled && (
+        <div className="flex items-center space-x-2">
+          {value && !disabled && (
           <button
             type="button"
             onClick={handleClear}
@@ -327,6 +328,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             <X className="h-4 w-4 group-hover:scale-110 transition-transform" />
           </button>
         )}
+        </div>
       </button>
       </div>
 
