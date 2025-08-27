@@ -1057,7 +1057,7 @@ const GateOutCompletionModal: React.FC<{
                           </label>
                           <div className="relative">
                             <input
-                              type="text"
+                              type={container.isVerifying ? "password" : "text"}
                               required
                               value={container.number}
                               onChange={(e) => handleContainerNumberChange(index, e.target.value)}
@@ -1069,6 +1069,12 @@ const GateOutCompletionModal: React.FC<{
                                   : ''
                               }`}
                               placeholder="e.g., MSKU1234567"
+                              onFocus={() => setContainers(prev => prev.map((c, i) => 
+                                i === index ? { ...c, isVerifying: true } : c
+                              ))}
+                              onBlur={() => setContainers(prev => prev.map((c, i) => 
+                                i === index ? { ...c, isVerifying: false } : c
+                              ))}
                             />
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                               {getValidationIcon(container)}
