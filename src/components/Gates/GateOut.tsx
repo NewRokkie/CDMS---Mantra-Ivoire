@@ -137,8 +137,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     validatedAt: new Date('2025-01-11T08:15:00'),
     estimatedReleaseDate: new Date('2025-01-12T10:00:00'),
     notes: 'Multiple containers - partial release allowed'
-  }
-  ,
+  },
   {
     id: 'BK-CMA-2025-004',
     bookingNumber: 'BK-CMA-2025-004',
@@ -662,6 +661,8 @@ const PendingGateOutView: React.FC<{
     (op.releaseOrder.bookingNumber && op.releaseOrder.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     op.releaseOrder.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleOperationClick = (operation: PendingGateOut) => {
     setSelectedOperation(operation);
     setShowCompletionModal(true);
@@ -969,7 +970,7 @@ const GateOutCompletionModal: React.FC<{
                     onChange={setGateOutTime}
                     placeholder="Select gate out time"
                     label="Gate Out Time *"
-                   includeSeconds={true}
+                    includeSeconds={true}
                     required
                   />
                 </div>
