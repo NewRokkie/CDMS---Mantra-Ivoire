@@ -522,13 +522,13 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
           <div className="flex items-center space-x-3">
             {currentStep > 1 && (
               <button
                 type="button"
                 onClick={handlePrevStep}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                className="btn-secondary"
               >
                 Previous
               </button>
@@ -539,7 +539,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              className="btn-secondary"
             >
               Cancel
             </button>
@@ -549,11 +549,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                 type="button"
                 onClick={handleNextStep}
                 disabled={!validateStep(currentStep)}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  validateStep(currentStep)
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next Step
               </button>
@@ -562,11 +558,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                 type="submit"
                 onClick={handleSubmit}
                 disabled={!isFormValid || isLoading}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                  isFormValid && !isLoading
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {isLoading ? (
                   <>
