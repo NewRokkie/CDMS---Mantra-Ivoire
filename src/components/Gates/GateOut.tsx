@@ -105,7 +105,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     containers: [
       {
         id: 'roc-6',
-        containerId: '7',
+    status: 'validated',
         containerNumber: 'SHIP-777888-5',
         containerType: 'dry',
         containerSize: '20ft',
@@ -964,39 +964,61 @@ const GateOutCompletionModal: React.FC<{
            formData.transportCompany;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isFormValid()) {
-      alert('Please complete container verification before proceeding.');
-      return;
-    }
-
-    const validatedContainers = containerInputs.filter(c => c.containerNumber && c.validationState === 'valid' && c.confirmationNumber);
-
+  const handleSubmit = async (submitData: any) => {
     setIsProcessing(true);
     try {
+      // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const releaseOrder = submitData.releaseOrder;
       
-      // Simulate system updates
-      console.log('Freeing location space for containers:', validatedContainers.map(c => c.containerNumber));
-      console.log('Decrementing booking reference container count');
-      
-      // Update booking reference status based on remaining containers
-      const processedCount = validatedContainers.length;
-      const currentRemaining = operation.releaseOrder.remainingContainers || operation.releaseOrder.totalContainers;
-      const newRemaining = Math.max(0, currentRemaining - processedCount);
-      
-      let newStatus: ReleaseOrder['status'];
-      if (newRemaining === 0) {
-        newStatus = 'completed'; // All containers processed
-      } else if (newRemaining < operation.releaseOrder.totalContainers) {
-        newStatus = 'in_process'; // Some containers processed
-      } else {
-        newStatus = 'pending'; // No containers processed yet
+      // Check if there are remaining containers to process
+      if (!releaseOrder.remainingContainers || releaseOrder.remainingContainers <= 0) {
+        throw new Error(`No remaining containers to process for booking ${releaseOrder.bookingNumber || releaseOrder.id}`);
       }
+
+      // Create new gate out operation
+      const newOperation = {
+        id: `GO-${Date.now()}`,
+        date: new Date(),
+        containerNumber: `TEMP-${releaseOrder.clientCode}-${Date.now()}`, // Temporary container number
+        releaseOrderId: releaseOrder.id,
+        bookingNumber: releaseOrder.bookingNumber || releaseOrder.id,
+        clientCode: releaseOrder.clientCode,
+        clientName: releaseOrder.clientName,
+        driverName: releaseOrder.driverName,
+        vehicleNumber: releaseOrder.vehicleNumber,
+        transportCompany: releaseOrder.transportCompany,
+        operationStatus: 'pending' as const
+      };
+
+      // Update the release order's remaining containers
+      const updatedRemainingContainers = releaseOrder.remainingContainers - 1;
       
-      console.log(`Updating booking status to: ${newStatus} (${newRemaining}/${operation.releaseOrder.totalContainers} remaining)`);
+      // Update status based on remaining containers
+      let newStatus: ReleaseOrder['status'] = releaseOrder.status;
+      if (updatedRemainingContainers === 0) {
+        newStatus = 'completed';
+      } else if (updatedRemainingContainers < releaseOrder.totalContainers) {
+        newStatus = 'in_process';
+      }
+
+      // Add to pending operations
+      setPendingOperations(prev => [newOperation, ...prev]);
+
+      alert(`Gate Out operation submitted for booking ${releaseOrder.bookingNumber || releaseOrder.id}. ${updatedRemainingContainers} containers remaining.`);
+
+      // Reset form
+      setFormData({
+        releaseOrderId: '',
+        selectedContainers: [],
+        transportCompany: '',
+        driverName: '',
+        vehicleNumber: '',
+        gateOutDate: new Date().toISOString().split('T')[0],
+        gateOutTime: new Date().toTimeString().slice(0, 5),
+        notes: ''
+      });
       
       onComplete(operation.id);
     } catch (error) {
@@ -1062,7 +1084,7 @@ const GateOutCompletionModal: React.FC<{
                   type="button"
                   onClick={handleAddContainer}
                   disabled={containerInputs.length >= 2}
-                  className="flex items-center pplygap-2 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Add Container (Max 2)"
                 >
                   <Plus className="h-4 w-4" />

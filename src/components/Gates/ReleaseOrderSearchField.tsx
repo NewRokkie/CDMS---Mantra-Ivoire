@@ -3,7 +3,7 @@ import { Search, ChevronDown, Check, FileText, X, Calendar, Package, User, Alert
 import { ReleaseOrder } from '../../types';
 
 interface ReleaseOrderSearchFieldProps {
-  releaseOrders: ReleaseOrder[];
+  bookings: ReleaseOrder[];
   selectedOrderId: string;
   onOrderSelect: (orderId: string) => void;
   placeholder?: string;
@@ -13,10 +13,10 @@ interface ReleaseOrderSearchFieldProps {
 }
 
 export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = ({
-  releaseOrders,
+  bookings = [],
   selectedOrderId,
   onOrderSelect,
-  placeholder = "Search release orders...",
+  placeholder = "Search bookings...",
   required = false,
   disabled = false,
   canViewAllData = true
@@ -28,15 +28,18 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const selectedOrder = releaseOrders.find(order => order.id === selectedOrderId);
+  const selectedOrder = bookings.find(order => order.id === selectedOrderId);
 
   // Filter and validate release orders
   const getValidReleaseOrders = () => {
-    return releaseOrders.filter(order => {
-      // Only show validated orders that are ready for gate out
-      const isValidStatus = order.status === 'validated';
-      const hasReadyContainers = order.containers.some(c => c.status === 'ready');
-      return isValidStatus && hasReadyContainers;
+    return bookings.filter(order => {
+      // Show orders that are validated or in_process (ready for gate out)
+      const isValidStatus = order.status === 'validated' || order.status === 'in_process' || order.status === 'pending';
+      // Check if order has containers or if it's a quantity-based booking
+      const hasContainers = order.containers && order.containers.length > 0;
+      const isQuantityBased = !hasContainers && order.totalContainers > 0;
+      
+      return isValidStatus && (isQuantityBased || hasContainers);
     });
   };
 
@@ -258,7 +261,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
           max-h-80 overflow-hidden animate-slide-in-up
         `}>
           {/* Validation Warning */}
-          {validOrders.length < releaseOrders.length && (
+          {validOrders.length < bookings.length && (
             <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
