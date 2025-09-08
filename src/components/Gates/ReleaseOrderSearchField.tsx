@@ -33,13 +33,12 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
   // Filter and validate release orders
   const getValidReleaseOrders = () => {
     return bookings.filter(order => {
-      // Show orders that are validated or in_process (ready for gate out)
-      const isValidStatus = order.status === 'validated' || order.status === 'in_process' || order.status === 'pending';
-      // Check if order has containers or if it's a quantity-based booking
-      const hasContainers = order.containers && order.containers.length > 0;
-      const isQuantityBased = !hasContainers && order.totalContainers > 0;
+      // Show orders that are pending or in_process (ready for gate out)
+      const isValidStatus = order.status === 'pending' || order.status === 'in_process';
+      // Always allow quantity-based bookings or bookings with containers
+      const hasValidContainers = order.totalContainers > 0;
       
-      return isValidStatus && (isQuantityBased || hasContainers);
+      return isValidStatus && hasValidContainers;
     });
   };
 
