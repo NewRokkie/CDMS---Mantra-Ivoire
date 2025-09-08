@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft, CheckSquare, X, Loader } from 'lucide-react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft, CheckSquare, X, Loader, LogOut } from 'lucide-react';
 import { Container, ReleaseOrder, ReleaseOrderContainer } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -105,7 +105,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     containers: [
       {
         id: 'roc-6',
-    status: 'validated',
+        containerId: '7',
         containerNumber: 'SHIP-777888-5',
         containerType: 'dry',
         containerSize: '20ft',
@@ -660,6 +660,7 @@ const PendingGateOutView: React.FC<{
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
   const { user, canViewAllData } = useAuth();
 
   const filteredOperations = operations.filter(op =>
@@ -697,15 +698,39 @@ const PendingGateOutView: React.FC<{
 
       {/* Search */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Search by truck number, driver name, booking number, or client..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+        <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search by truck number, driver name, booking number, or client..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              {['all', 'IMPORT', 'EXPORT'].map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setTypeFilter(type as any)}
+                  className={`px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+                    typeFilter === type
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {type === 'all' ? 'All Types' : type}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm text-gray-500">
+              {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -735,6 +760,9 @@ const PendingGateOutView: React.FC<{
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created By
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
                 </th>
               </tr>
             </thead>
@@ -769,6 +797,11 @@ const PendingGateOutView: React.FC<{
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.createdBy}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800`}>
+                      EXPORT
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -780,7 +813,7 @@ const PendingGateOutView: React.FC<{
             <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No pending operations</h3>
             <p className="text-gray-600">
-              {searchTerm ? "No operations match your search criteria." : "All gate out operations have been completed."}
+              {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate out operations have been created yet."}
             </p>
           </div>
         )}
@@ -1004,21 +1037,21 @@ const GateOutCompletionModal: React.FC<{
       }
 
       // Add to pending operations
-      setPendingOperations(prev => [newOperation, ...prev]);
+      // setPendingOperations(prev => [newOperation, ...prev]);
 
       alert(`Gate Out operation submitted for booking ${releaseOrder.bookingNumber || releaseOrder.id}. ${updatedRemainingContainers} containers remaining.`);
 
       // Reset form
-      setFormData({
-        releaseOrderId: '',
-        selectedContainers: [],
-        transportCompany: '',
-        driverName: '',
-        vehicleNumber: '',
-        gateOutDate: new Date().toISOString().split('T')[0],
-        gateOutTime: new Date().toTimeString().slice(0, 5),
-        notes: ''
-      });
+      // setFormData({
+      //   releaseOrderId: '',
+      //   selectedContainers: [],
+      //   transportCompany: '',
+      //   driverName: '',
+      //   vehicleNumber: '',
+      //   gateOutDate: new Date().toISOString().split('T')[0],
+      //   gateOutTime: new Date().toTimeString().slice(0, 5),
+      //   notes: ''
+      // });
       
       onComplete(operation.id);
     } catch (error) {
@@ -1213,7 +1246,7 @@ const GateOutCompletionModal: React.FC<{
                   <DatePicker
                     value={gateOutDate}
                     onChange={setGateOutDate}
-                    placeholder="Select gate out date"
+                    placeholder="Select date"
                     label="Gate Out Date *"
                     required
                   />
@@ -1223,9 +1256,8 @@ const GateOutCompletionModal: React.FC<{
                   <TimePicker
                     value={gateOutTime}
                     onChange={setGateOutTime}
-                    placeholder="Select gate out time"
+                    placeholder="Select time"
                     label="Gate Out Time *"
-                    includeSeconds={true}
                     required
                   />
                 </div>
