@@ -126,16 +126,26 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
 
   const getStatusBadge = (status: ReleaseOrder['status']) => {
     const statusConfig = {
-      draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
+      in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
       validated: { color: 'bg-green-100 text-green-800', label: 'Validated' },
-      partial: { color: 'bg-blue-100 text-blue-800', label: 'Partial Release' },
       completed: { color: 'bg-blue-600 text-white', label: 'Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
     };
     
-    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
+    const config = statusConfig[status as keyof typeof statusConfig];
+    
+    // Provide fallback if status is not found
+    if (!config) {
+      console.warn(`Unknown status: ${status}`);
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+          {status || 'Unknown'}
+        </span>
+      );
+    }
+    
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
         {config.label}
@@ -470,9 +480,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                   Container Quantities Breakdown
                 </h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex justify-center">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
                   {/* 20ft Containers */}
-                  <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+                    <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
                     <div className="flex items-center space-x-3 mb-4">
                       <Package className="h-6 w-6 text-blue-600" />
                       <div>
@@ -507,6 +518,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                         {(selectedOrder.containerQuantities?.size40ft || 0) === 1 ? 'Container' : 'Containers'}
                       </div>
                     </div>
+                  </div>
                   </div>
                 </div>
 
