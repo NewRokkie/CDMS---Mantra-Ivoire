@@ -194,6 +194,7 @@ const mockRecentGateOuts = [
     clientName: 'CMA CGM',
     gateOutTime: new Date('2025-01-11T13:45:00'),
     releaseOrderId: 'BK-CMA-2025-003',
+    bookingType: 'EXPORT',
     status: 'completed'
   },
   {
@@ -202,6 +203,7 @@ const mockRecentGateOuts = [
     clientName: 'MSC',
     gateOutTime: new Date('2025-01-11T11:30:00'),
     releaseOrderId: 'BK-MSCU-2025-002',
+    bookingType: 'IMPORT',
     status: 'completed'
   }
 ];
@@ -622,14 +624,14 @@ export const GateOut: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {gateOut.releaseOrderId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      gateOut.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                     }`}>
-                      {operation.bookingType}
+                      {gateOut.bookingType}
                     </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {gateOut.containerNumbers.join(', ')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

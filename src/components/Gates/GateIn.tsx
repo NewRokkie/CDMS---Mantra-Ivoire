@@ -18,6 +18,7 @@ export interface GateInFormData {
   clientCode: string;
   clientName: string;
   bookingReference: string;
+  bookingType: 'IMPORT' | 'EXPORT';
   containerNumber: string;
   secondContainerNumber: string; // For when quantity is 2
 
@@ -79,6 +80,7 @@ const mockPendingOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-MAE-2025-001',
+    bookingType: 'EXPORT',
     clientCode: '1088663',
     clientName: 'MAERSK LINE',
     truckNumber: 'ABC-123',
@@ -102,6 +104,7 @@ const mockPendingOperations = [
     status: 'EMPTY',
     isDamaged: true,
     bookingReference: '',
+    bookingType: 'IMPORT',
     clientCode: '2045789',
     clientName: 'MSC MEDITERRANEAN SHIPPING',
     truckNumber: 'XYZ-456',
@@ -125,6 +128,7 @@ const mockPendingOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-CMA-2025-003',
+    bookingType: 'EXPORT',
     clientCode: '3067234',
     clientName: 'CMA CGM',
     truckNumber: 'DEF-789',
@@ -152,6 +156,7 @@ const mockCompletedOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-SHIP-2025-001',
+    bookingType: 'IMPORT',
     clientCode: '4012567',
     clientName: 'SHIPPING SOLUTIONS INC',
     truckNumber: 'GHI-012',
@@ -176,6 +181,7 @@ const mockCompletedOperations = [
     status: 'EMPTY',
     isDamaged: false,
     bookingReference: '',
+    bookingType: 'EXPORT',
     clientCode: '1088663',
     clientName: 'MAERSK LINE',
     truckNumber: 'JKL-345',
@@ -214,6 +220,7 @@ export const GateIn: React.FC = () => {
     bookingReference: '',
     containerNumber: '',
     secondContainerNumber: '',
+    bookingType: 'EXPORT',
     driverName: '',
     truckNumber: '',
     transportCompany: '',
@@ -399,6 +406,7 @@ export const GateIn: React.FC = () => {
         clientCode: '',
         clientName: '',
         bookingReference: '',
+        bookingType: 'EXPORT',
         containerNumber: '',
         secondContainerNumber: '',
         driverName: '',
@@ -642,6 +650,12 @@ export const GateIn: React.FC = () => {
                   Entry Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Container
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -671,6 +685,20 @@ export const GateIn: React.FC = () => {
                     <div className="text-sm text-gray-500">
                       {operation.date.toLocaleTimeString()}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
@@ -772,6 +800,17 @@ const PendingOperationsView: React.FC<{
   onBack: () => void;
   onOperationClick: (operation: any) => void;
 }> = ({ operations, searchTerm, onSearchChange, onBack, onOperationClick }) => {
+  const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
+
+  const filteredOperations = operations.filter(operation => {
+    const matchesSearch = operation.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === 'all' || operation.bookingType === typeFilter;
+    return matchesSearch && matchesType;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -788,15 +827,39 @@ const PendingOperationsView: React.FC<{
 
       {/* Search */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+        <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search operations..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              {['all', 'IMPORT', 'EXPORT'].map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setTypeFilter(type as any)}
+                  className={`px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+                    typeFilter === type
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {type === 'all' ? 'All Types' : type}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm text-gray-500">
+              {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -816,6 +879,9 @@ const PendingOperationsView: React.FC<{
                   Container
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -830,7 +896,7 @@ const PendingOperationsView: React.FC<{
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {operations.map((operation) => (
+              {filteredOperations.map((operation) => (
                 <tr
                   key={operation.id}
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -847,6 +913,13 @@ const PendingOperationsView: React.FC<{
                     <div className="text-sm text-gray-500">
                       {operation.containerSize}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.clientCode} - {operation.clientName}</div>
@@ -880,6 +953,16 @@ const PendingOperationsView: React.FC<{
             </tbody>
           </table>
         </div>
+
+        {filteredOperations.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
+            <p className="text-gray-600">
+              {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1055,7 +1138,7 @@ const LocationValidationView: React.FC<{
                 <DatePicker
                   value={truckArrivalDate}
                   onChange={setTruckArrivalDate}
-                  placeholder="Select arrival date"
+                  placeholder="Arrival date"
                   label="Date"
                   required
                 />
@@ -1064,7 +1147,7 @@ const LocationValidationView: React.FC<{
                 <TimePicker
                   value={truckArrivalTime}
                   onChange={setTruckArrivalTime}
-                  placeholder="Select arrival time"
+                  placeholder="Arrival time"
                   label="Time"
                   includeSeconds={true}
                   required
@@ -1079,7 +1162,7 @@ const LocationValidationView: React.FC<{
                 <DatePicker
                   value={truckDepartureDate}
                   onChange={setTruckDepartureDate}
-                  placeholder="Select departure date"
+                  placeholder="Departure date"
                   label="Date"
                   minDate={truckArrivalDate}
                 />
@@ -1088,7 +1171,7 @@ const LocationValidationView: React.FC<{
                 <TimePicker
                   value={truckDepartureTime}
                   onChange={setTruckDepartureTime}
-                  placeholder="Select departure time"
+                  placeholder="Departure time"
                   label="Time"
                   includeSeconds={true}
                 />
