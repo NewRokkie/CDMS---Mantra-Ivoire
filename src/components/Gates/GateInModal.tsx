@@ -6,6 +6,45 @@ import { GateInFormData } from './GateIn';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TimePicker } from '../Common/TimePicker';
 
+// Container type options with images and codes
+const containerTypeOptions = [
+  { 
+    value: 'dry', 
+    label: 'Dry Container', 
+    code20: '22G1', 
+    code40: '42G1',
+    description: 'Standard general purpose container for dry cargo'
+  },
+  { 
+    value: 'reefer', 
+    label: 'Reefer Container', 
+    code20: '22R1', 
+    code40: '42R1',
+    description: 'Refrigerated container for temperature-sensitive cargo'
+  },
+  { 
+    value: 'tank', 
+    label: 'Tank Container', 
+    code20: '22T1', 
+    code40: '42T1',
+    description: 'Container for liquids and gases'
+  },
+  { 
+    value: 'flat_rack', 
+    label: 'Flat Rack', 
+    code20: '22F1', 
+    code40: '42F1',
+    description: 'Platform container for oversized or heavy cargo'
+  },
+  { 
+    value: 'open_top', 
+    label: 'Open Top', 
+    code20: '22U1', 
+    code40: '42U1',
+    description: 'Open-top container for top-loading cargo'
+  },
+];
+
 interface GateInModalProps {
   showForm: boolean;
   setShowForm: (show: boolean) => void;
@@ -48,6 +87,11 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   mockClients,
 }) => {
   if (!showForm) return null;
+  
+  // Get the current container type option
+  const currentContainerType = containerTypeOptions.find(
+    option => option.value === formData.containerType
+  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in !mt-0">
@@ -143,21 +187,40 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Container Type *
                         </label>
-                        <select
-                          required
-                          value={formData.containerType}
-                          onChange={(e) => handleInputChange('containerType', e.target.value)}
-                          className="form-input w-full"
-                        >
-                          <option value="dry">Dry Container</option>
-                          <option value="reefer">Reefer Container</option>
-                          <option value="tank">Tank Container</option>
-                          <option value="flat_rack">Flat Rack</option>
-                          <option value="open_top">Open Top</option>
-                        </select>
+                        <div className="mt-1">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {containerTypeOptions.map((option) => (
+                              <div
+                                key={option.value}
+                                onClick={() => handleInputChange('containerType', option.value)}
+                                className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                                  formData.containerType === option.value
+                                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                                    : 'border-gray-300 hover:border-gray-400'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h4 className="text-sm font-medium text-gray-900">
+                                      {option.label}
+                                    </h4>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {formData.containerSize === '20ft' ? option.code20 : option.code40}
+                                    </p>
+                                    </div>
+                                    {formData.containerType === option.value && (
+                                      <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-2">
+                                    {option.description}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
