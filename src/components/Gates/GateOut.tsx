@@ -48,7 +48,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     bookingNumber: 'BK-MAEU-2025-001',
     bookingType: 'EXPORT',
     clientId: '1',
-    bookingType: 'EXPORT' as const,
     clientCode: 'MAEU',
     clientName: 'Maersk Line',
     containerQuantities: {
@@ -96,8 +95,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     bookingNumber: 'BK-SHIP-2025-005',
     bookingType: 'IMPORT',
     clientId: '4',
-    bookingType: 'IMPORT' as const,
-    bookingType: 'EXPORT',
     clientCode: 'SHIP001',
     clientName: 'Shipping Solutions Inc',
     containerQuantities: {
@@ -112,7 +109,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
         id: 'roc-6',
         containerId: '7',
         containerNumber: 'SHIP-777888-5',
-    bookingType: 'IMPORT',
         containerType: 'dry',
         containerSize: '20ft',
         currentLocation: 'Block C-02',
@@ -156,7 +152,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     bookingNumber: 'BK-CMA-2025-004',
     bookingType: 'IMPORT',
     clientId: '2',
-    bookingType: 'EXPORT' as const,
     clientCode: 'CMA',
     clientName: 'CMA CGM',
     containerQuantities: {
@@ -605,6 +600,9 @@ export const GateOut: React.FC = () => {
                   Release Order
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Containers
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -625,6 +623,13 @@ export const GateOut: React.FC = () => {
                     {gateOut.releaseOrderId}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
+                  </td>
                     {gateOut.containerNumbers.join(', ')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -671,13 +676,15 @@ const PendingGateOutView: React.FC<{
   const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
   const { user, canViewAllData } = useAuth();
 
-  const filteredOperations = operations.filter(op =>
-    (op.releaseOrder.vehicleNumber && op.releaseOrder.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (op.releaseOrder.driverName && op.releaseOrder.driverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (op.releaseOrder.bookingNumber && op.releaseOrder.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    op.releaseOrder.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOperations = operations.filter(operation => {
+    const matchesSearch = (operation.releaseOrder.vehicleNumber && operation.releaseOrder.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (operation.releaseOrder.driverName && operation.releaseOrder.driverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (operation.releaseOrder.bookingNumber && operation.releaseOrder.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         operation.releaseOrder.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === 'all' || operation.releaseOrder.bookingType === typeFilter;
+    return matchesSearch && matchesType;
+  });
 
   const handleOperationClick = (operation: PendingGateOut) => {
     setSelectedOperation(operation);
@@ -689,17 +696,6 @@ const PendingGateOutView: React.FC<{
     setShowCompletionModal(false);
     setSelectedOperation(null);
   };
-
-  const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
-
-  const filteredOperations = operations.filter(operation => {
-    const matchesSearch = operation.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || operation.bookingType === typeFilter;
-    return matchesSearch && matchesType;
-  });
 
   return (
     <div className="space-y-6">
@@ -769,9 +765,6 @@ const PendingGateOutView: React.FC<{
                   Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Truck Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -800,13 +793,6 @@ const PendingGateOutView: React.FC<{
                     <div className="text-xs text-gray-500">
                       {operation.createdAt.toLocaleTimeString()}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {operation.bookingType}
-                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -853,7 +839,7 @@ const PendingGateOutView: React.FC<{
       {/* Gate Out Completion Modal */}
       {showCompletionModal && selectedOperation && (
         <GateOutCompletionModal
-        {filteredOperations.length === 0 && (
+          operation={selectedOperation}
           onClose={() => {
             setShowCompletionModal(false);
             setSelectedOperation(null);
@@ -1329,7 +1315,7 @@ const GateOutCompletionModal: React.FC<{
                   <CheckCircle className="h-4 w-4" />
                   <span>Complete Gate Out</span>
                 </>
-              {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate out operations are pending."}
+              )}
             </button>
           </div>
         </div>
