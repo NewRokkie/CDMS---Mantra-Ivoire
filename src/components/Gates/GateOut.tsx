@@ -747,6 +747,9 @@ const PendingGateOutView: React.FC<{
                   Created Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Truck Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -760,9 +763,6 @@ const PendingGateOutView: React.FC<{
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created By
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
                 </th>
               </tr>
             </thead>
@@ -778,6 +778,11 @@ const PendingGateOutView: React.FC<{
                     <div className="text-xs text-gray-500">
                       {operation.createdAt.toLocaleTimeString()}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800`}>
+                      EXPORT
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.releaseOrder.vehicleNumber || 'Not specified'}</div>
@@ -796,11 +801,6 @@ const PendingGateOutView: React.FC<{
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.createdBy}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800`}>
-                      EXPORT
-                    </span>
                   </td>
                 </tr>
               ))}
