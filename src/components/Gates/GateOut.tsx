@@ -70,7 +70,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
       },
       {
         id: 'roc-2',
-    bookingType: 'IMPORT' as const,
         containerId: '6',
         containerNumber: 'MAEU-555666-4',
         containerType: 'reefer',
@@ -118,8 +117,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
       },
       {
         id: 'roc-7',
-    bookingType: 'EXPORT' as const,
-    bookingType: 'EXPORT' as const,
         containerId: '8',
         containerNumber: 'SHIP-999000-6',
         containerType: 'dry',
@@ -154,6 +151,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     id: 'BK-CMA-2025-004',
     bookingNumber: 'BK-CMA-2025-004',
     clientId: '2',
+    bookingType: 'EXPORT' as const,
     clientCode: 'CMA',
     clientName: 'CMA CGM',
     containerQuantities: {
@@ -668,13 +666,15 @@ const PendingGateOutView: React.FC<{
   const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
   const { user, canViewAllData } = useAuth();
 
-  const filteredOperations = operations.filter(op =>
-    (op.releaseOrder.vehicleNumber && op.releaseOrder.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+  const filteredOperations = operations.filter(op => {
+    const matchesSearch = (op.releaseOrder.vehicleNumber && op.releaseOrder.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (op.releaseOrder.driverName && op.releaseOrder.driverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (op.releaseOrder.bookingNumber && op.releaseOrder.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     op.releaseOrder.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    op.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === 'all' || op.releaseOrder.bookingType === typeFilter;
+    return matchesSearch && matchesType;
+  });
 
   const handleOperationClick = (operation: PendingGateOut) => {
     setSelectedOperation(operation);
@@ -785,8 +785,10 @@ const PendingGateOutView: React.FC<{
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800`}>
-                      EXPORT
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.releaseOrder.bookingType === 'EXPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.releaseOrder.bookingType}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
