@@ -603,9 +603,6 @@ export const GateOut: React.FC = () => {
                   Containers
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -786,8 +783,10 @@ const PendingGateOutView: React.FC<{
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800`}>
-                      EXPORT
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.releaseOrder.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.releaseOrder.bookingType}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
