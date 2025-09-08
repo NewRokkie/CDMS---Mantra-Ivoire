@@ -10,38 +10,33 @@ import { TimePicker } from '../Common/TimePicker';
 const containerTypeOptions = [
   { 
     value: 'dry', 
-    label: 'Dry Container', 
+    label: 'Dry', 
     code20: '22G1', 
     code40: '42G1',
-    description: 'Standard general purpose container for dry cargo'
   },
   { 
     value: 'reefer', 
-    label: 'Reefer Container', 
+    label: 'Reefer', 
     code20: '22R1', 
     code40: '42R1',
-    description: 'Refrigerated container for temperature-sensitive cargo'
   },
   { 
     value: 'tank', 
-    label: 'Tank Container', 
+    label: 'Tank', 
     code20: '22T1', 
     code40: '42T1',
-    description: 'Container for liquids and gases'
   },
   { 
     value: 'flat_rack', 
     label: 'Flat Rack', 
     code20: '22F1', 
     code40: '42F1',
-    description: 'Platform container for oversized or heavy cargo'
   },
   { 
     value: 'open_top', 
     label: 'Open Top', 
     code20: '22U1', 
     code40: '42U1',
-    description: 'Open-top container for top-loading cargo'
   },
 ];
 
@@ -212,9 +207,6 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                                       <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
                                     )}
                                   </div>
-                                  <p className="text-xs text-gray-500 mt-2">
-                                    {option.description}
-                                  </p>
                                 </div>
                               ))}
                             </div>
@@ -247,7 +239,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           Container Status *
                         </label>
                         <Switch
-                          checked={formData.status === 'FULL'}
+                          checked={formData.status}
                           onChange={handleStatusChange}
                           label=""
                           leftLabel="EMPTY"
