@@ -47,6 +47,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     id: 'BK-MAEU-2025-001',
     bookingNumber: 'BK-MAEU-2025-001',
     clientId: '1',
+    bookingType: 'EXPORT' as const,
     clientCode: 'MAEU',
     clientName: 'Maersk Line',
     containerQuantities: {
@@ -69,6 +70,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
       },
       {
         id: 'roc-2',
+    bookingType: 'IMPORT' as const,
         containerId: '6',
         containerNumber: 'MAEU-555666-4',
         containerType: 'reefer',
@@ -93,6 +95,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     id: 'BK-SHIP-2025-005',
     bookingNumber: 'BK-SHIP-2025-005',
     clientId: '4',
+    bookingType: 'IMPORT' as const,
     clientCode: 'SHIP001',
     clientName: 'Shipping Solutions Inc',
     containerQuantities: {
@@ -115,6 +118,8 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
       },
       {
         id: 'roc-7',
+    bookingType: 'EXPORT' as const,
+    bookingType: 'EXPORT' as const,
         containerId: '8',
         containerNumber: 'SHIP-999000-6',
         containerType: 'dry',
