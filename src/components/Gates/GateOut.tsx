@@ -603,6 +603,9 @@ export const GateOut: React.FC = () => {
                   Containers
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -666,15 +669,13 @@ const PendingGateOutView: React.FC<{
   const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
   const { user, canViewAllData } = useAuth();
 
-  const filteredOperations = operations.filter(op => {
-    const matchesSearch = (op.releaseOrder.vehicleNumber && op.releaseOrder.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+  const filteredOperations = operations.filter(op =>
+    (op.releaseOrder.vehicleNumber && op.releaseOrder.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (op.releaseOrder.driverName && op.releaseOrder.driverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (op.releaseOrder.bookingNumber && op.releaseOrder.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     op.releaseOrder.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || op.releaseOrder.bookingType === typeFilter;
-    return matchesSearch && matchesType;
-  });
+    op.releaseOrder.clientCode.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleOperationClick = (operation: PendingGateOut) => {
     setSelectedOperation(operation);
@@ -785,10 +786,8 @@ const PendingGateOutView: React.FC<{
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      operation.releaseOrder.bookingType === 'EXPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {operation.releaseOrder.bookingType}
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800`}>
+                      EXPORT
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
