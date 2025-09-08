@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader, Package, User, Truck, MapPin, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, Loader, Package, User, Truck, MapPin, Calendar, CheckCircle, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInFormData } from './GateIn';
@@ -94,6 +94,42 @@ const ContainerTypeSelect = ({ value, onChange, containerSize }) => {
       )}
     </div>
   );
+};
+
+// Helper function to get container number validation status
+const getContainerValidationStatus = (containerNumber: string) => {
+  if (!containerNumber) return { isValid: false, message: '' };
+  
+  if (containerNumber.length !== 11) {
+    return { 
+      isValid: false, 
+      message: `${containerNumber.length}/11 characters` 
+    };
+  }
+  
+  const letters = containerNumber.substring(0, 4);
+  const numbers = containerNumber.substring(4, 11);
+  
+  if (!/^[A-Z]{4}$/.test(letters)) {
+    return { isValid: false, message: 'First 4 must be letters' };
+  }
+  
+  if (!/^[0-9]{7}$/.test(numbers)) {
+    return { isValid: false, message: 'Last 7 must be numbers' };
+  }
+  
+  return { isValid: true, message: 'Valid format' };
+};
+
+// Helper function to format container number for display
+const formatContainerForDisplay = (containerNumber: string): string => {
+  if (containerNumber.length === 11) {
+    const letters = containerNumber.substring(0, 4);
+    const numbers1 = containerNumber.substring(4, 10);
+    const numbers2 = containerNumber.substring(10, 11);
+    return `${letters}-${numbers1}-${numbers2}`;
+  }
+  return containerNumber;
 };
 
 export const GateInModal: React.FC<GateInModalProps> = ({
@@ -306,16 +342,45 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Container Number *
                         </label>
+                        <div className="relative">
                         <input
                           type="text"
                           required
                           value={formData.containerNumber}
                           onChange={(e) => handleInputChange('containerNumber', e.target.value)}
-                          className="form-input w-full"
+                          className={`form-input w-full pr-20 ${
+                            formData.containerNumber && !getContainerValidationStatus(formData.containerNumber).isValid
+                              ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                              : formData.containerNumber && getContainerValidationStatus(formData.containerNumber).isValid
+                              ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
+                              : ''
+                          }`}
                           placeholder="e.g., MSKU1234567"
-                          pattern="[A-Z]{4}[0-9]{7}"
-                          title="Format: 4 letters followed by 7 digits"
+                          maxLength={11}
                         />
+                        {/* Validation Status */}
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                          {formData.containerNumber && (
+                            <>
+                              {getContainerValidationStatus(formData.containerNumber).isValid ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                              )}
+                              <span className={`text-xs font-medium ${
+                                getContainerValidationStatus(formData.containerNumber).isValid 
+                                  ? 'text-green-600' 
+                                  : 'text-red-600'
+                              }`}>
+                                {getContainerValidationStatus(formData.containerNumber).message}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Format: 4 letters + 7 numbers (e.g., ONEU1234567) • Display: {formData.containerNumber ? formatContainerForDisplay(formData.containerNumber) : 'ONEU-123456-7'}
+                        </p>
                       </div>
 
                       {/* Second Container Number (if quantity is 2) */}
@@ -324,16 +389,45 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Second Container Number *
                           </label>
+                          <div className="relative">
                           <input
                             type="text"
                             required
                             value={formData.secondContainerNumber}
                             onChange={(e) => handleInputChange('secondContainerNumber', e.target.value)}
-                            className="form-input w-full"
+                            className={`form-input w-full pr-20 ${
+                              formData.secondContainerNumber && !getContainerValidationStatus(formData.secondContainerNumber).isValid
+                                ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                                : formData.secondContainerNumber && getContainerValidationStatus(formData.secondContainerNumber).isValid
+                                ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
+                                : ''
+                            }`}
                             placeholder="e.g., MSKU1234568"
-                            pattern="[A-Z]{4}[0-9]{7}"
-                            title="Format: 4 letters followed by 7 digits"
+                            maxLength={11}
                           />
+                          {/* Validation Status */}
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                            {formData.secondContainerNumber && (
+                              <>
+                                {getContainerValidationStatus(formData.secondContainerNumber).isValid ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                                )}
+                                <span className={`text-xs font-medium ${
+                                  getContainerValidationStatus(formData.secondContainerNumber).isValid 
+                                    ? 'text-green-600' 
+                                    : 'text-red-600'
+                                }`}>
+                                  {getContainerValidationStatus(formData.secondContainerNumber).message}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Format: 4 letters + 7 numbers (e.g., ONEU1234568) • Display: {formData.secondContainerNumber ? formatContainerForDisplay(formData.secondContainerNumber) : 'ONEU-123456-8'}
+                          </p>
                         </div>
                       )}
                     </div>

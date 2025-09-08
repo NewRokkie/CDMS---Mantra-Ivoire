@@ -72,7 +72,7 @@ const mockPendingOperations = [
   {
     id: 'PO-001',
     date: new Date('2025-01-11T14:30:00'),
-    containerNumber: 'MSKU1234567',
+    containerNumber: 'MSKU-123456-7',
     secondContainerNumber: '',
     containerSize: '40ft',
     containerType: 'dry',
@@ -80,7 +80,7 @@ const mockPendingOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-MAE-2025-001',
-    bookingType: 'EXPORT',
+    bookingType: 'EXPORT' as const,
     clientCode: '1088663',
     clientName: 'MAERSK LINE',
     truckNumber: 'ABC-123',
@@ -96,15 +96,15 @@ const mockPendingOperations = [
   {
     id: 'PO-002',
     date: new Date('2025-01-11T15:45:00'),
-    containerNumber: 'TCLU9876543',
-    secondContainerNumber: 'TCLU9876544',
+    containerNumber: 'TCLU-987654-3',
+    secondContainerNumber: 'TCLU-987654-4',
     containerSize: '20ft',
     containerType: 'reefer',
     containerQuantity: 2,
     status: 'EMPTY',
     isDamaged: true,
     bookingReference: '',
-    bookingType: 'IMPORT',
+    bookingType: 'IMPORT' as const,
     clientCode: '2045789',
     clientName: 'MSC MEDITERRANEAN SHIPPING',
     truckNumber: 'XYZ-456',
@@ -120,7 +120,7 @@ const mockPendingOperations = [
   {
     id: 'PO-003',
     date: new Date('2025-01-11T16:20:00'),
-    containerNumber: 'GESU4567891',
+    containerNumber: 'GESU-456789-1',
     secondContainerNumber: '',
     containerSize: '40ft',
     containerType: 'dry',
@@ -128,7 +128,7 @@ const mockPendingOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-CMA-2025-003',
-    bookingType: 'EXPORT',
+    bookingType: 'EXPORT' as const,
     clientCode: '3067234',
     clientName: 'CMA CGM',
     truckNumber: 'DEF-789',
@@ -148,7 +148,7 @@ const mockCompletedOperations = [
   {
     id: 'CO-001',
     date: new Date('2025-01-11T13:15:00'),
-    containerNumber: 'SHIP1112228',
+    containerNumber: 'SHIP-111222-8',
     secondContainerNumber: '',
     containerSize: '20ft',
     containerType: 'dry',
@@ -156,7 +156,7 @@ const mockCompletedOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-SHIP-2025-001',
-    bookingType: 'IMPORT',
+    bookingType: 'IMPORT' as const,
     clientCode: '4012567',
     clientName: 'SHIPPING SOLUTIONS INC',
     truckNumber: 'GHI-012',
@@ -173,15 +173,15 @@ const mockCompletedOperations = [
   {
     id: 'CO-002',
     date: new Date('2025-01-11T12:30:00'),
-    containerNumber: 'MAEU7778889',
-    secondContainerNumber: 'MAEU7778890',
+    containerNumber: 'MAEU-777888-9',
+    secondContainerNumber: 'MAEU-777889-0',
     containerSize: '20ft',
     containerType: 'dry',
     containerQuantity: 2,
     status: 'EMPTY',
     isDamaged: false,
     bookingReference: '',
-    bookingType: 'EXPORT',
+    bookingType: 'EXPORT' as const,
     clientCode: '1088663',
     clientName: 'MAERSK LINE',
     truckNumber: 'JKL-345',
@@ -196,6 +196,41 @@ const mockCompletedOperations = [
     completedAt: new Date('2025-01-11T13:00:00')
   }
 ];
+
+// Helper function to format container number for display (adds hyphens)
+const formatContainerNumberForDisplay = (containerNumber: string): string => {
+  if (containerNumber.length === 11) {
+    const letters = containerNumber.substring(0, 4);
+    const numbers1 = containerNumber.substring(4, 10);
+    const numbers2 = containerNumber.substring(10, 11);
+    return `${letters}-${numbers1}-${numbers2}`;
+  }
+  return containerNumber;
+};
+
+// Helper function to validate container number format
+const validateContainerNumber = (containerNumber: string): { isValid: boolean; message?: string } => {
+  if (!containerNumber) {
+    return { isValid: false, message: 'Container number is required' };
+  }
+  
+  if (containerNumber.length !== 11) {
+    return { isValid: false, message: 'Container number must be exactly 11 characters' };
+  }
+  
+  const letters = containerNumber.substring(0, 4);
+  const numbers = containerNumber.substring(4, 11);
+  
+  if (!/^[A-Z]{4}$/.test(letters)) {
+    return { isValid: false, message: 'First 4 characters must be letters (A-Z)' };
+  }
+  
+  if (!/^[0-9]{7}$/.test(numbers)) {
+    return { isValid: false, message: 'Last 7 characters must be numbers (0-9)' };
+  }
+  
+  return { isValid: true };
+};
 
 export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'overview' | 'pending' | 'location'>('overview');
@@ -244,6 +279,36 @@ export const GateIn: React.FC = () => {
   );
 
   const handleInputChange = (field: keyof GateInFormData, value: any) => {
+    // Special handling for container number validation
+    if (field === 'containerNumber' || field === 'secondContainerNumber') {
+      // Remove any non-alphanumeric characters and convert to uppercase
+      const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+      
+      // Limit to 11 characters maximum
+      if (cleanValue.length <= 11) {
+        const letters = cleanValue.substring(0, 4);
+        const numbers = cleanValue.substring(4, 11);
+        
+        // Only allow letters in first 4 positions
+        const validLetters = letters.replace(/[^A-Z]/g, '');
+        // Only allow numbers in positions 5-11
+        const validNumbers = numbers.replace(/[^0-9]/g, '');
+        
+        const validValue = validLetters + validNumbers;
+        
+        setFormData(prev => ({
+          ...prev,
+          [field]: validValue
+        }));
+        
+        // Trigger auto-save
+        setAutoSaving(true);
+        setTimeout(() => setAutoSaving(false), 1000);
+        return;
+      }
+      return; // Don't allow more than 11 characters
+    }
+    
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -304,10 +369,12 @@ export const GateIn: React.FC = () => {
     switch (step) {
       case 1:
         const hasContainerNumber = formData.containerNumber.trim() !== '';
+        const isValidFirstContainer = hasContainerNumber && validateContainerNumber(formData.containerNumber).isValid;
         const hasSecondContainer = formData.containerQuantity === 1 || formData.secondContainerNumber.trim() !== '';
+        const isValidSecondContainer = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumber).isValid;
         const hasClient = formData.clientId !== '';
         const hasBookingRef = formData.status === 'EMPTY' || formData.bookingReference.trim() !== '';
-        return hasContainerNumber && hasSecondContainer && hasClient && hasBookingRef;
+        return isValidFirstContainer && hasSecondContainer && isValidSecondContainer && hasClient && hasBookingRef;
       case 2:
         return formData.driverName !== '' && formData.truckNumber !== '' && formData.transportCompany !== '';
       default:
@@ -356,14 +423,15 @@ export const GateIn: React.FC = () => {
       const newOperation = {
         id: `PO-${Date.now()}`,
         date: new Date(),
-        containerNumber: formData.containerNumber,
-        secondContainerNumber: formData.secondContainerNumber,
+        containerNumber: formatContainerNumberForDisplay(formData.containerNumber),
+        secondContainerNumber: formData.secondContainerNumber ? formatContainerNumberForDisplay(formData.secondContainerNumber) : '',
         containerSize: formData.containerSize,
         containerType: formData.containerType,
         containerQuantity: formData.containerQuantity,
         status: formData.status,
         isDamaged: formData.isDamaged,
         bookingReference: formData.bookingReference,
+        bookingType: formData.bookingType,
         clientCode: formData.clientCode,
         clientName: formData.clientName,
         truckNumber: formData.truckNumber,
