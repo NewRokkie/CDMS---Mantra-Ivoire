@@ -6,38 +6,13 @@ import { GateInFormData } from './GateIn';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TimePicker } from '../Common/TimePicker';
 
-// Container type options with images and codes
+// Container type options with codes
 const containerTypeOptions = [
-  { 
-    value: 'dry', 
-    label: 'Dry', 
-    code20: '22G1', 
-    code40: '42G1',
-  },
-  { 
-    value: 'reefer', 
-    label: 'Reefer', 
-    code20: '22R1', 
-    code40: '42R1',
-  },
-  { 
-    value: 'tank', 
-    label: 'Tank', 
-    code20: '22T1', 
-    code40: '42T1',
-  },
-  { 
-    value: 'flat_rack', 
-    label: 'Flat Rack', 
-    code20: '22F1', 
-    code40: '42F1',
-  },
-  { 
-    value: 'open_top', 
-    label: 'Open Top', 
-    code20: '22U1', 
-    code40: '42U1',
-  },
+  { value: 'dry', label: 'Dry', code20: '22G1', code40: '42G1' },
+  { value: 'reefer', label: 'Reefer', code20: '22R1', code40: '42R1' },
+  { value: 'tank', label: 'Tank', code20: '22T1', code40: '42T1' },
+  { value: 'flat_rack', label: 'Flat Rack', code20: '22F1', code40: '42F1' },
+  { value: 'open_top', label: 'Open Top', code20: '22U1', code40: '42U1' },
 ];
 
 interface GateInModalProps {
@@ -61,6 +36,65 @@ interface GateInModalProps {
   handleClientChange: (clientId: string) => void;
   mockClients: Array<{ id: string; code: string; name: string }>;
 }
+
+// Custom Select Component
+const ContainerTypeSelect = ({ value, onChange, containerSize }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = containerTypeOptions.find(option => option.value === value);
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Container Type *
+      </label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="form-input w-full flex items-center justify-between text-left cursor-pointer"
+      >
+        <div>
+          <span className="block truncate">
+            {selectedOption ? selectedOption.label : 'Select container type'}
+          </span>
+          {selectedOption && (
+            <span className="text-xs text-blue-600 font-medium">
+              {containerSize === '20ft' ? selectedOption.code20 : selectedOption.code40}
+            </span>
+          )}
+        </div>
+        <ChevronDown 
+          className={`h-5 w-5 text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+        />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
+          <ul className="py-1">
+            {containerTypeOptions.map((option) => (
+              <li
+                key={option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`px-4 py-2 cursor-pointer hover:bg-blue-50 transition-colors ${
+                  value === option.value ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="block font-medium">{option.label}</span>
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    {containerSize === '20ft' ? option.code20 : option.code40}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const GateInModal: React.FC<GateInModalProps> = ({
   showForm,
@@ -177,42 +211,16 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           rightLabel="40ft"
                         />
                       </div>
-                      
+
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Container Type *
-                        </label>
-                        <div className="mt-1">
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {containerTypeOptions.map((option) => (
-                              <div
-                                key={option.value}
-                                onClick={() => handleInputChange('containerType', option.value)}
-                                className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                                  formData.containerType === option.value
-                                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                                    : 'border-gray-300 hover:border-gray-400'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <h4 className="text-sm font-medium text-gray-900">
-                                      {option.label}
-                                    </h4>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {formData.containerSize === '20ft' ? option.code20 : option.code40}
-                                    </p>
-                                    </div>
-                                    {formData.containerType === option.value && (
-                                      <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
+                        <ContainerTypeSelect
+                          value={formData.containerType}
+                          onChange={(value) => handleInputChange('containerType', value)}
+                          containerSize={formData.containerSize}
+                        />
                       </div>
+                    </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -239,7 +247,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           Container Status *
                         </label>
                         <Switch
-                          checked={formData.status}
+                          checked={formData.status === 'FULL'}
                           onChange={handleStatusChange}
                           label=""
                           leftLabel="EMPTY"
@@ -417,7 +425,16 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     </div>
                     <div>
                       <span className="text-gray-600">Type:</span>
-                      <div className="font-medium">{formData.containerType.charAt(0).toUpperCase() + formData.containerType.slice(1).replace('_', ' ')}</div>
+                      <div className="font-medium">
+                        {formData.containerType.charAt(0).toUpperCase() + formData.containerType.slice(1).replace('_', ' ')}
+                        {formData.containerType && (
+                          <span className="text-blue-600 ml-1">
+                            ({formData.containerSize === '20ft' 
+                              ? containerTypeOptions.find(opt => opt.value === formData.containerType)?.code20
+                              : containerTypeOptions.find(opt => opt.value === formData.containerType)?.code40})
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Client:</span>
