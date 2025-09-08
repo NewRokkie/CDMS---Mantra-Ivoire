@@ -1,46 +1,178 @@
-import React from 'react';
-import { Container, FileCheck, TrendingUp, Building, DollarSign, Activity, BarChart3, AlertTriangle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Container, FileCheck, TrendingUp, Building, DollarSign, Activity, BarChart3, AlertTriangle, Package, Wrench, CheckCircle, XCircle, Eye, MapPin, Calendar, User, X, Filter } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { DashboardStats } from '../../types';
 
-// Mock data - in production, this would come from your API
-const mockStats: DashboardStats = {
-  totalContainers: 1248,
-  containersIn: 892,
-  containersOut: 356,
-  pendingReleaseOrders: 23,
-  todayMovements: 47,
-  revenue: 125600,
-  occupancyRate: 78.5
-};
+// Enhanced mock container data for dashboard analytics
+const mockContainerData = [
+  { id: '1', number: 'MSKU-123456-7', type: 'dry', size: '40ft', status: 'in_depot', location: 'Stack S1-Row 1-Tier 1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-10T08:30:00'), isDamaged: false },
+  { id: '2', number: 'TCLU-987654-3', type: 'reefer', size: '20ft', status: 'out_depot', location: 'Gate 2', client: 'MSC Mediterranean Shipping', clientCode: 'MSCU', gateInDate: new Date('2025-01-09T14:15:00'), isDamaged: false },
+  { id: '3', number: 'GESU-456789-1', type: 'dry', size: '40ft', status: 'in_service', location: 'Workshop 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-08T16:45:00'), isDamaged: true },
+  { id: '4', number: 'SHIP-111222-8', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S33-Row 3-Tier 1', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2025-01-11T09:15:00'), isDamaged: false },
+  { id: '5', number: 'SHIP-333444-9', type: 'reefer', size: '40ft', status: 'maintenance', location: 'Workshop 2', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2025-01-07T13:20:00'), isDamaged: true },
+  { id: '6', number: 'MAEU-555666-4', type: 'reefer', size: '40ft', status: 'in_depot', location: 'Stack S61-Row 2-Tier 3', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-07T11:20:00'), isDamaged: false },
+  { id: '7', number: 'CMDU-789012-5', type: 'dry', size: '40ft', status: 'out_depot', location: 'Gate 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-06T13:30:00'), isDamaged: false },
+  { id: '8', number: 'HLCU-345678-9', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S101-Row 1-Tier 1', client: 'Hapag-Lloyd', clientCode: 'HLCU', gateInDate: new Date('2025-01-05T15:45:00'), isDamaged: false },
+  { id: '9', number: 'SNFW-294074-0', type: 'reefer', size: '40ft', status: 'in_depot', location: 'Stack S67-Row 3-Tier 2', client: 'Shipping Network', clientCode: 'SNFW', gateInDate: new Date('2025-01-04T10:15:00'), isDamaged: false },
+  { id: '10', number: 'MAEU-777888-1', type: 'tank', size: '20ft', status: 'cleaning', location: 'Cleaning Bay 1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-03T09:00:00'), isDamaged: true },
+  { id: '11', number: 'MSCU-999000-2', type: 'flat_rack', size: '40ft', status: 'in_depot', location: 'Stack S65-Row 1-Tier 1', client: 'MSC Mediterranean Shipping', clientCode: 'MSCU', gateInDate: new Date('2025-01-02T14:30:00'), isDamaged: false },
+  { id: '12', number: 'CMDU-111333-5', type: 'open_top', size: '20ft', status: 'in_depot', location: 'Stack S35-Row 2-Tier 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-01T16:00:00'), isDamaged: false },
+  { id: '13', number: 'SHIP-444555-6', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S17-Row 1-Tier 2', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2024-12-30T11:45:00'), isDamaged: false },
+  { id: '14', number: 'HLCU-666777-8', type: 'reefer', size: '40ft', status: 'maintenance', location: 'Workshop 3', client: 'Hapag-Lloyd', clientCode: 'HLCU', gateInDate: new Date('2024-12-29T08:20:00'), isDamaged: true },
+  { id: '15', number: 'MAEU-888999-0', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S3-Row 4-Tier 1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2024-12-28T13:15:00'), isDamaged: false }
+];
 
-// Mock client-specific data
-const mockClientStats = {
-  'SHIP001': {
-    totalContainers: 15,
-    containersIn: 12,
-    containersOut: 3,
-    pendingReleaseOrders: 2,
-    todayMovements: 1,
-    revenue: 8500,
-    occupancyRate: 85.0
-  },
-  'MAEU': {
-    totalContainers: 45,
-    containersIn: 32,
-    containersOut: 13,
-    pendingReleaseOrders: 5,
-    todayMovements: 8,
-    revenue: 25600,
-    occupancyRate: 92.3
-  }
-};
+type FilterType = 'customer' | 'yard' | 'type' | 'damage' | null;
+
+interface FilteredData {
+  containers: typeof mockContainerData;
+  title: string;
+  description: string;
+}
 
 export const DashboardOverview: React.FC = () => {
   const { t } = useLanguage();
   const { user, canViewAllData, getClientFilter } = useAuth();
+  const [activeFilter, setActiveFilter] = useState<FilterType>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  const clientFilter = getClientFilter();
+  const showClientNotice = !canViewAllData() && user?.role === 'client';
+
+  // Filter containers based on user permissions
+  const getFilteredContainers = () => {
+    let containers = mockContainerData;
+    
+    if (clientFilter) {
+      containers = containers.filter(container => 
+        container.clientCode === clientFilter || 
+        container.client === user?.company
+      );
+    }
+    
+    return containers;
+  };
+
+  const filteredContainers = getFilteredContainers();
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    // Total per customer
+    const customerStats = filteredContainers.reduce((acc, container) => {
+      const key = container.clientCode || container.client;
+      if (!acc[key]) {
+        acc[key] = { count: 0, name: container.client, code: container.clientCode };
+      }
+      acc[key].count++;
+      return acc;
+    }, {} as Record<string, { count: number; name: string; code: string }>);
+
+    // Total quantity in yard (in_depot status)
+    const inYardContainers = filteredContainers.filter(c => c.status === 'in_depot');
+
+    // Total by type per customer
+    const typeByCustomer = filteredContainers.reduce((acc, container) => {
+      const customerKey = container.clientCode || container.client;
+      if (!acc[customerKey]) {
+        acc[customerKey] = { dry: 0, reefer: 0, tank: 0, flat_rack: 0, open_top: 0, clientName: container.client };
+      }
+      acc[customerKey][container.type]++;
+      return acc;
+    }, {} as Record<string, Record<string, any>>);
+
+    // Total by damaged or not
+    const damagedStats = {
+      damaged: filteredContainers.filter(c => c.isDamaged).length,
+      undamaged: filteredContainers.filter(c => !c.isDamaged).length
+    };
+
+    return {
+      customerStats,
+      inYardContainers,
+      typeByCustomer,
+      damagedStats,
+      totalContainers: filteredContainers.length
+    };
+  }, [filteredContainers]);
+
+  // Get filtered data based on active filter
+  const getFilteredData = (): FilteredData | null => {
+    if (!activeFilter) return null;
+
+    switch (activeFilter) {
+      case 'customer':
+        if (selectedCustomer) {
+          const containers = filteredContainers.filter(c => 
+            (c.clientCode || c.client) === selectedCustomer
+          );
+          const customerInfo = stats.customerStats[selectedCustomer];
+          return {
+            containers,
+            title: `${customerInfo?.name || selectedCustomer} Containers`,
+            description: `All containers for ${customerInfo?.name || selectedCustomer}`
+          };
+        }
+        return {
+          containers: filteredContainers,
+          title: 'All Customers',
+          description: 'Container distribution across all customers'
+        };
+
+      case 'yard':
+        return {
+          containers: stats.inYardContainers,
+          title: 'Containers in Yard',
+          description: 'All containers currently stored in the depot yard'
+        };
+
+      case 'type':
+        if (selectedType) {
+          const containers = filteredContainers.filter(c => c.type === selectedType);
+          return {
+            containers,
+            title: `${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} Containers`,
+            description: `All ${selectedType} type containers`
+          };
+        }
+        return {
+          containers: filteredContainers,
+          title: 'All Container Types',
+          description: 'Container distribution by type'
+        };
+
+      case 'damage':
+        return {
+          containers: filteredContainers,
+          title: 'Damage Status Overview',
+          description: 'Container condition and damage reports'
+        };
+
+      default:
+        return null;
+    }
+  };
+
+  const handleStatCardClick = (filterType: FilterType, additionalData?: any) => {
+    if (activeFilter === filterType) {
+      // If clicking the same filter, close it
+      setActiveFilter(null);
+      setSelectedCustomer(null);
+      setSelectedType(null);
+    } else {
+      setActiveFilter(filterType);
+      if (filterType === 'customer' && additionalData) {
+        setSelectedCustomer(additionalData);
+      } else if (filterType === 'type' && additionalData) {
+        setSelectedType(additionalData);
+      } else {
+        setSelectedCustomer(null);
+        setSelectedType(null);
+      }
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -49,120 +181,35 @@ export const DashboardOverview: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatsForUser = () => {
-    const clientFilter = getClientFilter();
-    let stats = mockStats;
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      in_depot: { color: 'bg-green-100 text-green-800', label: 'In Depot' },
+      out_depot: { color: 'bg-blue-100 text-blue-800', label: 'Out Depot' },
+      in_service: { color: 'bg-yellow-100 text-yellow-800', label: 'In Service' },
+      maintenance: { color: 'bg-red-100 text-red-800', label: 'Maintenance' },
+      cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' }
+    };
     
-    // Use client-specific stats if user is a client
-    if (clientFilter && mockClientStats[clientFilter as keyof typeof mockClientStats]) {
-      stats = mockClientStats[clientFilter as keyof typeof mockClientStats];
-    }
-
-    const baseStats = [
-      {
-        title: canViewAllData() ? t('dashboard.stats.containers') : 'Your Containers',
-        value: stats.totalContainers.toLocaleString(),
-        icon: Container,
-        color: 'blue' as const,
-        trend: { value: 5.2, isPositive: true }
-      },
-      {
-        title: canViewAllData() ? t('dashboard.stats.in') : 'Containers In Depot',
-        value: stats.containersIn.toLocaleString(),
-        icon: Building,
-        color: 'green' as const,
-        trend: { value: 12.1, isPositive: true }
-      },
-      {
-        title: canViewAllData() ? t('dashboard.stats.out') : 'Containers Out',
-        value: stats.containersOut.toLocaleString(),
-        icon: TrendingUp,
-        color: 'teal' as const,
-        trend: { value: -2.4, isPositive: false }
-      }
-    ];
-
-    if (user?.role === 'client') {
-      return [
-        ...baseStats,
-        {
-          title: 'Your Release Orders',
-          value: stats.pendingReleaseOrders.toString(),
-          icon: FileCheck,
-          color: 'yellow' as const,
-          trend: { value: 8.3, isPositive: false }
-        }
-      ];
-    }
-
-    return [
-      ...baseStats,
-      {
-        title: t('dashboard.stats.pending'),
-        value: stats.pendingReleaseOrders.toString(),
-        icon: FileCheck,
-        color: 'yellow' as const,
-        trend: { value: 8.3, isPositive: false }
-      },
-      {
-        title: t('dashboard.stats.movements'),
-        value: stats.todayMovements.toString(),
-        icon: Activity,
-        color: 'purple' as const,
-        trend: { value: 15.7, isPositive: true }
-      },
-      {
-        title: t('dashboard.stats.revenue'),
-        value: formatCurrency(stats.revenue),
-        icon: DollarSign,
-        color: 'green' as const,
-        trend: { value: 23.5, isPositive: true }
-      }
-    ];
+    const config = statusConfig[status as keyof typeof statusConfig] || { color: 'bg-gray-100 text-gray-800', label: status };
+    
+    return (
+      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
+        {config.label}
+      </span>
+    );
   };
 
-  const stats = getStatsForUser();
-  const showClientNotice = !canViewAllData() && user?.role === 'client';
-
-  // Mock recent activities filtered by client
-  const getRecentActivities = () => {
-    const allActivities = [
-      { container: 'MSKU-123456-7', action: 'Gate In', time: '2 hours ago', status: 'completed', clientCode: 'MAEU' },
-      { container: 'TCLU-987654-3', action: 'Gate Out', time: '4 hours ago', status: 'completed', clientCode: 'MSCU' },
-      { container: 'GESU-456789-1', action: 'Gate In', time: '6 hours ago', status: 'completed', clientCode: 'CMDU' },
-      { container: 'SHIP-111222-8', action: 'Gate In', time: '1 hour ago', status: 'completed', clientCode: 'SHIP001' },
-      { container: 'SHIP-333444-9', action: 'Service', time: '8 hours ago', status: 'in_progress', clientCode: 'SHIP001' }
-    ];
-
-    const clientFilter = getClientFilter();
-    if (clientFilter) {
-      return allActivities.filter(activity => activity.clientCode === clientFilter);
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'reefer': return '❄️';
+      case 'tank': return '🛢️';
+      case 'flat_rack': return '📦';
+      case 'open_top': return '📂';
+      default: return '📦';
     }
-    
-    return allActivities.slice(0, 4); // Show top 4 for non-client users
   };
 
-  const recentActivities = getRecentActivities();
-
-  // Mock release orders filtered by client
-  const getPendingReleaseOrders = () => {
-    const allOrders = [
-      { id: 'RO-2025-001', container: 'MSKU-123456-7', client: 'Maersk Line', priority: 'high', clientCode: 'MAEU' },
-      { id: 'RO-2025-002', container: 'TCLU-987654-3', client: 'MSC', priority: 'medium', clientCode: 'MSCU' },
-      { id: 'RO-2025-003', container: 'GESU-456789-1', client: 'CMA CGM', priority: 'low', clientCode: 'CMDU' },
-      { id: 'RO-2025-004', container: 'SHIP-111222-8', client: 'Shipping Solutions Inc', priority: 'high', clientCode: 'SHIP001' },
-      { id: 'RO-2025-005', container: 'SHIP-333444-9', client: 'Shipping Solutions Inc', priority: 'medium', clientCode: 'SHIP001' }
-    ];
-
-    const clientFilter = getClientFilter();
-    if (clientFilter) {
-      return allOrders.filter(order => order.clientCode === clientFilter);
-    }
-    
-    return allOrders.slice(0, 4); // Show top 4 for non-client users
-  };
-
-  const pendingOrders = getPendingReleaseOrders();
+  const filteredData = getFilteredData();
 
   return (
     <div className="space-y-6">
@@ -181,94 +228,389 @@ export const DashboardOverview: React.FC = () => {
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stats.map((stat, index) => (
-          <StatCard key={index} {...stat} />
-        ))}
-      </div>
-
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {showClientNotice ? 'Your Recent Container Movements' : 'Recent Container Movements'}
-            </h3>
-            <BarChart3 className="h-5 w-5 text-gray-400" />
+      {/* Filter Close Button */}
+      {activeFilter && (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-600 text-white rounded-lg">
+              <Filter className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="font-medium text-blue-900">Active Filter</h3>
+              <p className="text-sm text-blue-700">{filteredData?.title}</p>
+            </div>
           </div>
-          <div className="space-y-3">
-            {recentActivities.map((movement, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                <div>
-                  <p className="font-medium text-gray-900">{movement.container}</p>
-                  <p className="text-sm text-gray-600">{movement.action}</p>
-                  {!canViewAllData() && movement.clientCode && (
-                    <p className="text-xs text-blue-600">{movement.clientCode}</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">{movement.time}</p>
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                    movement.status === 'completed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {movement.status === 'completed' ? 'Completed' : 'In Progress'}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {recentActivities.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <Activity className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p>No recent activities found</p>
-                <p className="text-sm">Your container movements will appear here</p>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={() => handleStatCardClick(null)}
+            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
+      )}
 
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {showClientNotice ? 'Your Release Orders' : 'Pending Release Orders'}
-            </h3>
-            <FileCheck className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="space-y-3">
-            {pendingOrders.map((order, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+      {/* Stats Grid - Total Per Customer */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Per Customer</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(stats.customerStats).map(([customerKey, data]) => (
+            <div
+              key={customerKey}
+              onClick={() => handleStatCardClick('customer', customerKey)}
+              className={`bg-white rounded-xl p-6 border cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                activeFilter === 'customer' && selectedCustomer === customerKey
+                  ? 'border-blue-500 bg-blue-50 shadow-lg'
+                  : 'border-gray-200 hover:border-blue-300'
+              }`}
+            >
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">{order.id}</p>
-                  <p className="text-sm text-gray-600">
-                    {order.container} {canViewAllData() && `- ${order.client}`}
+                  <p className="text-sm font-medium text-gray-600">
+                    {canViewAllData() ? data.name : 'Your Containers'}
                   </p>
-                  {!canViewAllData() && order.clientCode && (
-                    <p className="text-xs text-blue-600">{order.clientCode}</p>
-                  )}
+                  <p className="text-2xl font-bold text-gray-900">{data.count}</p>
+                  <div className="text-sm text-blue-600 mt-1">{data.code}</div>
                 </div>
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                  order.priority === 'high' 
-                    ? 'bg-red-100 text-red-800' 
-                    : order.priority === 'medium'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {order.priority.charAt(0).toUpperCase() + order.priority.slice(1)}
-                </span>
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Building className="h-6 w-6 text-blue-600" />
+                </div>
               </div>
-            ))}
-            {pendingOrders.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <FileCheck className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p>No pending release orders</p>
-                <p className="text-sm">Your release orders will appear here</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Total Quantity in Yard */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Quantity in Yard</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div
+            onClick={() => handleStatCardClick('yard')}
+            className={`bg-white rounded-xl p-6 border cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+              activeFilter === 'yard'
+                ? 'border-green-500 bg-green-50 shadow-lg'
+                : 'border-gray-200 hover:border-green-300'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Containers in Yard</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.inYardContainers.length}</p>
+                <div className="text-sm text-green-600 mt-1">Currently stored</div>
               </div>
-            )}
+              <div className="p-3 bg-green-100 rounded-lg">
+                <Package className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Capacity</p>
+                <p className="text-2xl font-bold text-gray-900">2,500</p>
+                <div className="text-sm text-gray-600 mt-1">Maximum capacity</div>
+              </div>
+              <div className="p-3 bg-gray-100 rounded-lg">
+                <BarChart3 className="h-6 w-6 text-gray-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Occupancy Rate</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {((stats.inYardContainers.length / 2500) * 100).toFixed(1)}%
+                </p>
+                <div className="text-sm text-purple-600 mt-1">Current utilization</div>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Total by Type */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Total by Container Type</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {['dry', 'reefer', 'tank', 'flat_rack', 'open_top'].map(type => {
+            const count = filteredContainers.filter(c => c.type === type).length;
+            return (
+              <div
+                key={type}
+                onClick={() => handleStatCardClick('type', type)}
+                className={`bg-white rounded-xl p-6 border cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                  activeFilter === 'type' && selectedType === type
+                    ? 'border-orange-500 bg-orange-50 shadow-lg'
+                    : 'border-gray-200 hover:border-orange-300'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-3xl mb-2">{getTypeIcon(type)}</div>
+                  <p className="text-sm font-medium text-gray-600 capitalize">
+                    {type.replace('_', ' ')}
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">{count}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Total by Damage Status */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Total by Damage Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            onClick={() => handleStatCardClick('damage')}
+            className={`bg-white rounded-xl p-6 border cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+              activeFilter === 'damage'
+                ? 'border-red-500 bg-red-50 shadow-lg'
+                : 'border-gray-200 hover:border-red-300'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Damaged Containers</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.damagedStats.damaged}</p>
+                <div className="text-sm text-red-600 mt-1">Require attention</div>
+              </div>
+              <div className="p-3 bg-red-100 rounded-lg">
+                <Wrench className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => handleStatCardClick('damage')}
+            className={`bg-white rounded-xl p-6 border cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+              activeFilter === 'damage'
+                ? 'border-green-500 bg-green-50 shadow-lg'
+                : 'border-gray-200 hover:border-green-300'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Undamaged Containers</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.damagedStats.undamaged}</p>
+                <div className="text-sm text-green-600 mt-1">Good condition</div>
+              </div>
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtered Data Table */}
+      {filteredData && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-slide-in-up">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{filteredData.title}</h3>
+                <p className="text-sm text-gray-600">{filteredData.description}</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                  {filteredData.containers.length} containers
+                </span>
+                <button
+                  onClick={() => handleStatCardClick(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Container
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type & Size
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  {canViewAllData() && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Client
+                    </th>
+                  )}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gate In Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Condition
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredData.containers.map((container) => (
+                  <tr key={container.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">{getTypeIcon(container.type)}</div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{container.number}</div>
+                          <div className="text-xs text-gray-500">ID: {container.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 capitalize">
+                        {container.type.replace('_', ' ')}
+                      </div>
+                      <div className="text-sm text-gray-500">{container.size}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(container.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-900">{container.location}</span>
+                      </div>
+                    </td>
+                    {canViewAllData() && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{container.client}</div>
+                          <div className="text-xs text-gray-500">{container.clientCode}</div>
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <div>
+                          <div className="text-sm text-gray-900">
+                            {container.gateInDate.toLocaleDateString()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {container.gateInDate.toLocaleTimeString()}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        {container.isDamaged ? (
+                          <>
+                            <XCircle className="h-4 w-4 text-red-500" />
+                            <span className="text-sm text-red-600 font-medium">Damaged</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="text-sm text-green-600 font-medium">Good</span>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredData.containers.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No containers found</h3>
+              <p className="text-gray-600">No containers match the selected filter criteria.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Type by Customer Breakdown (when customer filter is active) */}
+      {activeFilter === 'customer' && selectedCustomer && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Container Types for {stats.customerStats[selectedCustomer]?.name}
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {Object.entries(stats.typeByCustomer[selectedCustomer] || {}).map(([type, count]) => {
+              if (type === 'clientName') return null;
+              return (
+                <div key={type} className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl mb-2">{getTypeIcon(type)}</div>
+                  <div className="text-sm font-medium text-gray-600 capitalize">
+                    {type.replace('_', ' ')}
+                  </div>
+                  <div className="text-lg font-bold text-gray-900">{count as number}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Damage Analysis (when damage filter is active) */}
+      {activeFilter === 'damage' && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Damage Analysis by Customer</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(stats.customerStats).map(([customerKey, customerData]) => {
+              const customerContainers = filteredContainers.filter(c => 
+                (c.clientCode || c.client) === customerKey
+              );
+              const damaged = customerContainers.filter(c => c.isDamaged).length;
+              const undamaged = customerContainers.filter(c => !c.isDamaged).length;
+              const damageRate = customerContainers.length > 0 ? (damaged / customerContainers.length) * 100 : 0;
+
+              return (
+                <div key={customerKey} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="font-medium text-gray-900">{customerData.name}</div>
+                      <div className="text-sm text-gray-500">{customerData.code}</div>
+                    </div>
+                    <div className={`px-2 py-1 text-xs rounded-full ${
+                      damageRate > 20 ? 'bg-red-100 text-red-800' :
+                      damageRate > 10 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {damageRate.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-red-600">Damaged:</span>
+                      <span className="font-medium">{damaged}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-600">Good:</span>
+                      <span className="font-medium">{undamaged}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-gray-600">Total:</span>
+                      <span className="font-medium">{customerContainers.length}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
