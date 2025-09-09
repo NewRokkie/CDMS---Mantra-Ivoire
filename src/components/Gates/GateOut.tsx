@@ -1724,42 +1724,6 @@ const GateOutCompletionModal: React.FC<{
                 </div>
               )}
             </div>
-                    
-                    {/* Validation Messages */}
-                    {input.validationMessage && (
-                      <div className={`flex items-center space-x-2 text-sm ${
-                        input.validationState === 'valid' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {input.validationState === 'valid' ? (
-                          <CheckCircle className="h-4 w-4" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4" />
-                        )}
-                        <span>{input.validationMessage}</span>
-                      </div>
-                    )}
-
-                    {/* Confirmation Validation Messages */}
-                    {input.confirmationNumber && input.containerNumber && (
-                      <div className={`flex items-center space-x-2 text-sm ${
-                        input.confirmationNumber === input.containerNumber ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {input.confirmationNumber === input.containerNumber ? (
-                          <CheckCircle className="h-4 w-4" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4" />
-                        )}
-                        <span>
-                          {input.confirmationNumber === input.containerNumber 
-                            ? 'Container numbers match' 
-                            : 'Container numbers do not match'
-                          }
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Gate Out Date & Time */}
