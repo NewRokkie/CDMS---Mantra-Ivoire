@@ -1738,7 +1738,7 @@ const GateOutCompletionModal: React.FC<{
                     value={gateOutDate}
                     onChange={setGateOutDate}
                     placeholder="Select date"
-                    label="Gate Out Date *"
+                    label="Date *"
                     required
                   />
                 </div>
@@ -1748,7 +1748,7 @@ const GateOutCompletionModal: React.FC<{
                     value={gateOutTime}
                     onChange={setGateOutTime}
                     placeholder="Select time"
-                    label="Gate Out Time *"
+                    label="Time *"
                     required
                   />
                 </div>
