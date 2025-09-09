@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft, CheckSquare, X, Loader, LogOut } from 'lucide-react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft, X, Loader } from 'lucide-react';
 import { Container, ReleaseOrder, ReleaseOrderContainer } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -56,7 +56,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     },
     totalContainers: 2,
     maxQuantityThreshold: 10,
-    requiresDetailedBreakdown: false,
+    status: 'validated',
     containers: [
       {
         id: 'roc-1',
@@ -82,7 +82,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     transportCompany: 'Swift Transport Ltd',
     driverName: 'John Smith',
     vehicleNumber: 'ABC-123',
-    status: 'validated',
     createdBy: 'Jane Operator',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
@@ -102,7 +101,7 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
       size40ft: 2
     },
     totalContainers: 3,
-    maxQuantityThreshold: 10,
+    status: 'validated',
     requiresDetailedBreakdown: false,
     containers: [
       {
@@ -139,7 +138,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     transportCompany: 'Express Delivery',
     driverName: 'Lisa Green',
     vehicleNumber: 'JKL-345',
-    status: 'validated',
     createdBy: 'Sarah Client',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-10T16:00:00'),
@@ -176,7 +174,6 @@ const mockValidatedReleaseOrders: ReleaseOrder[] = [
     transportCompany: 'Global Logistics',
     driverName: 'Robert Johnson',
     vehicleNumber: 'XYZ-789',
-    status: 'validated',
     createdBy: 'Sarah Client',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T11:00:00'),
@@ -241,7 +238,7 @@ const mockPendingGateOutOperations = [
     releaseOrderId: 'BK-CMA-2025-004',
     releaseOrder: mockValidatedReleaseOrders[2],
     selectedContainers: mockValidatedReleaseOrders[2].containers,
-    createdAt: new Date('2025-01-11T16:20:00'),
+    createdAt: new Date('2025-01-11T16:00:00'),
     createdBy: 'Sarah Client',
     status: 'pending' as const,
     notes: 'Single container release - urgent',
@@ -250,6 +247,41 @@ const mockPendingGateOutOperations = [
     actualQuantity: 1
   }
 ];
+
+// Helper function to validate container number format
+const validateContainerNumber = (containerNumber: string): { isValid: boolean; message?: string } => {
+  if (!containerNumber) {
+    return { isValid: false, message: 'Container number is required' };
+  }
+  
+  if (containerNumber.length !== 11) {
+    return { isValid: false, message: `${containerNumber.length}/11 characters` };
+  }
+  
+  const letters = containerNumber.substring(0, 4);
+  const numbers = containerNumber.substring(4, 11);
+  
+  if (!/^[A-Z]{4}$/.test(letters)) {
+    return { isValid: false, message: 'First 4 characters must be letters (A-Z)' };
+  }
+  
+  if (!/^[0-9]{7}$/.test(numbers)) {
+    return { isValid: false, message: 'Last 7 characters must be numbers (0-9)' };
+  }
+  
+  return { isValid: true, message: 'Valid format' };
+};
+
+// Helper function to format container number for display (adds hyphens)
+const formatContainerNumberForDisplay = (containerNumber: string): string => {
+  if (containerNumber.length === 11) {
+    const letters = containerNumber.substring(0, 4);
+    const numbers1 = containerNumber.substring(4, 10);
+    const numbers2 = containerNumber.substring(10, 11);
+    return `${letters}-${numbers1}-${numbers2}`;
+  }
+  return containerNumber;
+};
 
 export const GateOut: React.FC = () => {
   const [selectedReleaseOrder, setSelectedReleaseOrder] = useState<ReleaseOrder | null>(null);
@@ -267,6 +299,18 @@ export const GateOut: React.FC = () => {
     gateOutDate: new Date().toISOString().split('T')[0],
     gateOutTime: new Date().toTimeString().slice(0, 5),
     notes: ''
+  });
+  const [containerNumbers, setContainerNumbers] = useState<string[]>(['']);
+  const [confirmContainerNumbers, setConfirmContainerNumbers] = useState<string[]>(['']);
+  const [containerValidationErrors, setContainerValidationErrors] = useState<string[]>([]);
+  const [completionModal, setCompletionModal] = useState<{
+    isOpen: boolean;
+    order: any;
+    containers: Array<{ id: string; number: string; confirmation: string }>;
+  }>({
+    isOpen: false,
+    order: null,
+    containers: [{ id: '1', number: '', confirmation: '' }]
   });
 
   const { t } = useLanguage();
@@ -317,6 +361,14 @@ export const GateOut: React.FC = () => {
 
   const handlePendingView = () => {
     setActiveView('pending');
+  };
+
+  const handleCompleteGateOut = (order: any) => {
+    setCompletionModal({
+      isOpen: true,
+      order,
+      containers: [{ id: '1', number: '', confirmation: '' }]
+    });
   };
 
   const handleGateOutSubmit = async (data: any) => {
@@ -385,6 +437,95 @@ export const GateOut: React.FC = () => {
     alert('Gate Out operation completed successfully!');
   };
 
+  const handleContainerNumberChange = (index: number, value: string) => {
+    // Remove any non-alphanumeric characters and convert to uppercase
+    const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Limit to 11 characters maximum
+    if (cleanValue.length <= 11) {
+      const letters = cleanValue.substring(0, 4);
+      const numbers = cleanValue.substring(4, 11);
+      
+      // Only allow letters in first 4 positions
+      const validLetters = letters.replace(/[^A-Z]/g, '');
+      // Only allow numbers in positions 5-11
+      const validNumbers = numbers.replace(/[^0-9]/g, '');
+      
+      const validValue = validLetters + validNumbers;
+      
+      setContainerNumbers(prev => {
+        const newNumbers = [...prev];
+        newNumbers[index] = validValue;
+        return newNumbers;
+      });
+      
+      // Clear confirmation when main number changes
+      setConfirmContainerNumbers(prev => {
+        const newConfirm = [...prev];
+        newConfirm[index] = '';
+        return newConfirm;
+      });
+      
+      // Update validation errors
+      const validation = validateContainerNumber(validValue);
+      setContainerValidationErrors(prev => {
+        const newErrors = [...prev];
+        newErrors[index] = validation.isValid ? '' : validation.message || '';
+        return newErrors;
+      });
+    }
+  };
+
+  const handleConfirmContainerNumberChange = (index: number, value: string) => {
+    // Remove any non-alphanumeric characters and convert to uppercase
+    const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Limit to 11 characters maximum
+    if (cleanValue.length <= 11) {
+      const letters = cleanValue.substring(0, 4);
+      const numbers = cleanValue.substring(4, 11);
+      
+      // Only allow letters in first 4 positions
+      const validLetters = letters.replace(/[^A-Z]/g, '');
+      // Only allow numbers in positions 5-11
+      const validNumbers = numbers.replace(/[^0-9]/g, '');
+      
+      const validValue = validLetters + validNumbers;
+      
+      setConfirmContainerNumbers(prev => {
+        const newConfirm = [...prev];
+        newConfirm[index] = validValue;
+        return newConfirm;
+      });
+    }
+  };
+
+  const addContainerField = () => {
+    setContainerNumbers(prev => [...prev, '']);
+    setConfirmContainerNumbers(prev => [...prev, '']);
+    setContainerValidationErrors(prev => [...prev, '']);
+  };
+
+  const removeContainerField = (index: number) => {
+    if (containerNumbers.length > 1) {
+      setContainerNumbers(prev => prev.filter((_, i) => i !== index));
+      setConfirmContainerNumbers(prev => prev.filter((_, i) => i !== index));
+      setContainerValidationErrors(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const isContainerNumberValid = (index: number): boolean => {
+    const containerNumber = containerNumbers[index];
+    const confirmNumber = confirmContainerNumbers[index];
+    const validation = validateContainerNumber(containerNumber);
+    return validation.isValid && containerNumber === confirmNumber;
+  };
+
+  const areAllContainerNumbersValid = (): boolean => {
+    return containerNumbers.every((_, index) => isContainerNumberValid(index)) &&
+           containerNumbers.every(num => num.length === 11);
+  };
+
   // Pending Operations View
   if (activeView === 'pending') {
     return <PendingGateOutView operations={pendingOperations} onBack={() => setActiveView('overview')} onComplete={handleCompletePendingOperation} />;
@@ -401,6 +542,169 @@ export const GateOut: React.FC = () => {
       </div>
     );
   }
+
+  const GateOutCompletionModal = ({ isOpen, onClose, order }: any) => {
+    const [containers, setContainers] = useState(completionModal.containers);
+    
+    const addContainerField = () => {
+      const newContainer = {
+        id: Date.now().toString(),
+        number: '',
+        confirmation: ''
+      };
+      const updatedContainers = [...containers, newContainer];
+      setContainers(updatedContainers);
+      setCompletionModal(prev => ({
+        ...prev,
+        containers: updatedContainers
+      }));
+    };
+    
+    const removeContainerField = (id: string) => {
+      if (containers.length > 1) {
+        const updatedContainers = containers.filter(container => container.id !== id);
+        setContainers(updatedContainers);
+        setCompletionModal(prev => ({
+          ...prev,
+          containers: updatedContainers
+        }));
+      }
+    };
+    
+    const updateContainerField = (id: string, field: 'number' | 'confirmation', value: string) => {
+      const updatedContainers = containers.map(container =>
+        container.id === id ? { ...container, [field]: value } : container
+      );
+      setContainers(updatedContainers);
+      setCompletionModal(prev => ({
+        ...prev,
+        containers: updatedContainers
+      }));
+    };
+    
+    const validateContainerNumber = (containerNumber: string): boolean => {
+      const cleanNumber = containerNumber.replace(/[^A-Z0-9]/g, '');
+      const pattern = /^[A-Z]{4}[0-9]{7}$/;
+      return pattern.test(cleanNumber);
+    };
+    
+    const formatContainerInput = (value: string): string => {
+      return value.replace(/[^A-Z0-9]/g, '').toUpperCase().slice(0, 11);
+    };
+    
+    const formatContainerDisplay = (containerNumber: string): string => {
+      if (containerNumber.length === 11) {
+        return `${containerNumber.slice(0, 4)}-${containerNumber.slice(4, 10)}-${containerNumber.slice(10)}`;
+      }
+      return containerNumber;
+    };
+
+    if (!isOpen || !order) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Complete Gate Out</h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-medium mb-2">Order Details</h4>
+              <p className="text-sm text-gray-600">Booking: {order.bookingNumber}</p>
+              <p className="text-sm text-gray-600">Client: {order.clientName}</p>
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Container Numbers
+                </label>
+                <button
+                  type="button"
+                  onClick={addContainerField}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  + Add Container
+                </button>
+              </div>
+              
+              {containers.map((container) => (
+                <div key={container.id} className="space-y-2 mb-4 p-3 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Container {containers.indexOf(container) + 1}</span>
+                    {containers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeContainerField(container.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  <input
+                    type="text"
+                    placeholder="Enter container number"
+                    value={container.number}
+                    onChange={(e) => updateContainerField(container.id, 'number', formatContainerInput(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Confirm container number"
+                    value={container.confirmation}
+                    onChange={(e) => updateContainerField(container.id, 'confirmation', formatContainerInput(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  
+                  {container.number && (
+                    <div className="text-xs text-gray-500">
+                      Display: {formatContainerDisplay(container.number)}
+                    </div>
+                  )}
+                  
+                  {container.number && container.confirmation && (
+                    <div className={`text-xs ${
+                      container.number === container.confirmation && validateContainerNumber(container.number)
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}>
+                      {container.number === container.confirmation && validateContainerNumber(container.number)
+                        ? '✓ Valid and confirmed'
+                        : '✗ Invalid or not matching'
+                      }
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Complete Gate Out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -662,6 +966,13 @@ export const GateOut: React.FC = () => {
           isProcessing={isProcessing}
         />
       )}
+
+      {/* Gate Out Completion Modal */}
+      <GateOutCompletionModal
+        isOpen={completionModal.isOpen}
+        onClose={() => setCompletionModal({ isOpen: false, order: null, containers: [{ id: '1', number: '', confirmation: '' }] })}
+        order={completionModal.order}
+      />
     </div>
   );
 };
@@ -868,6 +1179,94 @@ const GateOutCompletionModal: React.FC<{
   onClose: () => void;
   onComplete: (operationId: string) => void;
 }> = ({ operation, onClose, onComplete }) => {
+  const [containerNumbers, setContainerNumbers] = useState<string[]>(['']);
+  const [confirmContainerNumbers, setConfirmContainerNumbers] = useState<string[]>(['']);
+  const [containerValidationErrors, setContainerValidationErrors] = useState<string[]>([]);
+
+  const addContainerField = () => {
+    setContainerNumbers(prev => [...prev, '']);
+    setConfirmContainerNumbers(prev => [...prev, '']);
+    setContainerValidationErrors(prev => [...prev, '']);
+  };
+
+  const removeContainerField = (index: number) => {
+    if (containerNumbers.length > 1) {
+      setContainerNumbers(prev => prev.filter((_, i) => i !== index));
+      setConfirmContainerNumbers(prev => prev.filter((_, i) => i !== index));
+      setContainerValidationErrors(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleContainerNumberChange = (index: number, value: string) => {
+    // Remove any non-alphanumeric characters and convert to uppercase
+    const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Limit to 11 characters maximum
+    if (cleanValue.length <= 11) {
+      const letters = cleanValue.substring(0, 4);
+      const numbers = cleanValue.substring(4, 11);
+      
+      // Only allow letters in first 4 positions
+      const validLetters = letters.replace(/[^A-Z]/g, '');
+      // Only allow numbers in positions 5-11
+      const validNumbers = numbers.replace(/[^0-9]/g, '');
+      
+      const validValue = validLetters + validNumbers;
+      
+      setContainerNumbers(prev => {
+        const newNumbers = [...prev];
+        newNumbers[index] = validValue;
+        return newNumbers;
+      });
+      
+      // Clear confirmation when main number changes
+      setConfirmContainerNumbers(prev => {
+        const newConfirm = [...prev];
+        newConfirm[index] = '';
+        return newConfirm;
+      });
+      
+      // Update validation errors
+      const validation = validateContainerNumber(validValue);
+      setContainerValidationErrors(prev => {
+        const newErrors = [...prev];
+        newErrors[index] = validation.isValid ? '' : validation.message || '';
+        return newErrors;
+      });
+    }
+  };
+
+  const handleConfirmContainerNumberChange = (index: number, value: string) => {
+    // Remove any non-alphanumeric characters and convert to uppercase
+    const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Limit to 11 characters maximum
+    if (cleanValue.length <= 11) {
+      const letters = cleanValue.substring(0, 4);
+      const numbers = cleanValue.substring(4, 11);
+      
+      // Only allow letters in first 4 positions
+      const validLetters = letters.replace(/[^A-Z]/g, '');
+      // Only allow numbers in positions 5-11
+      const validNumbers = numbers.replace(/[^0-9]/g, '');
+      
+      const validValue = validLetters + validNumbers;
+      
+      setConfirmContainerNumbers(prev => {
+        const newConfirm = [...prev];
+        newConfirm[index] = validValue;
+        return newConfirm;
+      });
+    }
+  };
+
+  const isContainerNumberValid = (index: number): boolean => {
+    const containerNumber = containerNumbers[index];
+    const confirmNumber = confirmContainerNumbers[index];
+    const validation = validateContainerNumber(containerNumber);
+    return validation.isValid && containerNumber === confirmNumber;
+  };
+
   const [containers, setContainers] = useState<ContainerEntry[]>([
     {
       number: '',
@@ -973,33 +1372,35 @@ const GateOutCompletionModal: React.FC<{
     ));
   };
 
-  const handleContainerNumberChange = (inputId: string, containerNumber: string) => {
-    setContainerInputs(prev => prev.map(input => 
-      input.id === inputId 
-        ? { 
-            ...input, 
-            containerNumber, 
-            confirmationNumber: '', // Reset confirmation when main number changes
-            validationState: 'pending', 
-            validationMessage: '', 
-            isVerified: false 
-          }
-        : input
-    ));
-
-    // Validate container after state update
+  const handleContainerNumberChangeForInput = (inputId: string, containerNumber: string) => {
     setTimeout(() => {
-      if (containerNumber.trim()) {
-        const validation = validateContainer(containerNumber, operation.releaseOrder);
-        setContainerInputs(prev => prev.map(input => 
-          input.id === inputId 
-            ? { 
-                ...input, 
-                validationState: validation.isValid ? 'valid' : 'invalid',
-                validationMessage: validation.message
-              }
-            : input
-        ));
+      setContainerInputs(prev => prev.map(input => 
+        input.id === inputId 
+          ? { 
+              ...input, 
+              containerNumber,
+              confirmationNumber: '', // Clear confirmation when main number changes
+              validationState: containerNumber ? 'pending' : 'pending',
+              validationMessage: containerNumber ? 'Validating...' : '',
+              isVerified: false
+            }
+          : input
+      ));
+      
+      if (containerNumber) {
+        // Simulate validation delay
+        setTimeout(() => {
+          const validation = validateContainer(containerNumber, operation.releaseOrder);
+          setContainerInputs(prev => prev.map(input => 
+            input.id === inputId 
+              ? { 
+                  ...input, 
+                  validationState: validation.isValid ? 'valid' : 'invalid',
+                  validationMessage: validation.message
+                }
+              : input
+          ));
+        }, 500);
       }
     }, 0);
   };
@@ -1017,6 +1418,11 @@ const GateOutCompletionModal: React.FC<{
   };
 
   const handleSubmit = async (submitData: any) => {
+    if (!areAllContainerNumbersValid()) {
+      alert('Please ensure all container numbers are valid and confirmed.');
+      return;
+    }
+    
     setIsProcessing(true);
     try {
       // Simulate processing delay
@@ -1041,7 +1447,10 @@ const GateOutCompletionModal: React.FC<{
         driverName: releaseOrder.driverName,
         vehicleNumber: releaseOrder.vehicleNumber,
         transportCompany: releaseOrder.transportCompany,
-        operationStatus: 'pending' as const
+        operationStatus: 'pending' as const,
+        notes: '',
+        containerNumbers: containerNumbers.filter(num => num.length === 11),
+        displayContainerNumbers: containerNumbers.filter(num => num.length === 11).map(formatContainerNumberForDisplay)
       };
 
       // Update the release order's remaining containers
@@ -1079,6 +1488,14 @@ const GateOutCompletionModal: React.FC<{
       setIsProcessing(false);
     }
   };
+
+  const areAllContainerNumbersValid = (): boolean => {
+    return containerNumbers.every((_, index) => isContainerNumberValid(index)) &&
+           containerNumbers.every(num => num.length === 11);
+  };
+
+  const extractedContainerNumbers = containerInputs.map(input => input.containerNumber);
+  const extractedConfirmContainerNumbers = containerInputs.map(input => input.confirmationNumber);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -1129,6 +1546,185 @@ const GateOutCompletionModal: React.FC<{
               </div>
             </div>
 
+            {/* Container Number Entry */}
+            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-purple-900 flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Container Numbers
+                </h4>
+                <button
+                  type="button"
+                  onClick={addContainerField}
+                  className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Container</span>
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {containerNumbers.map((containerNumber, index) => {
+                  const validation = validateContainerNumber(containerNumber);
+                  const confirmNumber = confirmContainerNumbers[index];
+                  const numbersMatch = containerNumber === confirmNumber && containerNumber.length === 11;
+                  
+                  return (
+                    <div key={index} className="bg-white p-4 rounded-lg border border-purple-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-purple-800">
+                          Container {index + 1}
+                        </span>
+                        {containerNumbers.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeContainerField(index)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Container Number Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Enter Container Number *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={isInConfirmationMode ? "password" : "text"}
+                            onFocus={() => setIsInConfirmationMode(false)}
+                            required
+                            value={containerNumber}
+                            onChange={(e) => handleContainerNumberChange(index, e.target.value)}
+                            className={`form-input w-full pr-20 ${
+                              containerNumber && !validation.isValid
+                                ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                                : containerNumber && validation.isValid
+                                ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
+                                : ''
+                            }`}
+                            placeholder="e.g., ONEU1234567"
+                            maxLength={11}
+                          />
+                          {/* Validation Status */}
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                            {containerNumber && (
+                              <>
+                                {validation.isValid ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                                )}
+                                <span className={`text-xs font-medium ${
+                                  validation.isValid ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {validation.message}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Format: 4 letters + 7 numbers • Display: {containerNumber ? formatContainerNumberForDisplay(containerNumber) : 'ONEU-123456-7'}
+                        </p>
+                      </div>
+
+                      {/* Confirm Container Number */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Confirm Container Number *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            onFocus={() => setIsInConfirmationMode(true)}
+                            required
+                            value={confirmNumber}
+                            onChange={(e) => handleConfirmContainerNumberChange(index, e.target.value)}
+                            className={`form-input w-full pr-20 ${
+                              confirmNumber && confirmNumber !== containerNumber
+                                ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                                : confirmNumber && numbersMatch
+                                ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
+                                : ''
+                            }`}
+                            placeholder="Re-enter container number to confirm"
+                            maxLength={11}
+                          />
+                          {/* Match Status */}
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                            {confirmNumber && (
+                              <>
+                                {numbersMatch ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                                )}
+                                <span className={`text-xs font-medium ${
+                                  numbersMatch ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {numbersMatch ? 'Match' : 'No match'}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Container Status Indicator */}
+                      {validation.isValid && numbersMatch && (
+                        <div className="flex items-center p-2 bg-green-100 border border-green-200 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                          <span className="text-sm text-green-800">
+                            Container {formatContainerNumberForDisplay(containerNumber)} validated
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Validation Error */}
+                      {containerNumber && !validation.isValid && (
+                        <div className="flex items-center p-2 bg-red-100 border border-red-200 rounded-lg">
+                          <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                          <span className="text-sm text-red-800">
+                            {validation.message}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Confirmation Error */}
+                      {confirmNumber && containerNumber && confirmNumber !== containerNumber && (
+                        <div className="flex items-center p-2 bg-red-100 border border-red-200 rounded-lg">
+                          <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                          <span className="text-sm text-red-800">
+                            Container numbers do not match
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Container Summary */}
+              {containerNumbers.filter(num => num.length === 11).length > 0 && (
+                <div className="mt-4 p-4 bg-white rounded-lg border-2 border-purple-300">
+                  <h5 className="font-medium text-purple-900 mb-2">Container Summary</h5>
+                  <div className="text-sm text-gray-700">
+                    {containerNumbers.filter(num => num.length === 11).length} container{containerNumbers.filter(num => num.length === 11).length !== 1 ? 's' : ''} ready for gate out:
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {containerNumbers.filter(num => num.length === 11).map((num, index) => (
+                      <div key={index} className="text-sm font-mono text-purple-800">
+                        • {formatContainerNumberForDisplay(num)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Container Selection & Verification System */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
               <div className="flex items-center justify-between mb-4">
@@ -1168,7 +1764,7 @@ const GateOutCompletionModal: React.FC<{
                         type={isInConfirmationMode ? "password" : "text"}
                         onFocus={() => setIsInConfirmationMode(false)}
                         value={input.containerNumber}
-                        onChange={(e) => handleContainerNumberChange(input.id, e.target.value)}
+                        onChange={(e) => handleContainerNumberChangeForInput(input.id, e.target.value)}
                         className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ${
                           input.validationState === 'valid' 
                             ? 'border-green-400 bg-green-50' 
@@ -1304,7 +1900,7 @@ const GateOutCompletionModal: React.FC<{
             <button
               type="submit"
               onClick={handleSubmit}
-              disabled={isProcessing || !isFormValid() || isInVerificationMode}
+              disabled={isProcessing || !isFormValid() || isInVerificationMode || !areAllContainerNumbersValid()}
               className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isProcessing ? (
@@ -1314,7 +1910,6 @@ const GateOutCompletionModal: React.FC<{
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4" />
                   <span>Complete Gate Out</span>
                 </>
               )}
