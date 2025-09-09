@@ -1771,7 +1771,7 @@ const GateOutCompletionModal: React.FC<{
               onClick={onClose}
               className="btn-secondary"
             >
-              Cancel
+              <XCircle>Cancel</XCircle>
             </button>
             <button
               type="submit"
