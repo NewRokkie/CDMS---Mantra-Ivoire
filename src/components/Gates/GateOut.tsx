@@ -1724,7 +1724,6 @@ const GateOutCompletionModal: React.FC<{
                 </div>
               )}
             </div>
-            </div>
 
             {/* Gate Out Date & Time */}
             <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
