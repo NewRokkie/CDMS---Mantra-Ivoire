@@ -253,7 +253,6 @@ export const GateIn: React.FC = () => {
     clientCode: '',
     clientName: '',
     bookingReference: '',
-    containerNumber: '',
     secondContainerNumber: '',
     bookingType: 'EXPORT',
     driverName: '',
