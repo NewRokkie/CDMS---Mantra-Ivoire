@@ -67,7 +67,7 @@ export const YardSelector: React.FC = () => {
         disabled={isChanging}
         className={`
           flex items-center space-x-3 px-4 py-2 bg-white border-2 rounded-xl
-          transition-all duration-300 min-w-[200px]
+          transition-all duration-300 min-w-[400px]
           ${isOpen 
             ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10' 
             : currentYard 
