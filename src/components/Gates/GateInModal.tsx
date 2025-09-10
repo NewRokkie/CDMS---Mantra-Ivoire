@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { GateInFormData } from './GateIn';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TimePicker } from '../Common/TimePicker';
+import { DatePicker } from '../Common/DatePicker';
 
 // Container type options with codes
 const containerTypeOptions = [
@@ -516,11 +517,10 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <label className="block text-sm font-medium text-purple-800 mb-2">
                         Arrival Date *
                       </label>
-                      <TimePicker
+                      <DatePicker
                         value={formData.truckArrivalDate}
                         onChange={(date) => handleInputChange('truckArrivalDate', date)}
                         placeholder="Date"
-                        required
                       />
                     </div>
                     <div>
