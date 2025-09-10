@@ -9,7 +9,6 @@ interface PendingOperation {
   secondContainerNumber?: string;
   containerSize: string;
   containerType?: string;
-  bookingType: 'IMPORT' | 'EXPORT';
   clientCode: string;
   clientName: string;
   truckNumber: string;
@@ -43,7 +42,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   isProcessing,
   mockLocations
 }) => {
-  const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all'>('all');
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
 
@@ -52,7 +51,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                          operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || operation.bookingType === typeFilter;
+    const matchesType = typeFilter === 'all'
     return matchesSearch && matchesType;
   });
 
@@ -98,7 +97,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
           
           <div className="flex items-center space-x-3">
             <div className="flex bg-gray-100 rounded-lg p-1">
-              {['all', 'IMPORT', 'EXPORT'].map(type => (
+              {['all'].map(type => (
                 <button
                   key={type}
                   type="button"
