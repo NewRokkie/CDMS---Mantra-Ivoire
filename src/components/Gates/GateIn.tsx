@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, Edit, ArrowLeft, X } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 
@@ -265,6 +266,7 @@ export const GateIn: React.FC = () => {
 
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { currentYard, validateYardOperation } = useYard();
 
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 
@@ -390,6 +392,13 @@ export const GateIn: React.FC = () => {
   const handleSubmit = async () => {
     if (!canPerformGateIn) return;
 
+    // Validate yard operation
+    const yardValidation = validateYardOperation('gate_in');
+    if (!yardValidation.isValid) {
+      alert(`Cannot perform gate in: ${yardValidation.message}`);
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // Use client pool service to find optimal stack assignment
@@ -418,6 +427,8 @@ export const GateIn: React.FC = () => {
       const newOperation = {
         id: `PO-${Date.now()}`,
         date: new Date(),
+        yardId: currentYard?.id,
+        yardCode: currentYard?.code,
         containerNumber: formatContainerNumberForDisplay(formData.containerNumber),
         secondContainerNumber: formData.secondContainerNumber ? formatContainerNumberForDisplay(formData.secondContainerNumber) : '',
         containerSize: formData.containerSize,

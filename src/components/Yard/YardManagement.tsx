@@ -3,6 +3,7 @@ import { YardCanvas2D5 } from './YardCanvas2D5';
 import { YardSearchPanel } from './YardSearchPanel';
 import { Yard, Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { clientPoolService } from '../../services/clientPoolService';
 
 // Mock containers with specific positions in the Tantarelli yard
@@ -120,13 +121,25 @@ export const YardManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const { getClientFilter } = useAuth();
+  const { currentYard } = useYard();
 
-  const yard = createTantarelliYard();
   const clientFilter = getClientFilter();
 
   // Filter containers based on user permissions
   const getFilteredContainers = () => {
     let containers = mockContainers;
+    
+    // Filter by current yard first
+    if (currentYard) {
+      containers = containers.filter(container => {
+        // Check if container belongs to current yard
+        if (currentYard.id === 'depot-tantarelli') {
+          return container.location.includes('Stack S') && 
+                 /Stack S(1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35|37|39|41|43|45|47|49|51|53|55|61|63|65|67|69|71|73|75|77|79|81|83|85|87|89|91|93|95|97|99|101|103)/.test(container.location);
+        }
+        return container.location.includes(currentYard.code) || container.location.includes(currentYard.name);
+      });
+    }
     
     if (clientFilter) {
       // Use client pool service to filter containers
@@ -150,6 +163,9 @@ export const YardManagement: React.FC = () => {
   };
 
   const filteredContainers = getFilteredContainers();
+
+  // Use current yard or fallback to Tantarelli for demo
+  const yard = currentYard || createTantarelliYard();
 
   const handleContainerSearch = (containerNumber: string) => {
     setIsSearching(true);
@@ -182,8 +198,27 @@ export const YardManagement: React.FC = () => {
     <div className="h-full flex flex-col">
       {/* Page Header */}
       <div className="flex-shrink-0 mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Yard Management</h2>
-        <p className="text-gray-600">Real-time container location and yard visualization</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Yard Management</h2>
+            <p className="text-gray-600">
+              Real-time container location and yard visualization
+              {currentYard && (
+                <span className="ml-2 text-blue-600 font-medium">
+                  • {currentYard.name} ({currentYard.code})
+                </span>
+              )}
+            </p>
+          </div>
+          {currentYard && (
+            <div className="text-right text-sm text-gray-600">
+              <div>Occupancy: {currentYard.currentOccupancy}/{currentYard.totalCapacity}</div>
+              <div className="text-xs">
+                {((currentYard.currentOccupancy / currentYard.totalCapacity) * 100).toFixed(1)}% utilized
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Content Area - Full Height */}

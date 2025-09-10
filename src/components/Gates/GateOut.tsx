@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { GateOutModal } from './GateOutModal';
 import { ReleaseOrder } from '../../types';
 import { GateOutHeader } from './GateOut/GateOutHeader';
@@ -130,6 +131,7 @@ export const GateOut: React.FC = () => {
 
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { currentYard, validateYardOperation } = useYard();
 
   const canPerformGateOut = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 
@@ -141,6 +143,13 @@ export const GateOut: React.FC = () => {
   const handleCreateGateOut = (data: any) => {
     if (!canPerformGateOut) return;
 
+    // Validate yard operation
+    const yardValidation = validateYardOperation('gate_out');
+    if (!yardValidation.isValid) {
+      alert(`Cannot perform gate out: ${yardValidation.message}`);
+      return;
+    }
+
     setIsProcessing(true);
     setError('');
 
@@ -149,6 +158,8 @@ export const GateOut: React.FC = () => {
       const newOperation: PendingGateOut = {
         id: `PGO-${Date.now()}`,
         date: new Date(),
+        yardId: currentYard?.id,
+        yardCode: currentYard?.code,
         bookingNumber: data.booking?.bookingNumber || data.booking?.id,
         clientCode: data.booking?.clientCode,
         clientName: data.booking?.clientName,

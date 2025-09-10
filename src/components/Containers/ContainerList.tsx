@@ -3,6 +3,7 @@ import { Search, Filter, Download, Eye, Edit, AlertTriangle, X, Save, Loader, Pa
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ContainerViewModal } from './ContainerViewModal';
 import { ContainerEditModal } from './ContainerEditModal';
@@ -78,6 +79,7 @@ export const ContainerList: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const { t } = useLanguage();
   const { user, canViewAllData, getClientFilter } = useAuth();
+  const { currentYard } = useYard();
 
   const getStatusBadge = (status: Container['status']) => {
     const statusConfig = {
@@ -99,6 +101,20 @@ export const ContainerList: React.FC = () => {
   // Filter containers based on user permissions
   const getFilteredContainers = () => {
     let containers = mockContainers;
+    
+    // Filter by current yard first
+    if (currentYard) {
+      containers = containers.filter(container => {
+        // Check if container belongs to current yard
+        // For Tantarelli yard, check for specific stack patterns
+        if (currentYard.id === 'depot-tantarelli') {
+          return container.location.includes('Stack S') && 
+                 /Stack S(1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35|37|39|41|43|45|47|49|51|53|55|61|63|65|67|69|71|73|75|77|79|81|83|85|87|89|91|93|95|97|99|101|103)/.test(container.location);
+        }
+        // For other yards, use different patterns
+        return container.location.includes(currentYard.code) || container.location.includes(currentYard.name);
+      });
+    }
     
     // Apply client filter for client users
     const clientFilter = getClientFilter();

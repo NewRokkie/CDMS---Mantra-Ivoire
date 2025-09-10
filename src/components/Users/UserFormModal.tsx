@@ -292,5 +292,169 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     onChange={(e) => handleInputChange('role', e.target.value)}
                     className="form-input w-full"
                   >
-                    <option value
+                    <option value="operator">Operator</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="admin">Administrator</option>
+                    <option value="client">Client</option>
+                  </select>
+                  <p className="text-xs text-purple-600 mt-1">
+                    {getRoleDescription(formData.role)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Yard Assignments */}
+            <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-600 text-white rounded-lg">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-green-900">Yard Assignments</h4>
+                    <p className="text-sm text-green-700">
+                      Select which yards this user can access ({formData.yardAssignments.length} selected)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSelectAllYards}
+                  className="text-sm font-medium text-green-600 hover:text-green-800 px-3 py-1 hover:bg-green-100 rounded-md transition-colors"
+                >
+                  {formData.yardAssignments.length === availableYards.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {availableYards.map((yard) => {
+                  const isSelected = formData.yardAssignments.includes(yard.id);
+                  const occupancyRate = (yard.currentOccupancy / yard.totalCapacity) * 100;
                   
+                  return (
+                    <div
+                      key={yard.id}
+                      onClick={() => handleYardAssignmentToggle(yard.id)}
+                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                        isSelected
+                          ? 'border-green-500 bg-green-100 shadow-md'
+                          : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-lg transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            <Building className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-gray-900">{yard.name}</span>
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                {yard.code}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600">{yard.location}</div>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <div className="text-xs text-gray-500">
+                                {yard.currentOccupancy}/{yard.totalCapacity} containers
+                              </div>
+                              <div className={`text-xs px-2 py-1 rounded-full ${
+                                occupancyRate >= 90 ? 'bg-red-100 text-red-600' :
+                                occupancyRate >= 75 ? 'bg-orange-100 text-orange-600' :
+                                'bg-green-100 text-green-600'
+                              }`}>
+                                {occupancyRate.toFixed(0)}%
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Selection Indicator */}
+                        {isSelected && (
+                          <div className="flex-shrink-0">
+                            <div className="bg-green-500 text-white rounded-full p-1 animate-scale-in">
+                              <Check className="h-3 w-3" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {availableYards.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No yards available</p>
+                  <p className="text-xs">Contact administrator to set up yards</p>
+                </div>
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isActive" className="text-sm font-medium text-gray-900">
+                Active User
+              </label>
+            </div>
+          </form>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {formData.yardAssignments.length > 0 ? (
+                <span className="text-green-600 font-medium">
+                  ✓ {formData.yardAssignments.length} yard{formData.yardAssignments.length !== 1 ? 's' : ''} assigned
+                </span>
+              ) : (
+                <span className="text-red-600">⚠ No yards assigned</span>
+              )}
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                disabled={isLoading || formData.yardAssignments.length === 0}
+                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span>{selectedUser ? 'Updating...' : 'Creating...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>{selectedUser ? 'Update User' : 'Create User'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

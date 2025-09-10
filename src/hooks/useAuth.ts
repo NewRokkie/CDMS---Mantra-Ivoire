@@ -92,6 +92,7 @@ export const useAuthProvider = () => {
           isActive: true,
           lastLogin: new Date('2025-01-11T08:30:00'),
           createdAt: new Date('2024-01-01'),
+          yardAssignments: ['depot-tantarelli', 'depot-vridi', 'depot-san-pedro'], // Admin has access to all yards
           moduleAccess: {
             dashboard: true,
             containers: true,
@@ -117,6 +118,7 @@ export const useAuthProvider = () => {
           isActive: true,
           lastLogin: new Date('2025-01-11T07:15:00'),
           createdAt: new Date('2024-02-15'),
+          yardAssignments: ['depot-tantarelli'], // Operator assigned to main depot
           moduleAccess: {
             dashboard: true,
             containers: true,
@@ -142,6 +144,7 @@ export const useAuthProvider = () => {
           isActive: true,
           lastLogin: new Date('2025-01-10T16:45:00'),
           createdAt: new Date('2024-01-20'),
+          yardAssignments: ['depot-tantarelli', 'depot-vridi'], // Supervisor manages two depots
           moduleAccess: {
             dashboard: true,
             containers: true,
@@ -168,6 +171,7 @@ export const useAuthProvider = () => {
           lastLogin: new Date('2025-01-09T14:20:00'),
           createdAt: new Date('2024-03-10'),
           clientCode: 'SHIP001',
+          yardAssignments: ['depot-tantarelli'], // Client has access to main depot only
           moduleAccess: {
             dashboard: true,
             containers: true,
@@ -194,6 +198,7 @@ export const useAuthProvider = () => {
           lastLogin: new Date('2025-01-08T11:30:00'),
           createdAt: new Date('2024-04-15'),
           clientCode: 'MAEU',
+          yardAssignments: ['depot-tantarelli', 'depot-san-pedro'], // Maersk client has access to multiple yards
           moduleAccess: {
             dashboard: true,
             containers: true,

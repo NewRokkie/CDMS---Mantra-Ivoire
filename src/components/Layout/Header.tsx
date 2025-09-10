@@ -3,6 +3,7 @@ import { Bell, User, Globe, LogOut, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { YardSelector } from './YardSelector';
+import { YardSelector } from './YardSelector';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -25,6 +26,9 @@ export const Header: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-4">
+          {/* Yard Selector */}
+          <YardSelector />
+          
           {/* Yard Selector */}
           <YardSelector />
           

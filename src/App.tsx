@@ -1,6 +1,7 @@
 import React, { createContext, useState } from 'react';
 import { useAuthProvider, AuthContext } from './hooks/useAuth';
 import { useLanguageProvider, LanguageContext } from './hooks/useLanguage';
+import { useYardProvider, YardContext } from './hooks/useYard';
 import { LoginForm } from './components/Auth/LoginForm';
 import { Header } from './components/Layout/Header';
 import { Sidebar } from './components/Layout/Sidebar';
@@ -20,6 +21,7 @@ import { ReportsModule } from './components/Reports/ReportsModule';
 
 function AppContent() {
   const { user, isLoading, isAuthenticated, hasModuleAccess } = useAuthProvider();
+  const yardProvider = useYardProvider();
   const [activeModule, setActiveModule] = useState('dashboard');
 
   console.log('App render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user?.name, 'activeModule:', activeModule);
@@ -80,15 +82,17 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
-      <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6">
-          {renderModule()}
-        </main>
+    <YardContext.Provider value={yardProvider}>
+      <div className="flex h-screen bg-gray-100 overflow-hidden">
+        <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <Header />
+          <main className="flex-1 overflow-y-auto p-6">
+            {renderModule()}
+          </main>
+        </div>
       </div>
-    </div>
+    </YardContext.Provider>
   );
 }
 

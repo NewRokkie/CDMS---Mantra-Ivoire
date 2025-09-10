@@ -13,6 +13,7 @@ export interface User {
   moduleAccess: ModuleAccess;
   clientCode?: string; // For client users to filter their data
   yardAssignments?: string[]; // Array of yard IDs user has access to
+  yardAssignments?: string[]; // Array of yard IDs user has access to
 }
 
 export interface ModuleAccess {
