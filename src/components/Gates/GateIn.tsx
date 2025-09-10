@@ -3,7 +3,8 @@ import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Contain
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { GateInModal } from './GateInModal';
-import { PendingOperationsView } from './GateIn/PendingOperationsView';
+import { DatePicker } from '../Common/DatePicker';
+import { TimePicker } from '../Common/TimePicker';
 
 // Enhanced interface for the new gate-in process
 export interface GateInFormData {
@@ -103,6 +104,7 @@ const mockPendingOperations = [
     status: 'EMPTY',
     isDamaged: true,
     bookingReference: '',
+    bookingType: 'IMPORT' as const,
     clientCode: '2045789',
     clientName: 'MSC MEDITERRANEAN SHIPPING',
     truckNumber: 'XYZ-456',
@@ -126,6 +128,7 @@ const mockPendingOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-CMA-2025-003',
+    bookingType: 'EXPORT' as const,
     clientCode: '3067234',
     clientName: 'CMA CGM',
     truckNumber: 'DEF-789',
@@ -153,6 +156,7 @@ const mockCompletedOperations = [
     status: 'FULL',
     isDamaged: false,
     bookingReference: 'BK-SHIP-2025-001',
+    bookingType: 'IMPORT' as const,
     clientCode: '4012567',
     clientName: 'SHIPPING SOLUTIONS INC',
     truckNumber: 'GHI-012',
@@ -177,6 +181,7 @@ const mockCompletedOperations = [
     status: 'EMPTY',
     isDamaged: false,
     bookingReference: '',
+    bookingType: 'EXPORT' as const,
     clientCode: '1088663',
     clientName: 'MAERSK LINE',
     truckNumber: 'JKL-345',
@@ -248,15 +253,14 @@ export const GateIn: React.FC = () => {
     clientCode: '',
     clientName: '',
     bookingReference: '',
-    containerNumber: '',
     secondContainerNumber: '',
     bookingType: 'EXPORT',
     driverName: '',
     truckNumber: '',
     transportCompany: '',
     assignedLocation: '',
-    truckArrivalDate: new Date().toISOString().split('T')[0], // Default to today
-    truckArrivalTime: new Date().toTimeString().slice(0, 5), // Default to current time
+    truckArrivalDate: '',
+    truckArrivalTime: '',
     truckDepartureDate: '',
     truckDepartureTime: '',
     notes: '',
@@ -426,6 +430,7 @@ export const GateIn: React.FC = () => {
         status: formData.status,
         isDamaged: formData.isDamaged,
         bookingReference: formData.bookingReference,
+        bookingType: formData.bookingType,
         clientCode: formData.clientCode,
         clientName: formData.clientName,
         truckNumber: formData.truckNumber,
@@ -433,8 +438,8 @@ export const GateIn: React.FC = () => {
         transportCompany: formData.transportCompany,
         operationStatus: 'pending' as const,
         assignedLocation: '',
-        truckArrivalDate: formData.truckArrivalDate,
-        truckArrivalTime: formData.truckArrivalTime,
+        truckArrivalDate: '',
+        truckArrivalTime: '',
         truckDepartureDate: '',
         truckDepartureTime: ''
       };
@@ -475,8 +480,8 @@ export const GateIn: React.FC = () => {
         truckNumber: '',
         transportCompany: '',
         assignedLocation: '',
-        truckArrivalDate: new Date().toISOString().split('T')[0],
-        truckArrivalTime: new Date().toTimeString().slice(0, 5),
+        truckArrivalDate: '',
+        truckArrivalTime: '',
         truckDepartureDate: '',
         truckDepartureTime: '',
         notes: '',
@@ -506,6 +511,8 @@ export const GateIn: React.FC = () => {
         ...operation,
         operationStatus: 'completed' as const,
         assignedLocation: locationData.assignedLocation,
+        truckArrivalDate: locationData.truckArrivalDate,
+        truckArrivalTime: locationData.truckArrivalTime,
         truckDepartureDate: locationData.truckDepartureDate,
         truckDepartureTime: locationData.truckDepartureTime,
         completedAt: new Date()
@@ -583,10 +590,7 @@ export const GateIn: React.FC = () => {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onBack={() => setActiveView('overview')}
-        onOperationClick={() => {}} // Not used anymore, handled internally
-        onComplete={handleLocationValidation}
-        isProcessing={isProcessing}
-        mockLocations={mockLocations}
+        onOperationClick={handlePendingOperationClick}
       />
     );
   }
@@ -713,6 +717,12 @@ export const GateIn: React.FC = () => {
                   Entry Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Container
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -742,6 +752,20 @@ export const GateIn: React.FC = () => {
                     <div className="text-sm text-gray-500">
                       {operation.date.toLocaleTimeString()}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
@@ -831,6 +855,412 @@ export const GateIn: React.FC = () => {
           mockClients={mockClients}
         />
       )}
+    </div>
+  );
+};
+
+// Pending Operations View Component
+const PendingOperationsView: React.FC<{
+  operations: any[];
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  onBack: () => void;
+  onOperationClick: (operation: any) => void;
+}> = ({ operations, searchTerm, onSearchChange, onBack, onOperationClick }) => {
+  const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
+
+  const filteredOperations = operations.filter(operation => {
+    const matchesSearch = operation.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === 'all' || operation.bookingType === typeFilter;
+    return matchesSearch && matchesType;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Pending Operations</h2>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search operations..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              {['all', 'IMPORT', 'EXPORT'].map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setTypeFilter(type as any)}
+                  className={`px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+                    typeFilter === type
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {type === 'all' ? 'All Types' : type}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm text-gray-500">
+              {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Pending Operations Table */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Operations Awaiting Location Assignment</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Container
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Client
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Truck
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Driver Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredOperations.map((operation) => (
+                <tr
+                  key={operation.id}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => onOperationClick(operation)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {operation.date.toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                    {operation.secondContainerNumber && (
+                      <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
+                    )}
+                    <div className="text-sm text-gray-500">
+                      {operation.containerSize}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.clientCode} - {operation.clientName}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {operation.truckNumber}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                    <div className="text-sm text-gray-500">{operation.transportCompany}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {operation.status}
+                      </span>
+                      {operation.isDamaged && (
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                          Damaged
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredOperations.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
+            <p className="text-gray-600">
+              {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Location & Validation View Component
+const LocationValidationView: React.FC<{
+  operation: any;
+  onBack: () => void;
+  onComplete: (operation: any, locationData: any) => void;
+  isProcessing: boolean;
+  mockLocations: any;
+}> = ({ operation, onBack, onComplete, isProcessing, mockLocations }) => {
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [truckArrivalDate, setTruckArrivalDate] = useState('');
+  const [truckArrivalTime, setTruckArrivalTime] = useState('');
+  const [truckDepartureDate, setTruckDepartureDate] = useState('');
+  const [truckDepartureTime, setTruckDepartureTime] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
+
+  // Auto-assign damage stack for damaged containers
+  React.useEffect(() => {
+    if (operation.isDamaged) {
+      setSelectedLocation('DMG-VIRTUAL');
+    }
+  }, [operation.isDamaged]);
+
+  const availableLocations = operation.isDamaged
+    ? mockLocations.damage
+    : mockLocations[operation.containerSize] || [];
+
+  const filteredLocations = availableLocations.filter((loc: any) =>
+    loc.name.toLowerCase().includes(searchLocation.toLowerCase())
+  );
+
+  const handleComplete = () => {
+    if (!selectedLocation || !truckArrivalDate || !truckArrivalTime) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const locationData = {
+      assignedLocation: selectedLocation,
+      truckArrivalDate,
+      truckArrivalTime,
+      truckDepartureDate,
+      truckDepartureTime
+    };
+
+    onComplete(operation, locationData);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Location & Validation</h2>
+        </div>
+      </div>
+
+      {/* Operation Summary */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Operation Details</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <span className="text-sm text-gray-600">Container:</span>
+            <div className="font-medium">{operation.containerNumber}</div>
+            {operation.secondContainerNumber && (
+              <div className="font-medium">{operation.secondContainerNumber}</div>
+            )}
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Size & Qty:</span>
+            <div className="font-medium">{operation.containerSize} • Qty: {operation.containerQuantity}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Client:</span>
+            <div className="font-medium">{operation.clientCode} - {operation.clientName}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Status:</span>
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+              }`}>
+                {operation.status}
+              </span>
+              {operation.isDamaged && (
+                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                  Damaged
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Driver:</span>
+            <div className="font-medium">{operation.driverName}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Truck:</span>
+            <div className="font-medium">{operation.truckNumber}</div>
+          </div>
+        </div>
+        {operation.bookingReference && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <span className="text-sm text-gray-600">Booking Reference:</span>
+            <div className="font-medium">{operation.bookingReference}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Location Assignment */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          {operation.isDamaged ? 'Auto-Assigned to Damage Stack' : 'Stack Selection'}
+        </h3>
+
+        {!operation.isDamaged && (
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Search stacks..."
+                value={searchLocation}
+                onChange={(e) => setSearchLocation(e.target.value)}
+                className="form-input pl-10 w-full"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredLocations.map((location: any) => (
+            <div
+              key={location.id}
+              onClick={() => !operation.isDamaged && setSelectedLocation(location.id)}
+              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                selectedLocation === location.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : operation.isDamaged
+                  ? 'border-red-200 bg-red-50 cursor-not-allowed'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="font-medium text-gray-900">{location.name}</div>
+              <div className="text-sm text-gray-600">{location.section}</div>
+              <div className="text-sm text-gray-500 mt-2">
+                Available: {location.available}/{location.capacity}
+              </div>
+              {operation.isDamaged && location.id === 'DMG-VIRTUAL' && (
+                <div className="text-xs text-red-600 mt-1">Auto-assigned for damaged container</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Time Tracking */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Time Tracking</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Truck Arrival *</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <DatePicker
+                  value={truckArrivalDate}
+                  onChange={setTruckArrivalDate}
+                  placeholder="Arrival date"
+                  label="Date"
+                  required
+                />
+              </div>
+              <div>
+                <TimePicker
+                  value={truckArrivalTime}
+                  onChange={setTruckArrivalTime}
+                  placeholder="Arrival time"
+                  label="Time"
+                  includeSeconds={true}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3">Truck Departure</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <DatePicker
+                  value={truckDepartureDate}
+                  onChange={setTruckDepartureDate}
+                  placeholder="Departure date"
+                  label="Date"
+                  minDate={truckArrivalDate}
+                />
+              </div>
+              <div>
+                <TimePicker
+                  value={truckDepartureTime}
+                  onChange={setTruckDepartureTime}
+                  placeholder="Departure time"
+                  label="Time"
+                  includeSeconds={true}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-end space-x-3">
+        <button onClick={onBack} className="btn-secondary">
+          Cancel
+        </button>
+        <button
+          onClick={handleComplete}
+          disabled={isProcessing || !selectedLocation || !truckArrivalDate || !truckArrivalTime}
+          className="btn-success disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isProcessing ? 'Processing...' : 'Complete Operation'}
+        </button>
+      </div>
     </div>
   );
 };

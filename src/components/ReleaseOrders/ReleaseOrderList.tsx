@@ -53,7 +53,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientId: '1',
     clientCode: 'MAEU',
     clientName: 'Maersk Line',
-    bookingType: 'EXPORT',
     containerQuantities: {
       size20ft: 2,
       size40ft: 3
@@ -76,7 +75,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientId: '2',
     clientCode: 'MSCU',
     clientName: 'MSC',
-    bookingType: 'IMPORT',
     containerQuantities: {
       size20ft: 1,
       size40ft: 0
@@ -115,7 +113,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientId: '4',
     clientCode: 'SHIP001',
     clientName: 'Shipping Solutions Inc',
-    bookingType: 'EXPORT',
     containerQuantities: {
       size20ft: 1,
       size40ft: 1
@@ -162,7 +159,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientId: '2',
     clientCode: 'CMA',
     clientName: 'CMA CGM',
-    bookingType: 'IMPORT',
     containerQuantities: {
       size20ft: 1,
       size40ft: 0
@@ -185,7 +181,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientId: '4',
     clientCode: 'SHIP001',
     clientName: 'Shipping Solutions Inc',
-    bookingType: 'EXPORT',
     containerQuantities: {
       size20ft: 8,
       size40ft: 4
@@ -208,7 +203,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     clientId: '3',
     clientCode: 'CMDU',
     clientName: 'CMA CGM',
-    bookingType: 'IMPORT',
     containerQuantities: {
       size20ft: 0,
       size40ft: 1

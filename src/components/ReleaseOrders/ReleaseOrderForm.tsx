@@ -6,7 +6,6 @@ import { ContainerQuantityBySize } from '../../types';
 
 interface BookingReferenceFormData {
   bookingNumber: string;
-  bookingType: 'IMPORT' | 'EXPORT';
   clientId: string;
   clientCode: string;
   clientName: string;
@@ -35,7 +34,6 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   
   const [formData, setFormData] = useState<BookingReferenceFormData>({
     bookingNumber: '',
-    bookingType: 'EXPORT',
     clientId: '',
     clientCode: '',
     clientName: '',
@@ -186,8 +184,8 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Create Booking</h3>
-                <p className="text-xs text-gray-600">Step {currentStep} of 2 - Generate new booking</p>
+                <h3 className="text-lg font-bold text-gray-900">Create Booking Reference</h3>
+                <p className="text-xs text-gray-600">Step {currentStep} of 2 - Generate new booking reference</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -253,42 +251,9 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                     Booking Information
                   </h4>
                   
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-green-800 mb-2">
-                        Booking Type *
-                      </label>
-                      <div className="flex items-center space-x-4">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="bookingType"
-                            value="IMPORT"
-                            checked={formData.bookingType === 'IMPORT'}
-                            onChange={(e) => handleInputChange('bookingType', e.target.value)}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
-                          />
-                          <span className="text-sm font-medium text-green-800">IMPORT</span>
-                        </label>
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="bookingType"
-                            value="EXPORT"
-                            checked={formData.bookingType === 'EXPORT'}
-                            onChange={(e) => handleInputChange('bookingType', e.target.value)}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
-                          />
-                          <span className="text-sm font-medium text-green-800">EXPORT</span>
-                        </label>
-                      </div>
-                      <p className="text-xs text-green-600 mt-1">
-                        Select booking type for reporting purposes
-                      </p>
-                    </div>
-
+                  <div>
                     <label className="block text-sm font-medium text-green-800 mb-2">
-                      Booking Reference Number *
+                      Booking Number *
                     </label>
                     <input
                       type="text"
@@ -299,7 +264,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                       placeholder="e.g., BK-MAEU-2025-001"
                     />
                     <p className="text-xs text-green-600 mt-1">
-                      This will be used as the booking ID throughout the application
+                      This will be used as the booking reference ID throughout the application
                     </p>
                   </div>
                 </div>

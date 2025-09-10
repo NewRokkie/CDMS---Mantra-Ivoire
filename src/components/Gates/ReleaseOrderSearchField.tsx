@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ChevronDown, Check, FileText, X, Calendar, Package, User, AlertTriangle, Filter } from 'lucide-react';
+import { Search, ChevronDown, Check, FileText, X, Calendar, Package, User, AlertTriangle } from 'lucide-react';
 import { ReleaseOrder } from '../../types';
 
 interface ReleaseOrderSearchFieldProps {
@@ -23,7 +23,6 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isFocused, setIsFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -34,14 +33,12 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
   // Filter and validate release orders
   const getValidReleaseOrders = () => {
     return bookings.filter(order => {
-      // Show bookings that are validated or in_process (ready for gate out)
-      const isValidStatus = order.status === 'validated' || order.status === 'in_process';
-      // Check if booking has remaining containers to process
+      // Show orders that are pending or in_process (ready for gate out)
+      const isValidStatus = order.status === 'pending' || order.status === 'in_process';
+      // Always allow quantity-based bookings or bookings with containers
       const hasValidContainers = order.totalContainers > 0;
-      // Apply type filter
-      const matchesType = typeFilter === 'all' || order.bookingType === typeFilter;
       
-      return isValidStatus && hasValidContainers && matchesType;
+      return isValidStatus && hasValidContainers;
     });
   };
 
@@ -49,9 +46,9 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
 
   // Filter orders based on search term
   const filteredOrders = validOrders.filter(order =>
-    (order.bookingNumber || order.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.clientCode?.toLowerCase().includes(searchTerm.toLowerCase())
+    order.containers.some(c => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Close dropdown when clicking outside
@@ -144,7 +141,6 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     e.stopPropagation();
     onOrderSelect(''); // This will trigger the reset logic in parent
     setSearchTerm('');
-    setTypeFilter('all');
     setIsOpen(false);
     inputRef.current?.focus();
   };
@@ -263,38 +259,13 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
           absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl
           max-h-80 overflow-hidden animate-slide-in-up
         `}>
-          {/* Type Filter */}
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Filter by Type
-              </span>
-            </div>
-            <div className="flex space-x-2">
-              {['all', 'IMPORT', 'EXPORT'].map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setTypeFilter(type as any)}
-                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                    typeFilter === type
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {type === 'all' ? 'All Types' : type}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Validation Warning */}
           {validOrders.length < bookings.length && (
             <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
                 <span className="text-xs text-yellow-800">
-                  Only showing validated/in-process bookings ready for gate out
+                  Only showing validated orders ready for gate out
                 </span>
               </div>
             </div>
@@ -306,7 +277,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {filteredOrders.length} Booking{filteredOrders.length !== 1 ? 's' : ''} Available
+                    {filteredOrders.length} Release Order{filteredOrders.length !== 1 ? 's' : ''} Available
                   </span>
                   {searchTerm && (
                     <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
@@ -319,7 +290,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
               {/* Release Orders List */}
               <div className="max-h-64 overflow-y-auto scrollbar-thin">
                 {filteredOrders.map((order, index) => {
-                  const processedContainers = order.totalContainers - (order.remainingContainers || order.totalContainers);
+                  const readyContainers = order.containers.filter(c => c.status === 'ready').length;
                   
                   return (
                     <button
@@ -358,7 +329,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                                 : 'text-gray-900'
                               }
                             `}>
-                              {order.bookingNumber || order.id}
+                              {order.id}
                             </span>
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
                               {order.status}
@@ -374,23 +345,9 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                                   {canViewAllData ? order.clientName : 'Your Company'}
                                 </span>
                               </div>
-                              {order.bookingType && (
-                                <div className="flex items-center space-x-1">
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    order.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                                  }`}>
-                                    {order.bookingType}
-                                  </span>
-                                </div>
-                              )}
                               <div className="flex items-center space-x-1">
                                 <Package className="h-3 w-3" />
-                                <span>{order.totalContainers} containers</span>
-                                {order.remainingContainers !== undefined && (
-                                  <span className="text-orange-600">
-                                    • {order.remainingContainers} remaining
-                                  </span>
-                                )}
+                                <span>{readyContainers}/{order.containers.length} ready</span>
                               </div>
                             </div>
                             <div className="flex items-center space-x-1">
@@ -402,20 +359,6 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center space-x-1">
-                              <Package className="h-3 w-3" />
-                              <span className="font-medium text-gray-700">
-                                Progress: {processedContainers}/{order.totalContainers} 
-                                ({Math.round((processedContainers / order.totalContainers) * 100)}%)
-                              </span>
-                            </div>
-                            {order.remainingContainers !== undefined && (
-                              <div className="flex items-center space-x-1">
-                                <span className="text-orange-600 font-medium">
-                                <span className="text-gray-600 truncate">{order.notes}</span>
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
 
@@ -440,12 +383,12 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                 <FileText className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-sm font-medium text-gray-900 mb-1">
-                {searchTerm ? 'No matching bookings' : 'No bookings available'}
+                {searchTerm ? 'No matching release orders' : 'No release orders available'}
               </h3>
               <p className="text-xs text-gray-500">
                 {searchTerm 
                   ? `No results for "${searchTerm}". Try a different search term.`
-                  : 'No validated/in-process bookings are ready for gate out.'
+                  : 'No validated release orders are ready for gate out.'
                 }
               </p>
             </div>
