@@ -1,41 +1,20 @@
-interface PendingOperationsViewProps {
-  operations: PendingOperation[];
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
-  onBack: () => void;
-  onOperationClick: (operation: PendingOperation) => void,
-  onComplete: (operation: PendingOperation, locationData: any) => void;
-  isProcessing: boolean;
-  mockLocations: any;
-}
-
-export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
-  operations,
-  searchTerm,
-  onSearchChange,
-  onBack,
-  onOperationClick,
-  onComplete,
-  isProcessing,
-  mockLocations
-}) => {
-  const [typeFilter, setTypeFilter] = useState<'all' | 'pending' | 'completed'>('all');
-
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
+@@ .. @@
+                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                   Date
+                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Container
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Truck
-                </th>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {operation.date?.toLocaleDateString() || '-'}
-                  </td>
+                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                   Truck
+                 </th>
+@@ .. @@
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                     {operation.date?.toLocaleDateString() || '-'}
+                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
                     {operation.secondContainerNumber && (
@@ -56,9 +35,10 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                       {operation.clientCode || '-'}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {operation.vehicleNumber || '-'}
-                  </td>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                     {operation.vehicleNumber || '-'}
+                   </td>
+@@ .. @@
           <div className="flex items-center space-x-3">
             <div className="flex bg-gray-100 rounded-lg p-1">
               {['all', 'pending', 'completed'].map(status => (
@@ -76,6 +56,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                 </button>
               ))}
             </div>
+@@ .. @@
   const filteredOperations = operations.filter(operation => {
     const matchesSearch = operation.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
