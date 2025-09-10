@@ -162,24 +162,6 @@ export const YardSelector: React.FC = () => {
                           `}>
                             {yard.name}
                           </span>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                            {yard.code}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-600 truncate">
-                          {yard.location}
-                        </div>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <div className="text-xs text-gray-500">
-                            {yard.currentOccupancy}/{yard.totalCapacity} containers
-                          </div>
-                          <div className={`text-xs px-2 py-1 rounded-full ${
-                            occupancyRate >= 90 ? 'bg-red-100 text-red-600' :
-                            occupancyRate >= 75 ? 'bg-orange-100 text-orange-600' :
-                            'bg-green-100 text-green-600'
-                          }`}>
-                            {occupancyRate.toFixed(0)}%
-                          </div>
                         </div>
                       </div>
                     </div>
