@@ -1,7 +1,69 @@
 import React, { useState } from 'react';
 import { Plus, Search, Filter, Edit, Eye, Trash2, User as UserIcon, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { User } from '../../types';
+import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { UserFormModal } from './UserFormModal';
+
+// Helper function to get module access based on role
+const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
+  const baseAccess: ModuleAccess = {
+    dashboard: true,
+    containers: false,
+    gateIn: false,
+    gateOut: false,
+    releases: false,
+    edi: false,
+    yard: false,
+    clients: false,
+    users: false,
+    moduleAccess: false,
+    reports: false
+  };
+
+  switch (role) {
+    case 'admin':
+      return {
+        dashboard: true,
+        containers: true,
+        gateIn: true,
+        gateOut: true,
+        releases: true,
+        edi: true,
+        yard: true,
+        clients: true,
+        users: true,
+        moduleAccess: true,
+        reports: true
+      };
+    case 'supervisor':
+      return {
+        ...baseAccess,
+        containers: true,
+        gateIn: true,
+        gateOut: true,
+        releases: true,
+        edi: true,
+        reports: true,
+        users: true
+      };
+    case 'operator':
+      return {
+        ...baseAccess,
+        containers: true,
+        gateIn: true,
+        gateOut: true,
+        releases: true
+      };
+    case 'client':
+      return {
+        ...baseAccess,
+        containers: true,
+        releases: true
+      };
+    default:
+      return baseAccess;
+  }
+};
 
 // Mock data
 const mockUsers: User[] = [
@@ -16,7 +78,8 @@ const mockUsers: User[] = [
     isActive: true,
     lastLogin: new Date('2025-01-11T08:30:00'),
     createdAt: new Date('2024-01-01'),
-    permissions: ['all']
+    moduleAccess: getModuleAccessForRole('admin'),
+    yardAssignments: []
   },
   {
     id: '2',
@@ -29,7 +92,8 @@ const mockUsers: User[] = [
     isActive: true,
     lastLogin: new Date('2025-01-11T07:15:00'),
     createdAt: new Date('2024-02-15'),
-    permissions: ['containers', 'gate_operations', 'releases']
+    moduleAccess: getModuleAccessForRole('operator'),
+    yardAssignments: []
   },
   {
     id: '3',
@@ -42,7 +106,8 @@ const mockUsers: User[] = [
     isActive: true,
     lastLogin: new Date('2025-01-10T16:45:00'),
     createdAt: new Date('2024-01-20'),
-    permissions: ['containers', 'gate_operations', 'releases', 'edi', 'reports']
+    moduleAccess: getModuleAccessForRole('supervisor'),
+    yardAssignments: []
   },
   {
     id: '4',
@@ -55,7 +120,8 @@ const mockUsers: User[] = [
     isActive: true,
     lastLogin: new Date('2025-01-09T14:20:00'),
     createdAt: new Date('2024-03-10'),
-    permissions: ['containers_view', 'releases_view']
+    moduleAccess: getModuleAccessForRole('client'),
+    yardAssignments: []
   },
   {
     id: '5',
@@ -68,16 +134,11 @@ const mockUsers: User[] = [
     isActive: false,
     lastLogin: new Date('2024-12-15T10:30:00'),
     createdAt: new Date('2024-06-01'),
-    permissions: ['containers', 'gate_operations']
+    moduleAccess: getModuleAccessForRole('operator'),
+    yardAssignments: []
   }
 ];
 
-const rolePermissions = {
-  admin: ['all'],
-  supervisor: ['containers', 'gate_operations', 'releases', 'edi', 'reports', 'users_view'],
-  operator: ['containers', 'gate_operations', 'releases'],
-  client: ['containers_view', 'releases_view']
-};
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>(mockUsers);
@@ -92,14 +153,50 @@ export const UserManagement: React.FC = () => {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.department?.toLowerCase().includes(searchTerm.toLowerCase());
+                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          user.department?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && user.isActive) ||
-                         (statusFilter === 'inactive' && !user.isActive);
+    const matchesStatus = statusFilter === 'all' ||
+                          (statusFilter === 'active' && user.isActive) ||
+                          (statusFilter === 'inactive' && !user.isActive);
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  const handleSubmit = (userData: any) => {
+    if (selectedUser) {
+      // Edit existing user
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? {
+        ...u,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        department: userData.department,
+        company: userData.company,
+        role: userData.role,
+        yardAssignments: userData.yardAssignments,
+        isActive: userData.isActive,
+        moduleAccess: getModuleAccessForRole(userData.role)
+      } : u));
+    } else {
+      // Create new user
+      const newUser: User = {
+        id: Date.now().toString(), // Simple ID generation
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        department: userData.department,
+        company: userData.company,
+        role: userData.role,
+        yardAssignments: userData.yardAssignments,
+        isActive: userData.isActive,
+        createdAt: new Date(),
+        moduleAccess: getModuleAccessForRole(userData.role)
+      };
+      setUsers(prev => [...prev, newUser]);
+    }
+    setShowForm(false);
+    setSelectedUser(null);
+  };
 
   const handleEdit = (user: User) => {
     setSelectedUser(user);
@@ -119,7 +216,7 @@ export const UserManagement: React.FC = () => {
   };
 
   const handleToggleStatus = (userId: string) => {
-    setUsers(prev => prev.map(u => 
+    setUsers(prev => prev.map(u =>
       u.id === userId ? { ...u, isActive: !u.isActive } : u
     ));
   };
@@ -146,7 +243,7 @@ export const UserManagement: React.FC = () => {
       operator: { color: 'bg-blue-100 text-blue-800', label: 'Operator' },
       client: { color: 'bg-green-100 text-green-800', label: 'Client' }
     };
-    
+
     const config = roleConfig[role];
     return (
       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
@@ -159,7 +256,7 @@ export const UserManagement: React.FC = () => {
   const formatLastLogin = (date: Date) => {
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) return 'Just now';
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
@@ -197,7 +294,7 @@ export const UserManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -211,7 +308,7 @@ export const UserManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-red-100 rounded-lg">
@@ -225,7 +322,7 @@ export const UserManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -237,7 +334,7 @@ export const UserManagement: React.FC = () => {
                 {users.filter(u => {
                   const today = new Date();
                   const lastLogin = u.lastLogin;
-                  return lastLogin && 
+                  return lastLogin &&
                     lastLogin.toDateString() === today.toDateString();
                 }).length}
               </p>
@@ -260,7 +357,7 @@ export const UserManagement: React.FC = () => {
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
+
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
@@ -283,7 +380,7 @@ export const UserManagement: React.FC = () => {
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          
+
           <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Filter className="h-4 w-4" />
             <span>Advanced Filter</span>
@@ -346,8 +443,8 @@ export const UserManagement: React.FC = () => {
                       onClick={() => canManageUsers && handleToggleStatus(user.id)}
                       disabled={!canManageUsers}
                       className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                        user.isActive 
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                        user.isActive
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
                           : 'bg-red-100 text-red-800 hover:bg-red-200'
                       } ${canManageUsers ? 'cursor-pointer' : 'cursor-default'}`}
                     >
@@ -398,143 +495,12 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* User Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {selectedUser ? 'Edit User' : 'Add New User'}
-                </h3>
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
-
-              <form className="space-y-6">
-                {/* Basic Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={selectedUser?.name}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      defaultValue={selectedUser?.email}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      defaultValue={selectedUser?.phone}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="+1-555-0000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Department
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={selectedUser?.department}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Operations"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Role *
-                    </label>
-                    <select
-                      defaultValue={selectedUser?.role}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="operator">Operator</option>
-                      <option value="supervisor">Supervisor</option>
-                      <option value="admin">Administrator</option>
-                      <option value="client">Client</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Company
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={selectedUser?.company}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Container Depot Ltd"
-                    />
-                  </div>
-                </div>
-
-                {!selectedUser && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Password *
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter password"
-                    />
-                  </div>
-                )}
-
-                {/* Status */}
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    defaultChecked={selectedUser?.isActive ?? true}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                    Active User
-                  </label>
-                </div>
-
-                {/* Form Actions */}
-                <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    {selectedUser ? 'Update User' : 'Create User'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      <UserFormModal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        selectedUser={selectedUser}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader, User as UserIcon, Mail, Phone, Building, Shield, MapPin } from 'lucide-react';
+import { X, Save, Loader, User as UserIcon, Mail, Phone, Building, Shield, MapPin, Check } from 'lucide-react';
 import { User } from '../../types';
 import { useYard } from '../../hooks/useYard';
 
@@ -19,7 +19,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const { availableYards } = useYard();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -96,7 +96,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email || (!selectedUser && !formData.password)) {
       alert('Please fill in all required fields.');
       return;
@@ -133,7 +133,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -170,14 +170,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {/* Basic Information */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                 <UserIcon className="h-5 w-5 mr-2" />
                 Basic Information
               </h4>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-2">
@@ -192,7 +192,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     placeholder="John Doe"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-2">
                     Email Address *
@@ -209,7 +209,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-2">
                     Phone Number
@@ -225,7 +225,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-2">
                     Department
@@ -238,7 +238,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     placeholder="Operations, Administration, etc."
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-2">
                     Company
@@ -280,7 +280,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 <Shield className="h-5 w-5 mr-2" />
                 Role & Permissions
               </h4>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-purple-800 mb-2">
@@ -331,7 +331,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 {availableYards.map((yard) => {
                   const isSelected = formData.yardAssignments.includes(yard.id);
                   const occupancyRate = (yard.currentOccupancy / yard.totalCapacity) * 100;
-                  
+
                   return (
                     <div
                       key={yard.id}

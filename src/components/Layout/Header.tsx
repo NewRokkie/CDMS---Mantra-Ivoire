@@ -1,15 +1,18 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, User, Globe, LogOut, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { YardSelector } from './YardSelector';
 
 export const Header: React.FC = () => {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
 
   const handleLogout = () => {
     logout();
+    navigate('/login');
   };
 
   return (
@@ -23,11 +26,11 @@ export const Header: React.FC = () => {
             {t('dashboard.welcome')}, {user?.name}
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-4">
           {/* Yard Selector */}
           <YardSelector />
-          
+
           {/* Language Switcher */}
           <button
             onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
@@ -36,7 +39,7 @@ export const Header: React.FC = () => {
             <Globe className="h-4 w-4" />
             <span>{language.toUpperCase()}</span>
           </button>
-          
+
           {/* Notifications */}
           <button className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors">
             <Bell className="h-5 w-5" />
@@ -44,7 +47,7 @@ export const Header: React.FC = () => {
               3
             </span>
           </button>
-          
+
           {/* User Menu */}
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
@@ -56,7 +59,7 @@ export const Header: React.FC = () => {
                 <p className="text-gray-600 capitalize">{user?.role}</p>
               </div>
             </div>
-            
+
             <button
               onClick={handleLogout}
               className="p-2 text-gray-600 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"

@@ -13,7 +13,6 @@ export interface User {
   moduleAccess: ModuleAccess;
   clientCode?: string; // For client users to filter their data
   yardAssignments?: string[]; // Array of yard IDs user has access to
-  yardAssignments?: string[]; // Array of yard IDs user has access to
 }
 
 export interface ModuleAccess {
@@ -233,7 +232,7 @@ export interface ReleaseOrder {
   clientCode?: string;
   clientName: string;
   bookingType?: 'IMPORT' | 'EXPORT';
-  containerQuantities?: ContainerQuantityBySize;
+  containerQuantities?: ContainerQuantityBySize | { size20ft: 0; size40ft: 0 };
   totalContainers: number;
   remainingContainers?: number; // Track remaining containers for status calculation
   maxQuantityThreshold?: number;
