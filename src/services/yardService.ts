@@ -142,7 +142,7 @@ export class YardService {
       {
         id: 'vridi-section-a',
         name: 'Section A',
-        yardId: 'depot-vridi',
+        yardId: 'depot-yirima',
         stacks: this.createStandardStacks('vridi-section-a', 1, 20, 4, 5),
         position: { x: 0, y: 0, z: 0 },
         dimensions: { width: 300, length: 100 },
@@ -151,28 +151,11 @@ export class YardService {
       {
         id: 'vridi-section-b',
         name: 'Section B',
-        yardId: 'depot-vridi',
+        yardId: 'depot-yirima',
         stacks: this.createStandardStacks('vridi-section-b', 21, 40, 5, 5),
         position: { x: 0, y: 120, z: 0 },
         dimensions: { width: 300, length: 100 },
         color: '#10b981'
-      }
-    ];
-  }
-
-  /**
-   * Create San-Pédro yard sections (smaller standard layout)
-   */
-  private createSanPedroSections() {
-    return [
-      {
-        id: 'sanpedro-section-main',
-        name: 'Main Section',
-        yardId: 'depot-san-pedro',
-        stacks: this.createStandardStacks('sanpedro-section-main', 1, 15, 4, 4),
-        position: { x: 0, y: 0, z: 0 },
-        dimensions: { width: 250, length: 80 },
-        color: '#8b5cf6'
       }
     ];
   }
