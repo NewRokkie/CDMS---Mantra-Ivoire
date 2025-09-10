@@ -1,36 +1,16 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, X, FileText } from 'lucide-react';
-import { LocationValidationModal } from './LocationValidationModal';
-
-interface PendingOperation {
-  id: string;
-  date: Date;
-  containerNumber: string;
-  secondContainerNumber?: string;
-  containerSize: string;
-  containerType?: string;
-  bookingType: 'IMPORT' | 'EXPORT';
-  clientCode: string;
-  clientName: string;
-  truckNumber: string;
-  driverName: string;
-  transportCompany: string;
-  operationStatus: 'pending' | 'completed';
-  assignedLocation?: string;
-  bookingReference?: string;
-  status: 'FULL' | 'EMPTY';
-  isDamaged: boolean;
-}
+import { PendingGateOut } from './types';
+import { getStatusBadge, formatContainerForDisplay } from './utils';
+import { GateOutCompletionModal } from './GateOutCompletionModal';
 
 interface PendingOperationsViewProps {
-  operations: PendingOperation[];
+  operations: PendingGateOut[];
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onBack: () => void;
-  onOperationClick: (operation: PendingOperation) => void;
-  onComplete: (operation: PendingOperation, locationData: any) => void;
+  onComplete: (operation: PendingGateOut, containerNumbers: string[]) => void;
   isProcessing: boolean;
-  mockLocations: any;
 }
 
 export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
@@ -38,32 +18,32 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   searchTerm,
   onSearchChange,
   onBack,
-  onOperationClick,
   onComplete,
-  isProcessing,
-  mockLocations
+  isProcessing
 }) => {
   const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
 
   const filteredOperations = operations.filter(operation => {
-    const matchesSearch = operation.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (operation.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                         (operation.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                         (operation.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                         (operation.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     const matchesType = typeFilter === 'all' || operation.bookingType === typeFilter;
     return matchesSearch && matchesType;
   });
 
-  const handleOperationClick = (operation: PendingOperation) => {
-    setSelectedOperation(operation);
-    setShowLocationModal(true);
+  const handleOperationClick = (operation: PendingGateOut) => {
+    if (operation.remainingContainers > 0) {
+      setSelectedOperation(operation);
+      setShowCompletionModal(true);
+    }
   };
 
-  const handleLocationComplete = async (operation: PendingOperation, locationData: any) => {
-    await onComplete(operation, locationData);
-    setShowLocationModal(false);
+  const handleCompleteOperation = async (operation: PendingGateOut, containerNumbers: string[]) => {
+    await onComplete(operation, containerNumbers);
+    setShowCompletionModal(false);
     setSelectedOperation(null);
   };
 
@@ -94,6 +74,14 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            {searchTerm && (
+              <button
+                onClick={() => onSearchChange('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           
           <div className="flex items-center space-x-3">
@@ -123,7 +111,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
       {/* Pending Operations Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Operations Awaiting Location Assignment</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Operations Awaiting Processing</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -133,16 +121,19 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Container
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Truck Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Driver Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Truck
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Driver Name
+                  Containers
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -157,40 +148,65 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   onClick={() => handleOperationClick(operation)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {operation.date.toLocaleDateString()}
+                    {operation.date?.toLocaleDateString() || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
-                    {operation.secondContainerNumber && (
-                      <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
-                    )}
-                    <div className="text-sm text-gray-500">
-                      {operation.containerSize}
-                    </div>
-                  </td>
+                   <td>
+                  {operation.bookingType && (
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {operation.bookingType}
+                    </span>
+                  )}
+                </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {operation.truckNumber}
+                    {operation.vehicleNumber || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
-                    <div className="text-sm text-gray-500">{operation.transportCompany}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                        Pending
-                      </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {operation.status}
-                      </span>
-                      {operation.isDamaged && (
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                          Damaged
-                        </span>
-                      )}
+                    <div className="text-sm font-medium text-gray-900">
+                      {operation.driverName || '-'}
                     </div>
+                    <div className="text-sm text-gray-500">
+                      {operation.transportCompany || '-'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {operation.clientName || 'Unknown Client'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {operation.clientCode || '-'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-full">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-700">
+                          {operation.processedContainers}/{operation.totalContainers}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {Math.round((operation.processedContainers / operation.totalContainers) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            operation.processedContainers === operation.totalContainers
+                              ? 'bg-green-500'
+                              : operation.processedContainers > 0
+                              ? 'bg-blue-500'
+                              : 'bg-gray-300'
+                          }`}
+                          style={{ width: `${(operation.processedContainers / operation.totalContainers) * 100}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {operation.remainingContainers} remaining
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(operation.status)}
                   </td>
                 </tr>
               ))}
@@ -203,24 +219,23 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
             <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
             <p className="text-gray-600">
-              {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+              {searchTerm ? "Try adjusting your search criteria." : "No pending gate out operations."}
             </p>
           </div>
         )}
       </div>
       </div>
 
-      {/* Location Validation Modal */}
-      <LocationValidationModal
-        isOpen={showLocationModal}
+      {/* Gate Out Completion Modal */}
+      <GateOutCompletionModal
+        isOpen={showCompletionModal}
         onClose={() => {
-          setShowLocationModal(false);
+          setShowCompletionModal(false);
           setSelectedOperation(null);
         }}
         operation={selectedOperation}
-        onComplete={handleLocationComplete}
+        onComplete={handleCompleteOperation}
         isProcessing={isProcessing}
-        mockLocations={mockLocations}
       />
     </>
   );

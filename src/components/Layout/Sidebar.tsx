@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     { id: 'gate-in', icon: LogIn, label: 'Gate In', moduleKey: 'gateIn' as const },
     
     // 3. Release Orders - Must be created before Gate Out
-    { id: 'releases', icon: FileText, label: t('nav.releases'), moduleKey: 'releases' as const },
+    { id: 'releases', icon: FileText, label: 'Booking Reference', moduleKey: 'releases' as const },
     
     // 4. Gate Out - Depends on Release Orders
     { id: 'gate-out', icon: LogOutIcon, label: 'Gate Out', moduleKey: 'gateOut' as const },
