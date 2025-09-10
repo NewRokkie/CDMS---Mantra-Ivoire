@@ -28,9 +28,6 @@ export const Header: React.FC = () => {
           {/* Yard Selector */}
           <YardSelector />
           
-          {/* Yard Selector */}
-          <YardSelector />
-          
           {/* Language Switcher */}
           <button
             onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
