@@ -209,6 +209,7 @@ export interface BookingReference {
   clientId: string;
   clientCode?: string;
   clientName: string;
+  bookingType: 'IMPORT' | 'EXPORT';
   containerQuantities: ContainerQuantityBySize;
   totalContainers: number;
   maxQuantityThreshold: number;
@@ -229,6 +230,7 @@ export interface ReleaseOrder {
   clientId: string;
   clientCode?: string;
   clientName: string;
+  bookingType?: 'IMPORT' | 'EXPORT';
   containerQuantities?: ContainerQuantityBySize;
   totalContainers: number;
   remainingContainers?: number; // Track remaining containers for status calculation

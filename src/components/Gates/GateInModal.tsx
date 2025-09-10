@@ -53,12 +53,12 @@ const ContainerTypeSelect = ({ value, onChange, containerSize }) => {
         className="form-input w-full flex items-center justify-between text-left cursor-pointer"
       >
         <div>
-          <span className="block truncate">
-            {selectedOption ? selectedOption.label : 'Select container type'}
+          <span className="truncate">
+            {selectedOption ? selectedOption.label : 'Select container type'} -
           </span>
           {selectedOption && (
-            <span className="text-xs text-blue-600 font-medium">
-              {containerSize === '20ft' ? selectedOption.code20 : selectedOption.code40}
+            <span className="text-blue-600 font-medium">
+              <span></span> {containerSize === '20ft' ? selectedOption.code20 : selectedOption.code40}
             </span>
           )}
         </div>
@@ -162,8 +162,8 @@ export const GateInModal: React.FC<GateInModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in !mt-0">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up max-h-[90vh] overflow-hidden flex flex-col">
         
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
+        {/* Modal Header - Fixed */}
+        <div className="px-8 py-6 border-b border-gray-200 bg-white rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-gray-900">New Gate In Process</h3>
@@ -502,6 +502,41 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   </div>
                 </div>
 
+                {/* Truck Arrival Time Tracking */}
+                <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 bg-purple-600 text-white rounded-lg">
+                      <Calendar className="h-5 w-5" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-purple-900">Truck Arrival Time</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-purple-800 mb-2">
+                        Arrival Date *
+                      </label>
+                      <TimePicker
+                        value={formData.truckArrivalDate}
+                        onChange={(date) => handleInputChange('truckArrivalDate', date)}
+                        placeholder="Date"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-purple-800 mb-2">
+                        Arrival Time *
+                      </label>
+                      <TimePicker
+                        value={formData.truckArrivalTime}
+                        onChange={(time) => handleInputChange('truckArrivalTime', time)}
+                        placeholder="Time"
+                        required
+                        includeSeconds={true}
+                      />
+                    </div>
+                  </div>
+                </div>
                 {/* Operation Summary */}
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <h4 className="font-semibold text-gray-900 mb-4">Operation Summary</h4>
@@ -560,6 +595,14 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     <div>
                       <span className="text-gray-600">Transport Company:</span>
                       <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Arrival Date:</span>
+                      <div className="font-medium">{formData.truckArrivalDate || 'Not specified'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Arrival Time:</span>
+                      <div className="font-medium">{formData.truckArrivalTime || 'Not specified'}</div>
                     </div>
                     {formData.bookingReference && (
                       <div>

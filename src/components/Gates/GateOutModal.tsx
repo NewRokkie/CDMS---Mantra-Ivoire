@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, Calculator, Plus, Minus, Box, Ruler } from 'lucide-react';
+import { X, Loader, Package, User, Truck, CheckCircle, AlertTriangle, FileText, Calculator, Plus, Minus, Box, Ruler, Search } from 'lucide-react';
 import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
 import { useAuth } from '../../hooks/useAuth';
+import { ReleaseOrder } from '../../types';
 
 interface GateOutModalProps {
   showModal: boolean;
   setShowModal: (show: boolean) => void;
-  availableReleaseOrders: ReleaseOrder[];
+  availableBookings: ReleaseOrder[];
   onSubmit: (data: any) => void;
   isProcessing: boolean;
 }
@@ -19,16 +20,54 @@ interface GateOutFormData {
   notes: string;
 }
 
+// Helper function to validate container number format
+const validateContainerNumber = (containerNumber: string): { isValid: boolean; message?: string } => {
+  if (!containerNumber) {
+    return { isValid: false, message: 'Container number is required' };
+  }
+  
+  if (containerNumber.length !== 11) {
+    return { isValid: false, message: `${containerNumber.length}/11 characters` };
+  }
+  
+  const letters = containerNumber.substring(0, 4);
+  const numbers = containerNumber.substring(4, 11);
+  
+  if (!/^[A-Z]{4}$/.test(letters)) {
+    return { isValid: false, message: 'First 4 characters must be letters (A-Z)' };
+  }
+  
+  if (!/^[0-9]{7}$/.test(numbers)) {
+    return { isValid: false, message: 'Last 7 characters must be numbers (0-9)' };
+  }
+  
+  return { isValid: true, message: 'Valid format' };
+};
+
+// Helper function to format container number for display (adds hyphens)
+const formatContainerNumberForDisplay = (containerNumber: string): string => {
+  if (containerNumber.length === 11) {
+    const letters = containerNumber.substring(0, 4);
+    const numbers1 = containerNumber.substring(4, 10);
+    const numbers2 = containerNumber.substring(10, 11);
+    return `${letters}-${numbers1}-${numbers2}`;
+  }
+  return containerNumber;
+};
+
 export const GateOutModal: React.FC<GateOutModalProps> = ({
   showModal,
   setShowModal,
-  availableReleaseOrders,
+  availableBookings,
   onSubmit,
   isProcessing
 }) => {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [containerNumbers, setContainerNumbers] = useState<string[]>(['']);
+  const [confirmContainerNumbers, setConfirmContainerNumbers] = useState<string[]>(['']);
+  const [containerValidationErrors, setContainerValidationErrors] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<GateOutFormData>({
     selectedReleaseOrderId: '',
@@ -38,7 +77,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     notes: ''
   });
 
-  const selectedReleaseOrder = availableReleaseOrders.find(
+  const selectedBooking = (availableBookings || []).find(
     order => order.id === formData.selectedReleaseOrderId
   );
 
@@ -51,6 +90,98 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     // Trigger auto-save
     setAutoSaving(true);
     setTimeout(() => setAutoSaving(false), 1000);
+  };
+
+  const handleContainerNumberChange = (index: number, value: string) => {
+    // Remove any non-alphanumeric characters and convert to uppercase
+    const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Limit to 11 characters maximum
+    if (cleanValue.length <= 11) {
+      const letters = cleanValue.substring(0, 4);
+      const numbers = cleanValue.substring(4, 11);
+      
+      // Only allow letters in first 4 positions
+      const validLetters = letters.replace(/[^A-Z]/g, '');
+      // Only allow numbers in positions 5-11
+      const validNumbers = numbers.replace(/[^0-9]/g, '');
+      
+      const validValue = validLetters + validNumbers;
+      
+      setContainerNumbers(prev => {
+        const newNumbers = [...prev];
+        newNumbers[index] = validValue;
+        return newNumbers;
+      });
+      
+      // Clear confirmation when main number changes
+      setConfirmContainerNumbers(prev => {
+        const newConfirm = [...prev];
+        newConfirm[index] = '';
+        return newConfirm;
+      });
+      
+      // Update validation errors
+      const validation = validateContainerNumber(validValue);
+      setContainerValidationErrors(prev => {
+        const newErrors = [...prev];
+        newErrors[index] = validation.isValid ? '' : validation.message || '';
+        return newErrors;
+      });
+      
+      setAutoSaving(true);
+      setTimeout(() => setAutoSaving(false), 1000);
+    }
+  };
+
+  const handleConfirmContainerNumberChange = (index: number, value: string) => {
+    // Remove any non-alphanumeric characters and convert to uppercase
+    const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Limit to 11 characters maximum
+    if (cleanValue.length <= 11) {
+      const letters = cleanValue.substring(0, 4);
+      const numbers = cleanValue.substring(4, 11);
+      
+      // Only allow letters in first 4 positions
+      const validLetters = letters.replace(/[^A-Z]/g, '');
+      // Only allow numbers in positions 5-11
+      const validNumbers = numbers.replace(/[^0-9]/g, '');
+      
+      const validValue = validLetters + validNumbers;
+      
+      setConfirmContainerNumbers(prev => {
+        const newConfirm = [...prev];
+        newConfirm[index] = validValue;
+        return newConfirm;
+      });
+    }
+  };
+
+  const addContainerField = () => {
+    setContainerNumbers(prev => [...prev, '']);
+    setConfirmContainerNumbers(prev => [...prev, '']);
+    setContainerValidationErrors(prev => [...prev, '']);
+  };
+
+  const removeContainerField = (index: number) => {
+    if (containerNumbers.length > 1) {
+      setContainerNumbers(prev => prev.filter((_, i) => i !== index));
+      setConfirmContainerNumbers(prev => prev.filter((_, i) => i !== index));
+      setContainerValidationErrors(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const isContainerNumberValid = (index: number): boolean => {
+    const containerNumber = containerNumbers[index];
+    const confirmNumber = confirmContainerNumbers[index];
+    const validation = validateContainerNumber(containerNumber);
+    return validation.isValid && containerNumber === confirmNumber;
+  };
+
+  const areAllContainerNumbersValid = (): boolean => {
+    return containerNumbers.every((_, index) => isContainerNumberValid(index)) &&
+           containerNumbers.every(num => num.length === 11);
   };
 
   const handleReleaseOrderChange = (releaseOrderId: string) => {
@@ -67,7 +198,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     }
 
     // Handle selection case
-    const order = availableReleaseOrders.find(o => o.id === releaseOrderId);
+    const order = availableBookings.find(o => o.id === releaseOrderId);
     if (order) {
       setFormData(prev => ({
         ...prev,
@@ -105,8 +236,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     if (!validateStep(currentStep)) return;
     
     // Validate that we have all required data
-    if (!selectedReleaseOrder) {
-      alert('Please select a release order.');
+    if (!selectedBooking) {
+      alert('Please select a booking.');
       return;
     }
 
@@ -117,7 +248,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
 
     const submitData = {
       ...formData,
-      releaseOrder: selectedReleaseOrder,
+      booking: selectedBooking
     };
     
     onSubmit(submitData);
@@ -188,60 +319,89 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                 <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
                   <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                     <FileText className="h-5 w-5 mr-2" />
-                    Release Order Selection
+                    Booking Selection
                   </h4>
                   
                   <div className="space-y-4">
                     <ReleaseOrderSearchField
-                      releaseOrders={availableReleaseOrders}
+                      bookings={availableBookings}
                       selectedOrderId={formData.selectedReleaseOrderId}
                       onOrderSelect={handleReleaseOrderChange}
-                      placeholder="Search and select a release order..."
+                      placeholder="Search and select a booking..."
                       required
                       canViewAllData={user?.role !== 'client'}
                     />
 
                     {/* Release Order Details */}
-                    {selectedReleaseOrder && (
+                    {selectedBooking && (
                       <div className="bg-white p-4 rounded-lg border border-blue-200 mt-4">
                         <h5 className="font-medium text-gray-900 mb-3 flex items-center">
                           <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                          Selected Release Order
+                          Selected Booking
                         </h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Booking Number:</span>
-                            <span className="font-medium">{selectedReleaseOrder.bookingNumber}</span>
+                            <span className="text-gray-600">Booking Reference:</span>
+                            <span className="font-medium">{selectedBooking.bookingNumber}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Client:</span>
                             <span className="font-medium truncate ml-2">
-                              {user?.role === 'client' ? 'Your Company' : selectedReleaseOrder.clientName}
+                              {user?.role === 'client' ? 'Your Company' : selectedBooking.clientName}
                             </span>
                           </div>
+                          {selectedBooking.bookingType && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Type:</span>
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                selectedBooking.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                              }`}>
+                                {selectedBooking.bookingType}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span className="text-gray-600">Status:</span>
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              selectedReleaseOrder.status === 'validated' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                              selectedBooking.status === 'validated' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                             }`}>
-                              {selectedReleaseOrder.status}
+                              {selectedBooking.status}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Created:</span>
-                            <span className="font-medium">{selectedReleaseOrder.createdAt.toLocaleDateString()}</span>
+                            <span className="font-medium">{selectedBooking.createdAt.toLocaleDateString()}</span>
                           </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total Containers:</span>
+                            <span className="font-medium">{selectedBooking.totalContainers}</span>
+                          </div>
+                          {selectedBooking.containerQuantities && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Breakdown:</span>
+                              <span className="font-medium">
+                                {selectedBooking.containerQuantities.size20ft > 0 && `${selectedBooking.containerQuantities.size20ft}×20" `}
+                                {selectedBooking.containerQuantities.size40ft > 0 && `${selectedBooking.containerQuantities.size40ft}×40"`}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
 
+
+
+
+
+
+
                 {!formData.selectedReleaseOrderId && (
                   <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
                     <p className="text-sm text-yellow-800">
-                      Please select a release order to continue.
+                      Please select a booking to continue.
                     </p>
                   </div>
                 )}
@@ -312,8 +472,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Booking Number:</span>
-                      <div className="font-medium">{selectedReleaseOrder?.bookingNumber || 'Not selected'}</div>
+                      <span className="text-gray-600">Booking Reference:</span>
+                      <div className="font-medium">{selectedBooking?.bookingNumber || 'Not selected'}</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Driver:</span>
