@@ -53,8 +53,8 @@ export class YardService {
         }
       },
       {
-        id: 'depot-vridi',
-        name: 'Depot Vridi',
+        id: 'depot-yirima',
+        name: 'Depot Yirima',
         code: 'DEPOT-02',
         description: 'Secondary container depot with standard grid layout',
         location: 'Port Autonome d\'Abidjan - Vridi',
@@ -64,7 +64,7 @@ export class YardService {
         sections: this.createVridiSections(),
         createdAt: new Date('2024-02-01'),
         updatedAt: new Date(),
-        layout: 'standard',
+        layout: 'yirima',
         timezone: 'Africa/Abidjan',
         operatingHours: { start: '07:00', end: '21:00' },
         contactInfo: {
@@ -84,40 +84,6 @@ export class YardService {
           requiresApproval: true,
           maxContainersPerOperation: 5,
           defaultFreeDays: 2
-        }
-      },
-      {
-        id: 'depot-san-pedro',
-        name: 'Depot San-Pédro',
-        code: 'DEPOT-03',
-        description: 'Regional depot serving western Côte d\'Ivoire',
-        location: 'Port de San-Pédro',
-        isActive: true,
-        totalCapacity: 1200,
-        currentOccupancy: 678,
-        sections: this.createSanPedroSections(),
-        createdAt: new Date('2024-03-01'),
-        updatedAt: new Date(),
-        layout: 'standard',
-        timezone: 'Africa/Abidjan',
-        operatingHours: { start: '06:30', end: '20:30' },
-        contactInfo: {
-          manager: 'Kouadio Yves',
-          phone: '+225 ZZ ZZ ZZ ZZ ZZ',
-          email: 'manager.sanpedro@depot.ci'
-        },
-        address: {
-          street: 'Zone Portuaire',
-          city: 'San-Pédro',
-          state: 'Bas-Sassandra',
-          zipCode: '18 BP 9012',
-          country: 'Côte d\'Ivoire'
-        },
-        settings: {
-          autoAssignLocation: true,
-          requiresApproval: false,
-          maxContainersPerOperation: 8,
-          defaultFreeDays: 4
         }
       }
     ];
