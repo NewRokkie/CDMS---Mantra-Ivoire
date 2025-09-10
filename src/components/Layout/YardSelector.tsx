@@ -197,13 +197,6 @@ export const YardSelector: React.FC = () => {
               );
             })}
           </div>
-
-          {/* Footer */}
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-            <div className="text-xs text-gray-500 text-center">
-              Logged in as: <span className="font-medium">{user?.name}</span>
-            </div>
-          </div>
         </div>
       )}
     </div>
