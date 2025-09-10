@@ -169,6 +169,9 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {operation.clientName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {operation.truckNumber}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
