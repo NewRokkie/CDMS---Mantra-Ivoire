@@ -110,7 +110,7 @@ export const YardSelector: React.FC = () => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute w-[400] top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-slide-in-up">
+        <div className="w-[400] top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-slide-in-up">
           {/* Header */}
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
             <div className="flex items-center justify-between">
