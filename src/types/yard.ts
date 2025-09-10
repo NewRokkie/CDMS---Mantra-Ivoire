@@ -128,7 +128,7 @@ export interface YardOperationLog {
   id: string;
   yardId: string;
   yardCode: string;
-  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment';
+  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment' | 'yard_switch';
   containerNumber?: string;
   userId: string;
   userName: string;

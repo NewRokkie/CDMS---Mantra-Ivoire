@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  Filter, 
-  ChevronUp, 
-  ChevronDown, 
-  ChevronLeft, 
+import {
+  Search,
+  Filter,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Eye,
   X,
@@ -62,14 +62,14 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
   // Filter and sort orders
   const filteredAndSortedOrders = useMemo(() => {
     let filtered = orders.filter(order => {
-      const matchesSearch = 
+      const matchesSearch =
         order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.containers.some(c => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+        (order.containers && order.containers.some(c => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase())));
+
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       const matchesClient = clientFilter === 'all' || order.clientCode === clientFilter;
-      
+
       return matchesSearch && matchesStatus && matchesClient;
     });
 
@@ -84,8 +84,8 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
           bValue = b.id;
           break;
         case 'containerCount':
-          aValue = a.containers.length;
-          bValue = b.containers.length;
+          aValue = a.containers?.length || 0;
+          bValue = b.containers?.length || 0;
           break;
         case 'clientName':
           aValue = a.clientName;
@@ -128,14 +128,13 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
-      in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
       validated: { color: 'bg-green-100 text-green-800', label: 'Validated' },
       completed: { color: 'bg-blue-600 text-white', label: 'Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig];
-    
+
     // Provide fallback if status is not found
     if (!config) {
       console.warn(`Unknown status: ${status}`);
@@ -145,7 +144,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
         </span>
       );
     }
-    
+
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
         {config.label}
@@ -164,8 +163,8 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
     >
       <span>{children}</span>
       {sortConfig.field === field && (
-        sortConfig.direction === 'asc' ? 
-          <ChevronUp className="h-4 w-4" /> : 
+        sortConfig.direction === 'asc' ?
+          <ChevronUp className="h-4 w-4" /> :
           <ChevronDown className="h-4 w-4" />
       )}
     </button>
@@ -186,7 +185,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full lg:w-64"
               />
             </div>
-            
+
             <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3">
               <select
                 value={statusFilter}
@@ -199,7 +198,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-              
+
               <select
                 value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}
@@ -256,8 +255,8 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                       </span>
                     </div>
                     <div className="text-xs text-gray-500">
-                      {order.containerQuantities.size20ft > 0 && `${order.containerQuantities.size20ft}×20" `}
-                      {order.containerQuantities.size40ft > 0 && `${order.containerQuantities.size40ft}×40" `}
+                      {(order.containerQuantities?.size20ft || 0) > 0 && `${order.containerQuantities?.size20ft || 0}×20" `}
+                      {(order.containerQuantities?.size40ft || 0) > 0 && `${order.containerQuantities?.size40ft || 0}×40" `}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -295,7 +294,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
             <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No booking references found</h3>
             <p className="text-gray-600">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all'
                 ? "Try adjusting your search criteria or filters."
                 : "No bookings have been created yet."
               }
@@ -312,7 +311,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedOrders.length)} of {filteredAndSortedOrders.length} orders
             </span>
           </div>
-          
+
           {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="flex items-center space-x-4">
@@ -327,7 +326,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-                
+
                 {/* Page Numbers */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
                   <button
@@ -342,7 +341,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                     {pageNum}
                   </button>
                 ))}
-                
+
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
@@ -499,7 +498,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-6">
                   Container Quantities Breakdown
                 </h4>
-                
+
                 <div className="flex justify-center">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
                   {/* 20ft Containers */}
@@ -549,7 +548,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                       Total: {selectedOrder.totalContainers} Container{selectedOrder.totalContainers !== 1 ? 's' : ''}
                     </div>
                     <div className="text-sm text-gray-600 mb-2">
-                      Processed: {selectedOrder.totalContainers - (selectedOrder.remainingContainers || selectedOrder.totalContainers)} • 
+                      Processed: {selectedOrder.totalContainers - (selectedOrder.remainingContainers || selectedOrder.totalContainers)} •
                       Remaining: {selectedOrder.remainingContainers || selectedOrder.totalContainers}
                     </div>
                     {selectedOrder.requiresDetailedBreakdown && (

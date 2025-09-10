@@ -1,4 +1,4 @@
-import { Yard, YardContext, YardOperationLog, YardStats } from '../types/yard';
+import { Yard, YardContext, YardOperationLog, YardStats, YardStack } from '../types/yard';
 import { Container } from '../types';
 
 /**
@@ -53,8 +53,8 @@ export class YardService {
         }
       },
       {
-        id: 'depot-yirima',
-        name: 'Depot Yirima',
+        id: 'depot-vridi',
+        name: 'Depot Vridi',
         code: 'DEPOT-02',
         description: 'Secondary container depot with standard grid layout',
         location: 'Port Autonome d\'Abidjan - Vridi',
@@ -64,7 +64,7 @@ export class YardService {
         sections: this.createVridiSections(),
         createdAt: new Date('2024-02-01'),
         updatedAt: new Date(),
-        layout: 'yirima',
+        layout: 'standard',
         timezone: 'Africa/Abidjan',
         operatingHours: { start: '07:00', end: '21:00' },
         contactInfo: {
@@ -85,6 +85,40 @@ export class YardService {
           maxContainersPerOperation: 5,
           defaultFreeDays: 2
         }
+      },
+      {
+        id: 'depot-san-pedro',
+        name: 'Depot San Pedro',
+        code: 'DEPOT-03',
+        description: 'Coastal container depot with specialized handling',
+        location: 'Port Autonome de San Pedro',
+        isActive: true,
+        totalCapacity: 1200,
+        currentOccupancy: 890,
+        sections: this.createSanPedroSections(),
+        createdAt: new Date('2024-03-01'),
+        updatedAt: new Date(),
+        layout: 'standard',
+        timezone: 'Africa/Abidjan',
+        operatingHours: { start: '06:30', end: '20:30' },
+        contactInfo: {
+          manager: 'Pierre Kouadio',
+          phone: '+225 ZZ ZZ ZZ ZZ ZZ',
+          email: 'manager.sanpedro@depot.ci'
+        },
+        address: {
+          street: 'Zone Portuaire San Pedro',
+          city: 'San Pedro',
+          state: 'Bas-Sassandra',
+          zipCode: '10 BP 3456',
+          country: 'Côte d\'Ivoire'
+        },
+        settings: {
+          autoAssignLocation: true,
+          requiresApproval: false,
+          maxContainersPerOperation: 8,
+          defaultFreeDays: 3
+        }
       }
     ];
 
@@ -94,7 +128,7 @@ export class YardService {
 
     // Set default yard
     this.currentYardId = 'depot-tantarelli';
-    
+
     console.log('Yard Service initialized with', defaultYards.length, 'yards');
   }
 
@@ -142,7 +176,7 @@ export class YardService {
       {
         id: 'vridi-section-a',
         name: 'Section A',
-        yardId: 'depot-yirima',
+        yardId: 'depot-vridi',
         stacks: this.createStandardStacks('vridi-section-a', 1, 20, 4, 5),
         position: { x: 0, y: 0, z: 0 },
         dimensions: { width: 300, length: 100 },
@@ -151,7 +185,7 @@ export class YardService {
       {
         id: 'vridi-section-b',
         name: 'Section B',
-        yardId: 'depot-yirima',
+        yardId: 'depot-vridi',
         stacks: this.createStandardStacks('vridi-section-b', 21, 40, 5, 5),
         position: { x: 0, y: 120, z: 0 },
         dimensions: { width: 300, length: 100 },
@@ -161,12 +195,38 @@ export class YardService {
   }
 
   /**
+   * Create San Pedro yard sections (standard grid layout)
+   */
+  private createSanPedroSections() {
+    return [
+      {
+        id: 'sanpedro-section-a',
+        name: 'Section A',
+        yardId: 'depot-san-pedro',
+        stacks: this.createStandardStacks('sanpedro-section-a', 1, 15, 4, 4),
+        position: { x: 0, y: 0, z: 0 },
+        dimensions: { width: 250, length: 80 },
+        color: '#3b82f6'
+      },
+      {
+        id: 'sanpedro-section-b',
+        name: 'Section B',
+        yardId: 'depot-san-pedro',
+        stacks: this.createStandardStacks('sanpedro-section-b', 16, 30, 3, 4),
+        position: { x: 0, y: 100, z: 0 },
+        dimensions: { width: 250, length: 60 },
+        color: '#10b981'
+      }
+    ];
+  }
+
+  /**
    * Helper methods for creating stacks
    */
-  private createTantarelliTopStacks() {
-    const stacks = [];
+  private createTantarelliTopStacks(): YardStack[] {
+    const stacks: YardStack[] = [];
     const stackNumbers = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31];
-    
+
     stackNumbers.forEach((num, index) => {
       stacks.push({
         id: `stack-${num}`,
@@ -182,14 +242,14 @@ export class YardService {
         isOddStack: true
       });
     });
-    
+
     return stacks;
   }
 
-  private createTantarelliCenterStacks() {
-    const stacks = [];
+  private createTantarelliCenterStacks(): YardStack[] {
+    const stacks: YardStack[] = [];
     const stackNumbers = [33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55];
-    
+
     stackNumbers.forEach((num, index) => {
       stacks.push({
         id: `stack-${num}`,
@@ -205,14 +265,14 @@ export class YardService {
         isOddStack: true
       });
     });
-    
+
     return stacks;
   }
 
-  private createTantarelliBottomStacks() {
-    const stacks = [];
+  private createTantarelliBottomStacks(): YardStack[] {
+    const stacks: YardStack[] = [];
     const stackNumbers = [61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103];
-    
+
     stackNumbers.forEach((num, index) => {
       const rows = index < 6 ? 6 : index < 18 ? 4 : (num === 101 ? 1 : 2);
       stacks.push({
@@ -229,13 +289,13 @@ export class YardService {
         isOddStack: true
       });
     });
-    
+
     return stacks;
   }
 
-  private createStandardStacks(sectionId: string, startNum: number, endNum: number, rows: number, tiers: number) {
-    const stacks = [];
-    
+  private createStandardStacks(sectionId: string, startNum: number, endNum: number, rows: number, tiers: number): YardStack[] {
+    const stacks: YardStack[] = [];
+
     for (let i = startNum; i <= endNum; i++) {
       stacks.push({
         id: `${sectionId}-stack-${i}`,
@@ -251,7 +311,7 @@ export class YardService {
         isOddStack: false
       });
     }
-    
+
     return stacks;
   }
 
@@ -314,8 +374,10 @@ export class YardService {
     if (userYardAssignments.includes('all')) {
       return this.getAvailableYards();
     }
-    
-    return Array.from(this.yards.values()).filter(yard => 
+
+    const allYards = Array.from(this.yards.values());
+
+    return allYards.filter(yard =>
       yard.isActive && userYardAssignments.includes(yard.id)
     );
   }
@@ -330,7 +392,10 @@ export class YardService {
     details: Record<string, any> = {}
   ): void {
     const currentYard = this.getCurrentYard();
-    if (!currentYard) return;
+    if (!currentYard) {
+      console.warn('Cannot log operation: No current yard selected');
+      return;
+    }
 
     const log: YardOperationLog = {
       id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -338,7 +403,7 @@ export class YardService {
       yardCode: currentYard.code,
       operationType,
       containerNumber,
-      userId: 'current-user-id', // Would come from auth context
+      userId: 'system', // TODO: Replace with actual user ID from auth context
       userName,
       timestamp: new Date(),
       details,
@@ -461,8 +526,22 @@ export class YardService {
 
     // For Tantarelli yard, check for specific stack patterns
     if (yardId === 'depot-tantarelli') {
-      return container.location.includes('Stack S') && 
+      return container.location.includes('Stack S') &&
              /Stack S(1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35|37|39|41|43|45|47|49|51|53|55|61|63|65|67|69|71|73|75|77|79|81|83|85|87|89|91|93|95|97|99|101|103)/.test(container.location);
+    }
+
+    // For Vridi yard, check for standard stack patterns
+    if (yardId === 'depot-vridi') {
+      return container.location.includes('Stack') &&
+             (/vridi-section-a|vridi-section-b/.test(container.location) ||
+              container.location.includes(yard.code) || container.location.includes(yard.name));
+    }
+
+    // For San Pedro yard, check for standard stack patterns
+    if (yardId === 'depot-san-pedro') {
+      return container.location.includes('Stack') &&
+             (/sanpedro-section-a|sanpedro-section-b/.test(container.location) ||
+              container.location.includes(yard.code) || container.location.includes(yard.name));
     }
 
     // For other yards, use different patterns or explicit yard references

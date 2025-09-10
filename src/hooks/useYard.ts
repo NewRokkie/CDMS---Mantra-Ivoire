@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { Yard, YardContext } from '../types/yard';
+import { Yard, type YardContext } from '../types/yard';
 import { yardService } from '../services/yardService';
 import { useAuth } from './useAuth';
 
@@ -31,6 +31,7 @@ export const useYardProvider = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    console.log('useYardProvider useEffect triggered with user:', user);
     initializeYardContext();
   }, [user]);
 
@@ -40,10 +41,10 @@ export const useYardProvider = () => {
 
       // Get user's yard assignments
       const userYardAssignments = user?.yardAssignments || ['depot-tantarelli']; // Default assignment
-      
+
       // Get accessible yards for user
       const accessibleYards = yardService.getAccessibleYards(userYardAssignments);
-      
+
       // Set default yard if none selected
       let currentYard = yardService.getCurrentYard();
       if (!currentYard || !userYardAssignments.includes(currentYard.id)) {
@@ -124,9 +125,9 @@ export const useYardProvider = () => {
     const { start, end } = yardContext.currentYard.operatingHours;
 
     if (currentTime < start || currentTime > end) {
-      return { 
-        isValid: false, 
-        message: `Yard operations are only allowed between ${start} and ${end}` 
+      return {
+        isValid: false,
+        message: `Yard operations are only allowed between ${start} and ${end}`
       };
     }
 

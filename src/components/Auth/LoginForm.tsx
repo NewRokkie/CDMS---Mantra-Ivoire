@@ -1,28 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Container, Eye, EyeOff, Loader, User, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 export const LoginForm: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isSubmitting) return;
-    
+
     setError('');
     setIsSubmitting(true);
     console.log('Form submitted, attempting login...');
-    
+
     try {
       await login(email, password);
-      console.log('Login successful, should redirect to dashboard');
-      // The redirect happens automatically via App.tsx when isAuthenticated becomes true
+      console.log('Login successful, navigating to dashboard');
+      navigate('/dashboard');
     } catch (err) {
       console.error('Login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
@@ -34,16 +42,17 @@ export const LoginForm: React.FC = () => {
 
   const handleDemoLogin = async (demoEmail: string, demoPassword: string) => {
     if (isSubmitting) return;
-    
+
     console.log('Demo login for:', demoEmail);
     setEmail(demoEmail);
     setPassword(demoPassword);
     setError('');
     setIsSubmitting(true);
-    
+
     try {
       await login(demoEmail, demoPassword);
-      console.log('Demo login successful');
+      console.log('Demo login successful, navigating to dashboard');
+      navigate('/dashboard');
     } catch (err) {
       console.error('Demo login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
@@ -51,29 +60,29 @@ export const LoginForm: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-  
+
   const demoAccounts = [
-    { 
-      email: 'admin@depot.com', 
-      role: 'Administrator', 
+    {
+      email: 'admin@depot.com',
+      role: 'Administrator',
       description: 'Full system access',
       color: 'bg-red-500 hover:bg-red-600'
     },
-    { 
-      email: 'supervisor@depot.com', 
-      role: 'Supervisor', 
+    {
+      email: 'supervisor@depot.com',
+      role: 'Supervisor',
       description: 'Operations oversight',
       color: 'bg-orange-500 hover:bg-orange-600'
     },
-    { 
-      email: 'operator@depot.com', 
-      role: 'Operator', 
+    {
+      email: 'operator@depot.com',
+      role: 'Operator',
       description: 'Daily operations',
       color: 'bg-blue-500 hover:bg-blue-600'
     },
-    { 
-      email: 'client@shipping.com', 
-      role: 'Client Portal', 
+    {
+      email: 'client@shipping.com',
+      role: 'Client Portal',
       description: 'View containers',
       color: 'bg-green-500 hover:bg-green-600'
     }

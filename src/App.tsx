@@ -1,4 +1,5 @@
 import React, { createContext, useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthProvider, AuthContext } from './hooks/useAuth';
 import { useLanguageProvider, LanguageContext } from './hooks/useLanguage';
 import { useYardProvider, YardContext } from './hooks/useYard';
@@ -18,17 +19,14 @@ import { StackManagement } from './components/Yard/StackManagement';
 import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessManagement';
 import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
 import { ReportsModule } from './components/Reports/ReportsModule';
+import { Yard, YardSection, YardStack } from './types/yard';
 
-function AppContent() {
-  const { user, isLoading, isAuthenticated, hasModuleAccess } = useAuthProvider();
-  const yardProvider = useYardProvider();
-  const [activeModule, setActiveModule] = useState('dashboard');
-
-  console.log('App render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user?.name, 'activeModule:', activeModule);
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isLoading, isAuthenticated, user } = useAuthProvider();
 
   // Show loading spinner while checking authentication
   if (isLoading) {
-    console.log('App is loading, showing loading spinner...');
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -39,15 +37,23 @@ function AppContent() {
     );
   }
 
-  // Show login form if not authenticated
+  // Redirect to login if not authenticated
   if (!isAuthenticated || !user) {
-    console.log('User not authenticated, showing login form. isAuthenticated:', isAuthenticated, 'user:', !!user);
-    return <LoginForm />;
+    return <Navigate to="/login" replace />;
   }
 
-  console.log('User is authenticated, showing main application for:', user.name, 'with role:', user.role);
+  return <>{children}</>;
+};
+
+function AppContent() {
+  const { user, hasModuleAccess } = useAuthProvider();
+  const yardProvider = useYardProvider();
+  const [activeModule, setActiveModule] = useState('dashboard');
+
+  console.log('App render - user:', user?.name, 'activeModule:', activeModule);
 
   const renderModule = () => {
+    console.log('Rendering module:', activeModule);
     // Check module access before rendering
     switch (activeModule) {
       case 'dashboard':
@@ -81,7 +87,7 @@ function AppContent() {
     }
   };
 
-  return (
+  const MainApp = () => (
     <YardContext.Provider value={yardProvider}>
       <div className="flex h-screen bg-gray-100 overflow-hidden">
         <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
@@ -93,6 +99,22 @@ function AppContent() {
         </div>
       </div>
     </YardContext.Provider>
+  );
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginForm />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <MainApp />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
 
@@ -109,15 +131,15 @@ const AccessDenied: React.FC = () => (
 const StackManagementModule: React.FC = () => {
   // Complete mock yard data matching YardManagement
   const createCompleteDepotTantarelli = () => {
-    const sections = [];
-    const allStacks = [];
-    
+    const sections: YardSection[] = [];
+    const allStacks: YardStack[] = [];
+
     // Top Section (Blue) - Stack 01 to 31
-    const topSection = {
+    const topSection: YardSection = {
       id: 'section-top',
       name: 'Top Section',
       yardId: 'depot-tantarelli',
-      stacks: [],
+      stacks: [] as YardStack[],
       position: { x: 0, y: 0, z: 0 },
       dimensions: { width: 400, length: 120 },
       color: '#3b82f6'
@@ -163,11 +185,11 @@ const StackManagementModule: React.FC = () => {
     topSection.stacks = allStacks.filter(s => s.sectionId === topSection.id);
 
     // Center Section (Orange) - Stack 33 to 55
-    const centerSection = {
+    const centerSection: YardSection = {
       id: 'section-center',
       name: 'Center Section',
       yardId: 'depot-tantarelli',
-      stacks: [],
+      stacks: [] as YardStack[],
       position: { x: 0, y: 140, z: 0 },
       dimensions: { width: 400, length: 100 },
       color: '#f59e0b'
@@ -209,11 +231,11 @@ const StackManagementModule: React.FC = () => {
     centerSection.stacks = allStacks.filter(s => s.sectionId === centerSection.id);
 
     // Bottom Section (Green) - Stack 61 to 103
-    const bottomSection = {
+    const bottomSection: YardSection = {
       id: 'section-bottom',
       name: 'Bottom Section',
       yardId: 'depot-tantarelli',
-      stacks: [],
+      stacks: [] as YardStack[],
       position: { x: 0, y: 260, z: 0 },
       dimensions: { width: 400, length: 140 },
       color: '#10b981'
@@ -280,11 +302,19 @@ const StackManagementModule: React.FC = () => {
       sections,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date(),
-      layout: 'tantarelli'
-    };
+      layout: 'tantarelli',
+      code: 'DEPOT-TAN',
+      timezone: 'UTC',
+      operatingHours: { start: '06:00', end: '22:00' },
+      contactInfo: { manager: 'John Doe', phone: '+123456789', email: 'manager@example.com' },
+      address: { street: '123 Main St', city: 'City', state: 'State', zipCode: '12345', country: 'Country' },
+      settings: { autoAssignLocation: true, requiresApproval: false, maxContainersPerOperation: 10, defaultFreeDays: 7 }
+    } as Yard;
   };
 
+  console.time('createYardData');
   const [selectedYard] = React.useState(createCompleteDepotTantarelli());
+  console.timeEnd('createYardData');
 
   const handleConfigurationChange = (configurations: any[]) => {
     console.log('Stack configurations updated:', configurations);
@@ -292,8 +322,8 @@ const StackManagementModule: React.FC = () => {
   };
 
   return (
-    <StackManagement 
-      yard={selectedYard} 
+    <StackManagement
+      yard={selectedYard}
       onConfigurationChange={handleConfigurationChange}
     />
   );
