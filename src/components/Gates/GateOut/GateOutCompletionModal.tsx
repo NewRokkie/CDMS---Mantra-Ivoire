@@ -25,7 +25,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   ]);
   const [gateOutDate, setGateOutDate] = useState('');
   const [gateOutTime, setGateOutTime] = useState('');
-  const [inConfirmation, setInConfirmation] = useState(false)
+  const [inConfirmation, setInConfirmation] = useState(false);
   const [error, setError] = useState<string>('');
 
   // Reset form when modal closes or operation changes
@@ -339,12 +339,16 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
             </div>
 
             {/* Gate Out Date & Time */}
-            <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+            {canManageTimeTracking && (
+              <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-2 bg-purple-600 text-white rounded-lg">
                   <Calendar className="h-5 w-5" />
                 </div>
-                <h4 className="text-lg font-semibold text-purple-900">Gate Out Date & Time</h4>
+                <div>
+                  <h4 className="text-lg font-semibold text-purple-900">Gate Out Date & Time</h4>
+                  <p className="text-sm text-purple-700">Manual time tracking (Admin only)</p>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -371,7 +375,8 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                   />
                 </div>
               </div>
-            </div>
+              </div>
+            )}
 
             {/* Error Display */}
             {error && (
@@ -398,7 +403,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isProcessing || !areAllContainerNumbersValid() || (canManageTimeTracking && (!gateOutDate || !gateOutTime))}
+                disabled={isProcessing || !areAllContainerNumbersValid() || !gateOutDate || !gateOutTime}
                 className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {isProcessing ? (
