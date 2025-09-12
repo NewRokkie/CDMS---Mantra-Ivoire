@@ -125,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
       </div>
 
       {/* Navigation - Scrollable with transparent scrollbar */}
-      <nav className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent">
+      <nav className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent" style={{ scrollBehavior: 'auto' }}>
         <ul className="space-y-2 pb-4">
           {/* Main Menu Items */}
           {filteredMainMenuItems.map((item) => {
@@ -135,7 +135,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveModule(item.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveModule(item.id);
+                  }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-lg transform scale-105'
@@ -154,7 +157,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
             <li>
               {/* Configurations Header */}
               <button
-                onClick={handleConfigurationToggle}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleConfigurationToggle();
+                }}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                   isConfigurationActive
                     ? 'bg-slate-800 text-white'
@@ -180,7 +186,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
                     return (
                       <li key={item.id}>
                         <button
-                          onClick={() => handleConfigurationItemClick(item.id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleConfigurationItemClick(item.id);
+                          }}
                           className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sm ${
                             isActive
                               ? 'bg-blue-600 text-white shadow-md transform scale-105'
