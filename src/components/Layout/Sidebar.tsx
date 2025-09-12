@@ -14,7 +14,8 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
-  Cog
+  Cog,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -265,18 +266,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
       </nav>
 
       {/* Footer - Fixed */}
-      <div className="p-4 lg:p-4 border-t border-slate-800 flex-shrink-0">
+      <div className="p-4 border-t border-slate-800 flex-shrink-0">
         <div className="text-xs text-slate-400">
           <p>© 2025 DepotManager</p>
           <p>Version 1.0.0</p>
           {user && (
-            <p className="mt-2 text-slate-300 hidden lg:block">
+            <p className="mt-2 text-slate-300">
               Logged in as: {user.role}
             </p>
           )}
         </div>
       </div>
-      </aside>
+    </aside>
     </>
   );
 };
