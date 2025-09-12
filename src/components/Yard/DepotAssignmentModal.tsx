@@ -6,9 +6,14 @@ import {
   Save,
   Loader,
   Check,
-  UserPlus
+  UserPlus,
+  Mail,
+  Phone,
+  Shield,
+  MapPin
 } from 'lucide-react';
 import { Yard, User } from '../../types';
+import { useYard } from '../../hooks/useYard';
 
 interface DepotAssignmentModalProps {
   isOpen: boolean;
@@ -33,6 +38,8 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const { availableYards } = useYard();
 
   // Mock users data - in a real app, this would come from a user service
   const mockUsers: User[] = [
@@ -59,7 +66,8 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         clients: false,
         users: false,
         moduleAccess: false,
-        reports: false
+        reports: false,
+        depotManagement: true
       },
       yardAssignments: ['depot-tantarelli']
     },
@@ -86,7 +94,8 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         clients: false,
         users: false,
         moduleAccess: false,
-        reports: false
+        reports: false,
+        depotManagement: true
       },
       yardAssignments: ['depot-vridi']
     },
@@ -113,7 +122,8 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         clients: true,
         users: false,
         moduleAccess: false,
-        reports: true
+        reports: true,
+        depotManagement: true
       },
       yardAssignments: ['depot-tantarelli', 'depot-vridi', 'depot-san-pedro']
     },
@@ -140,7 +150,8 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         clients: false,
         users: false,
         moduleAccess: false,
-        reports: false
+        reports: false,
+        depotManagement: true
       },
       yardAssignments: []
     },
@@ -167,7 +178,8 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         clients: true,
         users: true,
         moduleAccess: true,
-        reports: true
+        reports: true,
+        depotManagement: true
       },
       yardAssignments: ['all']
     }
@@ -203,6 +215,21 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         ? prev.filter((id) => id !== userId)
         : [...prev, userId]
     );
+    triggerAutoSave();
+  };
+
+  const handleSelectAllUsers = () => {
+    if (selectedUserIds.length === filteredUsers.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(filteredUsers.map(u => u.id));
+    }
+    triggerAutoSave();
+  };
+
+  const triggerAutoSave = () => {
+    setAutoSaving(true);
+    setTimeout(() => setAutoSaving(false), 1000);
   };
 
   const handleSave = async () => {
@@ -253,27 +280,42 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
   if (!isOpen || !depot) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <UserPlus className="h-6 w-6 text-blue-600" />
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Assign Depot to Users</h2>
-              <p className="text-sm text-gray-600">
-                {depot.name} ({depot.code})
-              </p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
+
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-600 text-white rounded-lg">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Assign Users to Depot</h3>
+                <p className="text-sm text-gray-600">
+                  {depot.name} ({depot.code})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              {autoSaving && (
+                <div className="flex items-center space-x-2 text-green-600">
+                  <Loader className="h-4 w-4 animate-spin" />
+                  <span className="text-xs">Auto-saving...</span>
+                </div>
+              )}
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-white/50 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="h-6 w-6" />
-          </button>
         </div>
 
-        <div className="p-6">
+        {/* Modal Body - Scrollable */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
           {/* Search */}
           <div className="mb-6">
             <div className="relative">
@@ -288,115 +330,165 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
             </div>
           </div>
 
-          {/* Users List */}
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {filteredUsers.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {user.name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {user.email}
-                    </div>
-                    <div className="flex items-center space-x-2 mt-1">
-                      {getRoleBadge(user.role)}
-                      <span className="text-xs text-gray-500">
-                        {user.department}
-                      </span>
-                    </div>
-                  </div>
+          {/* User Assignments */}
+          <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-600 text-white rounded-lg">
+                  <MapPin className="h-5 w-5" />
                 </div>
-
-                <div className="flex items-center space-x-3">
-                  {user.isAssigned && (
-                    <span className="text-xs text-green-600 font-medium flex items-center">
-                      <Check className="h-3 w-3 mr-1" />
-                      Currently assigned
-                    </span>
-                  )}
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedUserIds.includes(user.id)}
-                      onChange={() => handleUserToggle(user.id)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      {selectedUserIds.includes(user.id)
-                        ? 'Assigned'
-                        : 'Assign'}
-                    </span>
-                  </label>
+                <div>
+                  <h4 className="text-lg font-semibold text-green-900">User Assignments</h4>
+                  <p className="text-sm text-green-700">
+                    Select which users can access this depot ({selectedUserIds.length} selected)
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8">
-              <Users className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No users found
-              </h3>
-              <p className="text-gray-600">
-                {searchTerm
-                  ? "Try adjusting your search criteria."
-                  : "No users available."}
-              </p>
+              <button
+                type="button"
+                onClick={handleSelectAllUsers}
+                className="text-sm font-medium text-green-600 hover:text-green-800 px-3 py-1 hover:bg-green-100 rounded-md transition-colors"
+              >
+                {selectedUserIds.length === filteredUsers.length ? 'Deselect All' : 'Select All'}
+              </button>
             </div>
-          )}
 
-          {/* Summary */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">
-                  Assignment Summary
-                </h4>
-                <p className="text-sm text-gray-600">
-                  {selectedUserIds.length} user
-                  {selectedUserIds.length !== 1 ? 's' : ''} will be assigned to{' '}
-                  {depot.name}
+            <div className="grid grid-cols-1 gap-3">
+              {filteredUsers.map((user) => {
+                const isSelected = selectedUserIds.includes(user.id);
+
+                return (
+                  <div
+                    key={user.id}
+                    onClick={() => handleUserToggle(user.id)}
+                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                      isSelected
+                        ? 'border-green-500 bg-green-100 shadow-md'
+                        : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          <Building className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium text-gray-900">{user.name}</span>
+                            {getRoleBadge(user.role)}
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{user.email}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <Phone className="h-3 w-3" />
+                            <span>{user.phone}</span>
+                          </div>
+                          <div className="text-sm text-gray-600">{user.department}</div>
+                          
+                          {/* Current Yard Assignments */}
+                          <div className="flex items-center space-x-2 mt-2">
+                            <div className="text-xs text-gray-500">Current assignments:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {user.yardAssignments.includes('all') ? (
+                                <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
+                                  All Depots
+                                </span>
+                              ) : user.yardAssignments.length > 0 ? (
+                                user.yardAssignments.slice(0, 2).map(yardId => {
+                                  const yard = availableYards.find(y => y.id === yardId);
+                                  return (
+                                    <span key={yardId} className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                                      {yard?.code || yardId}
+                                    </span>
+                                  );
+                                })
+                              ) : (
+                                <span className="text-xs text-gray-400 italic">No assignments</span>
+                              )}
+                              {user.yardAssignments.length > 2 && (
+                                <span className="text-xs text-gray-500">
+                                  +{user.yardAssignments.length - 2} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Selection Indicator */}
+                      {isSelected && (
+                        <div className="flex-shrink-0">
+                          <div className="bg-green-500 text-white rounded-full p-1 animate-scale-in">
+                            <Check className="h-3 w-3" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {filteredUsers.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No users found</p>
+                <p className="text-xs">
+                  {searchTerm 
+                    ? "Try adjusting your search criteria." 
+                    : "No users available for assignment"
+                  }
                 </p>
               </div>
-              <div className="text-right">
-                <div className="text-lg font-semibold text-gray-900">
-                  {selectedUserIds.length}
-                </div>
-                <div className="text-sm text-gray-500">Selected</div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            <span>Save Assignments</span>
-          </button>
+        {/* Modal Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {selectedUserIds.length > 0 ? (
+                <span className="text-green-600 font-medium">
+                  ✓ {selectedUserIds.length} user{selectedUserIds.length !== 1 ? 's' : ''} selected
+                </span>
+              ) : (
+                <span className="text-red-600">⚠ No users selected</span>
+              )}
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving || selectedUserIds.length === 0}
+                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span>Assigning...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Assign Users</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
