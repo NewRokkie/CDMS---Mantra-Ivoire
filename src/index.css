@@ -334,6 +334,121 @@
   .grid-cols-20 {
     grid-template-columns: repeat(20, minmax(0, 1fr));
   }
+
+  /* Mobile-first responsive utilities */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .mobile-padding {
+    padding: 1rem;
+  }
+
+  .mobile-text {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .mobile-button {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    min-height: 44px;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .mobile-input {
+    padding: 1rem;
+    font-size: 1rem;
+    border-radius: 0.75rem;
+    min-height: 44px;
+  }
+
+  .mobile-card {
+    padding: 1.25rem;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  /* Touch-friendly hover states */
+  @media (hover: hover) {
+    .mobile-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  /* Active states for touch */
+  .mobile-button:active {
+    transform: scale(0.98);
+  }
+
+  .mobile-card:active {
+    transform: scale(0.99);
+  }
+
+  /* Improved form inputs for mobile */
+  .form-input-mobile {
+    @apply mobile-input border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20;
+  }
+
+  /* Mobile-optimized switches */
+  .mobile-switch {
+    height: 2rem;
+    width: 3.5rem;
+  }
+
+  .mobile-switch-thumb {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+
+  /* Responsive text sizing */
+  .text-responsive-sm {
+    font-size: 0.875rem;
+  }
+
+  .text-responsive-base {
+    font-size: 1rem;
+  }
+
+  .text-responsive-lg {
+    font-size: 1.125rem;
+  }
+
+  .text-responsive-xl {
+    font-size: 1.25rem;
+  }
+
+  .text-responsive-2xl {
+    font-size: 1.5rem;
+  }
+
+  @media (min-width: 640px) {
+    .text-responsive-sm { font-size: 0.875rem; }
+    .text-responsive-base { font-size: 1rem; }
+    .text-responsive-lg { font-size: 1.125rem; }
+    .text-responsive-xl { font-size: 1.25rem; }
+    .text-responsive-2xl { font-size: 1.5rem; }
+  }
+
+  @media (min-width: 1024px) {
+    .text-responsive-sm { font-size: 0.875rem; }
+    .text-responsive-base { font-size: 1rem; }
+    .text-responsive-lg { font-size: 1.125rem; }
+    .text-responsive-xl { font-size: 1.5rem; }
+    .text-responsive-2xl { font-size: 1.875rem; }
+  }
 }
 
 /* Keyframe animations */

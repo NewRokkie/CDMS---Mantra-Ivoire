@@ -301,7 +301,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           onClick={handleInputClick}
           disabled={disabled}
           className={`
-            w-full flex items-center justify-between px-4 py-3 bg-white border-2 rounded-xl
+            w-full flex items-center justify-between px-4 py-4 sm:py-3 bg-white border-2 rounded-xl
             transition-all duration-300 text-left
             ${isOpen
               ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
@@ -310,13 +310,14 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
             }
             ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'cursor-pointer'}
+            touch-target
           `}
         >
           <div className="flex items-center space-x-3">
             <Calendar className={`h-5 w-5 transition-colors duration-300 ${
               isOpen ? 'text-blue-500' : selectedDate ? 'text-green-500' : 'text-gray-400'
             }`} />
-            <span className={`transition-colors duration-300 ${
+            <span className={`transition-colors duration-300 text-base sm:text-sm ${
               selectedDate ? 'text-gray-900 font-medium' : 'text-gray-500'
             }`}>
               {displayValue || placeholder}
@@ -328,10 +329,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               <button
                 type="button"
                 onClick={handleClear}
-                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200"
+                className="p-2 sm:p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200 touch-target"
                 title="Clear date"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
             )}
           </div>
@@ -339,8 +340,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
         {/* Selected Date Indicator */}
         {selectedDate && (
-          <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg animate-bounce-in">
-            <Calendar className="h-3 w-3" />
+          <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1.5 sm:p-1 shadow-lg animate-bounce-in">
+            <Calendar className="h-4 w-4 sm:h-3 sm:w-3" />
           </div>
         )}
       </div>

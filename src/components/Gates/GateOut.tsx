@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Menu, X } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { GateOutModal } from './GateOutModal';
 import { ReleaseOrder } from '../../types';
-import { GateOutHeader } from './GateOut/GateOutHeader';
-import { GateOutStats } from './GateOut/GateOutStats';
-import { GateOutSearchFilter } from './GateOut/GateOutSearchFilter';
-import { GateOutOperationsTable } from './GateOut/GateOutOperationsTable';
+import { MobileGateOutHeader } from './GateOut/MobileGateOutHeader';
+import { MobileGateOutStats } from './GateOut/MobileGateOutStats';
+import { MobileGateOutOperationsTable } from './GateOut/MobileGateOutOperationsTable';
 import { PendingOperationsView } from './GateOut/PendingOperationsView';
 import { GateOutCompletionModal } from './GateOut/GateOutCompletionModal';
 import { PendingGateOut } from './GateOut/types';
@@ -125,6 +124,8 @@ export const GateOut: React.FC = () => {
   const [pendingOperations, setPendingOperations] = useState(mockPendingOperations);
   const [completedOperations, setCompletedOperations] = useState(mockCompletedOperations);
   const [error, setError] = useState<string>('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('all');
   const { t } = useLanguage();
   const { user } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
@@ -255,34 +256,72 @@ export const GateOut: React.FC = () => {
 
   // Main Overview
   return (
-    <div className="space-y-6">
-      <GateOutHeader
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile-First Header */}
+      <MobileGateOutHeader
         pendingCount={pendingOperations.length}
         onShowPending={() => setActiveView('pending')}
-        onShowForm={() => setShowForm(true)} />
-
-      <GateOutStats
-        todayGateOuts={8}
-        pendingOperations={pendingOperations.length}
-        containersProcessed={156}
-        issuesReported={2}
+        onShowForm={() => setShowForm(true)}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
-      <GateOutSearchFilter
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filteredCount={allOperations.filter(op =>
-          (op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-          (op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-          (op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-          (op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false)).length}
-      />
+      {/* Mobile-Optimized Content */}
+      <div className="px-4 py-6 space-y-6">
+        <MobileGateOutStats
+          todayGateOuts={8}
+          pendingOperations={pendingOperations.length}
+          containersProcessed={156}
+          issuesReported={2}
+        />
 
-      <GateOutOperationsTable
-        operations={allOperations}
-        searchTerm={searchTerm}
-        onOperationClick={handlePendingOperationClick}
-      />
+        {/* Mobile Filter Chips */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+          {['all', 'pending', 'in_process', 'completed'].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setSelectedFilter(filter)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedFilter === filter
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {filter.charAt(0).toUpperCase() + filter.slice(1).replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+
+        {/* Mobile Search */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              placeholder="Search operations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-12 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile-Optimized Operations List */}
+        <MobileGateOutOperationsTable
+          operations={allOperations}
+          searchTerm={searchTerm}
+          selectedFilter={selectedFilter}
+          onOperationClick={handlePendingOperationClick}
+        />
+      </div>
 
       {/* Gate Out Form Modal */}
       {showForm && (

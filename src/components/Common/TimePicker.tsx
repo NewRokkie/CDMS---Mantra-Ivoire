@@ -294,7 +294,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         onClick={handleInputClick}
         disabled={disabled}
         className={`
-          w-full flex items-center justify-between px-4 py-3 bg-white border-2 rounded-xl
+          w-full flex items-center justify-between px-4 py-4 sm:py-3 bg-white border-2 rounded-xl
           transition-all duration-300 text-left
           ${isOpen || isFocused
             ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
@@ -303,13 +303,14 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
           }
           ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'cursor-pointer'}
+          touch-target
         `}
       >
         <div className="flex items-center space-x-3">
           <Clock className={`h-5 w-5 flex-shrink-0 transition-colors duration-300 ${
             isOpen || isFocused ? 'text-blue-500' : value ? 'text-green-500' : 'text-gray-400'
           }`} />
-          <span className={`transition-colors duration-300 font-medium ${
+          <span className={`transition-colors duration-300 font-medium text-base sm:text-sm ${
             value ? 'text-gray-900' : 'text-gray-500'
           }`}>
             {displayValue || placeholder}
@@ -322,18 +323,18 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200 group z-10"
+            className="p-2 sm:p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200 group z-10 touch-target"
             title="Clear time"
           >
-            <X className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <X className="h-5 w-5 sm:h-4 sm:w-4 group-hover:scale-110 transition-transform" />
           </button>
         )}
         </div>
       </button>
             {/* Selected Time Indicator */}
       {value && (
-        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg animate-bounce-in">
-          <Clock className="h-3 w-3" />
+        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1.5 sm:p-1 shadow-lg animate-bounce-in">
+          <Clock className="h-4 w-4 sm:h-3 sm:w-3" />
         </div>
       )}
       </div>
@@ -350,43 +351,44 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           {/* Centered Time Picker Overlay */}
           <div
             ref={overlayRef}
-            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fade-scale-in"
+            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fade-scale-in mx-4"
             style={{ 
-              maxWidth: '280px', 
-              maxHeight: '320px',
-              minWidth: '280px'
+              maxWidth: '320px', 
+              maxHeight: '400px',
+              minWidth: '280px',
+              width: '90vw'
             }}
           >
-            <div className="bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
+            <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-4 border border-gray-100">
               {/* Header */}
               <div className="text-center mb-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Select time</h3>
+                <h3 className="text-xl sm:text-lg font-bold text-gray-900 mb-2">Select time</h3>
                 <button
                   type="button"
                   onClick={handleCurrentTime}
-                  className="text-blue-600 hover:text-blue-800 font-medium px-3 py-1 hover:bg-blue-50 rounded-md transition-colors text-sm"
+                  className="text-blue-600 hover:text-blue-800 font-medium px-4 py-2 sm:px-3 sm:py-1 hover:bg-blue-50 rounded-lg sm:rounded-md transition-colors text-base sm:text-sm touch-target"
                 >
                   Current time
                 </button>
               </div>
 
               {/* Time Selection Interface */}
-              <div className={`flex justify-center items-center ${includeSeconds ? 'space-x-4' : 'space-x-6'} mb-4`}>
+              <div className={`flex justify-center items-center ${includeSeconds ? 'space-x-3 sm:space-x-4' : 'space-x-4 sm:space-x-6'} mb-6`}>
                 
                 {/* Hours Column */}
                 <div className="flex flex-col items-center space-y-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</span>
-                  <div className="flex flex-col items-center space-y-2">
+                  <span className="text-sm sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</span>
+                  <div className="flex flex-col items-center space-y-3 sm:space-y-2">
                     <button
                       type="button"
                       onClick={() => adjustHours('up')}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-3 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 touch-target"
                     >
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-5 w-5 sm:h-4 sm:w-4" />
                     </button>
                     
-                    <div className="bg-gray-100 rounded-xl px-4 py-3 min-w-[60px] text-center">
-                      <span className="text-2xl font-bold text-gray-900">
+                    <div className="bg-gray-100 rounded-xl px-5 py-4 sm:px-4 sm:py-3 min-w-[70px] sm:min-w-[60px] text-center">
+                      <span className="text-3xl sm:text-2xl font-bold text-gray-900">
                         {hours.toString().padStart(2, '0')}
                       </span>
                     </div>
@@ -394,32 +396,32 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                     <button
                       type="button"
                       onClick={() => adjustHours('down')}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-3 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 touch-target"
                     >
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-5 w-5 sm:h-4 sm:w-4" />
                     </button>
                   </div>
                 </div>
 
                 {/* Separator */}
                 <div className="flex items-center pt-6">
-                  <span className="text-2xl font-bold text-gray-400">:</span>
+                  <span className="text-3xl sm:text-2xl font-bold text-gray-400">:</span>
                 </div>
 
                 {/* Minutes Column */}
                 <div className="flex flex-col items-center space-y-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Minutes</span>
-                  <div className="flex flex-col items-center space-y-2">
+                  <span className="text-sm sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Minutes</span>
+                  <div className="flex flex-col items-center space-y-3 sm:space-y-2">
                     <button
                       type="button"
                       onClick={() => adjustMinutes('up')}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-3 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 touch-target"
                     >
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-5 w-5 sm:h-4 sm:w-4" />
                     </button>
                     
-                    <div className="bg-gray-100 rounded-xl px-4 py-3 min-w-[60px] text-center">
-                      <span className="text-2xl font-bold text-gray-900">
+                    <div className="bg-gray-100 rounded-xl px-5 py-4 sm:px-4 sm:py-3 min-w-[70px] sm:min-w-[60px] text-center">
+                      <span className="text-3xl sm:text-2xl font-bold text-gray-900">
                         {minutes.toString().padStart(2, '0')}
                       </span>
                     </div>
@@ -427,9 +429,9 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                     <button
                       type="button"
                       onClick={() => adjustMinutes('down')}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                      className="p-3 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 touch-target"
                     >
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-5 w-5 sm:h-4 sm:w-4" />
                     </button>
                   </div>
                 </div>
@@ -438,22 +440,22 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 {includeSeconds && (
                   <>
                     <div className="flex items-center pt-6">
-                      <span className="text-2xl font-bold text-gray-400">:</span>
+                      <span className="text-3xl sm:text-2xl font-bold text-gray-400">:</span>
                     </div>
                     
                     <div className="flex flex-col items-center space-y-2">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Seconds</span>
-                      <div className="flex flex-col items-center space-y-2">
+                      <span className="text-sm sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Seconds</span>
+                      <div className="flex flex-col items-center space-y-3 sm:space-y-2">
                         <button
                           type="button"
                           onClick={() => adjustSeconds('up')}
-                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                          className="p-3 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 touch-target"
                         >
-                          <ChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-5 w-5 sm:h-4 sm:w-4" />
                         </button>
                         
-                        <div className="bg-gray-100 rounded-xl px-4 py-3 min-w-[60px] text-center">
-                          <span className="text-2xl font-bold text-gray-900">
+                        <div className="bg-gray-100 rounded-xl px-5 py-4 sm:px-4 sm:py-3 min-w-[70px] sm:min-w-[60px] text-center">
+                          <span className="text-3xl sm:text-2xl font-bold text-gray-900">
                             {seconds.toString().padStart(2, '0')}
                           </span>
                         </div>
@@ -461,9 +463,9 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                         <button
                           type="button"
                           onClick={() => adjustSeconds('down')}
-                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110"
+                          className="p-3 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 touch-target"
                         >
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-5 w-5 sm:h-4 sm:w-4" />
                         </button>
                       </div>
                     </div>
@@ -472,11 +474,11 @@ export const TimePicker: React.FC<TimePickerProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100 px-2">
+              <div className="flex items-center justify-between pt-6 sm:pt-4 border-t border-gray-100 px-2">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100"
+                  className="px-6 py-4 sm:py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors rounded-lg hover:bg-gray-100 touch-target"
                 >
                   Cancel
                 </button>
@@ -484,7 +486,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="px-6 py-4 sm:py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg touch-target"
                 >
                   Save
                 </button>
