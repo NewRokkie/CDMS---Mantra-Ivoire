@@ -96,9 +96,9 @@ function AppContent() {
     <YardContext.Provider value={yardProvider}>
       <div className="flex h-screen bg-gray-100 overflow-hidden">
         <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
           <Header />
-          <main className="flex-1 overflow-y-auto p-6">{renderModule()}
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}
           </main>
         </div>
       </div>
