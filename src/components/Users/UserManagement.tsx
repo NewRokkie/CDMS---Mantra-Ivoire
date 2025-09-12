@@ -267,6 +267,12 @@ export const UserManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+        {currentYard && (
+          <div className="text-right text-sm text-gray-600">
+            <div>Managing users for: {currentYard.name}</div>
+            <div className="text-xs">{currentYard.code}</div>
+          </div>
+        )}
         {canManageUsers && (
           <button
             onClick={() => {

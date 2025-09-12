@@ -202,7 +202,8 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   );
 
   // Group stacks by section for better organization
-  const stacksBySection = yard.sections.map(section => ({
+  const targetYard = currentYard || yard;
+  const stacksBySection = targetYard.sections.map(section => ({
     section,
     stacks: filteredStacks.filter(stack => stack.sectionId === section.id)
   })).filter(group => group.stacks.length > 0);

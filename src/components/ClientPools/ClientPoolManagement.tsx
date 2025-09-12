@@ -251,7 +251,14 @@ export const ClientPoolManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Client Pool Management</h2>
-          <p className="text-gray-600">Manage customer-specific stack assignments and capacity allocation</p>
+          <p className="text-gray-600">
+            Manage customer-specific stack assignments and capacity allocation
+            {currentYard && (
+              <span className="ml-2 text-blue-600 font-medium">
+                • {currentYard.name} ({currentYard.code})
+              </span>
+            )}
+          </p>
         </div>
         <button
           onClick={() => {

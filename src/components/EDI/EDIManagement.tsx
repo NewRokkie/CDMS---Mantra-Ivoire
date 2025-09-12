@@ -134,6 +134,12 @@ export const EDIManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">EDI Management</h2>
+        {currentYard && (
+          <div className="text-right text-sm text-gray-600">
+            <div>Current Yard: {currentYard.name}</div>
+            <div className="text-xs">{currentYard.code}</div>
+          </div>
+        )}
         <div className="flex space-x-3">
           <button
             onClick={() => setShowConfig(!showConfig)}

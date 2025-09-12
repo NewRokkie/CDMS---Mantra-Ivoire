@@ -222,7 +222,10 @@ export const DashboardOverview: React.FC = () => {
               Welcome to your client portal, <strong>{user?.name}</strong>
             </p>
             <p className="text-xs text-blue-600 mt-1">
-              You are viewing data for <strong>{user?.company}</strong> only. Contact the depot for assistance.
+              You are viewing data for <strong>{user?.company}</strong> only
+              {currentYard && (
+                <span className="ml-1">in <strong>{currentYard.name}</strong></span>
+              )}. Contact the depot for assistance.
             </p>
           </div>
         </div>

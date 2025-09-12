@@ -77,10 +77,13 @@ export class EDIService {
     container: Container,
     operation: 'GATE_IN' | 'GATE_OUT',
     messageRef: string,
-    partnerCode: string
+    partnerCode: string,
+    yardId: string
   ): Promise<EDITransmissionLog> {
     const timestamp = format(new Date(), 'yyyyMMddHHmmss');
-    const fileName = `CODECO_${timestamp}_${container.number}_${operation}.edi`;
+    const yard = yardService.getYardById(yardId);
+    const yardCode = yard?.code || 'UNKNOWN';
+    const fileName = `CODECO_${yardCode}_${timestamp}_${container.number}_${operation}.edi`;
 
     const log: EDITransmissionLog = {
       id: `${messageRef}_${timestamp}`,
@@ -91,7 +94,9 @@ export class EDIService {
       transmissionDate: new Date(),
       status: 'SENT', // Simulate successful transmission
       partnerCode,
-      retryCount: 0
+      retryCount: 0,
+      createdBy: 'System',
+      updatedBy: 'System'
     };
 
     this.transmissionLogs.push(log);
@@ -102,9 +107,19 @@ export class EDIService {
       log.acknowledgmentReceived = new Date();
     }, 2000);
 
-    console.log(`[SIMULATED] EDI transmission for ${container.number}:`, {
+    // Log EDI operation
+    yardService.logOperation('edi_transmission', container.number, 'System', {
+      operation,
+      partnerCode,
+      fileName,
+      yardId,
+      yardCode
+    });
+
+    console.log(`[SIMULATED] EDI transmission for ${container.number} in yard ${yardCode}:`, {
       fileName,
       operation,
+      yardCode,
       ediContent: ediContent.substring(0, 200) + '...'
     });
 

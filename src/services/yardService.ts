@@ -532,7 +532,7 @@ export class YardService {
   /**
    * Check if container belongs to specific yard
    */
-  private isContainerInYard(container: Container, yardId: string): boolean {
+  isContainerInYard(container: Container, yardId: string): boolean {
     const yard = this.yards.get(yardId);
     if (!yard) return false;
 

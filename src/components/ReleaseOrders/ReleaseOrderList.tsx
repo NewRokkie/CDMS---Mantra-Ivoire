@@ -250,6 +250,13 @@ export const ReleaseOrderList: React.FC = () => {
   const getFilteredOrders = () => {
     let orders = mockBookingReferences;
     
+    // Filter by current yard (in a real implementation, orders would have yard associations)
+    if (currentYard) {
+      // For now, we'll assume all orders are yard-agnostic
+      // In a real implementation, you'd filter by yard-specific orders
+      console.log(`Filtering orders for yard: ${currentYard.name}`);
+    }
+    
     // Apply client filter for client users
     const clientFilter = getClientFilter();
     if (clientFilter) {
