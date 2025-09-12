@@ -248,7 +248,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   
                   <div className="space-y-6">
                     {/* Container Size and Quantity */}
-                    <div className="grid grid-cols-1 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Container Size *
@@ -289,7 +289,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     </div>
 
                     {/* Status Switches */}
-                    <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Container Status *
@@ -350,7 +350,8 @@ export const GateInModal: React.FC<GateInModalProps> = ({
 
                     {/* Container Numbers - Moved to the end */}
                     <div className="space-y-4 pt-4 border-t border-blue-200">
-                      <div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Container Number *
                         </label>
@@ -442,6 +443,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           </p>
                         </div>
                       )}
+                      </div>
                     </div>
 
                     {/* Damage Warning */}
@@ -470,7 +472,8 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   </h4>
                   
                   <div className="space-y-4">
-                    <div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Driver Name *
                       </label>
@@ -511,6 +514,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         placeholder="Transport company name"
                       />
                     </div>
+                    </div>
                   </div>
                 </div>
 
@@ -527,7 +531,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-purple-800 mb-2">
                         Arrival Date *
@@ -559,7 +563,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   <h4 className="font-semibold text-gray-900 mb-4">Operation Summary</h4>
                   <div className="space-y-3 text-sm">
                     {/* Mobile: Stack layout */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Container:</span>
                       <div className="font-medium">{formData.containerNumber || 'Not specified'}</div>
@@ -572,7 +576,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.containerSize} • Qty: {formData.containerQuantity}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Type:</span>
                       <div className="font-medium">
@@ -591,7 +595,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.clientCode ? `${formData.clientCode} - ${formData.clientName}` : 'Not selected'}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Status:</span>
                       <div className="flex items-center space-x-2">
@@ -612,7 +616,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.driverName || 'Not specified'}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Truck:</span>
                       <div className="font-medium">{formData.truckNumber || 'Not specified'}</div>
@@ -622,7 +626,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Arrival Date:</span>
                       <div className="font-medium">{formData.truckArrivalDate || 'Not specified'}</div>
@@ -633,7 +637,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     </div>
                     </div>
                     {formData.bookingReference && (
-                      <div className="col-span-full">
+                      <div className="md:col-span-2">
                         <span className="text-gray-600">Booking Reference:</span>
                         <div className="font-medium">{formData.bookingReference}</div>
                       </div>
