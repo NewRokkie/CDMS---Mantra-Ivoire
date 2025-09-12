@@ -108,19 +108,19 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   const isFormValid = selectedLocation;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col animate-slide-in-up">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-slide-in-up mx-2 sm:mx-0">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-purple-600 text-white rounded-lg">
                 <MapPin className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Location & Validation</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">Location & Validation</h3>
+                <p className="text-xs sm:text-sm text-gray-600">
                   Assign location for operation {operation.id}
                 </p>
               </div>
@@ -135,40 +135,40 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
         </div>
 
         {/* Modal Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="space-y-6">
             
             {/* Operation Summary */}
-            <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+            <div className="bg-blue-50 rounded-xl p-4 sm:p-6 border border-blue-200">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-2 bg-blue-600 text-white rounded-lg">
                   <Package className="h-5 w-5" />
                 </div>
-                <h4 className="text-lg font-semibold text-blue-900">Operation Details</h4>
+                <h4 className="text-base sm:text-lg font-semibold text-blue-900">Operation Details</h4>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="space-y-1">
-                  <span className="text-sm text-blue-700 font-medium">Container:</span>
-                  <div className="font-bold text-gray-900">{operation.containerNumber}</div>
+                  <span className="text-xs sm:text-sm text-blue-700 font-medium">Container:</span>
+                  <div className="font-bold text-gray-900 text-sm sm:text-base break-all">{operation.containerNumber}</div>
                   {operation.secondContainerNumber && (
-                    <div className="font-bold text-gray-900">{operation.secondContainerNumber}</div>
+                    <div className="font-bold text-gray-900 text-sm sm:text-base break-all">{operation.secondContainerNumber}</div>
                   )}
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm text-blue-700 font-medium">Size & Quantity:</span>
-                  <div className="font-medium text-gray-900">
+                  <span className="text-xs sm:text-sm text-blue-700 font-medium">Size & Quantity:</span>
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">
                     {operation.containerSize} • Qty: {operation.containerQuantity}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm text-blue-700 font-medium">Client:</span>
-                  <div className="font-medium text-gray-900">
+                  <span className="text-xs sm:text-sm text-blue-700 font-medium">Client:</span>
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">
                     {operation.clientCode} - {operation.clientName}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm text-blue-700 font-medium">Status:</span>
+                  <span className="text-xs sm:text-sm text-blue-700 font-medium">Status:</span>
                   <div className="flex items-center space-x-2">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
@@ -182,38 +182,38 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                     )}
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-sm text-blue-700 font-medium">Driver:</span>
-                  <div className="font-medium text-gray-900">{operation.driverName}</div>
+                <div className="space-y-1 sm:col-span-1 lg:col-span-1">
+                  <span className="text-xs sm:text-sm text-blue-700 font-medium">Driver:</span>
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">{operation.driverName}</div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-sm text-blue-700 font-medium">Truck:</span>
-                  <div className="font-medium text-gray-900">{operation.truckNumber}</div>
+                <div className="space-y-1 sm:col-span-1 lg:col-span-1">
+                  <span className="text-xs sm:text-sm text-blue-700 font-medium">Truck:</span>
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">{operation.truckNumber}</div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-sm text-blue-700 font-medium">Transport Company:</span>
-                  <div className="font-medium text-gray-900">{operation.transportCompany}</div>
+                <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                  <span className="text-xs sm:text-sm text-blue-700 font-medium">Transport Company:</span>
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">{operation.transportCompany}</div>
                 </div>
                 {operation.bookingReference && (
-                  <div className="space-y-1">
-                    <span className="text-sm text-blue-700 font-medium">Booking Reference:</span>
-                    <div className="font-medium text-gray-900">{operation.bookingReference}</div>
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                    <span className="text-xs sm:text-sm text-blue-700 font-medium">Booking Reference:</span>
+                    <div className="font-medium text-gray-900 text-sm sm:text-base break-all">{operation.bookingReference}</div>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Location Assignment */}
-            <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+            <div className="bg-green-50 rounded-xl p-4 sm:p-6 border border-green-200">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-2 bg-green-600 text-white rounded-lg">
                   <MapPin className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-green-900">
+                  <h4 className="text-base sm:text-lg font-semibold text-green-900">
                     {operation.isDamaged ? 'Auto-Assigned to Damage Stack' : 'Stack Selection'}
                   </h4>
-                  <p className="text-sm text-green-700">
+                  <p className="text-xs sm:text-sm text-green-700">
                     {operation.isDamaged 
                       ? 'Container automatically assigned for inspection'
                       : 'Choose the best available stack location'
@@ -223,7 +223,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
               </div>
 
               {!operation.isDamaged && (
-                <div className="mb-4">
+                <div className="mb-3 sm:mb-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <input
@@ -231,18 +231,18 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                       placeholder="Search stacks..."
                       value={searchLocation}
                       onChange={(e) => setSearchLocation(e.target.value)}
-                      className="form-input pl-10 w-full"
+                      className="form-input pl-10 w-full py-3 sm:py-2"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto scrollbar-thin">
+              <div className="grid grid-cols-1 gap-2 sm:gap-3 max-h-48 sm:max-h-64 overflow-y-auto scrollbar-thin">
                 {filteredLocations.map((location: LocationData) => (
                   <div
                     key={location.id}
                     onClick={() => !operation.isDamaged && setSelectedLocation(location.id)}
-                    className={`p-4 border rounded-lg transition-all duration-200 ${
+                    className={`p-3 sm:p-4 border rounded-lg transition-all duration-200 touch-target ${
                       selectedLocation === location.id
                         ? 'border-green-500 bg-green-100 shadow-md'
                         : operation.isDamaged
@@ -252,11 +252,11 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium text-gray-900">{location.name}</div>
-                        <div className="text-sm text-gray-600">{location.section}</div>
+                        <div className="font-medium text-gray-900 text-sm sm:text-base">{location.name}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">{location.section}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm sm:text-base font-medium text-gray-900">
                           {location.available}/{location.capacity}
                         </div>
                         <div className="text-xs text-gray-500">Available</div>
@@ -266,12 +266,12 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                     {selectedLocation === location.id && (
                       <div className="mt-2 flex items-center text-green-600">
                         <CheckCircle className="h-4 w-4 mr-1" />
-                        <span className="text-sm font-medium">Selected</span>
+                        <span className="text-xs sm:text-sm font-medium">Selected</span>
                       </div>
                     )}
                     
                     {operation.isDamaged && location.id === 'DMG-VIRTUAL' && (
-                      <div className="mt-2 text-xs text-red-600 font-medium">
+                      <div className="mt-2 text-xs sm:text-sm text-red-600 font-medium">
                         Auto-assigned for damaged container inspection
                       </div>
                     )}
@@ -280,9 +280,9 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
               </div>
 
               {filteredLocations.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-6 sm:py-8 text-gray-500">
                   <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No locations found</p>
+                  <p className="text-sm sm:text-base">No locations found</p>
                   <p className="text-xs">Try adjusting your search criteria</p>
                 </div>
               )}
@@ -290,24 +290,24 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
 
             {/* Time Tracking - Only for Admin Users */}
             {canManageTimeTracking ? (
-              <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+              <div className="bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-2 bg-orange-600 text-white rounded-lg">
                     <Clock className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-orange-900">Manual Time Tracking</h4>
-                    <p className="text-sm text-orange-700">Optional: Record truck departure time (Admin only)</p>
+                    <h4 className="text-base sm:text-lg font-semibold text-orange-900">Manual Time Tracking</h4>
+                    <p className="text-xs sm:text-sm text-orange-700">Optional: Record truck departure time (Admin only)</p>
                   </div>
                 </div>
                 
-                <div className="bg-white rounded-lg p-4 border border-orange-300">
+                <div className="bg-white rounded-lg p-3 sm:p-4 border border-orange-300">
                   <div className="flex items-center space-x-2 mb-3">
                     <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <h5 className="font-medium text-orange-900">Truck Departure</h5>
+                    <h5 className="text-sm sm:text-base font-medium text-orange-900">Truck Departure</h5>
                     <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Optional</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <DatePicker
                         value={truckDepartureDate}
@@ -332,16 +332,16 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
 
             {/* Error Display */}
             {error && (
-              <div className="flex items-center p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
                 <AlertTriangle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0" />
-                <p className="text-sm text-red-800">{error}</p>
+                <p className="text-xs sm:text-sm text-red-800">{error}</p>
               </div>
             )}
 
             {/* Form Validation Summary */}
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <h5 className="font-medium text-gray-900 mb-3">Validation Summary</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-200">
+              <h5 className="text-sm sm:text-base font-medium text-gray-900 mb-3">Validation Summary</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div className="flex items-center space-x-2">
                   {selectedLocation ? (
                     <CheckCircle className="h-4 w-4 text-green-600" />
@@ -370,9 +370,9 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+        <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-600">
               {isFormValid ? (
                 <span className="text-green-600 font-medium">✓ Ready to complete operation</span>
               ) : (
@@ -382,24 +382,26 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
             <div className="flex items-center space-x-3">
               <button
                 onClick={onClose}
-                className="btn-secondary"
+                className="btn-secondary px-4 py-3 sm:px-6 sm:py-2"
               >
                 Cancel
               </button>
               <button
                 onClick={handleComplete}
                 disabled={isProcessing || !isFormValid}
-                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 px-4 py-3 sm:px-6 sm:py-2"
               >
                 {isProcessing ? (
                   <>
                     <Loader className="h-4 w-4 animate-spin" />
-                    <span>Processing...</span>
+                    <span className="hidden sm:inline">Processing...</span>
+                    <span className="sm:hidden">...</span>
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    <span>Complete Operation</span>
+                    <span className="hidden sm:inline">Complete Operation</span>
+                    <span className="sm:hidden">Complete</span>
                   </>
                 )}
               </button>
