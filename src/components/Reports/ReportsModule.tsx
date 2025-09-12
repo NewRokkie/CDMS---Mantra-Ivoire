@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { DatePicker } from '../Common/DatePicker';
 import { AnalyticsTab } from './AnalyticsTab';
 import { OperationsTab } from './OperationsTab';
@@ -112,6 +113,7 @@ export const ReportsModule: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   
   const { user, canViewAllData, getClientFilter } = useAuth();
+  const { currentYard } = useYard();
 
   const billingData = useMemo(() => generateMockBillingData(), []);
 
