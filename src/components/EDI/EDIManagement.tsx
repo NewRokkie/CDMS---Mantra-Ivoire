@@ -13,6 +13,7 @@ import {
 import { EDIService } from '../../services/edifact/ediService';
 import { EDITransmissionLog, EDITransmissionConfig } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 
 export const EDIManagement: React.FC = () => {
   const [transmissionLogs, setTransmissionLogs] = useState<EDITransmissionLog[]>([]);
@@ -22,6 +23,7 @@ export const EDIManagement: React.FC = () => {
   const [operation, setOperation] = useState<'GATE_IN' | 'GATE_OUT'>('GATE_IN');
   const [showConfig, setShowConfig] = useState(false);
   const { user } = useAuth();
+  const { currentYard } = useYard();
 
   const ediService = new EDIService();
 
