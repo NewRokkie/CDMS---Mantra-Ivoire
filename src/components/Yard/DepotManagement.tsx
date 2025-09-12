@@ -21,8 +21,11 @@ import {
 } from 'lucide-react';
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { yardService } from '../../services/yardService';
 import { DepotFormModal } from './DepotFormModal';
+import { DepotDetailModal } from './DepotDetailModal';
+import { DepotAssignmentModal } from './DepotAssignmentModal';
 
 export const DepotManagement: React.FC = () => {
   const [depots, setDepots] = useState<Yard[]>([]);
@@ -31,8 +34,12 @@ export const DepotManagement: React.FC = () => {
   const [selectedDepot, setSelectedDepot] = useState<Yard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [showAssignment, setShowAssignment] = useState(false);
   const [isFormLoading, setIsFormLoading] = useState(false);
+  const [isAssignmentLoading, setIsAssignmentLoading] = useState(false);
   const { user } = useAuth();
+  const { currentYard, refreshYards } = useYard();
 
   // Mock stats for depots
   const [stats, setStats] = useState({
@@ -107,8 +114,10 @@ export const DepotManagement: React.FC = () => {
     try {
       setIsFormLoading(true);
       const newDepot = yardService.createYard(data, user?.name);
-      loadDepots();
+      await loadDepots();
+      await refreshYards(); // Refresh yard context
       setShowForm(false);
+      setSelectedDepot(null);
       alert(`Depot "${newDepot.name}" created successfully!`);
     } catch (error) {
       alert(`Error creating depot: ${error}`);
@@ -124,7 +133,8 @@ export const DepotManagement: React.FC = () => {
       setIsFormLoading(true);
       const updatedDepot = yardService.updateYard(selectedDepot.id, data, user?.name);
       if (updatedDepot) {
-        loadDepots();
+        await loadDepots();
+        await refreshYards(); // Refresh yard context
         setShowForm(false);
         setSelectedDepot(null);
         alert(`Depot "${updatedDepot.name}" updated successfully!`);
@@ -138,16 +148,61 @@ export const DepotManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteDepot = (depot: Yard) => {
+  const handleDeleteDepot = async (depot: Yard) => {
+    if (depot.id === currentYard?.id) {
+      alert('Cannot delete the currently selected depot. Please switch to another depot first.');
+      return;
+    }
+
     if (confirm(`Are you sure you want to delete the depot "${depot.name}"? This action cannot be undone.`)) {
       try {
-        // Note: The current yardService doesn't have a delete method
-        // This would need to be implemented in the service
-        alert('Delete functionality not yet implemented in yardService');
-        console.log('Delete depot:', depot.id);
+        const success = yardService.deleteYard(depot.id, user?.name);
+        if (success) {
+          await loadDepots();
+          await refreshYards(); // Refresh yard context
+          alert(`Depot "${depot.name}" deleted successfully!`);
+        } else {
+          alert('Error deleting depot: Depot not found or cannot be deleted');
+        }
       } catch (error) {
         alert(`Error deleting depot: ${error}`);
       }
+    }
+  };
+
+  const handleViewDepot = (depot: Yard) => {
+    setSelectedDepot(depot);
+    setShowDetail(true);
+  };
+
+  const handleEditDepot = (depot: Yard) => {
+    setSelectedDepot(depot);
+    setShowForm(true);
+  };
+
+  const handleAssignUsers = (depot: Yard) => {
+    setSelectedDepot(depot);
+    setShowAssignment(true);
+  };
+
+  const handleUserAssignment = async (userIds: string[]) => {
+    if (!selectedDepot) return;
+
+    try {
+      setIsAssignmentLoading(true);
+      // In a real implementation, this would update user assignments
+      console.log(`Assigning users ${userIds.join(', ')} to depot ${selectedDepot.name}`);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert(`Successfully assigned ${userIds.length} user(s) to ${selectedDepot.name}`);
+      setShowAssignment(false);
+      setSelectedDepot(null);
+    } catch (error) {
+      alert(`Error assigning users: ${error}`);
+    } finally {
+      setIsAssignmentLoading(false);
     }
   };
 
@@ -370,26 +425,31 @@ export const DepotManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => setSelectedDepot(depot)}
+                          onClick={() => handleViewDepot(depot)}
                           className="text-blue-600 hover:text-blue-900 p-1 rounded"
                           title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedDepot(depot);
-                            setShowForm(true);
-                          }}
+                          onClick={() => handleEditDepot(depot)}
                           className="text-gray-600 hover:text-gray-900 p-1 rounded"
                           title="Edit Depot"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
+                          onClick={() => handleAssignUsers(depot)}
+                          className="text-purple-600 hover:text-purple-900 p-1 rounded"
+                          title="Assign Users"
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => handleDeleteDepot(depot)}
                           className="text-red-600 hover:text-red-900 p-1 rounded"
                           title="Delete Depot"
+                          disabled={depot.id === currentYard?.id}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -426,6 +486,33 @@ export const DepotManagement: React.FC = () => {
           isLoading={isFormLoading}
         />
       )}
+
+      {/* Depot Detail Modal */}
+      {showDetail && (
+        <DepotDetailModal
+          isOpen={showDetail}
+          onClose={() => {
+            setShowDetail(false);
+            setSelectedDepot(null);
+          }}
+          depot={selectedDepot}
+        />
+      )}
+
+      {/* User Assignment Modal */}
+      {showAssignment && (
+        <DepotAssignmentModal
+          isOpen={showAssignment}
+          onClose={() => {
+            setShowAssignment(false);
+            setSelectedDepot(null);
+          }}
+          depot={selectedDepot}
+          onAssign={handleUserAssignment}
+          isLoading={isAssignmentLoading}
+        />
+      )}
     </div>
   );
 };
+</DepotFormModal>

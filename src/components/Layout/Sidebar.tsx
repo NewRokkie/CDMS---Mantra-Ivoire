@@ -45,13 +45,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     // 6. Supporting modules
     { id: 'edi', icon: Send, label: t('nav.edi'), moduleKey: 'edi' as const },
     { id: 'yard', icon: Grid3X3, label: 'Yard Management', moduleKey: 'yard' as const },
-    { id: 'depot-management', icon: Grid3X3, label: 'Depot Management', moduleKey: 'depotManagement' as const },
+    { id: 'depot-management', icon: Building, label: 'Depot Management', moduleKey: 'depotManagement' as const },
     { id: 'stack-management', icon: Settings, label: 'Stack Management', moduleKey: 'yard' as const },
     { id: 'client-pools', icon: Users, label: 'Client Pools', moduleKey: 'clients' as const },
     { id: 'reports', icon: BarChart3, label: t('nav.reports'), moduleKey: 'reports' as const },
 
     // 7. Management modules
-    { id: 'clients', icon: Building, label: 'Client Master Data', moduleKey: 'clients' as const },
+    { id: 'clients', icon: Users, label: 'Client Master Data', moduleKey: 'clients' as const },
 
     // 8. Administrative modules (bottom)
     { id: 'users', icon: Users, label: 'User Management', moduleKey: 'users' as const, priority: 11 },

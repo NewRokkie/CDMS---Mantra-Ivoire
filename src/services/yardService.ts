@@ -488,6 +488,38 @@ export class YardService {
   }
 
   /**
+   * Delete yard
+   */
+  deleteYard(yardId: string, userName?: string): boolean {
+    const yard = this.yards.get(yardId);
+    if (!yard) return false;
+
+    const effectiveUserName = userName || 'System';
+    
+    // Prevent deletion of the current yard
+    if (this.currentYardId === yardId) {
+      throw new Error('Cannot delete the currently selected yard');
+    }
+
+    // Check if yard has containers (in a real implementation)
+    if (yard.currentOccupancy > 0) {
+      throw new Error('Cannot delete yard with containers. Please move all containers first.');
+    }
+
+    this.yards.delete(yardId);
+    
+    // Log deletion
+    this.logOperation('yard_delete', undefined, effectiveUserName, {
+      deletedYardId: yardId,
+      deletedYardName: yard.name,
+      deletedYardCode: yard.code
+    });
+
+    console.log(`Deleted yard ${yardId} (${yard.name}) by ${effectiveUserName}`);
+    return true;
+  }
+
+  /**
    * Get yard context for UI
    */
   getYardContext(): YardContext {

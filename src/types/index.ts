@@ -30,6 +30,7 @@ export interface ModuleAccess {
   moduleAccess: boolean;
   reports: boolean;
   depotManagement: boolean;
+  depotManagement: boolean;
 }
 
 export interface ModulePermission {
