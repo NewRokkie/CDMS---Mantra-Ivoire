@@ -34,7 +34,6 @@ export class YardService {
         updatedBy: 'System',
         layout: 'tantarelli',
         timezone: 'Africa/Abidjan',
-        operatingHours: { start: '06:00', end: '22:00' },
         contactInfo: {
           manager: 'Jean-Baptiste Kouassi',
           phone: '+225 XX XX XX XX XX',
@@ -46,12 +45,6 @@ export class YardService {
           state: 'Lagunes',
           zipCode: '01 BP 1234',
           country: 'Côte d\'Ivoire'
-        },
-        settings: {
-          autoAssignLocation: true,
-          requiresApproval: false,
-          maxContainersPerOperation: 10,
-          defaultFreeDays: 3
         }
       },
       {
@@ -70,7 +63,6 @@ export class YardService {
         updatedBy: 'System',
         layout: 'standard',
         timezone: 'Africa/Abidjan',
-        operatingHours: { start: '07:00', end: '21:00' },
         contactInfo: {
           manager: 'Marie Adjoua',
           phone: '+225 YY YY YY YY YY',
@@ -82,12 +74,6 @@ export class YardService {
           state: 'Lagunes',
           zipCode: '08 BP 5678',
           country: 'Côte d\'Ivoire'
-        },
-        settings: {
-          autoAssignLocation: false,
-          requiresApproval: true,
-          maxContainersPerOperation: 5,
-          defaultFreeDays: 2
         }
       },
       {
@@ -106,7 +92,6 @@ export class YardService {
         updatedBy: 'System',
         layout: 'standard',
         timezone: 'Africa/Abidjan',
-        operatingHours: { start: '06:30', end: '20:30' },
         contactInfo: {
           manager: 'Pierre Kouadio',
           phone: '+225 ZZ ZZ ZZ ZZ ZZ',
@@ -118,12 +103,6 @@ export class YardService {
           state: 'Bas-Sassandra',
           zipCode: '10 BP 3456',
           country: 'Côte d\'Ivoire'
-        },
-        settings: {
-          autoAssignLocation: true,
-          requiresApproval: false,
-          maxContainersPerOperation: 8,
-          defaultFreeDays: 3
         }
       }
     ];

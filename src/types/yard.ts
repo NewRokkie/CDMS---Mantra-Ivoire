@@ -15,10 +15,6 @@ export interface Yard {
   // New multi-yard fields
   code: string; // Unique yard identifier (e.g., 'DEPOT-01', 'YARD-A')
   timezone: string; // Yard timezone for proper time handling
-  operatingHours: {
-    start: string; // e.g., '06:00'
-    end: string;   // e.g., '22:00'
-  };
   contactInfo: {
     manager: string;
     phone: string;
@@ -30,12 +26,6 @@ export interface Yard {
     state: string;
     zipCode: string;
     country: string;
-  };
-  settings: {
-    autoAssignLocation: boolean;
-    requiresApproval: boolean;
-    maxContainersPerOperation: number;
-    defaultFreeDays: number;
   };
 }
 

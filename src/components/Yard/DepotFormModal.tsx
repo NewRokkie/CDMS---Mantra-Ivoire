@@ -54,14 +54,8 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
     addressState: '',
     addressZipCode: '',
     addressCountry: 'Côte d\'Ivoire',
-    // Settings
-    timezone: 'Africa/Abidjan',
-    operatingHoursStart: '06:00',
-    operatingHoursEnd: '22:00',
-    autoAssignLocation: true,
-    requiresApproval: false,
-    maxContainersPerOperation: 10,
-    defaultFreeDays: 3
+    // Basic settings
+    timezone: 'Africa/Abidjan'
   });
 
   useEffect(() => {
@@ -83,13 +77,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         addressState: selectedDepot.address?.state || '',
         addressZipCode: selectedDepot.address?.zipCode || '',
         addressCountry: selectedDepot.address?.country || 'Côte d\'Ivoire',
-        timezone: selectedDepot.timezone || 'Africa/Abidjan',
-        operatingHoursStart: selectedDepot.operatingHours?.start || '06:00',
-        operatingHoursEnd: selectedDepot.operatingHours?.end || '22:00',
-        autoAssignLocation: selectedDepot.settings?.autoAssignLocation ?? true,
-        requiresApproval: selectedDepot.settings?.requiresApproval ?? false,
-        maxContainersPerOperation: selectedDepot.settings?.maxContainersPerOperation || 10,
-        defaultFreeDays: selectedDepot.settings?.defaultFreeDays || 3
+        timezone: selectedDepot.timezone || 'Africa/Abidjan'
       });
     } else {
       // Reset form for new depot
@@ -109,13 +97,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         addressState: '',
         addressZipCode: '',
         addressCountry: 'Côte d\'Ivoire',
-        timezone: 'Africa/Abidjan',
-        operatingHoursStart: '06:00',
-        operatingHoursEnd: '22:00',
-        autoAssignLocation: true,
-        requiresApproval: false,
-        maxContainersPerOperation: 10,
-        defaultFreeDays: 3
+        timezone: 'Africa/Abidjan'
       });
     }
     setErrors({});
@@ -153,8 +135,6 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         return !!formData.name && !!formData.code && !!formData.location;
       case 2:
         return true; // Contact info is optional
-      case 3:
-        return formData.totalCapacity > 0;
       default:
         return true;
     }
@@ -175,7 +155,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
 
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(3, prev + 1));
+      setCurrentStep(prev => Math.min(2, prev + 1));
     }
   };
 
@@ -210,17 +190,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         zipCode: formData.addressZipCode,
         country: formData.addressCountry
       },
-      timezone: formData.timezone,
-      operatingHours: {
-        start: formData.operatingHoursStart,
-        end: formData.operatingHoursEnd
-      },
-      settings: {
-        autoAssignLocation: formData.autoAssignLocation,
-        requiresApproval: formData.requiresApproval,
-        maxContainersPerOperation: formData.maxContainersPerOperation,
-        defaultFreeDays: formData.defaultFreeDays
-      }
+      timezone: formData.timezone
     };
 
     onSubmit(depotData);
@@ -243,7 +213,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                 <h3 className="text-lg font-bold text-gray-900">
                   {selectedDepot ? 'Edit Depot' : 'Create New Depot'}
                 </h3>
-                <p className="text-xs text-gray-600">Step {currentStep} of 3</p>
+                <p className="text-xs text-gray-600">Step {currentStep} of 2</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -268,11 +238,11 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
               <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
               <div 
                 className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300" 
-                style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+                style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
               ></div>
               
               <div className="flex justify-between relative z-20">
-                {[1, 2, 3].map((step) => (
+                {[1, 2].map((step) => (
                   <div key={step} className="flex flex-col items-center">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
                       step <= currentStep 
@@ -286,7 +256,6 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                     }`}>
                       {step === 1 && 'Basic Info'}
                       {step === 2 && 'Contact & Address'}
-                      {step === 3 && 'Settings'}
                     </span>
                   </div>
                 ))}
@@ -410,26 +379,25 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                         Status
                       </label>
                       <div className="flex items-center space-x-4">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="status"
-                            checked={formData.isActive}
-                            onChange={() => handleInputChange('isActive', true)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        <span className={`text-sm font-medium ${!formData.isActive ? 'text-blue-600' : 'text-gray-500'}`}>
+                          Inactive
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange('isActive', !formData.isActive)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                            formData.isActive ? 'bg-blue-600' : 'bg-gray-200'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              formData.isActive ? 'translate-x-6' : 'translate-x-1'
+                            }`}
                           />
-                          <span className="text-sm font-medium text-blue-800">Active</span>
-                        </label>
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="status"
-                            checked={!formData.isActive}
-                            onChange={() => handleInputChange('isActive', false)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                          />
-                          <span className="text-sm font-medium text-blue-800">Inactive</span>
-                        </label>
+                        </button>
+                        <span className={`text-sm font-medium ${formData.isActive ? 'text-blue-600' : 'text-gray-500'}`}>
+                          Active
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -660,55 +628,6 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                   </div>
                 </div>
 
-                {/* Operational Settings */}
-                <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                    <Settings className="h-5 w-5 mr-2" />
-                    Operational Settings
-                  </h4>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <div className="font-medium text-gray-900">Auto-assign Container Locations</div>
-                        <div className="text-sm text-gray-600">Automatically assign optimal locations for incoming containers</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleInputChange('autoAssignLocation', !formData.autoAssignLocation)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                          formData.autoAssignLocation ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            formData.autoAssignLocation ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <div className="font-medium text-gray-900">Requires Approval for Operations</div>
-                        <div className="text-sm text-gray-600">All operations require supervisor approval before execution</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleInputChange('requiresApproval', !formData.requiresApproval)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                          formData.requiresApproval ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            formData.requiresApproval ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
           </form>
@@ -738,7 +657,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                 Cancel
               </button>
               
-              {currentStep < 3 ? (
+              {currentStep < 2 ? (
                 <button
                   type="button"
                   onClick={handleNextStep}

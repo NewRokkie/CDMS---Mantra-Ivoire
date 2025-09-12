@@ -97,10 +97,8 @@ export interface Yard {
   updatedBy?: string;
   layout: 'tantarelli' | 'standard'; // Layout type for different rendering
   timezone?: string;
-  operatingHours?: { start: string; end: string };
   contactInfo?: { manager: string; phone: string; email: string };
   address?: { street: string; city: string; state: string; zipCode: string; country: string };
-  settings?: { autoAssignLocation: boolean; requiresApproval: boolean; maxContainersPerOperation: number; defaultFreeDays: number };
 }
 
 export interface YardSection {
