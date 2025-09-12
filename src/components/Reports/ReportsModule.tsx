@@ -112,6 +112,8 @@ export const ReportsModule: React.FC = () => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedContainer, setSelectedContainer] = useState<ContainerBilling | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'current' | 'global'>('current');
+  const [selectedDepot, setSelectedDepot] = useState<string | null>(null);
   
   const { user, canViewAllData, getClientFilter } = useAuth();
   const { currentYard } = useYard();
@@ -120,8 +122,15 @@ export const ReportsModule: React.FC = () => {
 
   const isManager = user?.role === 'admin' || user?.role === 'supervisor';
 
+  // Mock available yards for managers
+  const availableYards = [
+    { id: 'depot-tantarelli', name: 'Tantarelli Depot', code: 'TAN', currentOccupancy: 850, totalCapacity: 1200 },
+    { id: 'depot-vridi', name: 'Vridi Terminal', code: 'VRI', currentOccupancy: 650, totalCapacity: 900 },
+    { id: 'depot-san-pedro', name: 'San Pedro Port', code: 'SPP', currentOccupancy: 420, totalCapacity: 800 }
+  ];
+
   // Get multi-depot billing data for managers
-  const getMultiDepotBillingData = () => {
+  const getMultiDepotBillingData = useCallback(() => {
     if (!isManager) return billingData;
 
     if (selectedDepot) {
@@ -146,10 +155,10 @@ export const ReportsModule: React.FC = () => {
 
     // Return all data for global view
     return billingData;
-  };
+  }, [isManager, selectedDepot, billingData, availableYards]);
 
   // Get global billing statistics
-  const getGlobalBillingStats = () => {
+  const getGlobalBillingStats = useCallback(() => {
     if (!isManager) return null;
 
     const depotStats = availableYards.map(depot => {
@@ -195,10 +204,10 @@ export const ReportsModule: React.FC = () => {
     };
 
     return { depotStats, globalTotals };
-  };
+  }, [isManager, availableYards, getMultiDepotBillingData]);
 
   // Filter data based on user permissions
-  const getFilteredBillingData = () => {
+  const getFilteredBillingData = useCallback(() => {
     let data = isManager && viewMode === 'global' ? getMultiDepotBillingData() : billingData;
     
     // Apply client filter for client users
@@ -227,7 +236,7 @@ export const ReportsModule: React.FC = () => {
     }
     
     return data;
-  };
+  }, [isManager, viewMode, getMultiDepotBillingData, billingData, getClientFilter, searchTerm, clientFilter, statusFilter]);
 
   const filteredData = getFilteredBillingData();
   const globalBillingStats = getGlobalBillingStats();
