@@ -4,6 +4,7 @@ import { PendingGateOut, ContainerInput } from './types';
 import { validateContainerNumber, formatContainerForDisplay, getStatusBadge } from './utils';
 import { DatePicker } from '../../Common/DatePicker';
 import { TimePicker } from '../../Common/TimePicker';
+import { useAuth } from '../../../hooks/useAuth';
 
 interface GateOutCompletionModalProps {
   isOpen: boolean;
@@ -20,6 +21,9 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   onComplete,
   isProcessing
 }) => {
+  const { hasModuleAccess } = useAuth();
+  const canManageTimeTracking = hasModuleAccess('timeTracking');
+  
   const [containerInputs, setContainerInputs] = useState<ContainerInput[]>([
     { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
   ]);
