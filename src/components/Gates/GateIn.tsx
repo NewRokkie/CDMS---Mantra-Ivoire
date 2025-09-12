@@ -884,65 +884,6 @@ export const GateIn: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
-          todayGateIns={12}
-          pendingOperations={pendingOperations.length}
-          containersProcessed={892}
-          damagedContainers={3}
-        />
-
-        {/* Mobile-First Search and Filter */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          {/* Mobile Search Bar */}
-          <div className="p-4 border-b border-gray-100 sm:border-b-0">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type="text"
-                placeholder="Search operations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-12 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile Filter Chips */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
-            {['all', 'pending', 'completed', 'damaged'].map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setSelectedFilter(filter)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedFilter === filter
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {filter.charAt(0).toUpperCase() + filter.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Mobile-Optimized Operations List */}
-        <MobileOperationsTable
-          operations={filteredOperations}
-          searchTerm={searchTerm}
-          selectedFilter={selectedFilter}
-          onOperationClick={handlePendingOperationClick}
-        />
-      </div>
 
       {/* Gate In Form Modal */}
       {showForm && (
