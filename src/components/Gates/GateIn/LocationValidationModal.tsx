@@ -71,12 +71,19 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   React.useEffect(() => {
     if (!isOpen || !operation) {
       setSelectedLocation('');
-      setTruckDepartureDate('');
-      setTruckDepartureTime('');
+      // Set default system date and time
+      const now = new Date();
+      setTruckDepartureDate(now.toISOString().split('T')[0]);
+      setTruckDepartureTime(now.toTimeString().slice(0, 5));
       setSearchLocation('');
       setError('');
+    } else if (isOpen && operation) {
+      // Initialize with current system date/time when opening
+      const now = new Date();
+      setTruckDepartureDate(now.toISOString().split('T')[0]);
+      setTruckDepartureTime(now.toTimeString().slice(0, 5));
     }
-  }, [isOpen, operation?.id]);
+  }, [isOpen, operation]);
 
   if (!isOpen || !operation) return null;
 
@@ -98,8 +105,8 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
 
     const locationData = {
       assignedLocation: selectedLocation,
-      truckDepartureDate: canManageTimeTracking ? truckDepartureDate : new Date().toISOString().split('T')[0],
-      truckDepartureTime: canManageTimeTracking ? truckDepartureTime : new Date().toTimeString().slice(0, 5)
+      truckDepartureDate: truckDepartureDate || new Date().toISOString().split('T')[0],
+      truckDepartureTime: truckDepartureTime || new Date().toTimeString().slice(0, 5)
     };
 
     onComplete(operation, locationData);
@@ -291,40 +298,39 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
             {/* Time Tracking - Only for Admin Users */}
             {canManageTimeTracking ? (
               <div className="bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
-                <div className="flex items-center space-x-3 mb-6">
+                <div className="flex items-center space-x-3 mb-4">
                   <div className="p-2 bg-orange-600 text-white rounded-lg">
                     <Clock className="h-5 w-5" />
                   </div>
                   <div>
                     <h4 className="text-base sm:text-lg font-semibold text-orange-900">Manual Time Tracking</h4>
-                    <p className="text-xs sm:text-sm text-orange-700">Optional: Record truck departure time (Admin only)</p>
+                    <p className="text-xs sm:text-sm text-orange-700">Optional: Record truck departure time (Admin only) - Defaults to current system time</p>
                   </div>
                 </div>
                 
-                <div className="bg-white rounded-lg p-3 sm:p-4 border border-orange-300">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <h5 className="text-sm sm:text-base font-medium text-orange-900">Truck Departure</h5>
-                    <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Optional</span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-orange-800 mb-2">
+                      Truck Departure Date
+                    </label>
+                    <DatePicker
+                      value={truckDepartureDate}
+                      onChange={setTruckDepartureDate}
+                      placeholder="Current system date"
+                      required={false}
+                    />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <DatePicker
-                        value={truckDepartureDate}
-                        onChange={setTruckDepartureDate}
-                        placeholder="Departure date"
-                        label="Date"
-                      />
-                    </div>
-                    <div>
-                      <TimePicker
-                        value={truckDepartureTime}
-                        onChange={setTruckDepartureTime}
-                        placeholder="Departure time"
-                        label="Time"
-                        includeSeconds={true}
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-orange-800 mb-2">
+                      Truck Departure Time
+                    </label>
+                    <TimePicker
+                      value={truckDepartureTime}
+                      onChange={setTruckDepartureTime}
+                      placeholder="Current system time"
+                      required={false}
+                      includeSeconds={true}
+                    />
                   </div>
                 </div>
               </div>

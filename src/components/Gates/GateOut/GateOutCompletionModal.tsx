@@ -60,8 +60,10 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
     setContainerInputs([
       { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
     ]);
-    setGateOutDate('');
-    setGateOutTime('');
+    // Set default system date and time
+    const now = new Date();
+    setGateOutDate(now.toISOString().split('T')[0]);
+    setGateOutTime(now.toTimeString().slice(0, 5));
     setInConfirmation(false);
     setError('');
    setTruckCapacityError('');
@@ -69,10 +71,15 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
   // Reset form when modal opens with new operation or closes
   React.useEffect(() => {
-    if (!isOpen) {
+    if (isOpen && operation) {
+      // Initialize with current system date/time when opening
+      const now = new Date();
+      setGateOutDate(now.toISOString().split('T')[0]);
+      setGateOutTime(now.toTimeString().slice(0, 5));
+    } else if (!isOpen) {
       resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, operation]);
 
   // Reset form when operation changes
   React.useEffect(() => {
@@ -224,11 +231,6 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   const handleSubmit = () => {
     setError('');
     
-    if (!gateOutDate || !gateOutTime) {
-      setError('Please select both gate out date and time.');
-      return;
-    }
-    
    // Check truck capacity constraints
    const capacityCheck = checkTruckCapacity(containerInputs);
    if (!capacityCheck.isValid) {
@@ -248,8 +250,12 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
      return;
    }
     
+    // Use current system time if not manually set
+    const finalGateOutDate = gateOutDate || new Date().toISOString().split('T')[0];
+    const finalGateOutTime = gateOutTime || new Date().toTimeString().slice(0, 5);
+    
     const containerNumbers = validContainers.map(input => input.containerNumber);
-    onComplete(operation, containerNumbers);
+    onComplete(operation, containerNumbers, { gateOutDate: finalGateOutDate, gateOutTime: finalGateOutTime });
   };
 
   const areAllContainerNumbersValid = (): boolean => {
@@ -496,41 +502,41 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
             {/* Gate Out Date & Time */}
             {canManageTimeTracking && (
               <div className="bg-purple-50 rounded-xl p-4 sm:p-6 border border-purple-200">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-purple-600 text-white rounded-lg">
-                  <Calendar className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-base sm:text-lg font-semibold text-purple-900">Gate Out Date & Time</h4>
-                  <p className="text-xs sm:text-sm text-purple-700">Manual time tracking (Admin only)</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-purple-800 mb-2">
-                    Gate Out Date *
-                  </label>
-                  <DatePicker
-                    value={gateOutDate}
-                    onChange={setGateOutDate}
-                    placeholder="Date"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-purple-800 mb-2">
-                    Gate Out Time *
-                  </label>
-                  <TimePicker
-                    value={gateOutTime}
-                    onChange={setGateOutTime}
-                    placeholder="Time"
-                    required
-                  />
-                </div>
-              </div>
-              </div>
+                 <div className="flex items-center space-x-3 mb-4">
+                   <div className="p-2 bg-purple-600 text-white rounded-lg">
+                     <Calendar className="h-5 w-5" />
+                   </div>
+                   <div>
+                     <h4 className="text-base sm:text-lg font-semibold text-purple-900">Gate Out Date & Time</h4>
+                     <p className="text-xs sm:text-sm text-purple-700">Manual time tracking (Admin only) - Defaults to current system time</p>
+                   </div>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-xs sm:text-sm font-medium text-purple-800 mb-2">
+                       Gate Out Date
+                     </label>
+                     <DatePicker
+                       value={gateOutDate}
+                       onChange={setGateOutDate}
+                       placeholder="Current system date"
+                       required={false}
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-xs sm:text-sm font-medium text-purple-800 mb-2">
+                       Gate Out Time
+                     </label>
+                     <TimePicker
+                       value={gateOutTime}
+                       onChange={setGateOutTime}
+                       placeholder="Current system time"
+                       required={false}
+                     />
+                   </div>
+                 </div>
+               </div>
             )}
 
             {/* Error Display */}
@@ -558,7 +564,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isProcessing || !areAllContainerNumbersValid() || !gateOutDate || !gateOutTime}
+                disabled={isProcessing || !areAllContainerNumbersValid()}
                 className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 px-4 py-3 sm:px-6 sm:py-2"
               >
                 {isProcessing ? (
