@@ -617,8 +617,6 @@ export class ClientPoolService {
     userName?: string
   ): ClientPool {
     const effectiveUserName = userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
     const pool: ClientPool = {
       id: `pool-${clientCode.toLowerCase()}`,
       clientId,
@@ -650,8 +648,6 @@ export class ClientPoolService {
     // Log creation
     yardService.logOperation('client_pool_create', undefined, effectiveUserName, {
       clientCode,
-      yardId: currentYard?.id,
-      yardCode: currentYard?.code,
       maxCapacity,
       assignedStacksCount: assignedStacks.length
     });
@@ -782,8 +778,6 @@ export class ClientPoolService {
     userName?: string
   ): StackAssignment[] {
     const effectiveUserName = assignedBy || userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
     const assignments: StackAssignment[] = [];
     stackIds.forEach(stackId => {
       try {
@@ -804,10 +798,8 @@ export class ClientPoolService {
     });
 
     // Log bulk assignment
-    yardService.logOperation('stack_bulk_assign', undefined, effectiveUserName, {
+    yardService.logOperation('stack_assignment', undefined, effectiveUserName, {
       clientCode,
-      yardId: currentYard?.id,
-      yardCode: currentYard?.code,
       stackCount: assignments.length,
       action: 'bulk'
     });
