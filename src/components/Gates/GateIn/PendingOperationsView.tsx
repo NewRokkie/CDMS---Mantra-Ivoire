@@ -51,7 +51,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                          operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all'
+    const matchesType = typeFilter === 'all';
     return matchesSearch && matchesType;
   });
 
@@ -309,6 +309,81 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     Container
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Transport
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOperations.map((operation) => (
+                  <tr key={operation.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(operation.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <Package className="h-4 w-4 text-blue-600 mr-2" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {operation.containerNumber}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {operation.containerSize} • {operation.containerType?.replace('_', ' ')}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.clientName}</div>
+                      <div className="text-sm text-gray-500">{operation.clientCode}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        {getStatusBadge(operation.operationStatus)}
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {operation.status}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => handleOperationClick(operation)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
+                      >
+                        <MapPin className="h-4 w-4" />
+                        <span>Assign Location</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {filteredOperations.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
+              <p className="text-gray-600">
+                {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Location Validation Modal */}
