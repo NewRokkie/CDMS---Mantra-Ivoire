@@ -53,6 +53,14 @@ const availableModules: ModulePermission[] = [
     isSystemModule: false
   },
   {
+    id: 'timeTracking',
+    name: 'Time & Date Tracking',
+    description: 'Manual date/time entry for Gate In/Out operations',
+    category: 'admin',
+    requiredRole: ['admin', 'supervisor'],
+    isSystemModule: false
+  },
+  {
     id: 'yard',
     name: 'Yard Management',
     description: '3D yard visualization and management',
