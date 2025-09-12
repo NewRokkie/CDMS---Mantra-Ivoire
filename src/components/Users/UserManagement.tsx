@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Filter, Edit, Eye, Trash2, User as UserIcon, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { UserFormModal } from './UserFormModal';
 
 // Helper function to get module access based on role
@@ -148,6 +149,7 @@ export const UserManagement: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { user: currentUser } = useAuth();
+  const { currentYard } = useYard();
 
   const canManageUsers = currentUser?.role === 'admin';
 
