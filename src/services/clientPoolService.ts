@@ -1,5 +1,5 @@
 import { ClientPool, StackAssignment, ClientPoolStats, ContainerAssignmentRequest, StackAvailabilityResult } from '../types/clientPool';
-import { Yard, YardStack, Container, Client } from '../types';
+import { Yard, YardStack, Container } from '../types';
 import { yardService } from './yardService'; // Correct import for yardService in same directory
 
 /**
@@ -168,21 +168,108 @@ export class ClientPoolService {
     clientCode: string,
     containerSize: '20ft' | '40ft',
     yard: Yard,
-    containers: Container[]
+    containers: Container[],
+    yardId?: string
   ): StackAvailabilityResult[] {
+    // Use current yard if not specified
+    const targetYard = yardId ? yardService.getYardById(yardId) : yard;
+    if (!targetYard) {
+      console.warn('No valid yard found for stack availability check');
+      return [];
+    }
+
     const clientStacks = this.getClientStacks(clientCode);
     const availableStacks: StackAvailabilityResult[] = [];
 
-    // Get all stacks from yard
-    const allStacks = yard.sections.flatMap(section => section.stacks);
+    // Get all stacks from target yard
+    const allStacks = targetYard.sections.flatMap(section => section.stacks);
 
     clientStacks.forEach(stackId => {
       const stack = allStacks.find(s => s.id === stackId);
       if (!stack) return;
 
-      // Calculate current occupancy for this stack
-      const stackContainers = containers.filter(c =>
-        c.location.includes(`Stack S${stack.stackNumber}`)
+      // Calculate current occupancy for this stack in the specific yard
+      const stackContainers = containers.filter(c => {
+        const isInStack = c.location.includes(`Stack S${stack.stackNumber}`);
+        const isInYard = yardService.isContainerInYard ? yardService.isContainerInYard(c, targetYard.id) : true;
+        return isInStack && isInYard;
+      });
+      const currentOccupancy = stackContainers.length;
+      const availableSlots = stack.capacity - currentOccupancy;
+
+      // Check if stack can accommodate the container size
+      const canAccommodateSize = this.canStackAccommodateSize(stack, containerSize);
+
+      if (availableSlots > 0 && canAccommodateSize) {
+        const section = targetYard.sections.find(s => s.id === stack.sectionId);
+
+        availableStacks.push({
+          stackId: stack.id,
+          stackNumber: stack.stackNumber,
+          sectionName: section?.name || 'Unknown',
+          availableSlots,
+          totalCapacity: stack.capacity,
+          isRecommended: this.isStackRecommended(stack, containerSize, currentOccupancy),
+          distance: this.calculateStackDistance(stack, containerSize)
+        });
+      }
+    });
+
+    // Sort by recommendation, then by available slots, then by distance
+    return availableStacks.sort((a, b) => {
+      if (a.isRecommended !== b.isRecommended) {
+        return a.isRecommended ? -1 : 1;
+      }
+      if (a.availableSlots !== b.availableSlots) {
+        return b.availableSlots - a.availableSlots;
+      }
+      return (a.distance || 0) - (b.distance || 0);
+    });
+  }
+
+  /**
+   * Get available stacks for a client in a specific yard
+   */
+  getAvailableStacksForClientInYard(
+    clientCode: string,
+    containerSize: '20ft' | '40ft',
+    yardId: string,
+    containers: Container[]
+  ): StackAvailabilityResult[] {
+    const yard = yardService.getYardById(yardId);
+    if (!yard) {
+      console.warn(`Yard ${yardId} not found`);
+      return [];
+    }
+
+    return this.getAvailableStacksForClient(clientCode, containerSize, yard, containers, yardId);
+  }
+
+  /**
+   * Get client pools for a specific yard
+   */
+  getClientPoolsForYard(yardId: string): ClientPool[] {
+    // Filter client pools that have stacks in the specified yard
+    return Array.from(this.clientPools.values()).filter(pool => {
+      // Check if any of the pool's assigned stacks belong to this yard
+      return pool.assignedStacks.some(stackId => {
+        // In a real implementation, you'd check the stack's yard association
+        // For now, we'll use a simple pattern matching
+        return this.isStackInYard(stackId, yardId);
+      });
+    });
+  }
+
+  /**
+   * Check if a stack belongs to a specific yard
+   */
+  private isStackInYard(stackId: string, yardId: string): boolean {
+    const yard = yardService.getYardById(yardId);
+    if (!yard) return false;
+
+    // Check if stack exists in any section of this yard
+    return yard.sections.some(section =>
+      section.stacks.some(stack => stack.id === stackId)
       );
       const currentOccupancy = stackContainers.length;
       const availableSlots = stack.capacity - currentOccupancy;
@@ -314,12 +401,19 @@ export class ClientPoolService {
         throw new Error(`No active client pool found for ${request.clientCode}`);
       }
 
+      // Validate yard context
+      const currentYard = yardService.getCurrentYard();
+      if (!currentYard) {
+        throw new Error('No yard selected for container assignment');
+      }
+
       // Get available stacks for this client
       const availableStacks = this.getAvailableStacksForClient(
         request.clientCode,
         request.containerSize,
-        yard,
-        containers
+        currentYard,
+        containers,
+        currentYard.id
       );
 
       if (availableStacks.length === 0) {
@@ -331,15 +425,17 @@ export class ClientPoolService {
       const selectedStack = availableStacks[0];
 
       // Log the assignment for audit purposes
-      console.log(`Container ${request.containerNumber} assigned to Stack ${selectedStack.stackNumber} for client ${request.clientCode}`);
+      console.log(`Container ${request.containerNumber} assigned to Stack ${selectedStack.stackNumber} for client ${request.clientCode} in yard ${currentYard.code}`);
 
       // Update client pool occupancy
       this.updateClientPoolOccupancy(request.clientCode, 1, userName);
 
-      // Log operation using yardService (use 'container_move' for assignment)
-      yardService.logOperation('container_move', request.containerNumber, userName || 'System', {
+      // Log operation using yardService
+      yardService.logOperation('container_assign', request.containerNumber, userName || 'System', {
         clientCode: request.clientCode,
         stackId: selectedStack.stackId,
+        yardId: currentYard.id,
+        yardCode: currentYard.code,
         from: 'unassigned',
         to: selectedStack.stackId,
         userName: userName
@@ -545,6 +641,9 @@ export class ClientPoolService {
     clientName: string,
     assignedStacks: string[],
     maxCapacity: number,
+    contractStartDate: Date,
+    contractEndDate?: Date,
+    notes?: string,
     priority: 'high' | 'medium' | 'low',
     contractStartDate: Date,
     contractEndDate?: Date,
@@ -552,6 +651,8 @@ export class ClientPoolService {
     userName?: string
   ): ClientPool {
     const effectiveUserName = userName || 'System';
+    const currentYard = yardService.getCurrentYard();
+    
     const pool: ClientPool = {
       id: `pool-${clientCode.toLowerCase()}`,
       clientId,
@@ -565,7 +666,7 @@ export class ClientPoolService {
       updatedAt: new Date(),
       createdBy: effectiveUserName,
       updatedBy: effectiveUserName,
-      priority,
+      priority: 'medium',
       contractStartDate,
       contractEndDate,
       notes
@@ -583,6 +684,8 @@ export class ClientPoolService {
     // Log creation
     yardService.logOperation('client_pool_create', undefined, effectiveUserName, {
       clientCode,
+      yardId: currentYard?.id,
+      yardCode: currentYard?.code,
       maxCapacity,
       assignedStacksCount: assignedStacks.length
     });
@@ -647,7 +750,6 @@ export class ClientPoolService {
       yard,
       containers
     );
-
     if (availableStacks.length === 0) return null;
 
     // Apply additional filtering based on requirements
@@ -714,6 +816,8 @@ export class ClientPoolService {
     userName?: string
   ): StackAssignment[] {
     const effectiveUserName = assignedBy || userName || 'System';
+    const currentYard = yardService.getCurrentYard();
+    
     const assignments: StackAssignment[] = [];
     stackIds.forEach(stackId => {
       try {
@@ -734,8 +838,10 @@ export class ClientPoolService {
     });
 
     // Log bulk assignment
-    yardService.logOperation('stack_assignment', undefined, effectiveUserName, {
+    yardService.logOperation('stack_bulk_assign', undefined, effectiveUserName, {
       clientCode,
+      yardId: currentYard?.id,
+      yardCode: currentYard?.code,
       stackCount: assignments.length,
       action: 'bulk'
     });
@@ -749,11 +855,15 @@ export class ClientPoolService {
    */
   releaseContainerFromPool(containerNumber: string, clientCode: string, userName?: string): void {
     const effectiveUserName = userName || 'System';
+    const currentYard = yardService.getCurrentYard();
+    
     try {
       this.updateClientPoolOccupancy(clientCode, -1, effectiveUserName);
       // Log release
-      yardService.logOperation('container_move', containerNumber, effectiveUserName, {
+      yardService.logOperation('container_release', containerNumber, effectiveUserName, {
         clientCode,
+        yardId: currentYard?.id,
+        yardCode: currentYard?.code,
         action: 'release'
       });
       console.log(`Container ${containerNumber} released from client pool ${clientCode} by ${effectiveUserName}`);

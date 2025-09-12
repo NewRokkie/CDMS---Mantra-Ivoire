@@ -22,6 +22,7 @@ import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ClientPoolForm } from './ClientPoolForm';
+import { useYard } from '../../hooks/useYard';
 
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
@@ -32,6 +33,7 @@ export const ClientPoolManagement: React.FC = () => {
   const [selectedPool, setSelectedPool] = useState<ClientPool | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { currentYard } = useYard();
 
   // Mock yard data for the form
   const mockYard = {
@@ -122,7 +124,12 @@ export const ClientPoolManagement: React.FC = () => {
   const loadClientPools = async () => {
     try {
       setIsLoading(true);
-      const pools = clientPoolService.getClientPools();
+      
+      // Get pools for current yard only
+      const pools = currentYard 
+        ? clientPoolService.getClientPoolsForYard(currentYard.id)
+        : clientPoolService.getClientPools();
+        
       const poolStats = clientPoolService.getClientPoolStats();
 
       setClientPools(pools);
