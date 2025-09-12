@@ -59,7 +59,7 @@ export const useAuthProvider = () => {
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Error loading user session:', error);
+        console.error('Erreur lors de la récupération des données utilisateur:', error);
         // Clear corrupted data
         localStorage.removeItem('depot_user');
         localStorage.removeItem('depot_token');
@@ -103,9 +103,16 @@ export const useAuthProvider = () => {
             yard: true,
             clients: true,
             users: true,
-            moduleAccess: true,
             reports: true,
-            depotManagement: true
+            depotManagement: true,
+            timeTracking: true,
+            analytics: true,
+            clientPools: true,
+            stackManagement: true,
+            moduleAccess: true,
+            auditLogs: true,
+            billingReports: true,
+            operationsReports: true,
           },
           createdBy: "system"
         },
@@ -131,9 +138,16 @@ export const useAuthProvider = () => {
             yard: true,
             clients: false,
             users: false,
-            moduleAccess: false,
             reports: false,
-            depotManagement: true
+            depotManagement: true,
+            timeTracking: true,
+            analytics: false,
+            clientPools: false,
+            stackManagement: false,
+            moduleAccess: false,
+            auditLogs: false,
+            billingReports: false,
+            operationsReports: false,
           },
           createdBy: "system"
         },
@@ -159,9 +173,16 @@ export const useAuthProvider = () => {
             yard: true,
             clients: true,
             users: false,
-            moduleAccess: false,
             reports: true,
-            depotManagement: true
+            depotManagement: true,
+            timeTracking: true,
+            analytics: true,
+            clientPools: false,
+            stackManagement: false,
+            moduleAccess: false,
+            auditLogs: false,
+            billingReports: false,
+            operationsReports: false,
           },
           createdBy: "system"
         },
@@ -188,9 +209,16 @@ export const useAuthProvider = () => {
             yard: true,
             clients: false,
             users: false,
-            moduleAccess: false,
             reports: false,
-            depotManagement: true
+            depotManagement: true,
+            timeTracking: false,
+            analytics: false,
+            clientPools: false,
+            stackManagement: false,
+            moduleAccess: false,
+            auditLogs: false,
+            billingReports: false,
+            operationsReports: false,
           },
           createdBy: "system"
         },
@@ -217,9 +245,16 @@ export const useAuthProvider = () => {
             yard: true,
             clients: false,
             users: false,
-            moduleAccess: false,
             reports: false,
-            depotManagement: true
+            depotManagement: true,
+            timeTracking: false,
+            analytics: false,
+            clientPools: false,
+            stackManagement: false,
+            moduleAccess: false,
+            auditLogs: false,
+            billingReports: false,
+            operationsReports: false,
           },
           createdBy: "system"
         }
