@@ -197,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
                   onClick={() => {
                     handleMainMenuClick(item.id);
                   }}
-                  className={`w-full flex items-center space-x-3 px-4 py-4 lg:py-3 rounded-lg text-left transition-all duration-200 touch-target ${
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-lg transform scale-105'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
