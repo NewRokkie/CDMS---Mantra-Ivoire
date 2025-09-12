@@ -370,19 +370,12 @@ export class ClientPoolService {
         throw new Error(`No active client pool found for ${request.clientCode}`);
       }
 
-      // Validate yard context
-      const currentYard = yardService.getCurrentYard();
-      if (!currentYard) {
-        throw new Error('No yard selected for container assignment');
-      }
-
       // Get available stacks for this client
       const availableStacks = this.getAvailableStacksForClient(
         request.clientCode,
         request.containerSize,
-        currentYard,
-        containers,
-        currentYard.id
+        yard,
+        containers
       );
 
       if (availableStacks.length === 0) {
@@ -394,17 +387,15 @@ export class ClientPoolService {
       const selectedStack = availableStacks[0];
 
       // Log the assignment for audit purposes
-      console.log(`Container ${request.containerNumber} assigned to Stack ${selectedStack.stackNumber} for client ${request.clientCode} in yard ${currentYard.code}`);
+      console.log(`Container ${request.containerNumber} assigned to Stack ${selectedStack.stackNumber} for client ${request.clientCode}`);
 
       // Update client pool occupancy
       this.updateClientPoolOccupancy(request.clientCode, 1, userName);
 
-      // Log operation using yardService
-      yardService.logOperation('container_assign', request.containerNumber, userName || 'System', {
+      // Log operation using yardService (use 'container_move' for assignment)
+      yardService.logOperation('container_move', request.containerNumber, userName || 'System', {
         clientCode: request.clientCode,
         stackId: selectedStack.stackId,
-        yardId: currentYard.id,
-        yardCode: currentYard.code,
         from: 'unassigned',
         to: selectedStack.stackId,
         userName: userName
@@ -617,8 +608,6 @@ export class ClientPoolService {
     userName?: string
   ): ClientPool {
     const effectiveUserName = userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
     const pool: ClientPool = {
       id: `pool-${clientCode.toLowerCase()}`,
       clientId,
@@ -632,7 +621,7 @@ export class ClientPoolService {
       updatedAt: new Date(),
       createdBy: effectiveUserName,
       updatedBy: effectiveUserName,
-      priority: 'medium',
+      priority,
       contractStartDate,
       contractEndDate,
       notes
@@ -650,8 +639,6 @@ export class ClientPoolService {
     // Log creation
     yardService.logOperation('client_pool_create', undefined, effectiveUserName, {
       clientCode,
-      yardId: currentYard?.id,
-      yardCode: currentYard?.code,
       maxCapacity,
       assignedStacksCount: assignedStacks.length
     });
