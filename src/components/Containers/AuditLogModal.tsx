@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, FileText, Calendar, Clock } from 'lucide-react';
 import { AuditLog } from '../../types';
+import { useAuth } from '../../hooks/useAuth';
 
 interface AuditLogModalProps {
   auditLogs?: AuditLog[];
