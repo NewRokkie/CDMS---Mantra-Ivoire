@@ -344,7 +344,15 @@ export const ModuleAccessManagement: React.FC = () => {
           clients: true,
           users: true,
           moduleAccess: true,
-          reports: true
+          reports: true,
+          depotManagement: true,
+          timeTracking: true,
+          analytics: true,
+          clientPools: true,
+          stackManagement: true,
+          auditLogs: true,
+          billingReports: true,
+          operationsReports: true
         } : {
           dashboard: true,
           containers: ['admin', 'supervisor', 'operator'].includes(user.role),
@@ -356,7 +364,15 @@ export const ModuleAccessManagement: React.FC = () => {
           clients: ['admin', 'supervisor'].includes(user.role),
           users: user.role === 'admin',
           moduleAccess: user.role === 'admin',
-          reports: ['admin', 'supervisor'].includes(user.role)
+          reports: ['admin', 'supervisor'].includes(user.role),
+          depotManagement: ['admin', 'supervisor'].includes(user.role),
+          timeTracking: user.role === 'admin',
+          analytics: ['admin', 'supervisor'].includes(user.role),
+          clientPools: ['admin', 'supervisor'].includes(user.role),
+          stackManagement: ['admin', 'supervisor'].includes(user.role),
+          auditLogs: ['admin', 'supervisor', 'operator'].includes(user.role),
+          billingReports: ['admin', 'supervisor'].includes(user.role),
+          operationsReports: ['admin', 'supervisor'].includes(user.role)
         };
         
         return { ...user, moduleAccess: roleBasedAccess };

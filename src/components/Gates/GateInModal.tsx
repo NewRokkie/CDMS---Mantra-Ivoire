@@ -504,12 +504,16 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                 </div>
 
                 {/* Truck Arrival Time Tracking */}
-                <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                {canManageTimeTracking && (
+                  <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
                   <div className="flex items-center space-x-3 mb-4">
                     <div className="p-2 bg-purple-600 text-white rounded-lg">
                       <Calendar className="h-5 w-5" />
                     </div>
-                    <h4 className="text-lg font-semibold text-purple-900">Truck Arrival Time</h4>
+                    <div>
+                      <h4 className="text-lg font-semibold text-purple-900">Truck Arrival Time</h4>
+                      <p className="text-sm text-purple-700">Manual time tracking (Admin only)</p>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -536,7 +540,6 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       />
                     </div>
                   </div>
-                </div>
                 {/* Operation Summary */}
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <h4 className="font-semibold text-gray-900 mb-4">Operation Summary</h4>

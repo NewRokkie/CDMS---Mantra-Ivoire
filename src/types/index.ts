@@ -30,6 +30,13 @@ export interface ModuleAccess {
   moduleAccess: boolean;
   reports: boolean;
   depotManagement: boolean;
+  timeTracking: boolean;
+  analytics: boolean;
+  clientPools: boolean;
+  stackManagement: boolean;
+  auditLogs: boolean;
+  billingReports: boolean;
+  operationsReports: boolean;
 }
 
 export interface ModulePermission {

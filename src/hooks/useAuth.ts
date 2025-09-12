@@ -205,7 +205,7 @@ export const useAuthProvider = () => {
           isActive: true,
           lastLogin: new Date('2025-01-08T11:30:00'),
           createdAt: new Date('2024-04-15'),
-          clientCode: 'MAEU',
+          clientCode: 'MAER001',
           yardAssignments: ['depot-tantarelli', 'depot-san-pedro'], // Maersk client has access to multiple yards
           moduleAccess: {
             dashboard: true,
@@ -219,7 +219,14 @@ export const useAuthProvider = () => {
             users: false,
             moduleAccess: false,
             reports: false,
-            depotManagement: true
+            depotManagement: false,
+            timeTracking: false,
+            analytics: false,
+            clientPools: false,
+            stackManagement: false,
+            auditLogs: false,
+            billingReports: false,
+            operationsReports: false
           },
           createdBy: "system"
         }
