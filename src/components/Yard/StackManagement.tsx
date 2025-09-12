@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Shield } from 'lucide-react';
+import { Shield, AlertTriangle } from 'lucide-react';
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { StackManagementHeader } from './StackManagement/StackManagementHeader';
 import { StackManagementFilters } from './StackManagement/StackManagementFilters';
 import { StackConfigurationTable } from './StackManagement/StackConfigurationTable';
 import { StackConfigurationRules } from './StackManagement/StackConfigurationRules';
 import { StackPairingInfo } from './StackManagement/StackPairingInfo';
+import { yardService } from '../../services/yardService';
 
 interface StackConfiguration {
   stackId: string;
@@ -20,31 +22,86 @@ interface StackConfiguration {
 }
 
 interface StackManagementProps {
-  yard: Yard;
+  yard?: Yard;
   onConfigurationChange: (configurations: StackConfiguration[]) => void;
 }
 
 export const StackManagement: React.FC<StackManagementProps> = ({
-  yard,
+  yard: propYard,
   onConfigurationChange
 }) => {
   const { user } = useAuth();
+  const { currentYard, availableYards } = useYard();
   const [configurations, setConfigurations] = useState<StackConfiguration[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sectionFilter, setSectionFilter] = useState('all');
   const [hasChanges, setHasChanges] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   const canManageStacks = user?.role === 'admin' || user?.role === 'supervisor';
+  
+  // Use current yard from context, fallback to prop yard
+  const activeYard = currentYard || propYard;
 
   // Special stacks that are locked to 20feet only
   const SPECIAL_STACKS = [1, 31, 101, 103];
 
   useEffect(() => {
-    initializeConfigurations();
-  }, [yard]);
+    if (activeYard) {
+      initializeConfigurations();
+    } else {
+      setError('No yard selected for stack management');
+      setIsLoading(false);
+    }
+  }, [activeYard, user]);
 
   const initializeConfigurations = () => {
-    const allStacks = yard.sections.flatMap(section => section.stacks);
+    if (!activeYard) {
+      setError('No active yard available');
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const allStacks = activeYard.sections.flatMap(section => section.stacks);
+      
+      if (allStacks.length === 0) {
+        setError(`No stacks found in ${activeYard.name}`);
+        setIsLoading(false);
+        return;
+      }
+
+      const stackConfigs: StackConfiguration[] = [];
+
+      // Initialize stack configurations
+      allStacks.forEach(stack => {
+        const isSpecial = SPECIAL_STACKS.includes(stack.stackNumber);
+        
+        stackConfigs.push({
+          stackId: stack.id,
+          stackNumber: stack.stackNumber,
+          sectionId: stack.sectionId,
+          sectionName: activeYard.sections.find(s => s.id === stack.sectionId)?.name || 'Unknown',
+          containerSize: '20feet', // Default to 20feet
+          isSpecialStack: isSpecial,
+          lastModified: new Date(),
+          modifiedBy: user?.name || 'System'
+        });
+      });
+
+      setConfigurations(stackConfigs.sort((a, b) => a.stackNumber - b.stackNumber));
+      console.log(`Loaded ${stackConfigs.length} stack configurations for ${activeYard.name}`);
+    } catch (error) {
+      console.error('Error initializing stack configurations:', error);
+      setError(`Failed to load stack configurations: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
     const stackConfigs: StackConfiguration[] = [];
 
     // Initialize stack configurations
@@ -222,10 +279,23 @@ export const StackManagement: React.FC<StackManagementProps> = ({
 
   const handleSaveChanges = () => {
     if (!canManageStacks) return;
+    
+    if (!activeYard) {
+      alert('No yard selected for saving configurations');
+      return;
+    }
+
+    // Log the configuration change
+    yardService.logOperation('stack_configuration_update', undefined, user?.name || 'System', {
+      yardId: activeYard.id,
+      yardCode: activeYard.code,
+      configurationsCount: configurations.length,
+      modifiedBy: user?.name || 'System'
+    });
 
     onConfigurationChange(configurations);
     setHasChanges(false);
-    alert('Stack configurations saved successfully!');
+    alert(`Stack configurations saved successfully for ${activeYard.name}!`);
   };
 
   const handleResetChanges = () => {
@@ -233,6 +303,53 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     setHasChanges(false);
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading stack configurations...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Configuration Error</h3>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <button
+          onClick={() => {
+            setError('');
+            initializeConfigurations();
+          }}
+          className="btn-primary"
+        >
+          Retry Loading
+        </button>
+      </div>
+    );
+  }
+
+  // No yard selected
+  if (!activeYard) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No Yard Selected</h3>
+        <p className="text-gray-600 mb-4">Please select a yard to manage stack configurations.</p>
+        {availableYards.length > 0 && (
+          <div className="text-sm text-gray-500">
+            Available yards: {availableYards.map(y => y.name).join(', ')}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Access control
   if (!canManageStacks) {
     return (
       <div className="text-center py-12">
@@ -245,6 +362,19 @@ export const StackManagement: React.FC<StackManagementProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Yard Context Header */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-blue-600 text-white rounded-lg">
+            <Shield className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-medium text-blue-900">Stack Configuration for {activeYard.name}</h3>
+            <p className="text-sm text-blue-700">Managing {configurations.length} stacks in {activeYard.code}</p>
+          </div>
+        </div>
+      </div>
+
       <StackManagementHeader
         hasChanges={hasChanges}
         onSave={handleSaveChanges}
@@ -254,7 +384,7 @@ export const StackManagement: React.FC<StackManagementProps> = ({
       <StackManagementFilters
         searchTerm={searchTerm}
         sectionFilter={sectionFilter}
-        sections={yard.sections}
+        sections={activeYard.sections}
         onSearchChange={setSearchTerm}
         onSectionFilterChange={setSectionFilter}
       />
