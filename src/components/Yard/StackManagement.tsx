@@ -102,26 +102,6 @@ export const StackManagement: React.FC<StackManagementProps> = ({
       setIsLoading(false);
     }
   };
-    const stackConfigs: StackConfiguration[] = [];
-
-    // Initialize stack configurations
-    allStacks.forEach(stack => {
-      const isSpecial = SPECIAL_STACKS.includes(stack.stackNumber);
-      
-      stackConfigs.push({
-        stackId: stack.id,
-        stackNumber: stack.stackNumber,
-        sectionId: stack.sectionId,
-        sectionName: yard.sections.find(s => s.id === stack.sectionId)?.name || 'Unknown',
-        containerSize: '20feet', // Default to 20feet
-        isSpecialStack: isSpecial,
-        lastModified: new Date(),
-        modifiedBy: user?.name || 'System'
-      });
-    });
-
-    setConfigurations(stackConfigs.sort((a, b) => a.stackNumber - b.stackNumber));
-  };
 
   const getFilteredConfigurations = () => {
     let filtered = configurations;
