@@ -286,6 +286,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           <p className="text-xs text-gray-500 mt-2">40ft containers limited to single quantity</p>
                         )}
                       </div>
+                    </div>
 
                     {/* Status Switches */}
                     <div className="space-y-6">

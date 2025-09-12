@@ -8,7 +8,6 @@ import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
 import { MobileGateInStats } from './GateIn/MobileGateInStats';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
-import { LocationValidationView } from './GateIn/LocationValidationView';
 
 // Enhanced interface for the new gate-in process
 export interface GateInFormData {
@@ -510,7 +509,6 @@ export const GateIn: React.FC = () => {
 
   const handlePendingOperationClick = (operation: any) => {
     setSelectedOperation(operation);
-    setActiveView('location');
   };
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
@@ -571,19 +569,6 @@ export const GateIn: React.FC = () => {
         <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
         <p className="text-gray-600">You don't have permission to perform gate in operations.</p>
       </div>
-    );
-  }
-
-  // Location & Validation View
-  if (activeView === 'location' && selectedOperation) {
-    return (
-      <LocationValidationView
-        operation={selectedOperation}
-        onBack={() => setActiveView('pending')}
-        onComplete={handleLocationValidation}
-        isProcessing={isProcessing}
-        mockLocations={mockLocations}
-      />
     );
   }
 
