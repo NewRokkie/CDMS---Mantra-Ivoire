@@ -119,17 +119,6 @@ export const useYardProvider = () => {
       return { isValid: false, message: 'Current yard is not active' };
     }
 
-    // Add operation-specific validation
-    const now = new Date();
-    const currentTime = now.toTimeString().slice(0, 5);
-    const { start, end } = yardContext.currentYard.operatingHours;
-
-    if (currentTime < start || currentTime > end) {
-      return {
-        isValid: false,
-        message: `Yard operations are only allowed between ${start} and ${end}`
-      };
-    }
 
     return { isValid: true };
   };

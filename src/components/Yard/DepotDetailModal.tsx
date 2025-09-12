@@ -207,35 +207,6 @@ export const DepotDetailModal: React.FC<DepotDetailModalProps> = ({
                 <label className="text-sm font-medium text-gray-500">Timezone</label>
                 <p className="text-sm text-gray-900">{depot.timezone || 'Not specified'}</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Operating Hours</label>
-                <p className="text-sm text-gray-900">
-                  {depot.operatingHours ? `${depot.operatingHours.start} - ${depot.operatingHours.end}` : 'Not specified'}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Max Containers/Operation</label>
-                <p className="text-sm text-gray-900">{depot.settings?.maxContainersPerOperation || 'Not specified'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Default Free Days</label>
-                <p className="text-sm text-gray-900">{depot.settings?.defaultFreeDays || 'Not specified'}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Auto-assign Locations</label>
-                <p className="text-sm text-gray-900">
-                  {depot.settings?.autoAssignLocation ? 'Enabled' : 'Disabled'}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Requires Approval</label>
-                <p className="text-sm text-gray-900">
-                  {depot.settings?.requiresApproval ? 'Yes' : 'No'}
-                </p>
-              </div>
             </div>
           </div>
 
