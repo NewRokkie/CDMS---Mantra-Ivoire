@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ReleaseOrder, Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
 import { ReleaseOrderTableView } from './ReleaseOrderTableView';
 import { ReleaseOrderKPICards } from './ReleaseOrderKPICards';
@@ -245,6 +246,7 @@ export const ReleaseOrderList: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ReleaseOrder | null>(null);
   const { user, getClientFilter } = useAuth();
+  const { currentYard } = useYard();
 
   // Filter release orders based on user permissions
   const getFilteredOrders = () => {
@@ -292,7 +294,7 @@ export const ReleaseOrderList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <ReleaseOrderHeader onCreateOrder={handleCreateOrder} />
+      <ReleaseOrderHeader onCreateOrder={handleCreateOrder} currentYard={currentYard} />
 
       <ReleaseOrderKPICards stats={stats} />
 

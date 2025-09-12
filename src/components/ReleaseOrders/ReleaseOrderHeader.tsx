@@ -2,12 +2,14 @@ import React from 'react';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { Yard } from '../../types/yard';
 
 interface ReleaseOrderHeaderProps {
   onCreateOrder: () => void;
+  currentYard: Yard | null;
 }
 
-export const ReleaseOrderHeader: React.FC<ReleaseOrderHeaderProps> = ({ onCreateOrder }) => {
+export const ReleaseOrderHeader: React.FC<ReleaseOrderHeaderProps> = ({ onCreateOrder, currentYard }) => {
   const { t } = useLanguage();
   const { user, canViewAllData } = useAuth();
 
