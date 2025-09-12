@@ -302,6 +302,12 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-gray-600 text-sm px-4">
+                {searchTerm ? "Try adjusting your search criteria." : "No pending gate out operations."}
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Desktop Table Layout */}
         <div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
