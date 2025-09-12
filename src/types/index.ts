@@ -10,6 +10,8 @@ export interface User {
   isActive: boolean;
   lastLogin?: Date;
   createdAt: Date;
+  createdBy: string;
+  updatedBy?: string;
   moduleAccess: ModuleAccess;
   clientCode?: string; // For client users to filter their data
   yardAssignments?: string[]; // Array of yard IDs user has access to
@@ -27,6 +29,7 @@ export interface ModuleAccess {
   users: boolean;
   moduleAccess: boolean;
   reports: boolean;
+  depotManagement: boolean;
 }
 
 export interface ModulePermission {
@@ -73,12 +76,15 @@ export interface Client {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  createdBy: string;
+  updatedBy?: string;
   notes?: string;
 }
 
 export interface Yard {
   id: string;
   name: string;
+  code: string; // Unique code identifier for the yard
   description: string;
   location: string;
   isActive: boolean;
@@ -87,7 +93,14 @@ export interface Yard {
   sections: YardSection[];
   createdAt: Date;
   updatedAt: Date;
+  createdBy: string;
+  updatedBy?: string;
   layout: 'tantarelli' | 'standard'; // Layout type for different rendering
+  timezone?: string;
+  operatingHours?: { start: string; end: string };
+  contactInfo?: { manager: string; phone: string; email: string };
+  address?: { street: string; city: string; state: string; zipCode: string; country: string };
+  settings?: { autoAssignLocation: boolean; requiresApproval: boolean; maxContainersPerOperation: number; defaultFreeDays: number };
 }
 
 export interface YardSection {
@@ -100,10 +113,7 @@ export interface YardSection {
     y: number;
     z: number;
   };
-  dimensions: {
-    width: number;
-    length: number;
-  };
+  dimensions: { width: number; length: number };
   color?: string; // For visual distinction
 }
 
@@ -135,9 +145,9 @@ export interface YardBlock {
   capacity: number;
   currentOccupancy: number;
   position: {
-    x: number;
-    y: number;
-    z: number;
+    x: number; // Right (-left), Front (negative from door), Ground (0平整)
+    z: number; // Stack level (0-bottom, 1-2nd, 2-3rd, 3-4th, 4-5th)
+    y: number; // Bay/Cage/Bed (-from left door)
   };
   dimensions: {
     width: number;
@@ -159,7 +169,7 @@ export interface YardPosition {
     x: number;
     y: number;
     z: number;
-  };
+  }; // Exact coordinates in yard3D space
   isOccupied: boolean;
   containerId?: string;
   containerNumber?: string;
@@ -179,11 +189,16 @@ export interface Container {
   yardPosition?: YardPosition;
   gateInDate?: Date;
   gateOutDate?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  createdBy: string;
+  updatedBy?: string;
   client: string;
-  clientId?: string;
+  clientId?: string; // Add client ID for direct relations
   clientCode?: string; // Add client code for filtering
   releaseOrderId?: string;
   damage?: string[];
+  auditLogs?: AuditLog[];
 }
 
 export interface ReleaseOrderContainer {
@@ -244,6 +259,7 @@ export interface ReleaseOrder {
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   createdBy: string;
   validatedBy?: string;
+  updatedBy?: string;
   createdAt: Date;
   validatedAt?: Date;
   completedAt?: Date;
@@ -291,10 +307,7 @@ export interface EquipmentDetail {
     sizeTypeCode: string;
     codeListQualifier: string;
   };
-  statusOfEquipment: {
-    equipmentStatusCode: string;
-    fullEmptyIndicator: string;
-  };
+  statusOfEquipment: { equipmentStatusCode: string; fullEmptyIndicator: string };
   measurements?: {
     measurementUnitQualifier: string;
     measurementValue: number;
@@ -354,4 +367,11 @@ export interface DashboardStats {
   todayMovements: number;
   revenue: number;
   occupancyRate: number;
+}
+
+export interface AuditLog {
+  timestamp: Date;
+  user: string;
+  action: string;
+  details?: string;
 }

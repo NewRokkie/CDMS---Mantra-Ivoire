@@ -30,6 +30,8 @@ export class YardService {
         sections: this.createTantarelliSections(),
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date(),
+        createdBy: 'System',
+        updatedBy: 'System',
         layout: 'tantarelli',
         timezone: 'Africa/Abidjan',
         operatingHours: { start: '06:00', end: '22:00' },
@@ -64,6 +66,8 @@ export class YardService {
         sections: this.createVridiSections(),
         createdAt: new Date('2024-02-01'),
         updatedAt: new Date(),
+        createdBy: 'System',
+        updatedBy: 'System',
         layout: 'standard',
         timezone: 'Africa/Abidjan',
         operatingHours: { start: '07:00', end: '21:00' },
@@ -98,6 +102,8 @@ export class YardService {
         sections: this.createSanPedroSections(),
         createdAt: new Date('2024-03-01'),
         updatedAt: new Date(),
+        createdBy: 'System',
+        updatedBy: 'System',
         layout: 'standard',
         timezone: 'Africa/Abidjan',
         operatingHours: { start: '06:30', end: '20:30' },
@@ -332,14 +338,12 @@ export class YardService {
   /**
    * Set current yard
    */
-  setCurrentYard(yardId: string): boolean {
+  setCurrentYard(yardId: string, userName?: string): boolean {
     const yard = this.yards.get(yardId);
     if (yard && yard.isActive) {
       this.currentYardId = yardId;
-      this.logOperation('yard_switch', undefined, 'System', {
-        previousYard: this.currentYardId,
-        newYard: yardId
-      });
+      const effectiveUserName = userName || 'System';
+      this.logOperation('yard_switch', undefined, effectiveUserName, { previousYard: this.currentYardId, newYard: yardId });
       return true;
     }
     return false;
@@ -446,32 +450,40 @@ export class YardService {
   /**
    * Create new yard
    */
-  createYard(yardData: Omit<Yard, 'id' | 'createdAt' | 'updatedAt'>): Yard {
+  createYard(yardData: Omit<Yard, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>, userName?: string): Yard {
+    const effectiveUserName = userName || 'System';
     const yard: Yard = {
       ...yardData,
       id: `yard-${Date.now()}`,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      createdBy: effectiveUserName,
+      updatedBy: effectiveUserName
     };
 
     this.yards.set(yard.id, yard);
+    console.log(`Created new yard ${yard.name} by ${effectiveUserName}`);
     return yard;
   }
 
   /**
    * Update yard
    */
-  updateYard(yardId: string, updates: Partial<Yard>): Yard | null {
+  updateYard(yardId: string, updates: Partial<Yard>, userName?: string): Yard | null {
     const yard = this.yards.get(yardId);
+
     if (!yard) return null;
 
+    const effectiveUserName = userName || 'System';
     const updatedYard = {
       ...yard,
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      updatedBy: effectiveUserName
     };
 
     this.yards.set(yardId, updatedYard);
+    console.log(`Updated yard ${yardId} by ${effectiveUserName}`);
     return updatedYard;
   }
 

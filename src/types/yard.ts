@@ -9,6 +9,8 @@ export interface Yard {
   sections: YardSection[];
   createdAt: Date;
   updatedAt: Date;
+  createdBy: string;
+  updatedBy?: string;
   layout: 'tantarelli' | 'standard';
   // New multi-yard fields
   code: string; // Unique yard identifier (e.g., 'DEPOT-01', 'YARD-A')
@@ -128,7 +130,7 @@ export interface YardOperationLog {
   id: string;
   yardId: string;
   yardCode: string;
-  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment' | 'yard_switch';
+  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment' | 'yard_switch' | 'client_pool_create' | 'client_pool_update' | 'container_assign' | 'stack_remove' | 'stack_bulk_assign' | 'container_release' | 'yard_create' | 'yard_update' | 'edi_transmission' | 'codeco_generate';
   containerNumber?: string;
   userId: string;
   userName: string;

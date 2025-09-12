@@ -34,13 +34,13 @@ export const useAuthProvider = () => {
       try {
         const storedUser = localStorage.getItem('depot_user');
         const storedToken = localStorage.getItem('depot_token');
-        
+
         if (storedUser && storedToken) {
           const userData = JSON.parse(storedUser);
           // Validate token expiry (in production, this would be more sophisticated)
           const tokenData = JSON.parse(atob(storedToken.split('.')[1] || '{}'));
           const isExpired = tokenData.exp && Date.now() >= tokenData.exp * 1000;
-          
+
           if (!isExpired) {
             console.log('Restoring user session for:', userData.name);
             setUser(userData);
@@ -75,11 +75,11 @@ export const useAuthProvider = () => {
 
   const login = async (email: string, password: string) => {
     console.log('Login attempt for:', email);
-    
+
     try {
       // Simulate network delay for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const mockUsers: { [key: string]: User } = {
         'admin@depot.com': {
           id: '1',
@@ -104,8 +104,10 @@ export const useAuthProvider = () => {
             clients: true,
             users: true,
             moduleAccess: true,
-            reports: true
-          }
+            reports: true,
+            depotManagement: true
+          },
+          createdBy: "system"
         },
         'operator@depot.com': {
           id: '2',
@@ -130,8 +132,10 @@ export const useAuthProvider = () => {
             clients: false,
             users: false,
             moduleAccess: false,
-            reports: false
-          }
+            reports: false,
+            depotManagement: true
+          },
+          createdBy: "system"
         },
         'supervisor@depot.com': {
           id: '3',
@@ -156,8 +160,10 @@ export const useAuthProvider = () => {
             clients: true,
             users: false,
             moduleAccess: false,
-            reports: true
-          }
+            reports: true,
+            depotManagement: true
+          },
+          createdBy: "system"
         },
         'client@shipping.com': {
           id: '4',
@@ -183,8 +189,10 @@ export const useAuthProvider = () => {
             clients: false,
             users: false,
             moduleAccess: false,
-            reports: false
-          }
+            reports: false,
+            depotManagement: true
+          },
+          createdBy: "system"
         },
         'client2@maersk.com': {
           id: '5',
@@ -210,15 +218,17 @@ export const useAuthProvider = () => {
             clients: false,
             users: false,
             moduleAccess: false,
-            reports: false
-          }
+            reports: false,
+            depotManagement: true
+          },
+          createdBy: "system"
         }
       };
 
       const mockUser = mockUsers[email];
       if (mockUser && password === 'demo123') {
         console.log('Authentication successful for:', mockUser.name);
-        
+
         // Generate mock JWT token
         const tokenPayload = {
           userId: mockUser.id,
@@ -227,13 +237,13 @@ export const useAuthProvider = () => {
           iat: Math.floor(Date.now() / 1000),
           exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
         };
-        
+
         const mockToken = `header.${btoa(JSON.stringify(tokenPayload))}.signature`;
-        
+
         // Store user data and token
         localStorage.setItem('depot_user', JSON.stringify(mockUser));
         localStorage.setItem('depot_token', mockToken);
-        
+
         setUser(mockUser);
         setIsAuthenticated(true);
         console.log('User state updated, authentication complete');
@@ -252,7 +262,7 @@ export const useAuthProvider = () => {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    
+
     // Clear authentication data
     localStorage.removeItem('depot_user');
     localStorage.removeItem('depot_token');
@@ -262,12 +272,12 @@ export const useAuthProvider = () => {
 
   const hasModuleAccess = (module: keyof ModuleAccess): boolean => {
     if (!user || !user.moduleAccess) return false;
-    
+
     // Admin users always have full access to everything
     if (user.role === 'admin') {
       return true;
     }
-    
+
     return user.moduleAccess[module] === true;
   };
 
@@ -280,12 +290,12 @@ export const useAuthProvider = () => {
   // Get client filter for data queries
   const getClientFilter = (): string | null => {
     if (!user || canViewAllData()) return null;
-    
+
     // For client users, return their client identifier
     if (user.role === 'client') {
       return user.clientCode || user.company || user.email;
     }
-    
+
     return null;
   };
 

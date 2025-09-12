@@ -16,26 +16,6 @@ export interface PendingGateOut {
   createdAt: Date;
   estimatedReleaseDate?: Date;
   notes?: string;
-  updatedAt?: Date;
   updatedBy: string;
-}
-
-export interface GateOutFormData {
-  selectedReleaseOrderId: string;
-  driverName: string;
-  vehicleNumber: string;
-  transportCompany: string;
-  notes: string;
-}
-
-export interface ContainerValidation {
-  isValid: boolean;
-  message?: string;
-}
-
-export interface ContainerInput {
-  containerNumber: string;
-  confirmContainerNumber: string;
-  isValid: boolean;
-  validationMessage: string;
+  updatedAt?: Date;
 }

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Package, 
-  Settings, 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
+import {
+  Users,
+  Package,
+  Settings,
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
   Eye,
   AlertTriangle,
   CheckCircle,
@@ -37,6 +37,7 @@ export const ClientPoolManagement: React.FC = () => {
   const mockYard = {
     id: 'depot-tantarelli',
     name: 'Depot Tantarelli',
+    code: 'DEPOT-01',
     description: 'Main container depot',
     location: 'Tantarelli Port Complex',
     isActive: true,
@@ -109,6 +110,7 @@ export const ClientPoolManagement: React.FC = () => {
     ],
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date(),
+    createdBy: "System",
     layout: 'tantarelli' as const
   };
   const canManageClientPools = user?.role === 'admin' || user?.role === 'supervisor';
@@ -122,7 +124,7 @@ export const ClientPoolManagement: React.FC = () => {
       setIsLoading(true);
       const pools = clientPoolService.getClientPools();
       const poolStats = clientPoolService.getClientPoolStats();
-      
+
       setClientPools(pools);
       setStats(poolStats);
     } catch (error) {
@@ -135,7 +137,7 @@ export const ClientPoolManagement: React.FC = () => {
   const filteredPools = clientPools.filter(pool => {
     const matchesSearch = pool.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pool.clientCode.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
                          (statusFilter === 'active' && pool.isActive) ||
                          (statusFilter === 'inactive' && !pool.isActive);
     return matchesSearch && matchesStatus;
@@ -149,15 +151,17 @@ export const ClientPoolManagement: React.FC = () => {
     return 'text-blue-600 bg-blue-100';
   };
 
-  const getPriorityBadge = (priority: 'high' | 'medium' | 'low') => {
+  const getPriorityBadge = (
+    priority: 'high' | 'medium' | 'low'
+  ) => {
     const config = {
       high: { color: 'bg-red-100 text-red-800', label: 'High' },
       medium: { color: 'bg-yellow-100 text-yellow-800', label: 'Medium' },
       low: { color: 'bg-green-100 text-green-800', label: 'Low' }
     };
-    
+
     const { color, label } = config[priority] || config['low'];
-    
+
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${color}`}>
         {label}
@@ -177,14 +181,14 @@ export const ClientPoolManagement: React.FC = () => {
         data.contractEndDate ? new Date(data.contractEndDate) : undefined,
         data.notes
       );
-      
+
       // Assign stacks to the client
       clientPoolService.bulkAssignStacksToClient(
         data.assignedStacks,
         data.clientCode,
         user?.name || 'System'
       );
-      
+
       loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
@@ -196,7 +200,7 @@ export const ClientPoolManagement: React.FC = () => {
 
   const handleUpdatePool = (data: any) => {
     if (!selectedPool) return;
-    
+
     try {
       clientPoolService.updateClientPool(selectedPool.clientCode, {
         assignedStacks: data.assignedStacks,
@@ -205,7 +209,7 @@ export const ClientPoolManagement: React.FC = () => {
         contractEndDate: data.contractEndDate ? new Date(data.contractEndDate) : undefined,
         notes: data.notes
       });
-      
+
       loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
@@ -268,7 +272,7 @@ export const ClientPoolManagement: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
@@ -280,7 +284,7 @@ export const ClientPoolManagement: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center">
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -292,7 +296,7 @@ export const ClientPoolManagement: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center">
               <div className="p-2 bg-orange-100 rounded-lg">
@@ -321,7 +325,7 @@ export const ClientPoolManagement: React.FC = () => {
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -332,7 +336,7 @@ export const ClientPoolManagement: React.FC = () => {
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          
+
           <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Filter className="h-4 w-4" />
             <span>Advanced Filter</span>
@@ -349,33 +353,19 @@ export const ClientPoolManagement: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assigned Stacks
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Capacity
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Utilization
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned Stacks</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilization</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredPools.map((pool) => {
                 const utilizationRate = (pool.currentOccupancy / pool.maxCapacity) * 100;
-                
+
                 return (
                   <tr key={pool.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -392,10 +382,9 @@ export const ClientPoolManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{pool.assignedStacks.length} stacks</div>
                       <div className="text-sm text-gray-500">
-                        {pool.assignedStacks.slice(0, 3).map(stackId => 
+                        {pool.assignedStacks.slice(0, 3).map(stackId =>
                           `S${clientPoolService['extractStackNumber'](stackId).toString().padStart(2, '0')}`
-                        ).join(', ')}
-                        {pool.assignedStacks.length > 3 && ` +${pool.assignedStacks.length - 3} more`}
+                        ).join(', ')} {pool.assignedStacks.length > 3 && ` +${pool.assignedStacks.length - 3} more`}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -405,7 +394,8 @@ export const ClientPoolManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-1">
-                          <div className={`text-sm font-medium ${getUtilizationColor(pool.currentOccupancy, pool.maxCapacity)}`}>
+                          <div
+                            className={`text-sm font-medium ${getUtilizationColor(pool.currentOccupancy, pool.maxCapacity)}`}>
                             {utilizationRate.toFixed(1)}%
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
@@ -425,11 +415,7 @@ export const ClientPoolManagement: React.FC = () => {
                       {getPriorityBadge(pool.priority)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        pool.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${(pool.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')}`}>
                         {pool.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -502,18 +488,13 @@ export const ClientPoolManagement: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900">Pool Utilization Overview</h3>
           <BarChart3 className="h-5 w-5 text-gray-400" />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {clientPoolService.getClientPoolUtilization().map((util) => (
             <div key={util.clientCode} className="p-4 border border-gray-200 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-gray-900">{util.clientCode}</span>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  util.status === 'critical' ? 'bg-red-100 text-red-800' :
-                  util.status === 'high' ? 'bg-orange-100 text-orange-800' :
-                  util.status === 'optimal' ? 'bg-green-100 text-green-800' :
-                  'bg-blue-100 text-blue-800'
-                }`}>
+                <span className={`px-2 py-1 text-xs rounded-full ${util.status === 'critical' ? 'bg-red-100 text-red-800' : util.status === 'high' ? 'bg-orange-100 text-orange-800' : util.status === 'optimal' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                   {util.status}
                 </span>
               </div>

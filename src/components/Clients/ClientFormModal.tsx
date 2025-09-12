@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader, Building, Mail, Phone, MapPin, Calendar, DollarSign, Clock, User, FileText, Calculator } from 'lucide-react';
 import { Client } from '../../types';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ClientFormModalProps {
   isOpen: boolean;
@@ -15,10 +16,11 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
   selectedClient,
   onSubmit
 }) => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -104,10 +106,10 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return formData.name && formData.code && formData.email && formData.phone;
+        return !!formData.name && !!formData.code && !!formData.email && !!formData.phone;
       case 2:
-        return formData.address.street && formData.address.city && 
-               formData.contactPerson.name && formData.contactPerson.email;
+        return !!formData.address.street && !!formData.address.city &&
+               !!formData.contactPerson.name && !!formData.contactPerson.email;
       case 3:
         return formData.paymentTerms > 0 && formData.freeDaysAllowed >= 0 && formData.dailyStorageRate > 0;
       default:
@@ -127,18 +129,20 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateStep(currentStep)) return;
 
     setIsLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const clientData = {
         ...formData,
-        billingAddress: useSameAddress ? formData.address : formData.billingAddress
+        billingAddress: useSameAddress ? formData.address : formData.billingAddress,
+        createdBy: user?.name || 'System',
+        updatedBy: user?.name || 'System'
       };
-      
+
       onSubmit(clientData);
     } catch (error) {
       alert('Error saving client: ' + error);
@@ -156,7 +160,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl w-full max-w-4xl shadow-strong animate-slide-in-up max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -186,22 +190,22 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               </button>
             </div>
           </div>
-          
+
           {/* Progress Bar */}
           <div className="mt-3">
             <div className="relative">
               <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
-              <div 
-                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300" 
+              <div
+                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300"
                 style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
               ></div>
-              
+
               <div className="flex justify-between relative z-20">
                 {[1, 2, 3].map((step) => (
                   <div key={step} className="flex flex-col items-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                      step <= currentStep 
-                        ? 'bg-blue-600 text-white border border-blue-600' 
+                      step <= currentStep
+                        ? 'bg-blue-600 text-white border border-blue-600'
                         : 'bg-white text-gray-500 border border-gray-300'
                     }`}>
                       {step}
@@ -223,7 +227,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-slide-in-right">
@@ -232,7 +236,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <Building className="h-5 w-5 mr-2" />
                     Informations de Base
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
@@ -247,7 +251,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         placeholder="Ex: Maersk Line Côte d'Ivoire"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
                         Code Client *
@@ -262,7 +266,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         maxLength={10}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
                         Email Principal *
@@ -279,7 +283,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         />
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
                         Téléphone Principal *
@@ -296,7 +300,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         />
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
                         Numéro d'Identification Fiscale
@@ -320,14 +324,14 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
             {/* Step 2: Address & Contact */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Address Information */}
                 <div className="bg-green-50 rounded-xl p-6 border border-green-200">
                   <h4 className="font-semibold text-green-900 mb-6 flex items-center">
                     <MapPin className="h-5 w-5 mr-2" />
                     Adresse de l'Entreprise
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-green-800 mb-2">
@@ -342,7 +346,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         placeholder="Ex: Rue du Commerce, Zone Portuaire"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
                         Ville *
@@ -356,7 +360,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         placeholder="Ex: Abidjan, San-Pédro"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
                         Commune/District *
@@ -370,7 +374,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         placeholder="Ex: Plateau, Treichville, Koumassi"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
                         Code Postal
@@ -383,7 +387,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         placeholder="Ex: 01 BP 1234"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
                         Pays
@@ -405,7 +409,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <User className="h-5 w-5 mr-2" />
                     Personne de Contact
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-purple-800 mb-2">
@@ -420,7 +424,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         placeholder="Ex: Jean-Baptiste Kouassi"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-purple-800 mb-2">
                         Poste/Fonction *
@@ -434,7 +438,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         placeholder="Ex: Directeur des Opérations"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-purple-800 mb-2">
                         Email de Contact *
@@ -451,7 +455,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         />
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-purple-800 mb-2">
                         Téléphone de Contact *
@@ -488,7 +492,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       <span className="text-sm text-orange-800">Même adresse que l'entreprise</span>
                     </label>
                   </div>
-                  
+
                   {!useSameAddress && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
@@ -503,7 +507,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           placeholder="Adresse différente pour la facturation"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-orange-800 mb-2">
                           Ville
@@ -516,7 +520,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                           placeholder="Ville de facturation"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-orange-800 mb-2">
                           Commune/District
@@ -538,14 +542,14 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
             {/* Step 3: Configuration */}
             {currentStep === 3 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Financial Configuration */}
                 <div className="bg-green-50 rounded-xl p-6 border border-green-200">
                   <h4 className="font-semibold text-green-900 mb-6 flex items-center">
                     <DollarSign className="h-5 w-5 mr-2" />
                     Configuration Financière
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
@@ -566,7 +570,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       </div>
                       <p className="text-xs text-green-600 mt-1">Délai de paiement accordé au client</p>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
                         Jours de Stockage Gratuits *
@@ -586,7 +590,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       </div>
                       <p className="text-xs text-green-600 mt-1">Nombre de jours gratuits avant facturation</p>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
                         Tarif Journalier (FCFA) *
@@ -608,7 +612,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         Coût par jour après les jours gratuits: {formatCurrency(formData.dailyStorageRate)} FCFA
                       </p>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
                         Devise
@@ -630,7 +634,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <Calculator className="h-5 w-5 mr-2" />
                     Aperçu de la Facturation
                   </h4>
-                  
+
                   <div className="bg-white p-4 rounded-lg border border-blue-200">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="text-center">
@@ -646,7 +650,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         <div className="text-purple-700">Jours de Paiement</div>
                       </div>
                     </div>
-                    
+
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                       <div className="text-xs text-gray-600 space-y-1">
                         <div><strong>Exemple de calcul:</strong></div>
@@ -665,7 +669,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <FileText className="h-5 w-5 mr-2" />
                     Notes et Instructions Spéciales
                   </h4>
-                  
+
                   <textarea
                     value={formData.notes}
                     onChange={(e) => handleInputChange('notes', e.target.value)}
@@ -707,7 +711,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 </button>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <button
                 type="button"
@@ -716,7 +720,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               >
                 Annuler
               </button>
-              
+
               {currentStep < 3 ? (
                 <button
                   type="button"
