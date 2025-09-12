@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Menu, X } from 'lucide-react';
+import { AlertTriangle, Menu, X, Clock, Plus, Truck, Package, Search, Filter } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -36,10 +36,18 @@ const mockAvailableBookings: ReleaseOrder[] = [
   {
     id: 'RO-2025-004',
     bookingNumber: 'BK-CMA-2025-004',
-    clientId: '2', clientCode: 'CMA',
+    clientId: '2', 
+    clientCode: 'CMA',
     clientName: 'CMA CGM',
     bookingType: 'IMPORT',
-    containerQuantities: { size20ft: 1, size40ft: 0 }, totalContainers: 1, remainingContainers: 1, status: 'pending', createdBy: 'System', updatedBy: 'System', validatedBy: 'Mike Supervisor', createdAt: new Date('2025-01-11T11:00:00'),
+    containerQuantities: { size20ft: 1, size40ft: 0 }, 
+    totalContainers: 1, 
+    remainingContainers: 1, 
+    status: 'pending', 
+    createdBy: 'System', 
+    updatedBy: 'System', 
+    validatedBy: 'Mike Supervisor', 
+    createdAt: new Date('2025-01-11T11:00:00'),
     validatedAt: new Date('2025-01-11T12:30:00'),
     estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
     notes: 'Single container booking - urgent processing required'
@@ -137,6 +145,20 @@ export const GateOut: React.FC = () => {
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
+  // Filter operations based on search term and selected filter
+  const filteredOperations = allOperations.filter(operation => {
+    const matchesSearch = !searchTerm || 
+      operation.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      operation.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      operation.clientCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      operation.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      operation.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesFilter = selectedFilter === 'all' || operation.status === selectedFilter;
+    
+    return matchesSearch && matchesFilter;
+  });
+
   const handleCreateGateOut = (data: any) => {
     if (!canPerformGateOut) return;
 
@@ -220,7 +242,8 @@ export const GateOut: React.FC = () => {
         );
       }
 
-      setShowCompletionModal(false); setSelectedOperation(null);
+      setShowCompletionModal(false); 
+      setSelectedOperation(null);
 
       const statusMessage = updatedOperation.status === 'completed'
         ? 'Gate Out operation completed successfully!'
@@ -347,11 +370,6 @@ export const GateOut: React.FC = () => {
             </div>
           </div>
         </div>
-          todayGateOuts={8}
-          pendingOperations={pendingOperations.length}
-          containersProcessed={156}
-          issuesReported={2}
-        />
 
         {/* Mobile Filter Chips */}
         <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
@@ -436,7 +454,7 @@ export const GateOut: React.FC = () => {
         {/* Mobile-Optimized Operations List */}
         <div className="lg:hidden">
           <MobileGateOutOperationsTable
-            operations={allOperations}
+            operations={filteredOperations}
             searchTerm={searchTerm}
             selectedFilter={selectedFilter}
             onOperationClick={handlePendingOperationClick}
@@ -479,7 +497,7 @@ export const GateOut: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {allOperations.map((operation) => (
+                {filteredOperations.map((operation) => (
                   <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -565,7 +583,7 @@ export const GateOut: React.FC = () => {
             </table>
           </div>
 
-          {allOperations.length === 0 && (
+          {filteredOperations.length === 0 && (
             <div className="text-center py-12">
               <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
@@ -576,9 +594,6 @@ export const GateOut: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
 
       {/* Gate Out Form Modal */}
       {showForm && (
