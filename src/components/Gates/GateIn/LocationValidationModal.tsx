@@ -303,14 +303,14 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                     <Clock className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-base sm:text-lg font-semibold text-orange-900">Manual Time Tracking</h4>
-                    <p className="text-xs sm:text-sm text-orange-700">Optional: Record truck departure time (Admin only) - Defaults to current system time</p>
+                    <h4 className="font-semibold text-orange-900">Manual Time Tracking</h4>
+                    <p className="text-sm text-orange-700">Optional: Record truck departure time (Admin only) - Defaults to current system time</p>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-orange-800 mb-2">
+                    <label className="block text-sm font-medium text-orange-800 mb-2">
                       Truck Departure Date
                     </label>
                     <DatePicker
@@ -321,7 +321,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                     />
                   </div>
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-orange-800 mb-2">
+                    <label className="block text-sm font-medium text-orange-800 mb-2">
                       Truck Departure Time
                     </label>
                     <TimePicker

@@ -521,43 +521,42 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                 {/* Truck Arrival Time Tracking */}
                 {canManageTimeTracking && (
                   <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-purple-600 text-white rounded-lg">
-                      <Calendar className="h-5 w-5" />
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="p-2 bg-orange-600 text-white rounded-lg">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-orange-900">Truck Arrival Time</h4>
+                        <p className="text-sm text-orange-700">Manual time tracking (Admin only) - Defaults to current system time</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-purple-900">Truck Arrival Time</h4>
-                      <p className="text-sm text-purple-700">Manual time tracking (Admin only)</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-orange-800 mb-2">
+                          Arrival Date
+                        </label>
+                        <DatePicker
+                          value={formData.truckArrivalDate}
+                          onChange={(date) => handleInputChange('truckArrivalDate', date)}
+                          placeholder="Current system date"
+                          required={false}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-orange-800 mb-2">
+                          Arrival Time
+                        </label>
+                        <TimePicker
+                          value={formData.truckArrivalTime}
+                          onChange={(time) => handleInputChange('truckArrivalTime', time)}
+                          placeholder="Current system time"
+                          required={false}
+                          includeSeconds={true}
+                        />
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-purple-800 mb-2">
-                        Arrival Date *
-                      </label>
-                      <DatePicker
-                        value={formData.truckArrivalDate}
-                        onChange={(date) => handleInputChange('truckArrivalDate', date)}
-                        placeholder="Date"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-purple-800 mb-2">
-                        Arrival Time *
-                      </label>
-                      <TimePicker
-                        value={formData.truckArrivalTime}
-                        onChange={(time) => handleInputChange('truckArrivalTime', time)}
-                        placeholder="Time"
-                        required
-                        includeSeconds={true}
-                      />
-                    </div>
-                  </div>
-                  </div>
-                </div>
                 )}
 
                 {/* Operation Summary */}
@@ -565,7 +564,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   <h4 className="font-semibold text-gray-900 mb-4">Operation Summary</h4>
                   <div className="space-y-3 text-sm">
                     {/* Mobile: Stack layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Container:</span>
                       <div className="font-medium">{formData.containerNumber || 'Not specified'}</div>
@@ -578,7 +577,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.containerSize} • Qty: {formData.containerQuantity}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Type:</span>
                       <div className="font-medium">
@@ -597,7 +596,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.clientCode ? `${formData.clientCode} - ${formData.clientName}` : 'Not selected'}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Status:</span>
                       <div className="flex items-center space-x-2">
@@ -618,7 +617,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.driverName || 'Not specified'}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Truck:</span>
                       <div className="font-medium">{formData.truckNumber || 'Not specified'}</div>
@@ -628,7 +627,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
                     </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Arrival Date:</span>
                       <div className="font-medium">{formData.truckArrivalDate || 'Not specified'}</div>

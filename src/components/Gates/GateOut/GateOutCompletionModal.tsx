@@ -502,41 +502,41 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
             {/* Gate Out Date & Time */}
             {canManageTimeTracking && (
               <div className="bg-purple-50 rounded-xl p-4 sm:p-6 border border-purple-200">
-                 <div className="flex items-center space-x-3 mb-4">
-                   <div className="p-2 bg-purple-600 text-white rounded-lg">
-                     <Calendar className="h-5 w-5" />
-                   </div>
-                   <div>
-                     <h4 className="text-base sm:text-lg font-semibold text-purple-900">Gate Out Date & Time</h4>
-                     <p className="text-xs sm:text-sm text-purple-700">Manual time tracking (Admin only) - Defaults to current system time</p>
-                   </div>
-                 </div>
-                 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div>
-                     <label className="block text-xs sm:text-sm font-medium text-purple-800 mb-2">
-                       Gate Out Date
-                     </label>
-                     <DatePicker
-                       value={gateOutDate}
-                       onChange={setGateOutDate}
-                       placeholder="Current system date"
-                       required={false}
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs sm:text-sm font-medium text-purple-800 mb-2">
-                       Gate Out Time
-                     </label>
-                     <TimePicker
-                       value={gateOutTime}
-                       onChange={setGateOutTime}
-                       placeholder="Current system time"
-                       required={false}
-                     />
-                   </div>
-                 </div>
-               </div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-purple-600 text-white rounded-lg">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-purple-900">Gate Out Date & Time</h4>
+                    <p className="text-sm text-purple-700">Manual time tracking (Admin only) - Defaults to current system time</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-purple-800 mb-2">
+                      Gate Out Date
+                    </label>
+                    <DatePicker
+                      value={gateOutDate}
+                      onChange={setGateOutDate}
+                      placeholder="Current system date"
+                      required={false}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-purple-800 mb-2">
+                      Gate Out Time
+                    </label>
+                    <TimePicker
+                      value={gateOutTime}
+                      onChange={setGateOutTime}
+                      placeholder="Current system time"
+                      required={false}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Error Display */}
