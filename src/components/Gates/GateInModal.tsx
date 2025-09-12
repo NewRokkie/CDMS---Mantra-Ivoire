@@ -557,6 +557,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                     </div>
                   </div>
                   </div>
+                </div>
                 )}
 
                 {/* Operation Summary */}
