@@ -161,8 +161,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => handleMainMenuClick(item.id)}
-                    setActiveModule(item.id);
+                  onClick={() => {
+                    handleMainMenuClick(item.id);
                   }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     isActive
