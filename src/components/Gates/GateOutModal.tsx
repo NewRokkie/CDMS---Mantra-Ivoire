@@ -62,7 +62,8 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   onSubmit,
   isProcessing
 }) => {
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
+  const canManageTimeTracking = hasModuleAccess('timeTracking');
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
   const [containerNumbers, setContainerNumbers] = useState<string[]>(['']);

@@ -244,7 +244,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
                 </div>
 
                 {/* Audit Log Button */}
-                {container.auditLogs && container.auditLogs.length > 0 && (
+                {canViewAuditLogs && container.auditLogs && container.auditLogs.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => setShowAuditModal(true)}

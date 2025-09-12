@@ -398,7 +398,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isProcessing || !areAllContainerNumbersValid() || !gateOutDate || !gateOutTime}
+                disabled={isProcessing || !areAllContainerNumbersValid() || (canManageTimeTracking && (!gateOutDate || !gateOutTime))}
                 className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {isProcessing ? (

@@ -18,7 +18,15 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
     clients: false,
     users: false,
     moduleAccess: false,
-    reports: false
+    reports: false,
+    depotManagement: false,
+    timeTracking: false,
+    analytics: false,
+    clientPools: false,
+    stackManagement: false,
+    auditLogs: false,
+    billingReports: false,
+    operationsReports: false
   };
 
   switch (role) {
@@ -34,7 +42,15 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         clients: true,
         users: true,
         moduleAccess: true,
-        reports: true
+        reports: true,
+        depotManagement: true,
+        timeTracking: true,
+        analytics: true,
+        clientPools: true,
+        stackManagement: true,
+        auditLogs: true,
+        billingReports: true,
+        operationsReports: true
       };
     case 'supervisor':
       return {
@@ -45,7 +61,14 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         releases: true,
         edi: true,
         reports: true,
-        users: true
+        users: true,
+        depotManagement: true,
+        analytics: true,
+        clientPools: true,
+        stackManagement: true,
+        auditLogs: true,
+        billingReports: true,
+        operationsReports: true
       };
     case 'operator':
       return {
@@ -53,13 +76,16 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         containers: true,
         gateIn: true,
         gateOut: true,
-        releases: true
+        releases: true,
+        yard: true,
+        auditLogs: true
       };
     case 'client':
       return {
         ...baseAccess,
         containers: true,
-        releases: true
+        releases: true,
+        yard: true
       };
     default:
       return baseAccess;

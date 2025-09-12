@@ -140,7 +140,7 @@ export const ContainerList: React.FC = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const { t } = useLanguage();
-  const { user, canViewAllData, getClientFilter } = useAuth();
+  const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
 
   const getStatusBadge = (status: Container['status']) => {

@@ -850,6 +850,34 @@ export const ReportsModule: React.FC = () => {
         />
       )}
 
+      {/* No Access Message for Missing Tabs */}
+      {activeTab === 'billing' && !canAccessBillingReports && (
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-600">You don't have permission to access billing reports.</p>
+          <p className="text-sm text-gray-500 mt-2">Contact your administrator to request access.</p>
+        </div>
+      )}
+      
+      {activeTab === 'analytics' && !canAccessAnalytics && (
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-600">You don't have permission to access advanced analytics.</p>
+          <p className="text-sm text-gray-500 mt-2">Contact your administrator to request access.</p>
+        </div>
+      )}
+      
+      {activeTab === 'operations' && !canAccessOperationsReports && (
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-600">You don't have permission to access operations reports.</p>
+          <p className="text-sm text-gray-500 mt-2">Contact your administrator to request access.</p>
+        </div>
+      )}
+
       {/* Billing Detail Modal */}
       {showDetailModal && selectedContainer && (
         <BillingDetailModal

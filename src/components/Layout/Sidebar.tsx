@@ -46,8 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     { id: 'edi', icon: Send, label: t('nav.edi'), moduleKey: 'edi' as const },
     { id: 'yard', icon: Grid3X3, label: 'Yard Management', moduleKey: 'yard' as const },
     { id: 'depot-management', icon: Building, label: 'Depot Management', moduleKey: 'depotManagement' as const },
-    { id: 'stack-management', icon: Settings, label: 'Stack Management', moduleKey: 'yard' as const },
-    { id: 'client-pools', icon: Users, label: 'Client Pools', moduleKey: 'clients' as const },
+    { id: 'stack-management', icon: Settings, label: 'Stack Management', moduleKey: 'stackManagement' as const },
+    { id: 'client-pools', icon: Users, label: 'Client Pools', moduleKey: 'clientPools' as const },
     { id: 'reports', icon: BarChart3, label: t('nav.reports'), moduleKey: 'reports' as const },
 
     // 7. Management modules

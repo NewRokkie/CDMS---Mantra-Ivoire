@@ -169,6 +169,12 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!canEditContainers) {
+      alert('You do not have permission to edit containers.');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
