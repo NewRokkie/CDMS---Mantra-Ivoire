@@ -4,6 +4,7 @@ import { DatePicker } from '../Common/DatePicker';
 import { ClientPool } from '../../types/clientPool';
 import { Yard, YardStack } from '../../types';
 import { clientPoolService } from '../../services/clientPoolService';
+import { useYard } from '../../hooks/useYard';
 
 interface ClientPoolFormProps {
   isOpen: boolean;
@@ -51,6 +52,8 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   yard,
   isLoading = false
 }) => {
+  const { currentYard } = useYard();
+  
   const [formData, setFormData] = useState<ClientPoolFormData>({
     clientId: '',
     clientCode: '',
@@ -202,7 +205,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   );
 
   // Group stacks by section for better organization
-  const targetYard = currentYard || yard;
+  const targetYard = currentYard;
   const stacksBySection = targetYard.sections.map(section => ({
     section,
     stacks: filteredStacks.filter(stack => stack.sectionId === section.id)
