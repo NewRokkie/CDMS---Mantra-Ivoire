@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { yardService } from '../../services/yardService';
 import { DatePicker } from '../Common/DatePicker';
 import { AnalyticsTab } from './AnalyticsTab';
 import { OperationsTab } from './OperationsTab';
@@ -117,9 +118,88 @@ export const ReportsModule: React.FC = () => {
 
   const billingData = useMemo(() => generateMockBillingData(), []);
 
+  const isManager = user?.role === 'admin' || user?.role === 'supervisor';
+
+  // Get multi-depot billing data for managers
+  const getMultiDepotBillingData = () => {
+    if (!isManager) return billingData;
+
+    if (selectedDepot) {
+      // Filter data for specific depot
+      return billingData.filter(item => {
+        // In a real implementation, you'd check which depot the container belongs to
+        // For now, we'll use a simple distribution logic
+        const depot = availableYards.find(d => d.id === selectedDepot);
+        if (!depot) return false;
+        
+        // Distribute containers across depots based on client codes
+        if (selectedDepot === 'depot-tantarelli') {
+          return ['MAEU', 'MSCU', 'CMDU'].includes(item.clientCode);
+        } else if (selectedDepot === 'depot-vridi') {
+          return ['SHIP001', 'HLCU'].includes(item.clientCode);
+        } else if (selectedDepot === 'depot-san-pedro') {
+          return ['MAEU', 'CMDU'].includes(item.clientCode);
+        }
+        return true;
+      });
+    }
+
+    // Return all data for global view
+    return billingData;
+  };
+
+  // Get global billing statistics
+  const getGlobalBillingStats = () => {
+    if (!isManager) return null;
+
+    const depotStats = availableYards.map(depot => {
+      const depotBilling = getMultiDepotBillingData().filter(item => {
+        // Same distribution logic as above
+        if (depot.id === 'depot-tantarelli') {
+          return ['MAEU', 'MSCU', 'CMDU'].includes(item.clientCode);
+        } else if (depot.id === 'depot-vridi') {
+          return ['SHIP001', 'HLCU'].includes(item.clientCode);
+        } else if (depot.id === 'depot-san-pedro') {
+          return ['MAEU', 'CMDU'].includes(item.clientCode);
+        }
+        return false;
+      });
+
+      const revenue = depotBilling.reduce((sum, item) => sum + item.totalAmount, 0);
+      const activeContainers = depotBilling.filter(item => item.status === 'active').length;
+      const billableDays = depotBilling.reduce((sum, item) => sum + item.billableDays, 0);
+
+      return {
+        id: depot.id,
+        name: depot.name,
+        code: depot.code,
+        revenue,
+        activeContainers,
+        completedContainers: depotBilling.filter(item => item.status === 'completed').length,
+        billableDays,
+        averageDays: depotBilling.length > 0 
+          ? depotBilling.reduce((sum, item) => sum + item.totalDays, 0) / depotBilling.length 
+          : 0,
+        utilizationRate: (depot.currentOccupancy / depot.totalCapacity) * 100
+      };
+    });
+
+    const globalTotals = {
+      totalRevenue: depotStats.reduce((sum, d) => sum + d.revenue, 0),
+      totalActiveContainers: depotStats.reduce((sum, d) => sum + d.activeContainers, 0),
+      totalCompletedContainers: depotStats.reduce((sum, d) => sum + d.completedContainers, 0),
+      totalBillableDays: depotStats.reduce((sum, d) => sum + d.billableDays, 0),
+      averageUtilization: depotStats.length > 0 
+        ? depotStats.reduce((sum, d) => sum + d.utilizationRate, 0) / depotStats.length 
+        : 0
+    };
+
+    return { depotStats, globalTotals };
+  };
+
   // Filter data based on user permissions
   const getFilteredBillingData = () => {
-    let data = billingData;
+    let data = isManager && viewMode === 'global' ? getMultiDepotBillingData() : billingData;
     
     // Apply client filter for client users
     const clientFilterValue = getClientFilter();
@@ -150,6 +230,7 @@ export const ReportsModule: React.FC = () => {
   };
 
   const filteredData = getFilteredBillingData();
+  const globalBillingStats = getGlobalBillingStats();
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -228,14 +309,81 @@ export const ReportsModule: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Multi-Depot View Toggle for Managers */}
+      {isManager && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('current')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+                    viewMode === 'current'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Building className="h-4 w-4" />
+                  <span>Current Depot</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('global')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+                    viewMode === 'global'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Globe className="h-4 w-4" />
+                  <span>All Depots</span>
+                </button>
+              </div>
+              
+              {viewMode === 'global' && (
+                <select
+                  value={selectedDepot || 'all'}
+                  onChange={(e) => setSelectedDepot(e.target.value === 'all' ? null : e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="all">All Depots Combined</option>
+                  {availableYards.map(depot => (
+                    <option key={depot.id} value={depot.id}>
+                      {depot.name} ({depot.code})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            
+            <div className="text-sm text-gray-600">
+              {viewMode === 'current' ? (
+                <span>Viewing: {currentYard?.name || 'No depot selected'}</span>
+              ) : selectedDepot ? (
+                <span>Viewing: {availableYards.find(d => d.id === selectedDepot)?.name}</span>
+              ) : (
+                <span>Viewing: Global Performance ({availableYards.length} depots)</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Reports & Analytics</h2>
           <p className="text-gray-600">
             Container billing, free days tracking, and operational analytics
-            {currentYard && (
+            {viewMode === 'current' && currentYard && (
               <span className="ml-2 text-blue-600 font-medium">
                 • {currentYard.name} ({currentYard.code})
+              </span>
+            )}
+            {viewMode === 'global' && isManager && (
+              <span className="ml-2 text-purple-600 font-medium">
+                • {selectedDepot 
+                  ? availableYards.find(d => d.id === selectedDepot)?.name 
+                  : `Global View (${availableYards.length} depots)`
+                }
               </span>
             )}
           </p>
@@ -286,6 +434,176 @@ export const ReportsModule: React.FC = () => {
       {/* Billing & Free Days Tab */}
       {activeTab === 'billing' && (
         <div className="space-y-6">
+          {/* Global Billing Statistics for Managers */}
+          {isManager && viewMode === 'global' && globalBillingStats && !selectedDepot && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Globe className="h-5 w-5 mr-2" />
+                Global Billing Overview
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-500">Global Revenue</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {formatCurrency(globalBillingStats.globalTotals.totalRevenue)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Package className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-500">Active Containers</p>
+                      <p className="text-lg font-semibold text-gray-900">{globalBillingStats.globalTotals.totalActiveContainers}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-500">Global Billable Days</p>
+                      <p className="text-lg font-semibold text-gray-900">{globalBillingStats.globalTotals.totalBillableDays}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-500">Avg Utilization</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {globalBillingStats.globalTotals.averageUtilization.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Depot Performance Comparison */}
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">Depot Revenue Comparison</h3>
+                  <p className="text-sm text-gray-600">Revenue and billing metrics by depot</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depot</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Containers</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable Days</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Days</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilization</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {globalBillingStats.depotStats.map((depot) => (
+                        <tr key={depot.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Building className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">{depot.name}</div>
+                                <div className="text-sm text-gray-500">{depot.code}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{formatCurrency(depot.revenue)}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{depot.activeContainers}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{depot.billableDays}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{depot.averageDays.toFixed(1)} days</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-1">
+                                <div className={`text-sm font-medium ${
+                                  depot.utilizationRate >= 90 ? 'text-red-600' :
+                                  depot.utilizationRate >= 75 ? 'text-orange-600' :
+                                  depot.utilizationRate >= 25 ? 'text-green-600' : 'text-blue-600'
+                                }`}>
+                                  {depot.utilizationRate.toFixed(1)}%
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                  <div
+                                    className={`h-1.5 rounded-full ${
+                                      depot.utilizationRate >= 90 ? 'bg-red-500' :
+                                      depot.utilizationRate >= 75 ? 'bg-orange-500' :
+                                      depot.utilizationRate >= 25 ? 'bg-green-500' : 'bg-blue-500'
+                                    }`}
+                                    style={{ width: `${Math.min(depot.utilizationRate, 100)}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => setSelectedDepot(depot.id)}
+                              className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                              title="View Depot Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Individual Depot View for Managers */}
+          {isManager && viewMode === 'global' && selectedDepot && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Building className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <h3 className="font-medium text-blue-900">
+                      Viewing: {availableYards.find(d => d.id === selectedDepot)?.name}
+                    </h3>
+                    <p className="text-sm text-blue-700">Individual depot billing and performance</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedDepot(null)}
+                  className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Summary Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -504,12 +822,22 @@ export const ReportsModule: React.FC = () => {
 
       {/* Analytics Tab */}
       {activeTab === 'analytics' && (
-        <AnalyticsTab />
+        <AnalyticsTab 
+          viewMode={isManager ? viewMode : 'current'}
+          selectedDepot={selectedDepot}
+          availableYards={availableYards}
+          currentYard={currentYard}
+        />
       )}
 
       {/* Operations Tab */}
       {activeTab === 'operations' && (
-        <OperationsTab />
+        <OperationsTab 
+          viewMode={isManager ? viewMode : 'current'}
+          selectedDepot={selectedDepot}
+          availableYards={availableYards}
+          currentYard={currentYard}
+        />
       )}
 
       {/* Billing Detail Modal */}

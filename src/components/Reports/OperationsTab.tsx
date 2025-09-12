@@ -33,6 +33,13 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { DatePicker } from '../Common/DatePicker';
 
+interface OperationsTabProps {
+  viewMode?: 'current' | 'global';
+  selectedDepot?: string | null;
+  availableYards?: any[];
+  currentYard?: any;
+}
+
 interface OperationsData {
   dailyOperations: Array<{
     date: string;
@@ -148,12 +155,60 @@ const generateOperationsData = (): OperationsData => {
   };
 };
 
-export const OperationsTab: React.FC = () => {
+export const OperationsTab: React.FC<OperationsTabProps> = ({
+  viewMode = 'current',
+  selectedDepot = null,
+  availableYards = [],
+  currentYard = null
+}) => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedView, setSelectedView] = useState<'performance' | 'efficiency' | 'quality'>('performance');
   const { user, canViewAllData } = useAuth();
 
   const operationsData = useMemo(() => generateOperationsData(), []);
+
+  // Generate multi-depot operations data for managers
+  const getMultiDepotOperationsData = () => {
+    if (viewMode !== 'global') return operationsData;
+
+    if (selectedDepot) {
+      // Return data for specific depot
+      const depot = availableYards.find(d => d.id === selectedDepot);
+      if (!depot) return operationsData;
+      
+      // Generate depot-specific operations data
+      return {
+        ...operationsData,
+        depotName: depot.name,
+        depotCode: depot.code
+      };
+    }
+
+    // Return combined operations data for all depots
+    const combinedData = {
+      ...operationsData,
+      // Scale data by number of depots for global view
+      dailyOperations: operationsData.dailyOperations.map(item => ({
+        ...item,
+        gateInOperations: item.gateInOperations * availableYards.length,
+        gateOutOperations: item.gateOutOperations * availableYards.length
+      })),
+      operatorPerformance: operationsData.operatorPerformance.map(item => ({
+        ...item,
+        operationsCompleted: item.operationsCompleted * availableYards.length
+      })),
+      hourlyDistribution: operationsData.hourlyDistribution.map(item => ({
+        ...item,
+        gateIn: item.gateIn * availableYards.length,
+        gateOut: item.gateOut * availableYards.length,
+        total: item.total * availableYards.length
+      }))
+    };
+
+    return combinedData;
+  };
+
+  const displayData = getMultiDepotOperationsData();
 
   const formatTime = (minutes: number) => {
     if (minutes < 60) {
@@ -187,16 +242,16 @@ export const OperationsTab: React.FC = () => {
 
   // Calculate key operational metrics
   const operationalMetrics = useMemo(() => {
-    const totalOperations = operationsData.dailyOperations.reduce(
+    const totalOperations = displayData.dailyOperations.reduce(
       (sum, day) => sum + day.gateInOperations + day.gateOutOperations, 0
     );
-    const avgProcessingTime = operationsData.dailyOperations.reduce(
+    const avgProcessingTime = displayData.dailyOperations.reduce(
       (sum, day) => sum + day.avgProcessingTime, 0
-    ) / operationsData.dailyOperations.length;
-    const avgEfficiency = operationsData.dailyOperations.reduce(
+    ) / displayData.dailyOperations.length;
+    const avgEfficiency = displayData.dailyOperations.reduce(
       (sum, day) => sum + day.efficiency, 0
-    ) / operationsData.dailyOperations.length;
-    const peakHour = operationsData.hourlyDistribution.reduce(
+    ) / displayData.dailyOperations.length;
+    const peakHour = displayData.hourlyDistribution.reduce(
       (max, hour) => hour.total > max.total ? hour : max
     );
 
@@ -207,12 +262,37 @@ export const OperationsTab: React.FC = () => {
       peakHour: peakHour.hour,
       peakVolume: peakHour.total
     };
-  }, [operationsData]);
+  }, [displayData]);
 
   const showClientNotice = !canViewAllData() && user?.role === 'client';
 
   return (
     <div className="space-y-6">
+      {/* Depot Context Header for Global View */}
+      {viewMode === 'global' && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-orange-600 text-white rounded-lg">
+              <Activity className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-medium text-orange-900">
+                {selectedDepot 
+                  ? `${availableYards.find(d => d.id === selectedDepot)?.name} Operations`
+                  : 'Global Operations Dashboard'
+                }
+              </h3>
+              <p className="text-sm text-orange-700">
+                {selectedDepot 
+                  ? 'Individual depot operational metrics and efficiency'
+                  : `Combined operations data across ${availableYards.length} depots`
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Key Operational Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
@@ -351,7 +431,7 @@ export const OperationsTab: React.FC = () => {
           </div>
           
           <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={operationsData.dailyOperations.slice(-14)}>
+            <ComposedChart data={displayData.dailyOperations.slice(-14)}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis 
                 dataKey="date" 
@@ -392,7 +472,7 @@ export const OperationsTab: React.FC = () => {
           </div>
           
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={operationsData.processingTimes} layout="horizontal">
+            <BarChart data={displayData.processingTimes} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis type="number" stroke="#64748b" fontSize={12} />
               <YAxis 
@@ -431,7 +511,7 @@ export const OperationsTab: React.FC = () => {
           </div>
           
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={operationsData.hourlyDistribution}>
+            <AreaChart data={displayData.hourlyDistribution}>
               <defs>
                 <linearGradient id="operationsGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
@@ -474,7 +554,7 @@ export const OperationsTab: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            {operationsData.qualityMetrics.map((metric, index) => {
+            {displayData.qualityMetrics.map((metric, index) => {
               const isOnTarget = metric.current >= metric.target;
               const isErrorMetric = metric.metric.toLowerCase().includes('error') || metric.metric.toLowerCase().includes('rework');
               
@@ -538,7 +618,7 @@ export const OperationsTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {operationsData.operatorPerformance.map((operator, index) => (
+                {displayData.operatorPerformance.map((operator, index) => (
                   <tr key={operator.operatorName} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -610,7 +690,7 @@ export const OperationsTab: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {operationsData.equipmentUtilization.map((equipment, index) => (
+          {displayData.equipmentUtilization.map((equipment, index) => (
             <div key={equipment.equipment} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-gray-900">{equipment.equipment}</h4>

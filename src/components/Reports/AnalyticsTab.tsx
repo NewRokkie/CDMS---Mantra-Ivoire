@@ -32,6 +32,13 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { DatePicker } from '../Common/DatePicker';
 
+interface AnalyticsTabProps {
+  viewMode?: 'current' | 'global';
+  selectedDepot?: string | null;
+  availableYards?: any[];
+  currentYard?: any;
+}
+
 interface AnalyticsData {
   containerMovements: Array<{
     date: string;
@@ -134,28 +141,78 @@ const generateAnalyticsData = (): AnalyticsData => {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-export const AnalyticsTab: React.FC = () => {
+export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
+  viewMode = 'current',
+  selectedDepot = null,
+  availableYards = [],
+  currentYard = null
+}) => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedMetric, setSelectedMetric] = useState<'revenue' | 'containers' | 'occupancy'>('revenue');
   const { user, canViewAllData, getClientFilter } = useAuth();
 
   const analyticsData = useMemo(() => generateAnalyticsData(), []);
 
+  // Generate multi-depot analytics for managers
+  const getMultiDepotAnalytics = () => {
+    if (viewMode !== 'global') return null;
+
+    if (selectedDepot) {
+      // Return data for specific depot
+      const depot = availableYards.find(d => d.id === selectedDepot);
+      if (!depot) return null;
+      
+      // Generate depot-specific analytics
+      return {
+        ...analyticsData,
+        depotName: depot.name,
+        depotCode: depot.code
+      };
+    }
+
+    // Return combined analytics for all depots
+    const combinedData = {
+      ...analyticsData,
+      // Multiply data by number of depots for global view
+      containerMovements: analyticsData.containerMovements.map(item => ({
+        ...item,
+        gateIn: item.gateIn * availableYards.length,
+        gateOut: item.gateOut * availableYards.length,
+        total: (item.gateIn + item.gateOut) * availableYards.length
+      })),
+      revenueAnalytics: analyticsData.revenueAnalytics.map(item => ({
+        ...item,
+        revenue: item.revenue * availableYards.length,
+        containers: item.containers * availableYards.length
+      })),
+      occupancyTrends: analyticsData.occupancyTrends.map(item => ({
+        ...item,
+        occupancy: item.occupancy * availableYards.length,
+        capacity: item.capacity * availableYards.length
+      }))
+    };
+
+    return combinedData;
+  };
+
   // Filter data based on user permissions
   const getFilteredData = () => {
+    // Use multi-depot data if available
+    const sourceData = getMultiDepotAnalytics() || analyticsData;
+    
     const clientFilter = getClientFilter();
     if (clientFilter) {
       // Filter client distribution to show only user's data
-      const filteredClientDistribution = analyticsData.clientDistribution.filter(
+      const filteredClientDistribution = sourceData.clientDistribution.filter(
         client => client.clientCode === clientFilter
       );
       
       return {
-        ...analyticsData,
+        ...sourceData,
         clientDistribution: filteredClientDistribution
       };
     }
-    return analyticsData;
+    return sourceData;
   };
 
   const filteredData = getFilteredData();
@@ -198,6 +255,31 @@ export const AnalyticsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Depot Context Header for Global View */}
+      {viewMode === 'global' && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-purple-600 text-white rounded-lg">
+              <BarChart3 className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-medium text-purple-900">
+                {selectedDepot 
+                  ? `${availableYards.find(d => d.id === selectedDepot)?.name} Analytics`
+                  : 'Global Analytics Dashboard'
+                }
+              </h3>
+              <p className="text-sm text-purple-700">
+                {selectedDepot 
+                  ? 'Individual depot performance metrics and trends'
+                  : `Combined analytics across ${availableYards.length} depots`
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">

@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Container, FileCheck, TrendingUp, Building, DollarSign, Activity, BarChart3, AlertTriangle, Package, Wrench, CheckCircle, XCircle, Eye, MapPin, Calendar, User, X, Filter } from 'lucide-react';
+import { Container, FileCheck, TrendingUp, Building, DollarSign, Activity, BarChart3, AlertTriangle, Package, Wrench, CheckCircle, XCircle, Eye, MapPin, Calendar, User, X, Filter, Globe, Layers } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { useYard } from '../../hooks/useYard';
+import { yardService } from '../../services/yardService';
 import { DashboardStats } from '../../types';
 
 // Enhanced mock container data for dashboard analytics
@@ -35,12 +37,16 @@ interface FilteredData {
 export const DashboardOverview: React.FC = () => {
   const { t } = useLanguage();
   const { user, canViewAllData, getClientFilter } = useAuth();
+  const { currentYard, availableYards } = useYard();
   const [activeFilter, setActiveFilter] = useState<FilterType>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'current' | 'global'>('current');
+  const [selectedDepot, setSelectedDepot] = useState<string | null>(null);
 
   const clientFilter = getClientFilter();
   const showClientNotice = !canViewAllData() && user?.role === 'client';
+  const isManager = user?.role === 'admin' || user?.role === 'supervisor';
 
   // Filter containers based on user permissions
   const getFilteredContainers = () => {
@@ -57,6 +63,50 @@ export const DashboardOverview: React.FC = () => {
   };
 
   const filteredContainers = getFilteredContainers();
+
+  // Get multi-depot data for managers
+  const getMultiDepotData = () => {
+    if (!isManager) return null;
+
+    const allDepots = availableYards;
+    const globalStats = {
+      totalDepots: allDepots.length,
+      activeDepots: allDepots.filter(d => d.isActive).length,
+      totalCapacity: allDepots.reduce((sum, d) => sum + d.totalCapacity, 0),
+      totalOccupancy: allDepots.reduce((sum, d) => sum + d.currentOccupancy, 0),
+      averageUtilization: 0
+    };
+    globalStats.averageUtilization = globalStats.totalCapacity > 0 
+      ? (globalStats.totalOccupancy / globalStats.totalCapacity) * 100 
+      : 0;
+
+    const depotPerformance = allDepots.map(depot => {
+      const utilizationRate = (depot.currentOccupancy / depot.totalCapacity) * 100;
+      const depotContainers = mockContainerData.filter(c => 
+        yardService.isContainerInYard ? yardService.isContainerInYard(c, depot.id) : false
+      );
+      
+      return {
+        id: depot.id,
+        name: depot.name,
+        code: depot.code,
+        location: depot.location,
+        capacity: depot.totalCapacity,
+        occupancy: depot.currentOccupancy,
+        utilizationRate,
+        containers: depotContainers.length,
+        inDepot: depotContainers.filter(c => c.status === 'in_depot').length,
+        damaged: depotContainers.filter(c => c.isDamaged).length,
+        revenue: Math.floor(Math.random() * 50000) + 80000, // Mock revenue
+        efficiency: Math.floor(Math.random() * 20) + 80,
+        status: depot.isActive ? 'active' : 'inactive'
+      };
+    });
+
+    return { globalStats, depotPerformance };
+  };
+
+  const multiDepotData = getMultiDepotData();
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -213,6 +263,260 @@ export const DashboardOverview: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Multi-Depot View Toggle for Managers */}
+      {isManager && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('current')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+                    viewMode === 'current'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Building className="h-4 w-4" />
+                  <span>Current Depot</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('global')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+                    viewMode === 'global'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Globe className="h-4 w-4" />
+                  <span>All Depots</span>
+                </button>
+              </div>
+              
+              {viewMode === 'global' && (
+                <select
+                  value={selectedDepot || 'all'}
+                  onChange={(e) => setSelectedDepot(e.target.value === 'all' ? null : e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="all">All Depots Combined</option>
+                  {availableYards.map(depot => (
+                    <option key={depot.id} value={depot.id}>
+                      {depot.name} ({depot.code})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            
+            <div className="text-sm text-gray-600">
+              {viewMode === 'current' ? (
+                <span>Viewing: {currentYard?.name || 'No depot selected'}</span>
+              ) : selectedDepot ? (
+                <span>Viewing: {availableYards.find(d => d.id === selectedDepot)?.name}</span>
+              ) : (
+                <span>Viewing: Global Performance ({availableYards.length} depots)</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Stats for Managers */}
+      {isManager && viewMode === 'global' && multiDepotData && !selectedDepot && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Globe className="h-5 w-5 mr-2" />
+            Global Performance Overview
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Depots</p>
+                  <p className="text-2xl font-bold text-gray-900">{multiDepotData.globalStats.totalDepots}</p>
+                  <div className="text-sm text-blue-600 mt-1">
+                    {multiDepotData.globalStats.activeDepots} active
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Building className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Global Capacity</p>
+                  <p className="text-2xl font-bold text-gray-900">{multiDepotData.globalStats.totalCapacity.toLocaleString()}</p>
+                  <div className="text-sm text-green-600 mt-1">containers</div>
+                </div>
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <Package className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Global Occupancy</p>
+                  <p className="text-2xl font-bold text-gray-900">{multiDepotData.globalStats.totalOccupancy.toLocaleString()}</p>
+                  <div className="text-sm text-purple-600 mt-1">containers</div>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <Container className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Avg Utilization</p>
+                  <p className="text-2xl font-bold text-gray-900">{multiDepotData.globalStats.averageUtilization.toFixed(1)}%</p>
+                  <div className="flex items-center mt-2">
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-600 font-medium">+5.2%</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-orange-100 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Depot Performance Comparison for Managers */}
+      {isManager && viewMode === 'global' && multiDepotData && !selectedDepot && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Depot Performance Comparison</h3>
+            <p className="text-sm text-gray-600">Individual depot metrics and performance indicators</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depot</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilization</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Containers</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Efficiency</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {multiDepotData.depotPerformance.map((depot) => (
+                  <tr key={depot.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Building className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{depot.name}</div>
+                          <div className="text-sm text-gray-500">{depot.code}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{depot.occupancy.toLocaleString()} / {depot.capacity.toLocaleString()}</div>
+                      <div className="text-sm text-gray-500">containers</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-1">
+                          <div className={`text-sm font-medium ${
+                            depot.utilizationRate >= 90 ? 'text-red-600' :
+                            depot.utilizationRate >= 75 ? 'text-orange-600' :
+                            depot.utilizationRate >= 25 ? 'text-green-600' : 'text-blue-600'
+                          }`}>
+                            {depot.utilizationRate.toFixed(1)}%
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                            <div
+                              className={`h-2 rounded-full ${
+                                depot.utilizationRate >= 90 ? 'bg-red-500' :
+                                depot.utilizationRate >= 75 ? 'bg-orange-500' :
+                                depot.utilizationRate >= 25 ? 'bg-green-500' : 'bg-blue-500'
+                              }`}
+                              style={{ width: `${Math.min(depot.utilizationRate, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{depot.containers}</div>
+                      <div className="text-sm text-gray-500">{depot.inDepot} in depot</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{formatCurrency(depot.revenue)}</div>
+                      <div className="text-sm text-gray-500">monthly</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        depot.efficiency >= 95 ? 'bg-green-100 text-green-800' :
+                        depot.efficiency >= 85 ? 'bg-blue-100 text-blue-800' :
+                        depot.efficiency >= 75 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {depot.efficiency}%
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        depot.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {depot.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => setSelectedDepot(depot.id)}
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                        title="View Depot Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Individual Depot View for Managers */}
+      {isManager && viewMode === 'global' && selectedDepot && multiDepotData && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Building className="h-5 w-5 text-blue-600" />
+              <div>
+                <h3 className="font-medium text-blue-900">
+                  Viewing: {multiDepotData.depotPerformance.find(d => d.id === selectedDepot)?.name}
+                </h3>
+                <p className="text-sm text-blue-700">Individual depot performance metrics</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedDepot(null)}
+              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Client Notice */}
       {showClientNotice && (
         <div className="flex items-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
