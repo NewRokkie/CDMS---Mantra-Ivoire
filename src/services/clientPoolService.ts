@@ -270,38 +270,7 @@ export class ClientPoolService {
     // Check if stack exists in any section of this yard
     return yard.sections.some(section =>
       section.stacks.some(stack => stack.id === stackId)
-      );
-      const currentOccupancy = stackContainers.length;
-      const availableSlots = stack.capacity - currentOccupancy;
-
-      // Check if stack can accommodate the container size
-      const canAccommodateSize = this.canStackAccommodateSize(stack, containerSize);
-
-      if (availableSlots > 0 && canAccommodateSize) {
-        const section = yard.sections.find(s => s.id === stack.sectionId);
-
-        availableStacks.push({
-          stackId: stack.id,
-          stackNumber: stack.stackNumber,
-          sectionName: section?.name || 'Unknown',
-          availableSlots,
-          totalCapacity: stack.capacity,
-          isRecommended: this.isStackRecommended(stack, containerSize, currentOccupancy),
-          distance: this.calculateStackDistance(stack, containerSize)
-        });
-      }
-    });
-
-    // Sort by recommendation, then by available slots, then by distance
-    return availableStacks.sort((a, b) => {
-      if (a.isRecommended !== b.isRecommended) {
-        return a.isRecommended ? -1 : 1;
-      }
-      if (a.availableSlots !== b.availableSlots) {
-        return b.availableSlots - a.availableSlots;
-      }
-      return (a.distance || 0) - (b.distance || 0);
-    });
+    );
   }
 
   /**
@@ -641,9 +610,6 @@ export class ClientPoolService {
     clientName: string,
     assignedStacks: string[],
     maxCapacity: number,
-    contractStartDate: Date,
-    contractEndDate?: Date,
-    notes?: string,
     priority: 'high' | 'medium' | 'low',
     contractStartDate: Date,
     contractEndDate?: Date,
@@ -666,7 +632,7 @@ export class ClientPoolService {
       updatedAt: new Date(),
       createdBy: effectiveUserName,
       updatedBy: effectiveUserName,
-      priority: 'medium',
+      priority,
       contractStartDate,
       contractEndDate,
       notes
@@ -855,15 +821,11 @@ export class ClientPoolService {
    */
   releaseContainerFromPool(containerNumber: string, clientCode: string, userName?: string): void {
     const effectiveUserName = userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
     try {
       this.updateClientPoolOccupancy(clientCode, -1, effectiveUserName);
       // Log release
-      yardService.logOperation('container_release', containerNumber, effectiveUserName, {
+      yardService.logOperation('container_move', containerNumber, effectiveUserName, {
         clientCode,
-        yardId: currentYard?.id,
-        yardCode: currentYard?.code,
         action: 'release'
       });
       console.log(`Container ${containerNumber} released from client pool ${clientCode} by ${effectiveUserName}`);
