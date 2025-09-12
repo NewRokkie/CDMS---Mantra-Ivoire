@@ -595,19 +595,298 @@ export const GateIn: React.FC = () => {
 
   // Main Overview
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="lg:space-y-6">
       {/* Mobile-First Header */}
-      <MobileGateInHeader
-        pendingCount={pendingOperations.length}
-        onShowPending={() => setActiveView('pending')}
-        onShowForm={() => setShowForm(true)}
-        isMobileMenuOpen={isMobileMenuOpen}
-        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      />
+      <div className="lg:hidden">
+        <MobileGateInHeader
+          pendingCount={pendingOperations.length}
+          onShowPending={() => setActiveView('pending')}
+          onShowForm={() => setShowForm(true)}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        />
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden lg:flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setActiveView('pending')}
+            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
+            <Clock className="h-4 w-4" />
+            <span>Pending ({pendingOperations.length})</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn-success flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Gate In</span>
+          </button>
+        </div>
+      </div>
 
       {/* Mobile-Optimized Statistics */}
-      <div className="px-4 py-6 space-y-6">
-        <MobileGateInStats
+      <div className="px-4 py-6 lg:px-0 lg:py-0 space-y-6">
+        <div className="lg:hidden">
+          <MobileGateInStats
+            todayGateIns={12}
+            pendingOperations={pendingOperations.length}
+            containersProcessed={892}
+            damagedContainers={3}
+          />
+        </div>
+
+        {/* Desktop Stats */}
+        <div className="hidden lg:grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Truck className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Today's Gate Ins</p>
+                <p className="text-lg font-semibold text-gray-900">12</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Pending Operations</p>
+                <p className="text-lg font-semibold text-gray-900">{pendingOperations.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <ContainerIcon className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Containers Processed</p>
+                <p className="text-lg font-semibold text-gray-900">892</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Damaged Containers</p>
+                <p className="text-lg font-semibold text-gray-900">3</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Filter Chips */}
+        <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+          {['all', 'pending', 'completed', 'damaged'].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setSelectedFilter(filter)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedFilter === filter
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Mobile Search */}
+        <div className="lg:hidden bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              placeholder="Search operations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-12 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Search and Filter */}
+        <div className="hidden lg:block bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search operations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <select
+                value={selectedFilter}
+                onChange={(e) => setSelectedFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="damaged">Damaged</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button className="btn-secondary flex items-center space-x-2">
+                <Filter className="h-4 w-4" />
+                <span>Filter</span>
+              </button>
+              {searchTerm && (
+                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile-Optimized Operations List */}
+        <div className="lg:hidden">
+          <MobileOperationsTable
+            operations={filteredOperations}
+            searchTerm={searchTerm}
+            selectedFilter={selectedFilter}
+            onOperationClick={handlePendingOperationClick}
+          />
+        </div>
+
+        {/* Desktop Operations Table */}
+        <div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Gate In Operations</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Entry Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Container
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Truck
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status & Details
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOperations.map((operation) => (
+                  <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {operation.date.toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {operation.date.toLocaleTimeString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
+                      {operation.secondContainerNumber && (
+                        <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
+                      )}
+                      <div className="text-sm text-gray-500">
+                        {operation.containerSize}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {operation.containerType?.charAt(0).toUpperCase() + operation.containerType?.slice(1).replace('_', ' ')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.clientCode} - {operation.clientName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {operation.truckNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
+                      <div className="text-sm text-gray-500">{operation.transportCompany}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        {getStatusBadge(operation.operationStatus)}
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {operation.status}
+                        </span>
+                        {operation.isDamaged && (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                            Damaged
+                          </span>
+                        )}
+                      </div>
+                      {operation.bookingReference && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Booking: {operation.bookingReference}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {operation.assignedLocation || (
+                        <span className="text-gray-400 italic">Pending assignment</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredOperations.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
+              <p className="text-gray-600">
+                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been created yet."}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
           todayGateIns={12}
           pendingOperations={pendingOperations.length}
           containersProcessed={892}

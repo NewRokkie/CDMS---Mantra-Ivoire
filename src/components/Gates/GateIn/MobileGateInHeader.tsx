@@ -99,27 +99,6 @@ export const MobileGateInHeader: React.FC<MobileGateInHeaderProps> = ({
       </div>
 
       {/* Desktop Header - Hidden on Mobile */}
-      <div className="hidden lg:block px-6 py-6 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onShowPending}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-            >
-              <Clock className="h-4 w-4" />
-              <span>Pending ({pendingCount})</span>
-            </button>
-            <button
-              onClick={onShowForm}
-              className="btn-success flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>New Gate In</span>
-            </button>
-          </div>
-        </div>
-      </div>
     </>
   );
 };
