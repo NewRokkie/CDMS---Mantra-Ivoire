@@ -135,8 +135,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     saveScrollPosition();
     setActiveModule(itemId);
   };
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
-    <aside className="bg-slate-900 text-white w-72 h-screen flex flex-col">
+    <>
+      {/* Mobile Menu Button - Only visible on mobile */}
+      <button
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-3 bg-slate-900 text-white rounded-lg shadow-lg"
+      >
+        <Container className="h-6 w-6" />
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        bg-slate-900 text-white h-screen flex flex-col transition-transform duration-300 ease-in-out
+        lg:w-72 lg:relative lg:translate-x-0
+        fixed top-0 left-0 w-80 z-50
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Mobile Close Button */}
+        <button
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-white"
+        >
+          <X className="h-6 w-6" />
+        </button>
       {/* Header - Fixed with proper spacing */}
       <div className="p-6 pb-4 flex-shrink-0">
         <div className="flex items-center space-x-3">
