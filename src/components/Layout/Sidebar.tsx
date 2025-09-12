@@ -28,6 +28,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
   const { user, hasModuleAccess } = useAuth();
   const { t } = useLanguage();
   const [isConfigurationsOpen, setIsConfigurationsOpen] = useState(false);
+  const navRef = React.useRef<HTMLElement>(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   // Check if any configuration module is active
   const configurationModules = [
@@ -47,6 +49,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     }
   }, [isConfigurationActive]);
 
+  // Save scroll position before navigation
+  const saveScrollPosition = () => {
+    if (navRef.current) {
+      setScrollPosition(navRef.current.scrollTop);
+    }
+  };
+
+  // Restore scroll position after navigation
+  React.useEffect(() => {
+    if (navRef.current && scrollPosition > 0) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (navRef.current) {
+          navRef.current.scrollTop = scrollPosition;
+        }
+      });
+    }
+  }, [activeModule, isConfigurationsOpen]);
   // Main menu items (not in configurations)
   const mainMenuItems = [
     // 1. Dashboard - Always first
@@ -100,15 +120,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
   const hasConfigurationAccess = filteredConfigurationItems.length > 0;
 
   const handleConfigurationToggle = () => {
+    saveScrollPosition();
     setIsConfigurationsOpen(!isConfigurationsOpen);
   };
 
   const handleConfigurationItemClick = (itemId: string) => {
+    saveScrollPosition();
     setActiveModule(itemId);
     // Keep dropdown open when selecting a configuration item
     setIsConfigurationsOpen(true);
   };
 
+  const handleMainMenuClick = (itemId: string) => {
+    saveScrollPosition();
+    setActiveModule(itemId);
+  };
   return (
     <aside className="bg-slate-900 text-white w-72 h-screen flex flex-col">
       {/* Header - Fixed with proper spacing */}
@@ -125,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
       </div>
 
       {/* Navigation - Scrollable with transparent scrollbar */}
-      <nav className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent">
+      <nav ref={navRef} className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent">
         <ul className="space-y-2 pb-4">
           {/* Main Menu Items */}
           {filteredMainMenuItems.map((item) => {
@@ -135,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => {
+                  onClick={() => handleMainMenuClick(item.id)}
                     setActiveModule(item.id);
                   }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
