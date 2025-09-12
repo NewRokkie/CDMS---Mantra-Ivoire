@@ -219,14 +219,7 @@ export const useAuthProvider = () => {
             users: false,
             moduleAccess: false,
             reports: false,
-            depotManagement: false,
-            timeTracking: false,
-            analytics: false,
-            clientPools: false,
-            stackManagement: false,
-            auditLogs: false,
-            billingReports: false,
-            operationsReports: false
+            depotManagement: true
           },
           createdBy: "system"
         }
