@@ -102,6 +102,7 @@ export const Header: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50">
           <div className="px-4 py-4 space-y-4">
+          <div className="px-4 py-4 space-y-4">
             {/* Mobile Yard Selector */}
             <div className="md:hidden">
               <YardSelector />
@@ -155,6 +156,7 @@ export const Header: React.FC = () => {
               <LogOut className="h-4 w-4" />
               <span className="font-medium">{t('nav.logout')}</span>
             </button>
+          </div>
           </div>
         </div>
       )}
