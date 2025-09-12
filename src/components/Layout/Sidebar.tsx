@@ -125,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
       </div>
 
       {/* Navigation - Scrollable with transparent scrollbar */}
-      <nav className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent" style={{ scrollBehavior: 'auto' }}>
+      <nav className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent">
         <ul className="space-y-2 pb-4">
           {/* Main Menu Items */}
           {filteredMainMenuItems.map((item) => {
@@ -135,8 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
             return (
               <li key={item.id}>
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
+                  onClick={() => {
                     setActiveModule(item.id);
                   }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
@@ -157,8 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
             <li>
               {/* Configurations Header */}
               <button
-                onClick={(e) => {
-                  e.preventDefault();
+                onClick={() => {
                   handleConfigurationToggle();
                 }}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
@@ -186,8 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
                     return (
                       <li key={item.id}>
                         <button
-                          onClick={(e) => {
-                            e.preventDefault();
+                          onClick={() => {
                             handleConfigurationItemClick(item.id);
                           }}
                           className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sm ${
