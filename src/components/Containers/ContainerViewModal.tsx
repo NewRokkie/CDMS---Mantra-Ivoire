@@ -13,8 +13,10 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
   container,
   onClose
 }) => {
-  const { canViewAllData } = useAuth();
+  const { canViewAllData, hasModuleAccess } = useAuth();
   const [showAuditModal, setShowAuditModal] = useState(false);
+
+  const canViewAuditLogs = hasModuleAccess('auditLogs');
 
   const getStatusIcon = (status: Container['status']) => {
     switch (status) {
