@@ -25,8 +25,9 @@ const mockAvailableBookings: ReleaseOrder[] = [
     containerQuantities: { size20ft: 2, size40ft: 3 },
     totalContainers: 5,
     remainingContainers: 5,
-    status: 'validated',
-    createdBy: 'Jane Operator',
+    status: 'pending',
+    createdBy: 'System',
+    updatedBy: 'System',
     validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
     validatedAt: new Date('2025-01-11T10:30:00'),
@@ -36,17 +37,10 @@ const mockAvailableBookings: ReleaseOrder[] = [
   {
     id: 'RO-2025-004',
     bookingNumber: 'BK-CMA-2025-004',
-    clientId: '2',
-    clientCode: 'CMA',
+    clientId: '2', clientCode: 'CMA',
     clientName: 'CMA CGM',
     bookingType: 'IMPORT',
-    containerQuantities: { size20ft: 1, size40ft: 0 },
-    totalContainers: 1,
-    remainingContainers: 1,
-    status: 'validated',
-    createdBy: 'Sarah Client',
-    validatedBy: 'Mike Supervisor',
-    createdAt: new Date('2025-01-11T11:00:00'),
+    containerQuantities: { size20ft: 1, size40ft: 0 }, totalContainers: 1, remainingContainers: 1, status: 'pending', createdBy: 'System', updatedBy: 'System', validatedBy: 'Mike Supervisor', createdAt: new Date('2025-01-11T11:00:00'),
     validatedAt: new Date('2025-01-11T12:30:00'),
     estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
     notes: 'Single container booking - urgent processing required'
@@ -71,6 +65,7 @@ const mockPendingOperations: PendingGateOut[] = [
     status: 'in_process',
     createdBy: 'Jane Operator',
     createdAt: new Date('2025-01-11T14:30:00'),
+    updatedBy: 'System',
     estimatedReleaseDate: new Date('2025-01-12T14:00:00'),
     notes: 'Priority booking - handle with care'
   },
@@ -90,6 +85,7 @@ const mockPendingOperations: PendingGateOut[] = [
     status: 'pending',
     createdBy: 'Sarah Client',
     createdAt: new Date('2025-01-11T15:45:00'),
+    updatedBy: 'System',
     estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
     notes: 'Single container booking - urgent processing required'
   }
@@ -113,6 +109,7 @@ const mockCompletedOperations: PendingGateOut[] = [
     status: 'completed',
     createdBy: 'Jane Operator',
     createdAt: new Date('2025-01-11T11:30:00'),
+    updatedBy: 'System',
     estimatedReleaseDate: new Date('2025-01-13T09:00:00'),
     notes: 'Client requested release - completed successfully'
   }
@@ -128,7 +125,6 @@ export const GateOut: React.FC = () => {
   const [pendingOperations, setPendingOperations] = useState(mockPendingOperations);
   const [completedOperations, setCompletedOperations] = useState(mockCompletedOperations);
   const [error, setError] = useState<string>('');
-
   const { t } = useLanguage();
   const { user } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
@@ -152,14 +148,11 @@ export const GateOut: React.FC = () => {
 
     setIsProcessing(true);
     setError('');
-
     try {
       // Create new pending operation
       const newOperation: PendingGateOut = {
         id: `PGO-${Date.now()}`,
         date: new Date(),
-        yardId: currentYard?.id,
-        yardCode: currentYard?.code,
         bookingNumber: data.booking?.bookingNumber || data.booking?.id,
         clientCode: data.booking?.clientCode,
         clientName: data.booking?.clientName,
@@ -174,12 +167,13 @@ export const GateOut: React.FC = () => {
         createdBy: user?.name || 'Unknown',
         createdAt: new Date(),
         estimatedReleaseDate: data.booking?.estimatedReleaseDate,
-        notes: data.notes
+        notes: data.notes,
+        updatedBy: user?.name || 'System'
       };
 
       setPendingOperations(prev => [newOperation, ...prev]);
       setShowForm(false);
-      
+
       alert(`Gate Out operation created for booking ${newOperation.bookingNumber}`);
     } catch (error) {
       setError(`Error creating gate out operation: ${error}`);
@@ -198,7 +192,6 @@ export const GateOut: React.FC = () => {
   const handleCompleteOperation = async (operation: PendingGateOut, containerNumbers: string[]) => {
     setIsProcessing(true);
     setError('');
-
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -210,7 +203,9 @@ export const GateOut: React.FC = () => {
         ...operation,
         processedContainers: newProcessedTotal,
         remainingContainers: newRemainingTotal,
-        status: newRemainingTotal === 0 ? 'completed' : 'in_process'
+        status: newRemainingTotal === 0 ? 'completed' : 'in_process',
+        updatedAt: new Date(),
+        updatedBy: user?.name || 'System'
       };
 
       if (updatedOperation.status === 'completed') {
@@ -219,18 +214,17 @@ export const GateOut: React.FC = () => {
         setCompletedOperations(prev => [updatedOperation, ...prev]);
       } else {
         // Update in pending operations
-        setPendingOperations(prev => 
+        setPendingOperations(prev =>
           prev.map(op => op.id === operation.id ? updatedOperation : op)
         );
       }
 
-      setShowCompletionModal(false);
-      setSelectedOperation(null);
-      
-      const statusMessage = updatedOperation.status === 'completed' 
+      setShowCompletionModal(false); setSelectedOperation(null);
+
+      const statusMessage = updatedOperation.status === 'completed'
         ? 'Gate Out operation completed successfully!'
         : `${processedCount} container(s) processed. ${newRemainingTotal} remaining.`;
-      
+
       alert(statusMessage);
     } catch (error) {
       setError(`Error completing operation: ${error}`);
@@ -239,29 +233,25 @@ export const GateOut: React.FC = () => {
     }
   };
 
-  if (!canPerformGateOut) {
-    return (
-      <div className="text-center py-12">
-        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-        <p className="text-gray-600">You don't have permission to perform gate out operations.</p>
-      </div>
-    );
-  }
+  if (!canPerformGateOut) return (
+    <div className="text-center py-12">
+      <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+      <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+      <p className="text-gray-600">You don't have permission to perform gate out operations.</p>
+    </div>
+  );
 
   // Pending Operations View
-  if (activeView === 'pending') {
-    return (
-      <PendingOperationsView
-        operations={pendingOperations}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onBack={() => setActiveView('overview')}
-        onComplete={handleCompleteOperation}
-        isProcessing={isProcessing}
-      />
-    );
-  }
+  if (activeView === 'pending') return (
+    <PendingOperationsView
+      operations={pendingOperations}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      onBack={() => setActiveView('overview')}
+      onComplete={handleCompleteOperation}
+      isProcessing={isProcessing}
+    />
+  );
 
   // Main Overview
   return (
@@ -269,8 +259,7 @@ export const GateOut: React.FC = () => {
       <GateOutHeader
         pendingCount={pendingOperations.length}
         onShowPending={() => setActiveView('pending')}
-        onShowForm={() => setShowForm(true)}
-      />
+        onShowForm={() => setShowForm(true)} />
 
       <GateOutStats
         todayGateOuts={8}
@@ -286,8 +275,7 @@ export const GateOut: React.FC = () => {
           (op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
           (op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
           (op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-          (op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
-        ).length}
+          (op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false)).length}
       />
 
       <GateOutOperationsTable
@@ -310,10 +298,7 @@ export const GateOut: React.FC = () => {
       {/* Gate Out Completion Modal */}
       <GateOutCompletionModal
         isOpen={showCompletionModal}
-        onClose={() => {
-          setShowCompletionModal(false);
-          setSelectedOperation(null);
-        }}
+        onClose={() => { setShowCompletionModal(false); setSelectedOperation(null); }}
         operation={selectedOperation}
         onComplete={handleCompleteOperation}
         isProcessing={isProcessing}

@@ -9,6 +9,8 @@ export interface ClientPool {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  createdBy: string;
+  updatedBy?: string;
   notes?: string;
   priority: 'high' | 'medium' | 'low';
   contractStartDate: Date;
@@ -43,6 +45,7 @@ export interface ContainerAssignmentRequest {
   containerSize: '20ft' | '40ft';
   preferredSection?: string;
   requiresSpecialHandling?: boolean;
+  userName?: string;
 }
 
 export interface StackAvailabilityResult {

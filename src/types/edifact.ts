@@ -89,4 +89,6 @@ export interface EDITransmissionLog {
   partnerCode: string;
   retryCount: number;
   acknowledgmentReceived?: Date;
+  createdBy: string;
+  updatedBy?: string;
 }

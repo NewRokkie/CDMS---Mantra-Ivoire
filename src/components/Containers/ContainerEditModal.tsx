@@ -12,7 +12,7 @@ interface ContainerEditModalProps {
 export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   container,
   onClose,
-  onSave
+  onSave,
 }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +24,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     location: container.location,
     client: container.client,
     clientCode: container.clientCode || '',
-    damage: container.damage || []
+    damage: container.damage || [],
   });
 
   const [newDamage, setNewDamage] = useState('');
@@ -32,6 +32,31 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
+  const [containerValidationError, setContainerValidationError] = useState('');
+
+  // Helper function to validate container number format
+  const validateContainerNumber = (containerNumber: string): { isValid: boolean; message?: string } => {
+    if (!containerNumber) {
+      return { isValid: false, message: 'Container number is required' };
+    }
+
+    if (containerNumber.length !== 11) {
+      return { isValid: false, message: `${containerNumber.length}/11 characters` };
+    }
+
+    const letters = containerNumber.substring(0, 4);
+    const numbers = containerNumber.substring(4, 11);
+
+    if (!/^[A-Z]{4}$/.test(letters)) {
+      return { isValid: false, message: 'First 4 characters must be letters (A-Z)' };
+    }
+
+    if (!/^[0-9]{7}$/.test(numbers)) {
+      return { isValid: false, message: 'Last 7 characters must be numbers (0-9)' };
+    }
+
+    return { isValid: true };
+  };
 
   // Mock location data
   const mockLocations = [
@@ -46,7 +71,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     { id: 'workshop-1', name: 'Workshop 1', section: 'Maintenance', type: 'workshop' },
     { id: 'workshop-2', name: 'Workshop 2', section: 'Maintenance', type: 'workshop' },
     { id: 'gate-1', name: 'Gate 1', section: 'Entry/Exit', type: 'gate' },
-    { id: 'gate-2', name: 'Gate 2', section: 'Entry/Exit', type: 'gate' }
+    { id: 'gate-2', name: 'Gate 2', section: 'Entry/Exit', type: 'gate' },
   ];
 
   // Mock client data
@@ -58,7 +83,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     { id: '5', code: 'HLCU', name: 'Hapag-Lloyd' },
     { id: '6', code: 'ONEY', name: 'Ocean Network Express' },
     { id: '7', code: 'EGLV', name: 'Evergreen Marine' },
-    { id: '8', code: 'YMLU', name: 'Yang Ming Marine' }
+    { id: '8', code: 'YMLU', name: 'Yang Ming Marine' },
   ];
 
   const filteredLocations = mockLocations.filter(location =>
@@ -71,7 +96,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     client.code.toLowerCase().includes(clientSearch.toLowerCase())
   );
 
-  const selectedClient = mockClients.find(client => 
+  const selectedClient = mockClients.find(client =>
     client.name === formData.client || client.code === formData.clientCode
   );
 
@@ -95,10 +120,34 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (field === 'number') {
+      // Remove any non-alphanumeric characters (accept a-z, A-Z, 0-9) and convert to uppercase
+      let cleanValue = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+      // Limit to 11 characters maximum
+      if (cleanValue.length <= 11) {
+        // For first 4 positions, only keep uppercase letters
+        const letters = cleanValue.substring(0, 4).replace(/[^A-Z]/g, '');
+        // For last 7 positions, only keep numbers
+        const numbers = cleanValue.substring(4, 11).replace(/[^0-9]/g, '');
+
+        const validValue = letters + numbers;
+
+        setFormData(prev => ({
+          ...prev,
+          [field]: validValue
+        }));
+
+        // Update validation error
+        const validation = validateContainerNumber(validValue);
+        setContainerValidationError(validation.isValid ? '' : validation.message || '');
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleAddDamage = () => {
@@ -135,7 +184,9 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
         location: formData.location,
         client: formData.client,
         clientCode: formData.clientCode,
-        damage: formData.damage.length > 0 ? formData.damage : undefined
+        damage: formData.damage.length > 0 ? formData.damage : undefined,
+        updatedAt: new Date(),
+        updatedBy: user?.name || 'System',
       };
 
       onSave(updatedContainer);
@@ -146,13 +197,13 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     }
   };
 
-  const isFormValid = formData.number && formData.type && formData.size && 
-                     formData.status && formData.location && formData.client;
+  const isFormValid = validateContainerNumber(formData.number).isValid &&
+                   formData.type && formData.size &&
+                   formData.status && formData.location && formData.client;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
-        
         {/* Modal Header */}
         <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -177,14 +228,14 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {/* Basic Information */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                 <Package className="h-5 w-5 mr-2" />
                 Basic Information
               </h4>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-800 mb-2">
@@ -195,9 +246,16 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                     required
                     value={formData.number}
                     onChange={(e) => handleInputChange('number', e.target.value)}
-                    className="form-input w-full"
+                    className={`form-input w-full ${containerValidationError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
                     placeholder="e.g., MSKU1234567"
+                    maxLength={11}
                   />
+                  {containerValidationError && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertTriangle className="h-4 w-4 mr-1" />
+                      <span>{containerValidationError}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -228,8 +286,8 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                     onChange={(e) => handleInputChange('size', e.target.value)}
                     className="form-input w-full"
                   >
-                    <option value="20ft">20 feet</option>
-                    <option value="40ft">40 feet</option>
+                    <option value="20ft">20 Feet</option>
+                    <option value="40ft">40 Feet</option>
                   </select>
                 </div>
 
@@ -259,7 +317,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                 <MapPin className="h-5 w-5 mr-2" />
                 Location Information
               </h4>
-              
+
               <div>
                 <label className="block text-sm font-medium text-green-800 mb-2">
                   Current Location *
@@ -269,10 +327,10 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                     type="button"
                     onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
                     className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${
-                      isLocationDropdownOpen 
-                        ? 'border-green-500 shadow-lg shadow-green-500/20 ring-4 ring-green-500/10' 
-                        : formData.location 
-                        ? 'border-green-400 shadow-md shadow-green-400/10' 
+                      isLocationDropdownOpen
+                        ? 'border-green-500 shadow-lg shadow-green-500/20 ring-4 ring-green-500/10'
+                        : formData.location
+                        ? 'border-green-400 shadow-md shadow-green-400/10'
                         : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
                     }`}
                   >
@@ -308,7 +366,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Location List */}
+                      {/* Location list */}
                       <div className="max-h-48 overflow-y-auto">
                         {filteredLocations.map((location) => (
                           <button
@@ -352,7 +410,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                 <Building className="h-5 w-5 mr-2" />
                 Client Information
               </h4>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-purple-800 mb-2">
@@ -363,10 +421,10 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                       type="button"
                       onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
                       className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${
-                        isClientDropdownOpen 
-                          ? 'border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-500/10' 
-                          : selectedClient 
-                          ? 'border-purple-400 shadow-md shadow-purple-400/10' 
+                        isClientDropdownOpen
+                          ? 'border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-500/10'
+                          : selectedClient
+                          ? 'border-purple-400 shadow-md shadow-purple-400/10'
                           : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
                       }`}
                     >
@@ -374,9 +432,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                         <Building className={`h-5 w-5 ${selectedClient ? 'text-purple-600' : 'text-gray-400'}`} />
                         <div className="text-left">
                           {selectedClient ? (
-                            <>
-                              <div className="font-medium text-gray-900">{selectedClient.name}</div>
-                            </>
+                            <div className="font-medium text-gray-900">{selectedClient.name}</div>
                           ) : (
                             <div className="text-gray-500">Select client...</div>
                           )}
@@ -399,12 +455,12 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                               placeholder="Search clients..."
                               value={clientSearch}
                               onChange={(e) => setClientSearch(e.target.value)}
-                             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                             />
                           </div>
                         </div>
 
-                        {/* Client List */}
+                        {/* Client list */}
                         <div className="max-h-48 overflow-y-auto">
                           {filteredClients.map((client) => (
                             <button
@@ -463,7 +519,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                 <AlertTriangle className="h-5 w-5 mr-2" />
                 Damage Reports
               </h4>
-              
+
               <div className="space-y-4">
                 {/* Existing Damage List */}
                 {formData.damage.length > 0 && (
@@ -526,10 +582,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
         {/* Modal Footer */}
         <div className="px-8 py-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
           <div className="flex items-center justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="btn-secondary"
-            >
+            <button onClick={onClose} className="btn-secondary">
               Cancel
             </button>
             <button

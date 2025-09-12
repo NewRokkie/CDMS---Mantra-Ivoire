@@ -1,7 +1,9 @@
 import React, { createContext, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthProvider, AuthContext } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth'; // Ensure useAuth is imported if not already
 import { useLanguageProvider, LanguageContext } from './hooks/useLanguage';
+
 import { useYardProvider, YardContext } from './hooks/useYard';
 import { LoginForm } from './components/Auth/LoginForm';
 import { Header } from './components/Layout/Header';
@@ -20,10 +22,11 @@ import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessMa
 import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
 import { ReportsModule } from './components/Reports/ReportsModule';
 import { Yard, YardSection, YardStack } from './types/yard';
+import { DepotManagement } from './components/Yard/DepotManagement';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isLoading, isAuthenticated, user } = useAuthProvider();
+  const { isLoading, isAuthenticated, user } = useAuth(); // Changed from useAuthProvider()
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -46,7 +49,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 function AppContent() {
-  const { user, hasModuleAccess } = useAuthProvider();
+  const { user, hasModuleAccess } = useAuth(); // Changed from useAuthProvider()
   const yardProvider = useYardProvider();
   const [activeModule, setActiveModule] = useState('dashboard');
 
@@ -74,6 +77,8 @@ function AppContent() {
         return hasModuleAccess('users') ? <UserManagement /> : <AccessDenied />;
       case 'yard':
         return hasModuleAccess('yard') ? <YardManagement /> : <AccessDenied />;
+      case 'depot-management':
+        return hasModuleAccess('depotManagement') ? <DepotManagement /> : <AccessDenied />;
       case 'stack-management':
         return hasModuleAccess('yard') ? <StackManagementModule /> : <AccessDenied />;
       case 'client-pools':
@@ -93,8 +98,7 @@ function AppContent() {
         <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
         <div className="flex-1 flex flex-col min-w-0">
           <Header />
-          <main className="flex-1 overflow-y-auto p-6">
-            {renderModule()}
+          <main className="flex-1 overflow-y-auto p-6">{renderModule()}
           </main>
         </div>
       </div>
@@ -122,8 +126,12 @@ const AccessDenied: React.FC = () => (
   <div className="text-center py-12">
     <div className="h-12 w-12 text-red-400 mx-auto mb-4">🚫</div>
     <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-    <p className="text-gray-600">You don't have permission to access this module.</p>
-    <p className="text-sm text-gray-500 mt-2">Contact your administrator to request access.</p>
+    <p className="text-gray-600">
+      You don't have permission to access this module.
+    </p>
+    <p className="text-sm text-gray-500 mt-2">
+      Contact your administrator to request access.
+    </p>
   </div>
 );
 
@@ -142,7 +150,7 @@ const StackManagementModule: React.FC = () => {
       stacks: [] as YardStack[],
       position: { x: 0, y: 0, z: 0 },
       dimensions: { width: 400, length: 120 },
-      color: '#3b82f6'
+      color: '#3b82f6',
     };
 
     const topStacks = [
@@ -161,28 +169,20 @@ const StackManagementModule: React.FC = () => {
       { stackNumber: 25, rows: 5, x: 20, y: 60 },
       { stackNumber: 27, rows: 5, x: 50, y: 60 },
       { stackNumber: 29, rows: 5, x: 80, y: 60 },
-      { stackNumber: 31, rows: 7, x: 110, y: 60 }
+      { stackNumber: 31, rows: 7, x: 110, y: 60 },
     ];
 
-    topStacks.forEach(stack => {
+    topStacks.forEach((stack) => {
       const yardStack = {
-        id: `stack-${stack.stackNumber}`,
-        stackNumber: stack.stackNumber,
-        sectionId: topSection.id,
-        rows: stack.rows,
-        maxTiers: 5,
-        currentOccupancy: Math.floor(Math.random() * (stack.rows * 5)),
-        capacity: stack.rows * 5,
-        position: { x: stack.x, y: stack.y, z: 0 },
-        dimensions: { width: 12, length: 6 },
-        containerPositions: [],
-        isOddStack: true
+        id: `stack-${stack.stackNumber}`, stackNumber: stack.stackNumber, sectionId: topSection.id, rows: stack.rows, maxTiers: 5, currentOccupancy: Math.floor(Math.random() * (stack.rows * 5)), capacity: stack.rows * 5, position: { x: stack.x, y: stack.y, z: 0 }, dimensions: { width: 12, length: 6 }, containerPositions: [] as { stackId: string, row: number, tier: number, containerId: string }[], isOddStack: true,
       };
       yardStack.capacity = yardStack.rows * yardStack.maxTiers;
       allStacks.push(yardStack);
     });
 
-    topSection.stacks = allStacks.filter(s => s.sectionId === topSection.id);
+    topSection.stacks = allStacks.filter(
+      (s) => s.sectionId === topSection.id,
+    );
 
     // Center Section (Orange) - Stack 33 to 55
     const centerSection: YardSection = {
@@ -192,7 +192,7 @@ const StackManagementModule: React.FC = () => {
       stacks: [] as YardStack[],
       position: { x: 0, y: 140, z: 0 },
       dimensions: { width: 400, length: 100 },
-      color: '#f59e0b'
+      color: '#f59e0b',
     };
 
     const centerStacks = [
@@ -207,10 +207,10 @@ const StackManagementModule: React.FC = () => {
       { stackNumber: 49, rows: 4, x: 260, y: 160 },
       { stackNumber: 51, rows: 4, x: 290, y: 160 },
       { stackNumber: 53, rows: 4, x: 320, y: 160 },
-      { stackNumber: 55, rows: 4, x: 350, y: 160 }
+      { stackNumber: 55, rows: 4, x: 350, y: 160 },
     ];
 
-    centerStacks.forEach(stack => {
+    centerStacks.forEach((stack) => {
       const yardStack = {
         id: `stack-${stack.stackNumber}`,
         stackNumber: stack.stackNumber,
@@ -221,14 +221,17 @@ const StackManagementModule: React.FC = () => {
         capacity: stack.rows * 5,
         position: { x: stack.x, y: stack.y, z: 0 },
         dimensions: { width: 12, length: 6 },
-        containerPositions: [],
-        isOddStack: true
+        containerPositions: [] as { stackId: string, row: number, tier: number, containerId: string }[],
+        isOddStack: true,
       };
       yardStack.capacity = yardStack.rows * yardStack.maxTiers;
       allStacks.push(yardStack);
     });
 
-    centerSection.stacks = allStacks.filter(s => s.sectionId === centerSection.id);
+    centerSection.stacks = allStacks.filter(
+      (s) => s.sectionId === centerSection.id,
+    );
+
 
     // Bottom Section (Green) - Stack 61 to 103
     const bottomSection: YardSection = {
@@ -238,7 +241,7 @@ const StackManagementModule: React.FC = () => {
       stacks: [] as YardStack[],
       position: { x: 0, y: 260, z: 0 },
       dimensions: { width: 400, length: 140 },
-      color: '#10b981'
+      color: '#10b981',
     };
 
     const bottomStacks = [
@@ -266,10 +269,10 @@ const StackManagementModule: React.FC = () => {
       { stackNumber: 99, rows: 4, x: 230, y: 320 },
       // Special stacks
       { stackNumber: 101, rows: 1, x: 260, y: 320 },
-      { stackNumber: 103, rows: 2, x: 290, y: 320 }
+      { stackNumber: 103, rows: 2, x: 290, y: 320 },
     ];
 
-    bottomStacks.forEach(stack => {
+    bottomStacks.forEach((stack) => {
       const yardStack = {
         id: `stack-${stack.stackNumber}`,
         stackNumber: stack.stackNumber,
@@ -280,21 +283,25 @@ const StackManagementModule: React.FC = () => {
         capacity: stack.rows * 5,
         position: { x: stack.x, y: stack.y, z: 0 },
         dimensions: { width: 12, length: 6 },
-        containerPositions: [],
-        isOddStack: true
+        containerPositions: [] as { stackId: string, row: number, tier: number, containerId: string }[],
+        isOddStack: true,
       };
       yardStack.capacity = yardStack.rows * yardStack.maxTiers;
       allStacks.push(yardStack);
     });
 
-    bottomSection.stacks = allStacks.filter(s => s.sectionId === bottomSection.id);
+    bottomSection.stacks = allStacks.filter(
+      (s) => s.sectionId === bottomSection.id,
+    );
+
 
     sections.push(topSection, centerSection, bottomSection);
 
     return {
       id: 'depot-tantarelli',
       name: 'Depot Tantarelli',
-      description: 'Main container depot with specialized odd-numbered stack layout',
+      description:
+        'Main container depot with specialized odd-numbered stack layout',
       location: 'Tantarelli Port Complex',
       isActive: true,
       totalCapacity: allStacks.reduce((sum, stack) => sum + stack.capacity, 0),
@@ -306,9 +313,24 @@ const StackManagementModule: React.FC = () => {
       code: 'DEPOT-TAN',
       timezone: 'UTC',
       operatingHours: { start: '06:00', end: '22:00' },
-      contactInfo: { manager: 'John Doe', phone: '+123456789', email: 'manager@example.com' },
-      address: { street: '123 Main St', city: 'City', state: 'State', zipCode: '12345', country: 'Country' },
-      settings: { autoAssignLocation: true, requiresApproval: false, maxContainersPerOperation: 10, defaultFreeDays: 7 }
+      contactInfo: {
+        manager: 'John Doe',
+        phone: '+123456789',
+        email: 'manager@example.com',
+      },
+      address: {
+        street: '123 Main St',
+        city: 'City',
+        state: 'State',
+        zipCode: '12345',
+        country: 'Country',
+      },
+      settings: {
+        autoAssignLocation: true,
+        requiresApproval: false,
+        maxContainersPerOperation: 10,
+        defaultFreeDays: 7,
+      },
     } as Yard;
   };
 
