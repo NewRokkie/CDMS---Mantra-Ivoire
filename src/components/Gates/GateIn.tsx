@@ -8,6 +8,7 @@ import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
 import { MobileGateInStats } from './GateIn/MobileGateInStats';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
+import { LocationValidationView } from './GateIn/LocationValidationView';
 
 // Enhanced interface for the new gate-in process
 export interface GateInFormData {
@@ -652,21 +653,22 @@ export const GateIn: React.FC = () => {
             </div>
           </div>
 
-        {/* Mobile Filter Chips */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
-          {['all', 'pending', 'completed', 'damaged'].map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setSelectedFilter(filter)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedFilter === filter
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </button>
-          ))}
+          {/* Mobile Filter Chips */}
+          <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+            {['all', 'pending', 'completed', 'damaged'].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setSelectedFilter(filter)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedFilter === filter
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Mobile-Optimized Operations List */}
