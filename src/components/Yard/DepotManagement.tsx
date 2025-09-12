@@ -515,4 +515,3 @@ export const DepotManagement: React.FC = () => {
     </div>
   );
 };
-</DepotFormModal>

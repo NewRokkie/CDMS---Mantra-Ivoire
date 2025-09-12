@@ -164,7 +164,6 @@ export const useAuthProvider = () => {
             depotManagement: true
           },
           createdBy: "system"
-          depotManagement: true
         },
         'client@shipping.com': {
           id: '4',
@@ -194,7 +193,6 @@ export const useAuthProvider = () => {
             depotManagement: true
           },
           createdBy: "system"
-          depotManagement: true
         },
         'client2@maersk.com': {
           id: '5',
@@ -224,7 +222,6 @@ export const useAuthProvider = () => {
             depotManagement: true
           },
           createdBy: "system"
-          depotManagement: true
         }
       };
 
