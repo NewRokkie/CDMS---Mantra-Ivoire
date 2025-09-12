@@ -5,6 +5,7 @@ import {
   DollarSign, 
   Download, 
   Filter, 
+ Globe,
   Search, 
   TrendingUp, 
   Clock, 
