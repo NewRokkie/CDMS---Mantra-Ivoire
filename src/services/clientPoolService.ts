@@ -617,6 +617,8 @@ export class ClientPoolService {
     userName?: string
   ): ClientPool {
     const effectiveUserName = userName || 'System';
+    const currentYard = yardService.getCurrentYard();
+    
     const pool: ClientPool = {
       id: `pool-${clientCode.toLowerCase()}`,
       clientId,
@@ -630,7 +632,7 @@ export class ClientPoolService {
       updatedAt: new Date(),
       createdBy: effectiveUserName,
       updatedBy: effectiveUserName,
-      priority,
+      priority: 'medium',
       contractStartDate,
       contractEndDate,
       notes
@@ -648,6 +650,8 @@ export class ClientPoolService {
     // Log creation
     yardService.logOperation('client_pool_create', undefined, effectiveUserName, {
       clientCode,
+      yardId: currentYard?.id,
+      yardCode: currentYard?.code,
       maxCapacity,
       assignedStacksCount: assignedStacks.length
     });
