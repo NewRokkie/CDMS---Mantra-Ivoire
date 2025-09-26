@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
   // Check if any configuration module is active
   const configurationModules = [
     'depot-management',
-    'stack-management',
+    'stack-management', 
     'client-pools',
     'clients',
     'users',
@@ -68,7 +68,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
       });
     }
   }, [activeModule, isConfigurationsOpen]);
-
   // Main menu items (not in configurations)
   const mainMenuItems = [
     // 1. Dashboard - Always first
@@ -102,33 +101,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     { id: 'module-access', icon: Shield, label: 'Module Access', moduleKey: 'moduleAccess' as const }
   ];
 
-  // Type pour tous les moduleKey
-  type ModuleKey =
-    | 'dashboard'
-    | 'gateIn'
-    | 'releases'
-    | 'gateOut'
-    | 'containers'
-    | 'edi'
-    | 'yard'
-    | 'reports'
-    | 'depotManagement'
-    | 'stackManagement'
-    | 'clientPools'
-    | 'clients'
-    | 'users'
-    | 'moduleAccess';
-
-  // Type pour les items de menu
-  type MenuItem = {
-    id: string;
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-    moduleKey: ModuleKey;
-  };
-
   // Filter menu items based on user's module access
-  const getFilteredMenuItems = (items: MenuItem[]): MenuItem[] => {
+  const getFilteredMenuItems = (items: typeof mainMenuItems) => {
     if (!user) return [];
 
     return items.filter(item => {
@@ -162,7 +136,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     saveScrollPosition();
     setActiveModule(itemId);
   };
-
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -177,16 +150,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div
+        <div 
           className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`bg-slate-900 text-white h-screen flex flex-col transition-transform duration-300 ease-in-out lg:w-72 lg:relative lg:translate-x-0 fixed top-0 left-0 w-80 z-50 ${
-        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}>
+      <aside className={`
+        bg-slate-900 text-white h-screen flex flex-col transition-transform duration-300 ease-in-out
+        lg:w-72 lg:relative lg:translate-x-0
+        fixed top-0 left-0 w-80 z-50
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* Mobile Close Button */}
         <button
           onClick={() => setIsMobileMenuOpen(false)}
@@ -194,115 +170,114 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
         >
           <X className="h-6 w-6" />
         </button>
-
-        {/* Header - Fixed with proper spacing */}
-        <div className="p-6 pb-4 flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Container className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="font-bold text-lg">MANTRA IVOIRE</h2>
-              <p className="text-xs text-slate-400">Depot Management System (DMS)</p>
-            </div>
+      {/* Header - Fixed with proper spacing */}
+      <div className="p-6 pb-4 flex-shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Container className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg">MANTRA IVOIRE</h2>
+            <p className="text-xs text-slate-400">Depot Management System (DMS)</p>
           </div>
         </div>
+      </div>
 
-        {/* Navigation - Scrollable with transparent scrollbar */}
-        <nav ref={navRef} className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent">
-          <ul className="space-y-2 pb-4">
-            {/* Main Menu Items */}
-            {filteredMainMenuItems.map(item => {
-              const Icon = item.icon;
-              const isActive = activeModule === item.id;
+      {/* Navigation - Scrollable with transparent scrollbar */}
+      <nav ref={navRef} className="flex-1 px-4 pt-2 overflow-y-auto scrollbar-transparent">
+        <ul className="space-y-2 pb-4">
+          {/* Main Menu Items */}
+          {filteredMainMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeModule === item.id;
 
-              return (
-                <li key={item.id}>
-                  <button
-                    onClick={() => {
-                      handleMainMenuClick(item.id);
-                    }}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-lg transform scale-105'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                    }`}
-                  >
-                    <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span className="font-medium">{item.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-
-            {/* Configurations Dropdown */}
-            {hasConfigurationAccess && (
-              <li>
-                {/* Configurations Header */}
+            return (
+              <li key={item.id}>
                 <button
                   onClick={() => {
-                    handleConfigurationToggle();
+                    handleMainMenuClick(item.id);
                   }}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                    isConfigurationActive
-                      ? 'bg-slate-800 text-white'
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-lg transform scale-105'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <Cog className={`h-5 w-5 flex-shrink-0 ${isConfigurationActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span className="font-medium">Configurations</span>
-                  </div>
-                  <div className={`transition-transform duration-200 ${isConfigurationsOpen ? 'rotate-90' : ''}`}>
-                    <ChevronRight className="h-4 w-4" />
-                  </div>
+                  <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="font-medium">{item.label}</span>
                 </button>
-
-                {/* Configurations Submenu */}
-                {isConfigurationsOpen && (
-                  <ul className="mt-2 ml-4 space-y-1 border-l-2 border-slate-700 pl-4">
-                    {filteredConfigurationItems.map(item => {
-                      const Icon = item.icon;
-                      const isActive = activeModule === item.id;
-
-                      return (
-                        <li key={item.id}>
-                          <button
-                            onClick={() => {
-                              handleConfigurationItemClick(item.id);
-                            }}
-                            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sm ${
-                              isActive
-                                ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                            }`}
-                          >
-                            <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                            <span className="font-medium">{item.label}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
               </li>
-            )}
-          </ul>
-        </nav>
+            );
+          })}
 
-        {/* Footer - Fixed */}
-        <div className="p-4 border-t border-slate-800 flex-shrink-0">
-          <div className="text-xs text-slate-400">
-            <p>© 2025 DepotManager</p>
-            <p>Version 1.0.0</p>
-            {user && (
-              <p className="mt-2 text-slate-300">
-                Logged in as: {user.role}
-              </p>
-            )}
-          </div>
+          {/* Configurations Dropdown */}
+          {hasConfigurationAccess && (
+            <li>
+              {/* Configurations Header */}
+              <button
+                onClick={() => {
+                  handleConfigurationToggle();
+                }}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                  isConfigurationActive
+                    ? 'bg-slate-800 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Cog className={`h-5 w-5 flex-shrink-0 ${isConfigurationActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="font-medium">Configurations</span>
+                </div>
+                <div className={`transition-transform duration-200 ${isConfigurationsOpen ? 'rotate-90' : ''}`}>
+                  <ChevronRight className="h-4 w-4" />
+                </div>
+              </button>
+
+              {/* Configurations Submenu */}
+              {isConfigurationsOpen && (
+                <ul className="mt-2 ml-4 space-y-1 border-l-2 border-slate-700 pl-4">
+                  {filteredConfigurationItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeModule === item.id;
+
+                    return (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => {
+                            handleConfigurationItemClick(item.id);
+                          }}
+                          className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sm ${
+                            isActive
+                              ? 'bg-blue-600 text-white shadow-md transform scale-105'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                          <span className="font-medium">{item.label}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </li>
+          )}
+        </ul>
+      </nav>
+
+      {/* Footer - Fixed */}
+      <div className="p-4 border-t border-slate-800 flex-shrink-0">
+        <div className="text-xs text-slate-400">
+          <p>© 2025 DepotManager</p>
+          <p>Version 1.0.0</p>
+          {user && (
+            <p className="mt-2 text-slate-300">
+              Logged in as: {user.role}
+            </p>
+          )}
         </div>
-      </aside>
+      </div>
+    </aside>
     </>
   );
 };
