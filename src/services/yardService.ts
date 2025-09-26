@@ -17,6 +17,9 @@ export class YardService {
    * Initialize default yards for the system
    */
   private initializeDefaultYards(): void {
+    // Import stack service to get dynamic stacks
+    const { stackService } = require('./stackService');
+    
     const defaultYards: Yard[] = [
       {
         id: 'depot-tantarelli',
@@ -27,7 +30,7 @@ export class YardService {
         isActive: true,
         totalCapacity: 2500,
         currentOccupancy: 1847,
-        sections: this.createTantarelliSections(),
+        sections: this.createDefaultSections('depot-tantarelli'),
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date(),
         createdBy: 'System',
@@ -56,7 +59,7 @@ export class YardService {
         isActive: true,
         totalCapacity: 1800,
         currentOccupancy: 1245,
-        sections: this.createVridiSections(),
+        sections: this.createDefaultSections('depot-vridi'),
         createdAt: new Date('2024-02-01'),
         updatedAt: new Date(),
         createdBy: 'System',
@@ -85,7 +88,7 @@ export class YardService {
         isActive: true,
         totalCapacity: 1200,
         currentOccupancy: 890,
-        sections: this.createSanPedroSections(),
+        sections: this.createDefaultSections('depot-san-pedro'),
         createdAt: new Date('2024-03-01'),
         updatedAt: new Date(),
         createdBy: 'System',
@@ -110,6 +113,8 @@ export class YardService {
     defaultYards.forEach(yard => {
       this.yards.set(yard.id, yard);
     });
+
+    this.initializeStacksForYards(defaultYards);
 
     // Set default yard
     this.currentYardId = 'depot-tantarelli';
@@ -496,6 +501,16 @@ export class YardService {
 
     console.log(`Deleted yard ${yardId} (${yard.name}) by ${effectiveUserName}`);
     return true;
+  }
+
+  /**
+  updateYardSections(yardId: string): YardSection[] {
+    const yard = this.yards.get(yardId);
+    if (!yard) return [];
+
+    // Get current stacks from stack service
+    const { stackService } = require('./stackService');
+    return stackService.updateYardSections(yardId, yard.sections);
   }
 
   /**
