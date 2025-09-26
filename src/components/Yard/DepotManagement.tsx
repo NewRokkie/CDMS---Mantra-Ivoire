@@ -94,12 +94,12 @@ export const DepotManagement: React.FC = () => {
   const handleCreateDepot = async (data: any) => {
     try {
       setIsFormLoading(true);
-      const newDepot = yardService.createYard(data, user?.name);
+      const newDepot = await yardService.createYard(data, user?.name);
       await loadDepots();
       await refresh(); // Refresh yard context
       setShowForm(false);
       setSelectedDepot(null);
-      alert(`Depot "${newDepot.name}" created successfully!`);
+      alert(`Depot "${newDepot?.name || 'New depot'}" created successfully!`);
     } catch (error) {
       alert(`Error creating depot: ${error}`);
     } finally {
@@ -112,7 +112,7 @@ export const DepotManagement: React.FC = () => {
 
     try {
       setIsFormLoading(true);
-      const updatedDepot = yardService.updateYard(selectedDepot.id, data, user?.name);
+      const updatedDepot = await yardService.updateYard(selectedDepot.id, data, user?.name);
       if (updatedDepot) {
         await loadDepots();
         await refresh(); // Refresh yard context
@@ -137,7 +137,7 @@ export const DepotManagement: React.FC = () => {
 
     if (confirm(`Are you sure you want to delete the depot "${depot.name}"? This action cannot be undone.`)) {
       try {
-        const success = yardService.deleteYard(depot.id, user?.name);
+        const success = await yardService.deleteYard(depot.id, user?.name);
         if (success) {
           await loadDepots();
           await refresh(); // Refresh yard context
