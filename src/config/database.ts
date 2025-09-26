@@ -16,12 +16,12 @@ export interface DatabaseConfig {
 
 // Default database configuration
 export const defaultDatabaseConfig: DatabaseConfig = {
-  host: process.env.VITE_DB_HOST || 'localhost',
-  port: parseInt(process.env.VITE_DB_PORT || '5432'),
-  database: process.env.VITE_DB_NAME || 'cdms_db',
-  user: process.env.VITE_DB_USER || 'postgres',
-  password: process.env.VITE_DB_PASSWORD || 'postgres',
-  ssl: process.env.VITE_DB_SSL === 'true',
+  host: import.meta.env.VITE_DB_HOST || 'localhost',
+  port: parseInt(import.meta.env.VITE_DB_PORT || '5432'),
+  database: import.meta.env.VITE_DB_NAME || 'cdms_db',
+  user: import.meta.env.VITE_DB_USER || 'postgres',
+  password: import.meta.env.VITE_DB_PASSWORD || 'postgres',
+  ssl: import.meta.env.VITE_DB_SSL === 'true',
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
   connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
