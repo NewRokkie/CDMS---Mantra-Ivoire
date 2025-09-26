@@ -9,6 +9,7 @@ import { useYard } from '../../hooks/useYard';
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
   const [stats, setStats] = useState<ClientPoolStats | null>(null);
+  const [utilization, setUtilization] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
@@ -119,9 +120,11 @@ export const ClientPoolManagement: React.FC = () => {
         : await clientPoolService.getClientPools();
 
       const poolStats = await clientPoolService.getClientPoolStats();
+      const poolUtilization = await clientPoolService.getClientPoolUtilization();
 
       setClientPools(pools);
       setStats(poolStats);
+      setUtilization(poolUtilization);
     } catch (error) {
       console.error('Error loading client pools:', error);
     } finally {
@@ -496,7 +499,7 @@ export const ClientPoolManagement: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {clientPoolService.getClientPoolUtilization().map((util) => (
+          {utilization.map((util) => (
             <div key={util.clientCode} className="p-4 border border-gray-200 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-gray-900">{util.clientCode}</span>
