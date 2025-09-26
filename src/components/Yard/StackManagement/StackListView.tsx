@@ -1,19 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Package, 
-  Grid3X3, 
-  MapPin,
-  AlertTriangle,
-  CheckCircle,
-  Copy,
-  Download
-} from 'lucide-react';
+import { Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, Package, Grid3x3 as Grid3X3, MapPin, AlertTriangle, CheckCircle, Copy, Download } from 'lucide-react';
 import { YardStack, YardSection } from '../../../types/yard';
 import { useAuth } from '../../../hooks/useAuth';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader, Package, MapPin, Grid3X3, Ruler, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, Save, Loader, Package, MapPin, Grid3x3 as Grid3X3, Ruler, AlertTriangle, CheckCircle } from 'lucide-react';
 import { YardStack, YardSection } from '../../../types/yard';
 import { StackFormData, StackValidationResult } from '../../../services/stackService';
 import { useAuth } from '../../../hooks/useAuth';

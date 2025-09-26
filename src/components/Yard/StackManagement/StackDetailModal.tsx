@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Package, MapPin, Grid3X3, Ruler, Users, Calendar, BarChart3 } from 'lucide-react';
+import { X, Package, MapPin, Grid3x3 as Grid3X3, Ruler, Users, Calendar, BarChart3 } from 'lucide-react';
 import { YardStack, YardSection } from '../../../types/yard';
 
 interface StackDetailModalProps {

@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Package, 
-  Plus, 
-  Grid3X3, 
-  AlertTriangle, 
-  Building,
-  MapPin,
-  Settings,
-  Eye,
-  Edit,
-  Trash2
-} from 'lucide-react';
+import { Package, Plus, Grid3x3 as Grid3X3, AlertTriangle, Building, MapPin, Settings, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
 import { YardStack, YardSection } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
