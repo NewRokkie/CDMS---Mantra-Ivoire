@@ -1,16 +1,5 @@
 import React, { useState } from 'react';
-import {
-  X,
-  Settings,
-  Copy,
-  Download,
-  Upload,
-  Grid3X3,
-  Building,
-  Loader,
-  AlertTriangle,
-  CheckCircle
-} from 'lucide-react';
+import { X, Settings, Copy, Download, Upload, Grid3x3 as Grid3X3, Building, Loader, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Yard } from '../../types/yard';
 
 interface StackBulkActionsModalProps {

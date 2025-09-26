@@ -1,23 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Plus,
-  Search,
-  Filter,
-  Edit,
-  Trash2,
-  Eye,
-  Grid3X3,
-  Package,
-  MapPin,
-  Settings,
-  AlertTriangle,
-  CheckCircle,
-  Copy,
-  Download,
-  Upload,
-  BarChart3,
-  Layers
-} from 'lucide-react';
+import { Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, Grid3x3 as Grid3X3, Package, MapPin, Settings, AlertTriangle, CheckCircle, Copy, Download, Upload, BarChart3, Layers } from 'lucide-react';
 import { Stack, StackFormData } from '../../types/stack';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';

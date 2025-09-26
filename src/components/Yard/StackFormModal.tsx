@@ -1,17 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Save,
-  Loader,
-  Grid3X3,
-  Package,
-  MapPin,
-  Settings,
-  AlertTriangle,
-  CheckCircle,
-  Ruler,
-  Layers
-} from 'lucide-react';
+import { X, Save, Loader, Grid3x3 as Grid3X3, Package, MapPin, Settings, AlertTriangle, CheckCircle, Ruler, Layers } from 'lucide-react';
 import { Stack, StackFormData, StackValidation } from '../../types/stack';
 import { Yard } from '../../types/yard';
 import { stackService } from '../../services/stackService';

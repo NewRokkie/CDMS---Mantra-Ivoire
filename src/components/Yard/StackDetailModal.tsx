@@ -1,18 +1,5 @@
 import React from 'react';
-import {
-  X,
-  Grid3X3,
-  Package,
-  MapPin,
-  Calendar,
-  User,
-  BarChart3,
-  Settings,
-  AlertTriangle,
-  CheckCircle,
-  Ruler,
-  Layers
-} from 'lucide-react';
+import { X, Grid3x3 as Grid3X3, Package, MapPin, Calendar, User, BarChart3, Settings, AlertTriangle, CheckCircle, Ruler, Layers } from 'lucide-react';
 import { Stack } from '../../types/stack';
 import { Yard } from '../../types/yard';
 
