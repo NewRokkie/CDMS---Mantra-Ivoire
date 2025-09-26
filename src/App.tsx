@@ -21,8 +21,9 @@ import { StackManagement } from './components/Yard/StackManagement';
 import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessManagement';
 import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
 import { ReportsModule } from './components/Reports/ReportsModule';
-import { Yard, YardSection, YardStack } from './types/yard';
+import { Yard, YardSection, YardStack, YardPosition } from './types/yard';
 import { DepotManagement } from './components/Yard/DepotManagement';
+import SupabaseTest from './components/Test/SupabaseTest';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,6 +88,8 @@ function AppContent() {
         return hasModuleAccess('moduleAccess') ? <ModuleAccessManagement /> : <AccessDenied />;
       case 'reports':
         return hasModuleAccess('reports') ? <ReportsModule /> : <AccessDenied />;
+      case 'supabase-test':
+        return hasModuleAccess('users') ? <SupabaseTest /> : <AccessDenied />;
       default:
         return <DashboardOverview />;
     }
@@ -98,8 +101,7 @@ function AppContent() {
         <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
         <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
           <Header />
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}
-          </main>
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}</main>
         </div>
       </div>
     </YardContext.Provider>
@@ -125,7 +127,9 @@ function AppContent() {
 const AccessDenied: React.FC = () => (
   <div className="text-center py-12">
     <div className="h-12 w-12 text-red-400 mx-auto mb-4">🚫</div>
-    <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+    <h3 className="text-lg font-medium text-gray-900 mb-2">
+      Access Denied
+    </h3>
     <p className="text-gray-600">
       You don't have permission to access this module.
     </p>
@@ -166,17 +170,28 @@ const StackManagementModule: React.FC = () => {
       { stackNumber: 19, rows: 5, x: 290, y: 20 },
       { stackNumber: 21, rows: 5, x: 320, y: 20 },
       { stackNumber: 23, rows: 5, x: 350, y: 20 },
-      { stackNumber: 25, rows: 5, x: 20, y: 60 },
+      { stackNumber: 25, rows: 5, x: 350, y: 20 },
       { stackNumber: 27, rows: 5, x: 50, y: 60 },
       { stackNumber: 29, rows: 5, x: 80, y: 60 },
       { stackNumber: 31, rows: 7, x: 110, y: 60 },
     ];
 
     topStacks.forEach((stack) => {
-      const yardStack = {
-        id: `stack-${stack.stackNumber}`, stackNumber: stack.stackNumber, sectionId: topSection.id, rows: stack.rows, maxTiers: 5, currentOccupancy: Math.floor(Math.random() * (stack.rows * 5)), capacity: stack.rows * 5, position: { x: stack.x, y: stack.y, z: 0 }, dimensions: { width: 12, length: 6 }, containerPositions: [] as { stackId: string, row: number, tier: number, containerId: string }[], isOddStack: true,
+      const capacity = stack.rows * 5;
+      const currentOccupancy = Math.floor(Math.random() * capacity);
+      const yardStack: YardStack = {
+        id: `stack-${stack.stackNumber}`,
+        stackNumber: stack.stackNumber,
+        sectionId: topSection.id,
+        rows: stack.rows,
+        maxTiers: 5,
+        currentOccupancy,
+        capacity,
+        position: { x: stack.x, y: stack.y, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: true,
       };
-      yardStack.capacity = yardStack.rows * yardStack.maxTiers;
       allStacks.push(yardStack);
     });
 
@@ -211,27 +226,27 @@ const StackManagementModule: React.FC = () => {
     ];
 
     centerStacks.forEach((stack) => {
-      const yardStack = {
+      const capacity = stack.rows * 5;
+      const currentOccupancy = Math.floor(Math.random() * capacity);
+      const yardStack: YardStack = {
         id: `stack-${stack.stackNumber}`,
         stackNumber: stack.stackNumber,
         sectionId: centerSection.id,
         rows: stack.rows,
         maxTiers: 5,
-        currentOccupancy: Math.floor(Math.random() * (stack.rows * 5)),
-        capacity: stack.rows * 5,
+        currentOccupancy,
+        capacity,
         position: { x: stack.x, y: stack.y, z: 0 },
         dimensions: { width: 12, length: 6 },
-        containerPositions: [] as { stackId: string, row: number, tier: number, containerId: string }[],
+        containerPositions: [],
         isOddStack: true,
       };
-      yardStack.capacity = yardStack.rows * yardStack.maxTiers;
       allStacks.push(yardStack);
     });
 
     centerSection.stacks = allStacks.filter(
       (s) => s.sectionId === centerSection.id,
     );
-
 
     // Bottom Section (Green) - Stack 61 to 103
     const bottomSection: YardSection = {
@@ -273,27 +288,27 @@ const StackManagementModule: React.FC = () => {
     ];
 
     bottomStacks.forEach((stack) => {
-      const yardStack = {
+      const capacity = stack.rows * 5;
+      const currentOccupancy = Math.floor(Math.random() * capacity);
+      const yardStack: YardStack = {
         id: `stack-${stack.stackNumber}`,
         stackNumber: stack.stackNumber,
         sectionId: bottomSection.id,
         rows: stack.rows,
         maxTiers: 5,
-        currentOccupancy: Math.floor(Math.random() * (stack.rows * 5)),
-        capacity: stack.rows * 5,
+        currentOccupancy,
+        capacity,
         position: { x: stack.x, y: stack.y, z: 0 },
         dimensions: { width: 12, length: 6 },
-        containerPositions: [] as { stackId: string, row: number, tier: number, containerId: string }[],
+        containerPositions: [],
         isOddStack: true,
       };
-      yardStack.capacity = yardStack.rows * yardStack.maxTiers;
       allStacks.push(yardStack);
     });
 
     bottomSection.stacks = allStacks.filter(
       (s) => s.sectionId === bottomSection.id,
     );
-
 
     sections.push(topSection, centerSection, bottomSection);
 
@@ -309,6 +324,7 @@ const StackManagementModule: React.FC = () => {
       sections,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date(),
+      createdBy: 'system',
       layout: 'tantarelli',
       code: 'DEPOT-TAN',
       timezone: 'UTC',
