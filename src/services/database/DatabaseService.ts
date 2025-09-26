@@ -508,7 +508,52 @@ export class MockDatabaseService extends DatabaseService {
 
   private initializeMockData() {
     // Initialize with empty collections that match our schema
-    this.mockData.set('users', []);
+    this.mockData.set('users', [
+      {
+        id: 'admin-001',
+        email: 'admin@depot.com',
+        password_hash: '$2b$10$demo.hash.for.demo123', // demo123
+        first_name: 'System',
+        last_name: 'Administrator',
+        role: 'admin',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'supervisor-001',
+        email: 'supervisor@depot.com',
+        password_hash: '$2b$10$demo.hash.for.demo123', // demo123
+        first_name: 'Operations',
+        last_name: 'Supervisor',
+        role: 'supervisor',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'operator-001',
+        email: 'operator@depot.com',
+        password_hash: '$2b$10$demo.hash.for.demo123', // demo123
+        first_name: 'Gate',
+        last_name: 'Operator',
+        role: 'operator',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'client-001',
+        email: 'client2@maersk.com',
+        password_hash: '$2b$10$demo.hash.for.demo123', // demo123
+        first_name: 'Client',
+        last_name: 'Portal User',
+        role: 'client',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]);
     this.mockData.set('yards', []);
     this.mockData.set('clients', []);
     this.mockData.set('containers', []);
