@@ -21,6 +21,7 @@ import { StackManagement } from './components/Yard/StackManagement';
 import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessManagement';
 import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
 import { ReportsModule } from './components/Reports/ReportsModule';
+import { StackCRUDManagement } from './components/Yard/StackCRUDManagement';
 import { Yard, YardSection, YardStack, YardPosition } from './types/yard';
 import { DepotManagement } from './components/Yard/DepotManagement';
 import SupabaseTest from './components/Test/SupabaseTest';
@@ -81,7 +82,7 @@ function AppContent() {
       case 'depot-management':
         return hasModuleAccess('depotManagement') ? <DepotManagement /> : <AccessDenied />;
       case 'stack-management':
-        return hasModuleAccess('yard') ? <StackManagementModule /> : <AccessDenied />;
+        return hasModuleAccess('yard') ? <StackCRUDManagement /> : <AccessDenied />;
       case 'client-pools':
         return hasModuleAccess('clients') ? <ClientPoolManagement /> : <AccessDenied />;
       case 'module-access':

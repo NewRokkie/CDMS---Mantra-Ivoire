@@ -15,6 +15,9 @@ export { useReleaseOrders } from './useReleaseOrders';
 export { useGateOperations } from './useGateOperations';
 export { useClientPools } from './useClientPools';
 
+// Stack management
+export { useStacks } from './useStacks';
+
 // Re-export types that might be needed
 export type { ContainerFilters, ContainerStats } from './useContainers';
 export type { ReleaseOrderFilters, ReleaseOrderStats } from './useReleaseOrders';
