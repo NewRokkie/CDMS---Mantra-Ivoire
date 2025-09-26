@@ -337,7 +337,8 @@ export class YardService {
    * Get yard by ID
    */
   getYardById(yardId: string): Yard | null {
-    return this.yards.get(yardId) || null;
+    // Get yard with updated stacks
+    return this.getYardWithStacks(yardId);
   }
 
   /**
