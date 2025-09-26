@@ -133,10 +133,10 @@ export const ClientPoolManagement: React.FC = () => {
 
       // Get pools for current yard only
       const pools = currentYard
-        ? clientPoolService.getClientPoolsForYard(currentYard.id)
-        : clientPoolService.getClientPools();
+        ? await clientPoolService.getClientPoolsForYard(currentYard.id)
+        : await clientPoolService.getClientPools();
 
-      const poolStats = clientPoolService.getClientPoolStats();
+      const poolStats = await clientPoolService.getClientPoolStats();
 
       setClientPools(pools);
       setStats(poolStats);
