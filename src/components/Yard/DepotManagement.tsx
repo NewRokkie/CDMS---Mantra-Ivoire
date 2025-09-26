@@ -58,7 +58,7 @@ export const DepotManagement: React.FC = () => {
   const loadDepots = async () => {
     try {
       setIsLoading(true);
-      const availableDepots = yardService.getAvailableYards();
+      const availableDepots = await yardService.getAvailableYards();
 
       setDepots(availableDepots);
 
