@@ -1,10 +1,11 @@
 /**
  * useContainers Hook - Container management with database integration
+ * Supporte automatiquement Supabase et PostgreSQL via l'adaptateur
  */
 
 import { useState, useEffect } from 'react';
 import { Container } from '../types';
-import { containerService } from '../services/database/ContainerService';
+import { databaseAdapter } from '../services/DatabaseAdapter';
 import { useAuth } from './useAuth';
 
 export interface ContainerFilters {
@@ -50,14 +51,27 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
       setError(null);
 
       const effectiveFilters = getEffectiveFilters();
-      const loadedContainers = await containerService.getAllContainers(effectiveFilters);
+      const loadedContainers = await databaseAdapter.getAllContainers(effectiveFilters);
 
       setContainers(loadedContainers);
       setFilteredContainers(loadedContainers);
 
-      // Load statistics
-      const containerStats = await containerService.getContainerStatistics(effectiveFilters.yardId);
-      setStats(containerStats);
+      // Load statistics (pour l'instant, on utilise des stats basiques)
+      // TODO: Implémenter getContainerStatistics dans l'adaptateur
+      setStats({
+        totalContainers: loadedContainers.length,
+        containersInDepot: loadedContainers.filter(c => c.status === 'in_depot').length,
+        containersOutDepot: loadedContainers.filter(c => c.status === 'out_depot').length,
+        containersBySize: {
+          '20ft': loadedContainers.filter(c => c.size === '20ft').length,
+          '40ft': loadedContainers.filter(c => c.size === '40ft').length,
+        },
+        containersByType: loadedContainers.reduce((acc, c) => {
+          acc[c.type] = (acc[c.type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        damagedContainers: loadedContainers.filter(c => c.damage && c.damage.length > 0).length,
+      });
 
       console.log(`✅ Loaded ${loadedContainers.length} containers`);
     } catch (err) {
@@ -77,7 +91,7 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
     }
 
     try {
-      const searchResults = await containerService.searchContainers(searchTerm);
+      const searchResults = await databaseAdapter.searchContainers(searchTerm);
 
       // Apply client filter if needed
       const clientFilter = getClientFilter();
@@ -95,7 +109,7 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
   // Get container by number
   const getContainer = async (containerNumber: string): Promise<Container | null> => {
     try {
-      return await containerService.getContainerByNumber(containerNumber);
+      return await databaseAdapter.getContainerByNumber(containerNumber);
     } catch (err) {
       console.error('Failed to get container:', err);
       return null;
@@ -105,7 +119,7 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
   // Create new container
   const createContainer = async (containerData: Omit<Container, 'id' | 'createdAt' | 'updatedAt'>): Promise<Container | null> => {
     try {
-      const newContainer = await containerService.createContainer(containerData);
+      const newContainer = await databaseAdapter.createContainer(containerData);
       if (newContainer) {
         await loadContainers(); // Refresh list
       }
@@ -119,7 +133,7 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
   // Update container
   const updateContainer = async (containerId: string, updates: Partial<Container>): Promise<Container | null> => {
     try {
-      const updatedContainer = await containerService.updateContainer(containerId, updates);
+      const updatedContainer = await databaseAdapter.updateContainer(containerId, updates);
       if (updatedContainer) {
         await loadContainers(); // Refresh list
       }
@@ -133,7 +147,7 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
   // Delete container
   const deleteContainer = async (containerId: string): Promise<boolean> => {
     try {
-      const success = await containerService.deleteContainer(containerId);
+      const success = await databaseAdapter.deleteContainer(containerId);
       if (success) {
         await loadContainers(); // Refresh list
       }
@@ -151,16 +165,19 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
     reason?: string
   ): Promise<boolean> => {
     try {
-      const success = await containerService.updateContainerStatus(
-        containerNumber,
-        newStatus,
-        reason,
-        user?.id
-      );
+      // Pour l'instant, on utilise updateContainer avec le nouveau statut
+      const container = await databaseAdapter.getContainerByNumber(containerNumber);
+      if (!container) {
+        throw new Error('Container not found');
+      }
+
+      const success = await databaseAdapter.updateContainer(container.id, {
+        status: newStatus
+      });
       if (success) {
         await loadContainers(); // Refresh list
       }
-      return success;
+      return !!success;
     } catch (err) {
       console.error('Failed to update container status:', err);
       throw err;
@@ -180,11 +197,15 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
     }
   ): Promise<boolean> => {
     try {
-      await containerService.reportContainerDamage(
-        containerNumber,
-        damageData,
-        user?.id
-      );
+      // Mettre à jour le conteneur avec les informations de dommage
+      const container = await databaseAdapter.getContainerByNumber(containerNumber);
+      if (!container) {
+        throw new Error('Container not found');
+      }
+
+      await databaseAdapter.updateContainer(container.id, {
+        damage: [damageData.description]
+      });
       await loadContainers(); // Refresh list
       return true;
     } catch (err) {
@@ -193,40 +214,46 @@ export const useContainers = (initialFilters?: ContainerFilters) => {
     }
   };
 
-  // Get container movement history
+  // Get container movement history (simplifié pour l'adaptateur)
   const getContainerMovements = async (containerNumber: string) => {
     try {
-      return await containerService.getContainerMovements(containerNumber);
+      // TODO: Implémenter dans l'adaptateur
+      console.log('getContainerMovements pas encore implémenté dans l\'adaptateur');
+      return [];
     } catch (err) {
       console.error('Failed to get container movements:', err);
       return [];
     }
   };
 
-  // Get container damage history
+  // Get container damage history (simplifié pour l'adaptateur)
   const getContainerDamages = async (containerNumber: string) => {
     try {
-      return await containerService.getContainerDamages(containerNumber);
+      // TODO: Implémenter dans l'adaptateur
+      console.log('getContainerDamages pas encore implémenté dans l\'adaptateur');
+      return [];
     } catch (err) {
       console.error('Failed to get container damages:', err);
       return [];
     }
   };
 
-  // Get containers requiring maintenance
+  // Get containers requiring maintenance (simplifié pour l'adaptateur)
   const getMaintenanceContainers = async () => {
     try {
-      return await containerService.getContainersRequiringMaintenance();
+      // Filtrer les conteneurs avec statut maintenance
+      return containers.filter(c => c.status === 'maintenance');
     } catch (err) {
       console.error('Failed to get maintenance containers:', err);
       return [];
     }
   };
 
-  // Get damaged containers
+  // Get damaged containers (simplifié pour l'adaptateur)
   const getDamagedContainers = async () => {
     try {
-      return await containerService.getDamagedContainers();
+      // Filtrer les conteneurs avec dommages
+      return containers.filter(c => c.damage && c.damage.length > 0);
     } catch (err) {
       console.error('Failed to get damaged containers:', err);
       return [];

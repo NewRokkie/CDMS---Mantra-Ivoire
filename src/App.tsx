@@ -23,6 +23,7 @@ import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagem
 import { ReportsModule } from './components/Reports/ReportsModule';
 import { Yard, YardSection, YardStack, YardPosition } from './types/yard';
 import { DepotManagement } from './components/Yard/DepotManagement';
+import SupabaseTest from './components/Test/SupabaseTest';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,6 +88,8 @@ function AppContent() {
         return hasModuleAccess('moduleAccess') ? <ModuleAccessManagement /> : <AccessDenied />;
       case 'reports':
         return hasModuleAccess('reports') ? <ReportsModule /> : <AccessDenied />;
+      case 'supabase-test':
+        return hasModuleAccess('users') ? <SupabaseTest /> : <AccessDenied />;
       default:
         return <DashboardOverview />;
     }

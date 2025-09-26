@@ -2,12 +2,41 @@
  * useYard Hook - Database-connected yard management
  */
 
-import { useState, useEffect } from 'react';
-import { Yard, YardContext, YardStats } from '../types/yard';
+import { useState, useEffect, createContext, useContext } from 'react';
+import { Yard, YardContext as YardContextType, YardStats } from '../types/yard';
 import { yardService } from '../services/yardService';
 import { useAuth } from './useAuth';
 
+interface YardProviderType extends YardContextType {
+  // Actions
+  setCurrentYardById: (yardId: string) => Promise<boolean>;
+  getYardContext: () => YardContextType;
+  validateContainerOperation: (containerNumber: string, operation: string) => Promise<{ isValid: boolean; message?: string }>;
+  getYardContainers: (yardId?: string) => Promise<any[]>;
+  refreshCurrentYard: () => Promise<void>;
+  getAvailablePositions: (containerSize?: '20ft' | '40ft') => Promise<any[]>;
+  reservePosition: (positionId: string, containerNumber: string, clientCode: string) => Promise<boolean>;
+  getOperationLogs: (yardId?: string, limit?: number) => Promise<any[]>;
+  // Management (admin/supervisor)
+  createYard: (yardData: Omit<Yard, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>) => Promise<Yard | null>;
+  updateYard: (yardId: string, updates: Partial<Yard>) => Promise<Yard | null>;
+  deleteYard: (yardId: string) => Promise<boolean>;
+  // Utilities
+  refresh: () => Promise<void>;
+}
+
+const YardContext = createContext<YardProviderType | undefined>(undefined);
+
 export const useYard = () => {
+  const context = useContext(YardContext);
+  if (context === undefined) {
+    throw new Error('useYard must be used within a YardProvider');
+  }
+  return context;
+};
+
+// Database-connected yard provider
+export const useYardProvider = () => {
   const { user } = useAuth();
   const [currentYard, setCurrentYard] = useState<Yard | null>(null);
   const [availableYards, setAvailableYards] = useState<Yard[]>([]);
@@ -86,7 +115,7 @@ export const useYard = () => {
   };
 
   // Get yard context
-  const getYardContext = (): YardContext => {
+  const getYardContext = (): YardContextType => {
     return {
       currentYard,
       availableYards,
@@ -290,3 +319,5 @@ export const useYard = () => {
     refresh: loadAccessibleYards,
   };
 };
+
+export { YardContext };
