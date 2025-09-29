@@ -427,6 +427,159 @@ export const ModuleAccessManagement: React.FC = () => {
     );
   };
 
+  // Bulk actions handler
+  const handleBulkActions = () => {
+    if (bulkSelectedUserIds.length === 0) return;
+
+    // Show bulk actions menu/modal
+    const actions = [
+      'Apply Role-Based Access',
+      'Enable All Modules',
+      'Disable All Modules',
+      'Copy Access from Another User'
+    ];
+
+    const selectedAction = prompt(
+      `Select bulk action for ${bulkSelectedUserIds.length} users:\n\n` +
+      actions.map((action, index) => `${index + 1}. ${action}`).join('\n') +
+      '\n\nEnter number (1-4):'
+    );
+
+    const actionIndex = parseInt(selectedAction || '0') - 1;
+    if (actionIndex >= 0 && actionIndex < actions.length) {
+      handleBulkAction(actions[actionIndex]);
+    }
+  };
+
+  // Handle specific bulk actions
+  const handleBulkAction = (action: string) => {
+    switch (action) {
+      case 'Apply Role-Based Access':
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            bulkSelectedUserIds.includes(user.id)
+              ? { ...user, moduleAccess: getModuleAccessForRole(user.role) }
+              : user
+          )
+        );
+        alert(`Applied role-based access to ${bulkSelectedUserIds.length} users`);
+        break;
+        
+      case 'Enable All Modules':
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            bulkSelectedUserIds.includes(user.id)
+              ? { 
+                  ...user, 
+                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
+                    ...acc,
+                    [key]: true
+                  }), {} as ModuleAccess)
+                }
+              : user
+          )
+        );
+        alert(`Enabled all modules for ${bulkSelectedUserIds.length} users`);
+        break;
+        
+      case 'Disable All Modules':
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            bulkSelectedUserIds.includes(user.id)
+              ? { 
+                  ...user, 
+                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
+                    ...acc,
+                    [key]: key === 'dashboard' // Keep dashboard always enabled
+                  }), {} as ModuleAccess)
+                }
+              : user
+          )
+        );
+        alert(`Disabled all modules (except dashboard) for ${bulkSelectedUserIds.length} users`);
+        break;
+        
+      default:
+        alert('Action not implemented yet');
+    }
+  };
+
+  // Helper function to get default module access based on role
+  const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
+    const baseAccess: ModuleAccess = {
+      dashboard: true,
+      containers: false,
+      gateIn: false,
+      gateOut: false,
+      releases: false,
+      edi: false,
+      yard: false,
+      clients: false,
+      users: false,
+      moduleAccess: false,
+      reports: false,
+      depotManagement: false,
+      timeTracking: false,
+      analytics: false,
+      clientPools: false,
+      stackManagement: false,
+      auditLogs: false,
+      billingReports: false,
+      operationsReports: false
+    };
+
+    switch (role) {
+      case 'admin':
+        return Object.keys(baseAccess).reduce((acc, key) => ({
+          ...acc,
+          [key]: true
+        }), {} as ModuleAccess);
+        
+      case 'supervisor':
+        return {
+          ...baseAccess,
+          containers: true,
+          gateIn: true,
+          gateOut: true,
+          releases: true,
+          edi: true,
+          yard: true,
+          clients: true,
+          reports: true,
+          depotManagement: true,
+          timeTracking: true,
+          analytics: true,
+          clientPools: true,
+          stackManagement: true,
+          auditLogs: true,
+          billingReports: true,
+          operationsReports: true
+        };
+        
+      case 'operator':
+        return {
+          ...baseAccess,
+          containers: true,
+          gateIn: true,
+          gateOut: true,
+          releases: true,
+          yard: true,
+          auditLogs: true
+        };
+        
+      case 'client':
+        return {
+          ...baseAccess,
+          containers: true,
+          releases: true,
+          yard: true
+        };
+        
+      default:
+        return baseAccess;
+    }
+  };
+
   const calculateAccessPercentage = (user: User): number => {
     const totalModules = Object.keys(moduleConfig).length;
     const accessibleModules = Object.values(user.moduleAccess).filter(Boolean).length;
@@ -928,156 +1081,4 @@ export const ModuleAccessManagement: React.FC = () => {
       </div>
     </div>
   );
-
-  // Bulk actions handler
-  const handleBulkActions = () => {
-    if (bulkSelectedUserIds.length === 0) return;
-
-    // Show bulk actions menu/modal
-    const actions = [
-      'Apply Role-Based Access',
-      'Enable All Modules',
-      'Disable All Modules',
-      'Copy Access from Another User'
-    ];
-
-    const selectedAction = prompt(
-      `Select bulk action for ${bulkSelectedUserIds.length} users:\n\n` +
-      actions.map((action, index) => `${index + 1}. ${action}`).join('\n') +
-      '\n\nEnter number (1-4):'
-    );
-
-    const actionIndex = parseInt(selectedAction || '0') - 1;
-    if (actionIndex >= 0 && actionIndex < actions.length) {
-      handleBulkAction(actions[actionIndex]);
-    }
-  };
-
-  // Handle specific bulk actions
-  const handleBulkAction = (action: string) => {
-    switch (action) {
-      case 'Apply Role-Based Access':
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            bulkSelectedUserIds.includes(user.id)
-              ? { ...user, moduleAccess: getModuleAccessForRole(user.role) }
-              : user
-          )
-        );
-        alert(`Applied role-based access to ${bulkSelectedUserIds.length} users`);
-        break;
-        
-      case 'Enable All Modules':
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            bulkSelectedUserIds.includes(user.id)
-              ? { 
-                  ...user, 
-                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
-                    ...acc,
-                    [key]: true
-                  }), {} as ModuleAccess)
-                }
-              : user
-          )
-        );
-        alert(`Enabled all modules for ${bulkSelectedUserIds.length} users`);
-        break;
-        
-      case 'Disable All Modules':
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            bulkSelectedUserIds.includes(user.id)
-              ? { 
-                  ...user, 
-                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
-                    ...acc,
-                    [key]: key === 'dashboard' // Keep dashboard always enabled
-                  }), {} as ModuleAccess)
-                }
-              : user
-          )
-        );
-        alert(`Disabled all modules (except dashboard) for ${bulkSelectedUserIds.length} users`);
-        break;
-        
-      default:
-        alert('Action not implemented yet');
-    }
-  };
-
-  // Helper function to get default module access based on role
-  function getModuleAccessForRole(role: User['role']): ModuleAccess {
-    const baseAccess: ModuleAccess = {
-      dashboard: true,
-      containers: false,
-      gateIn: false,
-      gateOut: false,
-      releases: false,
-      edi: false,
-      yard: false,
-      clients: false,
-      users: false,
-      moduleAccess: false,
-      reports: false,
-      depotManagement: false,
-      timeTracking: false,
-      analytics: false,
-      clientPools: false,
-      stackManagement: false,
-      auditLogs: false,
-      billingReports: false,
-      operationsReports: false
-    };
-    switch (role) {
-      case 'admin':
-        return Object.keys(baseAccess).reduce((acc, key) => ({
-          ...acc,
-          [key]: true
-        }), {} as ModuleAccess);
-        
-      case 'supervisor':
-        return {
-          ...baseAccess,
-          containers: true,
-          gateIn: true,
-          gateOut: true,
-          releases: true,
-          edi: true,
-          yard: true,
-          clients: true,
-          reports: true,
-          depotManagement: true,
-          timeTracking: true,
-          analytics: true,
-          clientPools: true,
-          stackManagement: true,
-          auditLogs: true,
-          billingReports: true,
-          operationsReports: true
-        };
-        
-      case 'operator':
-        return {
-          ...baseAccess,
-          containers: true,
-          gateIn: true,
-          gateOut: true,
-          releases: true,
-          yard: true,
-          auditLogs: true
-        };
-        
-      case 'client':
-        return {
-          ...baseAccess,
-          containers: true,
-          releases: true,
-          yard: true
-        };
-        
-      default:
-        return baseAccess;
-    }
-  }
 };
