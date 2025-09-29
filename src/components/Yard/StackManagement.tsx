@@ -40,7 +40,6 @@ export const StackManagement: React.FC<StackManagementProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [showStackForm, setShowStackForm] = useState(false);
-  const [showStackForm, setShowStackForm] = useState(false);
   const [selectedStack, setSelectedStack] = useState<StackConfiguration | null>(null);
   const [isFormLoading, setIsFormLoading] = useState(false);
 
