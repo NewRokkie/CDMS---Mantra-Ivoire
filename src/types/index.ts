@@ -187,7 +187,7 @@ export interface YardPosition {
 export interface Container {
   id: string;
   number: string;
-  type: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  type: 'standard' | 'hi_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   size: '20ft' | '40ft';
   status: 'in_depot' | 'out_depot' | 'in_service' | 'maintenance' | 'cleaning';
   location: string;

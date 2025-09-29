@@ -9,7 +9,10 @@ import { DatePicker } from '../Common/DatePicker';
 
 // Container type options with codes
 const containerTypeOptions = [
-  { value: 'dry', label: 'Dry', code20: '22G1', code40: '42G1' },
+  { value: 'standard', label: 'Standard', code20: '22G1', code40: '42G1' },
+  { value: 'hi_cube', label: 'Hi-Cube', code20: '25G1', code40: '45G1' },
+  { value: 'hard_top', label: 'Hard Top', code20: '22H1', code40: '42H1' },
+  { value: 'ventilated', label: 'Ventilated', code20: '22V1', code40: '42V1' },
   { value: 'reefer', label: 'Reefer', code20: '22R1', code40: '42R1' },
   { value: 'tank', label: 'Tank', code20: '22T1', code40: '42T1' },
   { value: 'flat_rack', label: 'Flat Rack', code20: '22F1', code40: '42F1' },
