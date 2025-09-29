@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Shield, Edit, Trash2 } from 'lucide-react';
+import { Settings, Shield, CreditCard as Edit, Trash2 } from 'lucide-react';
 import { clientPoolService } from '../../../services/clientPoolService';
 
 interface StackConfiguration {
