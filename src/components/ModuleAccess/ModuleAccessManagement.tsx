@@ -297,7 +297,9 @@ const mockUsers: User[] = [
 
 export const ModuleAccessManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>(mockUsers);
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>(''); // Single selection (radio behavior)
+  const [bulkSelectedUserIds, setBulkSelectedUserIds] = useState<string[]>([]); // Bulk selection
+  const [selectionMode, setSelectionMode] = useState<'single' | 'bulk'>('single'); // Selection mode toggle
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -346,7 +348,7 @@ export const ModuleAccessManagement: React.FC = () => {
     const totalUsers = filteredUsers.length;
     const totalModules = Object.keys(moduleConfig).length;
     const adminUsers = filteredUsers.filter(u => u.role === 'admin').length;
-    const selectedUsers = selectedUserIds.length;
+    const selectedUsers = selectionMode === 'single' ? (selectedUserId ? 1 : 0) : bulkSelectedUserIds.length;
 
     return { totalUsers, totalModules, adminUsers, selectedUsers };
   }, [filteredUsers, selectedUserIds]);
@@ -366,28 +368,53 @@ export const ModuleAccessManagement: React.FC = () => {
     }
   };
 
-  const handleUserSelect = (userId: string) => {
-    setSelectedUserIds(prev => 
+  // Single selection handler (radio button behavior)
+  const handleSingleUserSelect = (userId: string) => {
+    setSelectedUserId(prev => prev === userId ? '' : userId);
+  };
+
+  // Bulk selection handler (checkbox behavior)
+  const handleBulkUserSelect = (userId: string) => {
+    setBulkSelectedUserIds(prev => 
       prev.includes(userId) 
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
   };
 
-  const handleSelectAll = () => {
-    if (selectedUserIds.length === filteredUsers.length) {
-      setSelectedUserIds([]);
+  // Toggle selection mode
+  const toggleSelectionMode = () => {
+    setSelectionMode(prev => {
+      const newMode = prev === 'single' ? 'bulk' : 'single';
+      // Clear selections when switching modes
+      if (newMode === 'single') {
+        setBulkSelectedUserIds([]);
+      } else {
+        setSelectedUserId('');
+      }
+      return newMode;
+    });
+  };
+
+  // Handle select all for bulk mode
+  const handleSelectAllBulk = () => {
+    if (bulkSelectedUserIds.length === filteredUsers.length) {
+      setBulkSelectedUserIds([]);
     } else {
-      setSelectedUserIds(filteredUsers.map(u => u.id));
+      setBulkSelectedUserIds(filteredUsers.map(u => u.id));
     }
   };
 
   const handleModuleToggle = (moduleKey: keyof ModuleAccess) => {
-    if (selectedUserIds.length === 0) return;
+    const targetUserIds = selectionMode === 'single' 
+      ? (selectedUserId ? [selectedUserId] : [])
+      : bulkSelectedUserIds;
+    
+    if (targetUserIds.length === 0) return;
 
     setUsers(prevUsers => 
       prevUsers.map(user => 
-        selectedUserIds.includes(user.id)
+        targetUserIds.includes(user.id)
           ? {
               ...user,
               moduleAccess: {
@@ -514,7 +541,8 @@ export const ModuleAccessManagement: React.FC = () => {
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
@@ -522,11 +550,11 @@ export const ModuleAccessManagement: React.FC = () => {
               placeholder="Search users by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sm:w-64 pl-10 pr-4 py-2 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           
-          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
@@ -551,6 +579,46 @@ export const ModuleAccessManagement: React.FC = () => {
               <option value="admin">Admin</option>
             </select>
           </div>
+          </div>
+
+          {/* Selection Mode Toggle and Bulk Actions */}
+          <div className="flex items-center space-x-3">
+            {/* Selection Mode Toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setSelectionMode('single')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  selectionMode === 'single'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Single Select
+              </button>
+              <button
+                onClick={() => setSelectionMode('bulk')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  selectionMode === 'bulk'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Bulk Select
+              </button>
+            </div>
+
+            {/* Bulk Actions Button */}
+            {selectionMode === 'bulk' && (
+              <button
+                onClick={handleBulkActions}
+                disabled={bulkSelectedUserIds.length === 0}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Bulk Actions ({bulkSelectedUserIds.length})</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -563,57 +631,96 @@ export const ModuleAccessManagement: React.FC = () => {
             <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">
                 <h3 className="text-base lg:text-lg font-semibold text-gray-900">Users</h3>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
+                  {/* Selection Mode Indicator */}
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    selectionMode === 'single' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {selectionMode === 'single' ? 'Single Select' : 'Bulk Select'}
+                  </span>
+                  
                   <span className="text-xs lg:text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium">
                     {filteredUsers.length} users
                   </span>
-                  <button
-                    onClick={handleSelectAll}
-                    className="text-xs lg:text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    {selectedUserIds.length === filteredUsers.length ? 'Deselect All' : 'Select All'}
-                  </button>
+                  
+                  {/* Select All Button - Only in bulk mode */}
+                  {selectionMode === 'bulk' && (
+                    <button
+                      onClick={handleSelectAllBulk}
+                      className="text-xs lg:text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      {bulkSelectedUserIds.length === filteredUsers.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="divide-y divide-gray-200 max-h-96 lg:max-h-[500px] overflow-y-auto">
               {filteredUsers.map((user) => {
-                const isSelected = selectedUserIds.includes(user.id);
+                // Determine if user is selected based on current mode
+                const isSelected = selectionMode === 'single' 
+                  ? selectedUserId === user.id
+                  : bulkSelectedUserIds.includes(user.id);
                 const accessPercentage = calculateAccessPercentage(user);
 
                 return (
                   <button
                     key={user.id}
-                    onClick={() => handleUserSelect(user.id)}
-                    className={`w-full text-left p-3 lg:p-4 transition-all duration-200 hover:bg-gray-50 relative ${
-                      isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
+                    onClick={() => selectionMode === 'single' 
+                      ? handleSingleUserSelect(user.id) 
+                      : handleBulkUserSelect(user.id)
+                    }
+                    className={`w-full text-left p-3 lg:p-4 transition-all duration-200 hover:bg-gray-50 relative border-2 rounded-lg mx-2 my-1 ${
+                      isSelected 
+                        ? selectionMode === 'single'
+                          ? 'bg-blue-50 border-blue-500 shadow-lg shadow-blue-500/20 ring-2 ring-blue-200'
+                          : 'bg-purple-50 border-purple-500 shadow-lg shadow-purple-500/20 ring-2 ring-purple-200'
+                        : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-start space-x-3">
-                      <div className={`p-2 lg:p-3 rounded-lg transition-all duration-200 ${
-                        isSelected ? 'bg-blue-100' : 'bg-gray-100'
+                      <div className={`p-2 lg:p-3 rounded-lg transition-all duration-200 flex-shrink-0 ${
+                        isSelected 
+                          ? selectionMode === 'single' 
+                            ? 'bg-blue-100' 
+                            : 'bg-purple-100'
+                          : 'bg-gray-100'
                       }`}>
                         {getRoleIcon(user.role)}
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm lg:text-base font-medium text-gray-900 truncate">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm lg:text-base font-medium text-gray-900 truncate">
                             {user.name}
-                          </h4>
-                          {isSelected && (
-                            <div className="bg-blue-500 text-white rounded-full p-1 ml-2">
-                              <CheckCircle className="h-3 w-3" />
-                            </div>
-                          )}
+                            </h4>
+                            <p className="text-xs lg:text-sm text-gray-600 truncate mt-1">
+                              {user.email}
+                            </p>
+                          </div>
+                          
+                          {/* Selection Indicator */}
+                          <div className="flex-shrink-0 ml-2">
+                            {isSelected && (
+                              <div className={`text-white rounded-full p-1 animate-scale-in ${
+                                selectionMode === 'single' ? 'bg-blue-500' : 'bg-purple-500'
+                              }`}>
+                                <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4" />
+                              </div>
+                            )}
+                            {selectionMode === 'bulk' && !isSelected && (
+                              <div className="border-2 border-gray-300 rounded-full p-1">
+                                <div className="h-3 w-3 lg:h-4 lg:w-4"></div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
-                        <p className="text-xs lg:text-sm text-gray-600 truncate mt-1">
-                          {user.email}
-                        </p>
-                        
-                        <div className="mt-2 lg:mt-3">
+                        <div className="mt-3">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-500">Module Access</span>
                             <span className="text-xs font-medium text-gray-700">
@@ -665,14 +772,67 @@ export const ModuleAccessManagement: React.FC = () => {
             </div>
 
             <div className="p-4 lg:p-6">
-              {selectedUserIds.length === 0 ? (
+              {(selectionMode === 'single' ? !selectedUserId : bulkSelectedUserIds.length === 0) ? (
                 <div className="text-center py-8 lg:py-12">
                   <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Users Selected</h3>
-                  <p className="text-gray-600">Select one or more users from the left panel to configure their module access.</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {selectionMode === 'single' ? 'No User Selected' : 'No Users Selected'}
+                  </h3>
+                  <p className="text-gray-600">
+                    {selectionMode === 'single' 
+                      ? 'Select a user from the left panel to configure their module access.'
+                      : 'Select one or more users from the left panel to configure their module access.'
+                    }
+                  </p>
+                  <div className="mt-4">
+                    <button
+                      onClick={toggleSelectionMode}
+                      className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                    >
+                      Switch to {selectionMode === 'single' ? 'Bulk' : 'Single'} Selection Mode
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {/* Selection Mode Info */}
+                  <div className={`p-4 rounded-lg border ${
+                    selectionMode === 'single' 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-purple-50 border-purple-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${
+                          selectionMode === 'single' ? 'bg-blue-600' : 'bg-purple-600'
+                        } text-white`}>
+                          {selectionMode === 'single' ? <UserIcon className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <h4 className={`font-medium ${
+                            selectionMode === 'single' ? 'text-blue-900' : 'text-purple-900'
+                          }`}>
+                            {selectionMode === 'single' ? 'Single User Configuration' : 'Bulk User Configuration'}
+                          </h4>
+                          <p className={`text-sm ${
+                            selectionMode === 'single' ? 'text-blue-700' : 'text-purple-700'
+                          }`}>
+                            {selectionMode === 'single' 
+                              ? 'Configuring module access for 1 user'
+                              : `Configuring module access for ${bulkSelectedUserIds.length} users`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={toggleSelectionMode}
+                        className="text-sm font-medium text-gray-600 hover:text-gray-800 px-3 py-1 hover:bg-white rounded-md transition-colors"
+                      >
+                        Switch to {selectionMode === 'single' ? 'Bulk' : 'Single'}
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Modules by Category */}
                   {Object.entries(modulesByCategory).map(([category, modules]) => {
                     if (categoryFilter !== 'all' && categoryFilter !== category) return null;
@@ -692,7 +852,10 @@ export const ModuleAccessManagement: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
                           {modules.map((module) => {
                             const moduleKey = module.id as keyof ModuleAccess;
-                            const selectedUsers = users.filter(u => selectedUserIds.includes(u.id));
+                            const targetUsers = selectionMode === 'single'
+                              ? users.filter(u => u.id === selectedUserId)
+                              : users.filter(u => bulkSelectedUserIds.includes(u.id));
+                            const selectedUsers = targetUsers;
                             const enabledCount = selectedUsers.filter(u => u.moduleAccess[moduleKey]).length;
                             const allEnabled = enabledCount === selectedUsers.length;
                             const someEnabled = enabledCount > 0 && enabledCount < selectedUsers.length;
@@ -735,7 +898,7 @@ export const ModuleAccessManagement: React.FC = () => {
 
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-gray-500">
-                                    {enabledCount}/{selectedUsers.length} users
+                                    {enabledCount}/{selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''}
                                   </span>
                                   <div className="flex items-center space-x-1">
                                     {module.isSystemModule && (
@@ -765,4 +928,156 @@ export const ModuleAccessManagement: React.FC = () => {
       </div>
     </div>
   );
+
+  // Bulk actions handler
+  function handleBulkActions() {
+    if (bulkSelectedUserIds.length === 0) return;
+
+    // Show bulk actions menu/modal
+    const actions = [
+      'Apply Role-Based Access',
+      'Enable All Modules',
+      'Disable All Modules',
+      'Copy Access from Another User'
+    ];
+
+    const selectedAction = prompt(
+      `Select bulk action for ${bulkSelectedUserIds.length} users:\n\n` +
+      actions.map((action, index) => `${index + 1}. ${action}`).join('\n') +
+      '\n\nEnter number (1-4):'
+    );
+
+    const actionIndex = parseInt(selectedAction || '0') - 1;
+    if (actionIndex >= 0 && actionIndex < actions.length) {
+      handleBulkAction(actions[actionIndex]);
+    }
+  }
+
+  // Handle specific bulk actions
+  function handleBulkAction(action: string) {
+    switch (action) {
+      case 'Apply Role-Based Access':
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            bulkSelectedUserIds.includes(user.id)
+              ? { ...user, moduleAccess: getModuleAccessForRole(user.role) }
+              : user
+          )
+        );
+        alert(`Applied role-based access to ${bulkSelectedUserIds.length} users`);
+        break;
+        
+      case 'Enable All Modules':
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            bulkSelectedUserIds.includes(user.id)
+              ? { 
+                  ...user, 
+                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
+                    ...acc,
+                    [key]: true
+                  }), {} as ModuleAccess)
+                }
+              : user
+          )
+        );
+        alert(`Enabled all modules for ${bulkSelectedUserIds.length} users`);
+        break;
+        
+      case 'Disable All Modules':
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            bulkSelectedUserIds.includes(user.id)
+              ? { 
+                  ...user, 
+                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
+                    ...acc,
+                    [key]: key === 'dashboard' // Keep dashboard always enabled
+                  }), {} as ModuleAccess)
+                }
+              : user
+          )
+        );
+        alert(`Disabled all modules (except dashboard) for ${bulkSelectedUserIds.length} users`);
+        break;
+        
+      default:
+        alert('Action not implemented yet');
+    }
+  }
+
+  // Helper function to get default module access based on role
+  function getModuleAccessForRole(role: User['role']): ModuleAccess {
+    const baseAccess: ModuleAccess = {
+      dashboard: true,
+      containers: false,
+      gateIn: false,
+      gateOut: false,
+      releases: false,
+      edi: false,
+      yard: false,
+      clients: false,
+      users: false,
+      moduleAccess: false,
+      reports: false,
+      depotManagement: false,
+      timeTracking: false,
+      analytics: false,
+      clientPools: false,
+      stackManagement: false,
+      auditLogs: false,
+      billingReports: false,
+      operationsReports: false
+    };
+    switch (role) {
+      case 'admin':
+        return Object.keys(baseAccess).reduce((acc, key) => ({
+          ...acc,
+          [key]: true
+        }), {} as ModuleAccess);
+        
+      case 'supervisor':
+        return {
+          ...baseAccess,
+          containers: true,
+          gateIn: true,
+          gateOut: true,
+          releases: true,
+          edi: true,
+          yard: true,
+          clients: true,
+          reports: true,
+          depotManagement: true,
+          timeTracking: true,
+          analytics: true,
+          clientPools: true,
+          stackManagement: true,
+          auditLogs: true,
+          billingReports: true,
+          operationsReports: true
+        };
+        
+      case 'operator':
+        return {
+          ...baseAccess,
+          containers: true,
+          gateIn: true,
+          gateOut: true,
+          releases: true,
+          yard: true,
+          auditLogs: true
+        };
+        
+      case 'client':
+        return {
+          ...baseAccess,
+          containers: true,
+          releases: true,
+          yard: true
+        };
+        
+      default:
+        return baseAccess;
+    }
+  }
 };
