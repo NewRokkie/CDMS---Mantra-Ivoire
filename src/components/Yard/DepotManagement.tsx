@@ -1,5 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Building, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, TrendingUp, MapPin, Users, Clock, X, Loader, Calendar } from 'lucide-react';
+import {
+  Building,
+  Package,
+  Settings,
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Eye,
+  AlertTriangle,
+  CheckCircle,
+  TrendingUp,
+  MapPin,
+  Users,
+  Clock,
+  X,
+  Loader,
+  Calendar
+} from 'lucide-react';
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -39,7 +58,7 @@ export const DepotManagement: React.FC = () => {
   const loadDepots = async () => {
     try {
       setIsLoading(true);
-      const availableDepots = await yardService.getAvailableYards();
+      const availableDepots = yardService.getAvailableYards();
 
       setDepots(availableDepots);
 
