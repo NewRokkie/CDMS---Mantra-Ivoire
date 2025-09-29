@@ -12,7 +12,7 @@ const mockContainers: Container[] = [
   {
     id: 'c1',
     number: 'MSKU-123456-7',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_depot',
     location: 'Stack S1-Row 1-Tier 1',
@@ -34,7 +34,7 @@ const mockContainers: Container[] = [
   {
     id: 'c3',
     number: 'GESU-456789-1',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_depot',
     location: 'Stack S5-Row 1-Tier 2',
@@ -45,7 +45,7 @@ const mockContainers: Container[] = [
   {
     id: 'c4',
     number: 'SHIP-111222-8',
-    type: 'dry',
+    type: 'standard',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S33-Row 3-Tier 1',
@@ -67,7 +67,7 @@ const mockContainers: Container[] = [
   {
     id: 'c6',
     number: 'CMDU-789012-5',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_depot',
     location: 'Stack S65-Row 4-Tier 1',
