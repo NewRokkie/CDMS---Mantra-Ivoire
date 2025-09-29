@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, Eye, Edit, AlertTriangle, Package } from 'lucide-react';
+import { Search, Filter, Download, Eye, CreditCard as Edit, AlertTriangle, Package } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -24,7 +24,7 @@ const initialContainers: Container[] = [
   {
     id: '1',
     number: 'MSKU1234567',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_depot',
     location: 'Stack S1-Row 1-Tier 1',
@@ -90,7 +90,7 @@ const initialContainers: Container[] = [
   {
     id: '4',
     number: 'SHIP1112228',
-    type: 'standard',
+    type: 'dry',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S7-Row 3-Tier 2',
