@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, XCircle, Plus, Edit, Trash2, UserPlus, Sparkles, Zap, Lock, Unlock, Eye, EyeOff, Star, Award, Crown, Gem } from 'lucide-react';
+import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, XCircle, Plus, CreditCard as Edit, Trash2, UserPlus, Sparkles, Zap, Lock, Unlock, Eye, EyeOff, Star, Award, Crown, Gem } from 'lucide-react';
 import { User, ModuleAccess, ModulePermission } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 
