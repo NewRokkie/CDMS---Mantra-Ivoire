@@ -305,6 +305,8 @@ export const StackManagement: React.FC<StackManagementProps> = ({
         canAssign40Feet={canAssign40Feet}
         getAdjacentStackNumber={getAdjacentStackNumber}
         onContainerSizeChange={handleContainerSizeChange}
+        onEditStack={handleEditStack}
+        onDeleteStack={handleDeleteStack}
       />
 
       <StackConfigurationRules />
