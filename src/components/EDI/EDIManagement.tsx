@@ -88,6 +88,53 @@ export const EDIManagement: React.FC = () => {
     }
   };
 
+  const handleGenerateSapXml = async () => {
+    setIsLoading(true);
+    try {
+      // Create mock container data for demonstration
+      const mockContainer = {
+        id: 'mock-container-' + Date.now(),
+        number: 'PCIU9507070',
+        size: '40ft' as const,
+        type: 'dry' as const,
+        status: 'available' as const,
+        location: 'A-01-01',
+        clientId: 'client-001',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: user?.name || 'System',
+        updatedBy: user?.name || 'System'
+      };
+
+      const xmlContent = await ediService.generateSapXmlReport(
+        mockContainer,
+        operation,
+        'PROPRE MOYEN', // transporter
+        '028-AA-01', // vehicleNumber
+        '0001052069', // clientCode
+        user?.name || 'System', // userName
+        'FULL' // containerLoadStatus
+      );
+
+      // Create and download the XML file
+      const blob = new Blob([xmlContent], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SAP_CODECO_${operation}_${mockContainer.number}_${Date.now()}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert('SAP XML file generated and downloaded successfully!');
+    } catch (error) {
+      alert(`Error generating SAP XML: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getStatusIcon = (status: EDITransmissionLog['status']) => {
     switch (status) {
       case 'PENDING':
