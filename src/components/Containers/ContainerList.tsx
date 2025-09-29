@@ -68,7 +68,7 @@ const initialContainers: Container[] = [
   {
     id: '3',
     number: 'GESU4567891',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_service',
     location: 'Stack S5-Row 1-Tier 3',
@@ -90,7 +90,7 @@ const initialContainers: Container[] = [
   {
     id: '4',
     number: 'SHIP1112228',
-    type: 'dry',
+    type: 'standard',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S7-Row 3-Tier 2',
@@ -101,7 +101,7 @@ const initialContainers: Container[] = [
     createdBy: 'System',
     updatedBy: 'System',
     auditLogs: [
-      { timestamp: new Date('2025-01-11T09:15:00'), user: 'System', action: 'created', details: 'Standard dry container added' },
+      { timestamp: new Date('2025-01-11T09:15:00'), user: 'System', action: 'created', details: 'Standard standard container added' },
       { timestamp: new Date('2025-01-11T11:00:00'), user: 'Yard Operator', action: 'moved', details: 'Placed in Stack S7 stack' },
       { timestamp: new Date('2025-01-12T10:30:00'), user: 'Client Rep', action: 'viewed', details: 'Verified container position' },
       { timestamp: new Date('2025-01-12T14:00:00'), user: 'Admin', action: 'edited', details: 'Updated client code to SHIP001' },
