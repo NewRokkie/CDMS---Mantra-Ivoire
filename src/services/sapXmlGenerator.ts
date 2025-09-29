@@ -57,14 +57,14 @@ export class SapXmlGenerator {
    */
   private static getDesignCode(containerType: Container['type']): string {
     const designMapping = {
-      'dry': '003',        // Standard dry container
+      'standard': '003',        // Standard standard container
       'reefer': '004',     // Refrigerated container
       'tank': '005',       // Tank container
       'flat_rack': '006',  // Flat rack container
       'open_top': '007'    // Open top container
     };
     
-    return designMapping[containerType] || '003'; // Default to dry container
+    return designMapping[containerType] || '003'; // Default to standard container
   }
 
   /**
