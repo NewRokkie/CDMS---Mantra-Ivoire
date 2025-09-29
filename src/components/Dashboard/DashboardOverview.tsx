@@ -644,8 +644,8 @@ export const DashboardOverview: React.FC = () => {
       {/* Total by Type */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Total by Container Type</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {['dry', 'reefer', 'tank', 'flat_rack', 'open_top'].map(type => {
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          {['standard', 'hi_cube', 'hard_top', 'ventilated', 'reefer', 'tank', 'flat_rack', 'open_top'].map(type => {
             const count = filteredContainers.filter(c => c.type === type).length;
             return (
               <div

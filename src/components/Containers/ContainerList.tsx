@@ -90,7 +90,7 @@ const initialContainers: Container[] = [
   {
     id: '4',
     number: 'SHIP1112228',
-    type: 'dry',
+    type: 'standard',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S7-Row 3-Tier 2',

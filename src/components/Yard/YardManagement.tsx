@@ -78,7 +78,7 @@ const mockContainers: Container[] = [
   {
     id: 'c7',
     number: 'HLCU-345678-9',
-    type: 'dry',
+    type: 'standard',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S101-Row 1-Tier 1',

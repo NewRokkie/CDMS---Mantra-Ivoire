@@ -274,7 +274,10 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                     onChange={(e) => handleInputChange('type', e.target.value)}
                     className="form-input w-full"
                   >
-                    <option value="dry">Dry Container</option>
+                    <option value="standard">Standard Container</option>
+                    <option value="hi_cube">Hi-Cube Container</option>
+                    <option value="hard_top">Hard Top Container</option>
+                    <option value="ventilated">Ventilated Container</option>
                     <option value="reefer">Reefer Container</option>
                     <option value="tank">Tank Container</option>
                     <option value="flat_rack">Flat Rack</option>

@@ -287,7 +287,10 @@ export class SapXmlGenerator {
    */
   static getContainerTypeDescription(containerType: Container['type']): string {
     const descriptions = {
-      'dry': 'Standard Dry Container',
+      'standard': 'Standard Container',
+      'hi_cube': 'Hi-Cube Container',
+      'hard_top': 'Hard Top Container',
+      'ventilated': 'Ventilated Container',
       'reefer': 'Refrigerated Container',
       'tank': 'Tank Container',
       'flat_rack': 'Flat Rack Container',

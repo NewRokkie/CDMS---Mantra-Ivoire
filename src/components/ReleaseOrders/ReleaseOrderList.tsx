@@ -25,7 +25,7 @@ const mockAvailableContainers: Container[] = [
   {
     id: '4',
     number: 'SHIP-111222-8',
-    type: 'dry',
+    type: 'standard',
     size: '20ft',
     status: 'in_depot',
     location: 'Block B-05',

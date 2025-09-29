@@ -333,7 +333,7 @@ export class EDIService {
     return {
       id: '1',
       number: containerNumber,
-      type: 'dry',
+      type: 'standard',
       size: '40ft',
       status: 'in_depot',
       location: 'Block A-12',

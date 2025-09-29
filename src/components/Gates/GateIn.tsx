@@ -246,7 +246,7 @@ export const GateIn: React.FC = () => {
 
   const [formData, setFormData] = useState<GateInFormData>({
     containerSize: '20ft',
-    containerType: 'dry',
+    containerType: 'standard',
     containerQuantity: 1,
     status: 'FULL',
     isDamaged: false,
