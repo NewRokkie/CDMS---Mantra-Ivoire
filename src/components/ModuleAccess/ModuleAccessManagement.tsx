@@ -930,7 +930,7 @@ export const ModuleAccessManagement: React.FC = () => {
   );
 
   // Bulk actions handler
-  function handleBulkActions() {
+  const handleBulkActions = () => {
     if (bulkSelectedUserIds.length === 0) return;
 
     // Show bulk actions menu/modal
@@ -951,10 +951,10 @@ export const ModuleAccessManagement: React.FC = () => {
     if (actionIndex >= 0 && actionIndex < actions.length) {
       handleBulkAction(actions[actionIndex]);
     }
-  }
+  };
 
   // Handle specific bulk actions
-  function handleBulkAction(action: string) {
+  const handleBulkAction = (action: string) => {
     switch (action) {
       case 'Apply Role-Based Access':
         setUsers(prevUsers => 
@@ -1004,7 +1004,7 @@ export const ModuleAccessManagement: React.FC = () => {
       default:
         alert('Action not implemented yet');
     }
-  }
+  };
 
   // Helper function to get default module access based on role
   function getModuleAccessForRole(role: User['role']): ModuleAccess {
