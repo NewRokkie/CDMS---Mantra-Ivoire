@@ -1,6 +1,8 @@
 import { CODECOGenerator } from './codecoGenerator';
+import { SapXmlGenerator, SapCodecoReportData } from '../sapXmlGenerator';
 import { Container, EDITransmissionConfig, EDITransmissionLog } from '../../types';
 import { format } from 'date-fns';
+import { yardService } from '../yardService';
 
 export class EDIService {
   private transmissionConfigs: Map<string, EDITransmissionConfig> = new Map();
@@ -72,6 +74,106 @@ export class EDIService {
     return await this.simulateTransmission(ediContent, container, 'GATE_OUT', messageRef, partnerCode);
   }
 
+  async generateSapXmlReport(
+    container: Container,
+    operationType: 'GATE_IN' | 'GATE_OUT',
+    transporter: string,
+    vehicleNumber: string,
+    userName: string,
+    containerLoadStatus: 'FULL' | 'EMPTY' = 'FULL'
+  ): Promise<{ xmlContent: string; log: EDITransmissionLog }> {
+    try {
+      // Generate SAP XML
+      const xmlContent = await SapXmlGenerator.generateSapCodecoReportXml({
+        container,
+        operationType,
+        transporter,
+        vehicleNumber,
+        clientCode: container.clientCode || container.client,
+        userName,
+        containerLoadStatus
+      });
+
+      // Validate the generated XML
+      const validation = SapXmlGenerator.validateSapXml(xmlContent);
+      if (!validation.isValid) {
+        throw new Error(`SAP XML validation failed: ${validation.errors.join(', ')}`);
+      }
+
+      // Create transmission log
+      const messageRef = this.generateMessageReference(
+        operationType === 'GATE_IN' ? 'GI' : 'GO',
+        container.number
+      );
+      const partnerCode = this.getPartnerCodeForContainer(container);
+      const currentYard = yardService.getCurrentYard();
+      
+      const log = await this.simulateTransmission(
+        xmlContent,
+        container,
+        operationType,
+        messageRef,
+        partnerCode,
+        currentYard?.id || 'unknown'
+      );
+
+      console.log(`[SAP XML] Generated for ${container.number}:`, {
+        operationType,
+        containerType: SapXmlGenerator.getContainerTypeDescription(container.type),
+        operationDesc: SapXmlGenerator.getOperationDescription(operationType),
+        transporter,
+        vehicleNumber,
+        yardCode: currentYard?.code || 'UNKNOWN'
+      });
+
+      return { xmlContent, log };
+    } catch (error) {
+      throw new Error(`Failed to generate SAP XML report: ${error}`);
+    }
+  }
+
+  async processSapXmlFromGateIn(
+    container: Container,
+    transporter: string,
+    vehicleNumber: string,
+    userName: string,
+    containerLoadStatus: 'FULL' | 'EMPTY' = 'FULL'
+  ): Promise<{ xmlContent: string; log: EDITransmissionLog }> {
+    if (!container.gateInDate) {
+      throw new Error('Container must have a gate-in date to generate SAP XML');
+    }
+
+    return this.generateSapXmlReport(
+      container,
+      'GATE_IN',
+      transporter,
+      vehicleNumber,
+      userName,
+      containerLoadStatus
+    );
+  }
+
+  async processSapXmlFromGateOut(
+    container: Container,
+    transporter: string,
+    vehicleNumber: string,
+    userName: string,
+    containerLoadStatus: 'FULL' | 'EMPTY' = 'FULL'
+  ): Promise<{ xmlContent: string; log: EDITransmissionLog }> {
+    if (!container.gateOutDate) {
+      throw new Error('Container must have a gate-out date to generate SAP XML');
+    }
+
+    return this.generateSapXmlReport(
+      container,
+      'GATE_OUT',
+      transporter,
+      vehicleNumber,
+      userName,
+      containerLoadStatus
+    );
+  }
+
   private async simulateTransmission(
     ediContent: string,
     container: Container,
@@ -83,7 +185,9 @@ export class EDIService {
     const timestamp = format(new Date(), 'yyyyMMddHHmmss');
     const yard = yardService.getYardById(yardId);
     const yardCode = yard?.code || 'UNKNOWN';
-    const fileName = `CODECO_${yardCode}_${timestamp}_${container.number}_${operation}.edi`;
+    const fileName = operation.includes('XML') 
+      ? `SAP_CODECO_${yardCode}_${timestamp}_${container.number}_${operation}.xml`
+      : `CODECO_${yardCode}_${timestamp}_${container.number}_${operation}.edi`;
 
     const log: EDITransmissionLog = {
       id: `${messageRef}_${timestamp}`,
