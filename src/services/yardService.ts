@@ -427,6 +427,243 @@ export class YardService {
   }
 
   /**
+   * Add a new stack to a yard section
+   */
+  addStackToSection(
+    yardId: string,
+    sectionId: string,
+    stackData: {
+      stackNumber: number;
+      rows: number;
+      maxTiers: number;
+      position: { x: number; y: number; z: number };
+      dimensions: { width: number; length: number };
+    },
+    userName?: string
+  ): YardStack | null {
+    const yard = this.yards.get(yardId);
+    if (!yard) return null;
+
+    const section = yard.sections.find(s => s.id === sectionId);
+    if (!section) return null;
+
+    // Check if stack number already exists
+    const existingStack = section.stacks.find(s => s.stackNumber === stackData.stackNumber);
+    if (existingStack) {
+      throw new Error(`Stack ${stackData.stackNumber} already exists in this section`);
+    }
+
+    const newStack: YardStack = {
+      id: `stack-${stackData.stackNumber}`,
+      stackNumber: stackData.stackNumber,
+      sectionId,
+      rows: stackData.rows,
+      maxTiers: stackData.maxTiers,
+      currentOccupancy: 0,
+      capacity: stackData.rows * stackData.maxTiers,
+      position: stackData.position,
+      dimensions: stackData.dimensions,
+      containerPositions: [],
+      isOddStack: stackData.stackNumber % 2 === 1
+    };
+
+    section.stacks.push(newStack);
+    section.stacks.sort((a, b) => a.stackNumber - b.stackNumber);
+
+    // Update yard capacity
+    yard.totalCapacity += newStack.capacity;
+    yard.updatedAt = new Date();
+    if (userName) {
+      yard.updatedBy = userName;
+    }
+
+    this.yards.set(yardId, yard);
+
+    // Log operation
+    this.logOperation('stack_create', undefined, userName || 'System', {
+      yardId,
+      yardCode: yard.code,
+      sectionId,
+      stackNumber: stackData.stackNumber,
+      capacity: newStack.capacity
+    });
+
+    console.log(`Created stack ${stackData.stackNumber} in section ${sectionId} of yard ${yard.name}`);
+    return newStack;
+  }
+
+  /**
+   * Update an existing stack
+   */
+  updateStack(
+    yardId: string,
+    stackId: string,
+    updates: Partial<{
+      rows: number;
+      maxTiers: number;
+      position: { x: number; y: number; z: number };
+      dimensions: { width: number; length: number };
+    }>,
+    userName?: string
+  ): YardStack | null {
+    const yard = this.yards.get(yardId);
+    if (!yard) return null;
+
+    let targetStack: YardStack | null = null;
+    let targetSection: any = null;
+
+    // Find the stack across all sections
+    for (const section of yard.sections) {
+      const stack = section.stacks.find(s => s.id === stackId);
+      if (stack) {
+        targetStack = stack;
+        targetSection = section;
+        break;
+      }
+    }
+
+    if (!targetStack || !targetSection) return null;
+
+    // Check if stack has containers before allowing capacity changes
+    if ((updates.rows || updates.maxTiers) && targetStack.currentOccupancy > 0) {
+      throw new Error('Cannot modify stack capacity while containers are present');
+    }
+
+    const oldCapacity = targetStack.capacity;
+
+    // Apply updates
+    if (updates.rows !== undefined) {
+      targetStack.rows = updates.rows;
+    }
+    if (updates.maxTiers !== undefined) {
+      targetStack.maxTiers = updates.maxTiers;
+    }
+    if (updates.position !== undefined) {
+      targetStack.position = updates.position;
+    }
+    if (updates.dimensions !== undefined) {
+      targetStack.dimensions = updates.dimensions;
+    }
+
+    // Recalculate capacity
+    const newCapacity = targetStack.rows * targetStack.maxTiers;
+    targetStack.capacity = newCapacity;
+
+    // Update yard total capacity
+    yard.totalCapacity = yard.totalCapacity - oldCapacity + newCapacity;
+    yard.updatedAt = new Date();
+    if (userName) {
+      yard.updatedBy = userName;
+    }
+
+    this.yards.set(yardId, yard);
+
+    // Log operation
+    this.logOperation('stack_update', undefined, userName || 'System', {
+      yardId,
+      yardCode: yard.code,
+      stackId,
+      stackNumber: targetStack.stackNumber,
+      oldCapacity,
+      newCapacity,
+      updates
+    });
+
+    console.log(`Updated stack ${targetStack.stackNumber} in yard ${yard.name}`);
+    return targetStack;
+  }
+
+  /**
+   * Delete a stack from a yard section
+   */
+  deleteStack(yardId: string, stackId: string, userName?: string): boolean {
+    const yard = this.yards.get(yardId);
+    if (!yard) return false;
+
+    let targetStack: YardStack | null = null;
+    let targetSection: any = null;
+    let stackIndex = -1;
+
+    // Find the stack across all sections
+    for (const section of yard.sections) {
+      const index = section.stacks.findIndex(s => s.id === stackId);
+      if (index !== -1) {
+        targetStack = section.stacks[index];
+        targetSection = section;
+        stackIndex = index;
+        break;
+      }
+    }
+
+    if (!targetStack || !targetSection || stackIndex === -1) return false;
+
+    // Check if stack has containers
+    if (targetStack.currentOccupancy > 0) {
+      throw new Error('Cannot delete stack with containers. Please move all containers first.');
+    }
+
+    // Remove stack from section
+    targetSection.stacks.splice(stackIndex, 1);
+
+    // Update yard capacity
+    yard.totalCapacity -= targetStack.capacity;
+    yard.updatedAt = new Date();
+    if (userName) {
+      yard.updatedBy = userName;
+    }
+
+    this.yards.set(yardId, yard);
+
+    // Log operation
+    this.logOperation('stack_delete', undefined, userName || 'System', {
+      yardId,
+      yardCode: yard.code,
+      sectionId: targetSection.id,
+      stackId,
+      stackNumber: targetStack.stackNumber,
+      capacity: targetStack.capacity
+    });
+
+    console.log(`Deleted stack ${targetStack.stackNumber} from yard ${yard.name}`);
+    return true;
+  }
+
+  /**
+   * Get available stack numbers for a section (to avoid duplicates)
+   */
+  getAvailableStackNumbers(yardId: string, sectionId: string): number[] {
+    const yard = this.yards.get(yardId);
+    if (!yard) return [];
+
+    const section = yard.sections.find(s => s.id === sectionId);
+    if (!section) return [];
+
+    const existingNumbers = section.stacks.map(s => s.stackNumber);
+    const allNumbers = Array.from({ length: 200 }, (_, i) => i + 1);
+    
+    return allNumbers.filter(num => !existingNumbers.includes(num));
+  }
+
+  /**
+   * Get next suggested stack number for a section
+   */
+  getNextStackNumber(yardId: string, sectionId: string): number {
+    const yard = this.yards.get(yardId);
+    if (!yard) return 1;
+
+    const section = yard.sections.find(s => s.id === sectionId);
+    if (!section || section.stacks.length === 0) return 1;
+
+    const maxNumber = Math.max(...section.stacks.map(s => s.stackNumber));
+    
+    // For Tantarelli layout, suggest next odd number
+    if (yard.layout === 'tantarelli') {
+      return maxNumber % 2 === 0 ? maxNumber + 1 : maxNumber + 2;
+    }
+    
+    return maxNumber + 1;
+  }
+  /**
    * Create new yard
    */
   createYard(yardData: Omit<Yard, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>, userName?: string): Yard {

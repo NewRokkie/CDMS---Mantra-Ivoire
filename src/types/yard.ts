@@ -120,7 +120,7 @@ export interface YardOperationLog {
   id: string;
   yardId: string;
   yardCode: string;
-  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment' | 'yard_switch' | 'client_pool_create' | 'client_pool_update' | 'container_assign' | 'stack_remove' | 'stack_bulk_assign' | 'container_release' | 'yard_create' | 'yard_update' | 'yard_delete' | 'edi_transmission' | 'codeco_generate';
+  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment' | 'yard_switch' | 'client_pool_create' | 'client_pool_update' | 'container_assign' | 'stack_remove' | 'stack_bulk_assign' | 'container_release' | 'yard_create' | 'yard_update' | 'yard_delete' | 'edi_transmission' | 'codeco_generate' | 'stack_create' | 'stack_update' | 'stack_delete';
   containerNumber?: string;
   userId: string;
   userName: string;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Shield } from 'lucide-react';
+import { Settings, Shield, Edit, Trash2 } from 'lucide-react';
 import { clientPoolService } from '../../../services/clientPoolService';
 
 interface StackConfiguration {
@@ -18,13 +18,17 @@ interface StackConfigurationTableProps {
   canAssign40Feet: (stackNumber: number) => boolean;
   getAdjacentStackNumber: (stackNumber: number) => number | null;
   onContainerSizeChange: (stackId: string, newSize: '20feet' | '40feet') => void;
+  onEditStack: (config: StackConfiguration) => void;
+  onDeleteStack: (config: StackConfiguration) => void;
 }
 
 export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = ({
   configurations,
   canAssign40Feet,
   getAdjacentStackNumber,
-  onContainerSizeChange
+  onContainerSizeChange,
+  onEditStack,
+  onDeleteStack
 }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -50,6 +54,9 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Manage
               </th>
             </tr>
           </thead>
@@ -159,6 +166,24 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                         {config.containerSize === '40feet' && (
                           <span className="absolute inset-x-0 -bottom-1.5 mx-auto h-0.5 w-5 bg-orange-500"></span>
                         )}
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => onEditStack(config)}
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                        title="Edit Stack"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteStack(config)}
+                        className="text-red-600 hover:text-red-900 p-1 rounded"
+                        title="Delete Stack"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>

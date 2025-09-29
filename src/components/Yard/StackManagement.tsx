@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle } from 'lucide-react';
+import { Shield, AlertTriangle, Plus, Edit, Trash2 } from 'lucide-react';
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -8,6 +8,7 @@ import { StackManagementFilters } from './StackManagement/StackManagementFilters
 import { StackConfigurationTable } from './StackManagement/StackConfigurationTable';
 import { StackConfigurationRules } from './StackManagement/StackConfigurationRules';
 import { StackPairingInfo } from './StackManagement/StackPairingInfo';
+import { StackFormModal } from './StackManagement/StackFormModal';
 import { yardService } from '../../services/yardService';
 
 interface StackConfiguration {
@@ -38,6 +39,9 @@ export const StackManagement: React.FC<StackManagementProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [showStackForm, setShowStackForm] = useState(false);
+  const [selectedStack, setSelectedStack] = useState<StackConfiguration | null>(null);
+  const [isFormLoading, setIsFormLoading] = useState(false);
 
   const canManageStacks = user?.role === 'admin' || user?.role === 'supervisor';
   
@@ -270,6 +274,99 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     setHasChanges(false);
   };
 
+  const handleCreateStack = async (stackData: any) => {
+    if (!activeYard) return;
+
+    try {
+      setIsFormLoading(true);
+      const newStack = yardService.addStackToSection(
+        activeYard.id,
+        stackData.sectionId,
+        {
+          stackNumber: stackData.stackNumber,
+          rows: stackData.rows,
+          maxTiers: stackData.maxTiers,
+          position: stackData.position,
+          dimensions: stackData.dimensions
+        },
+        user?.name
+      );
+
+      if (newStack) {
+        // Refresh configurations
+        initializeConfigurations();
+        setShowStackForm(false);
+        setSelectedStack(null);
+        alert(`Stack ${newStack.stackNumber} created successfully!`);
+      }
+    } catch (error) {
+      alert(`Error creating stack: ${error}`);
+    } finally {
+      setIsFormLoading(false);
+    }
+  };
+
+  const handleEditStack = (config: StackConfiguration) => {
+    setSelectedStack(config);
+    setShowStackForm(true);
+  };
+
+  const handleUpdateStack = async (stackData: any) => {
+    if (!activeYard || !selectedStack) return;
+
+    try {
+      setIsFormLoading(true);
+      const updatedStack = yardService.updateStack(
+        activeYard.id,
+        selectedStack.stackId,
+        {
+          rows: stackData.rows,
+          maxTiers: stackData.maxTiers,
+          position: stackData.position,
+          dimensions: stackData.dimensions
+        },
+        user?.name
+      );
+
+      if (updatedStack) {
+        // Refresh configurations
+        initializeConfigurations();
+        setShowStackForm(false);
+        setSelectedStack(null);
+        alert(`Stack ${updatedStack.stackNumber} updated successfully!`);
+      }
+    } catch (error) {
+      alert(`Error updating stack: ${error}`);
+    } finally {
+      setIsFormLoading(false);
+    }
+  };
+
+  const handleDeleteStack = async (config: StackConfiguration) => {
+    if (!activeYard) return;
+
+    if (confirm(`Are you sure you want to delete Stack ${config.stackNumber}? This action cannot be undone.`)) {
+      try {
+        const success = yardService.deleteStack(activeYard.id, config.stackId, user?.name);
+        if (success) {
+          // Refresh configurations
+          initializeConfigurations();
+          alert(`Stack ${config.stackNumber} deleted successfully!`);
+        }
+      } catch (error) {
+        alert(`Error deleting stack: ${error}`);
+      }
+    }
+  };
+
+  const handleFormSubmit = (stackData: any) => {
+    if (selectedStack) {
+      handleUpdateStack(stackData);
+    } else {
+      handleCreateStack(stackData);
+    }
+  };
+
   if (!canManageStacks) {
     return (
       <div className="text-center py-12">
@@ -284,6 +381,10 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     <div className="space-y-6">
       <StackManagementHeader
         hasChanges={hasChanges}
+        onCreateStack={() => {
+          setSelectedStack(null);
+          setShowStackForm(true);
+        }}
         onSave={handleSaveChanges}
         onReset={handleResetChanges}
       />
@@ -301,6 +402,8 @@ export const StackManagement: React.FC<StackManagementProps> = ({
         canAssign40Feet={canAssign40Feet}
         getAdjacentStackNumber={getAdjacentStackNumber}
         onContainerSizeChange={handleContainerSizeChange}
+        onEditStack={handleEditStack}
+        onDeleteStack={handleDeleteStack}
       />
 
       <StackConfigurationRules />
@@ -310,6 +413,21 @@ export const StackManagement: React.FC<StackManagementProps> = ({
         canAssign40Feet={canAssign40Feet}
         getAdjacentStackNumber={getAdjacentStackNumber}
       />
+
+      {/* Stack Form Modal */}
+      {showStackForm && (
+        <StackFormModal
+          isOpen={showStackForm}
+          onClose={() => {
+            setShowStackForm(false);
+            setSelectedStack(null);
+          }}
+          onSubmit={handleFormSubmit}
+          selectedStack={selectedStack}
+          yard={activeYard}
+          isLoading={isFormLoading}
+        />
+      )}
     </div>
   );
 };

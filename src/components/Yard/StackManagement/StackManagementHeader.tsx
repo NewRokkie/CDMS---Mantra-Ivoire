@@ -1,14 +1,16 @@
 import React from 'react';
-import { Save, RotateCcw } from 'lucide-react';
+import { Save, RotateCcw, Plus } from 'lucide-react';
 
 interface StackManagementHeaderProps {
   hasChanges: boolean;
+  onCreateStack: () => void;
   onSave: () => void;
   onReset: () => void;
 }
 
 export const StackManagementHeader: React.FC<StackManagementHeaderProps> = ({
   hasChanges,
+  onCreateStack,
   onSave,
   onReset
 }) => {
@@ -19,6 +21,13 @@ export const StackManagementHeader: React.FC<StackManagementHeaderProps> = ({
         <p className="text-gray-600">Configure container size assignments for all stacks</p>
       </div>
       <div className="flex items-center space-x-3">
+        <button
+          onClick={onCreateStack}
+          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Create Stack</span>
+        </button>
         {hasChanges && (
           <>
             <button
