@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { YardCanvas2D5 } from './YardCanvas2D5';
+import { YardCanvas2D } from './YardCanvas2D';
 import { YardSearchPanel } from './YardSearchPanel';
 import { Yard, Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -239,7 +239,7 @@ export const YardManagement: React.FC = () => {
         {/* Canvas Area - Takes Remaining Space */}
         <div className="flex-1 bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="h-full">
-            <YardCanvas2D5
+            <YardCanvas2D
               yard={yard}
               containers={filteredContainers}
               selectedContainer={selectedContainer}
