@@ -168,39 +168,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   };
 
-  const getRoleBadge = (role: User['role']) => {
-    const config = {
-      admin: {
-        color: 'bg-red-100 text-red-800',
-        label: 'Admin'
-      },
-      supervisor: {
-        color: 'bg-blue-100 text-blue-800',
-        label: 'Supervisor'
-      },
-      operator: {
-        color: 'bg-green-100 text-green-800',
-        label: 'Operator'
-      },
-      client: {
-        color: 'bg-yellow-100 text-yellow-800',
-        label: 'Client'
-      }
-    };
-
-    const { color, label } = (
-      config[role] || config['operator']
-    ) as { color: string; label: string };
-
-    return (
-      <span
-        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${color}`}
-      >
-        {label}
-      </span>
-    );
-  };
-
   if (!isOpen) return null;
 
   return (
