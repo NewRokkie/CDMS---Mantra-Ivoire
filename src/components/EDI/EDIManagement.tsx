@@ -221,7 +221,36 @@ export const EDIManagement: React.FC = () => {
 
       {/* File Upload Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Process EDI from File</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">EDI Processing Options</h3>
+        
+        {/* SAP XML Generation */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-3">Generate SAP CODECO XML</h4>
+          <p className="text-sm text-blue-700 mb-4">
+            Generate SAP-format XML for CODECO transmission (uses sample container data)
+          </p>
+          <div className="flex items-center space-x-4">
+            <select
+              value={operation}
+              onChange={(e) => setOperation(e.target.value as 'GATE_IN' | 'GATE_OUT')}
+              className="px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="GATE_IN">Gate In</option>
+              <option value="GATE_OUT">Gate Out</option>
+            </select>
+            <button
+              onClick={handleGenerateSapXml}
+              disabled={isLoading}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="h-4 w-4" />
+              <span>{isLoading ? 'Generating...' : 'Generate SAP XML'}</span>
+            </button>
+          </div>
+        </div>
+        
+        {/* File Upload */}
+        <h4 className="font-medium text-gray-900 mb-4">Process EDI from File</h4>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
