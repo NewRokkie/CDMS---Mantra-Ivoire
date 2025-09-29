@@ -1,5 +1,6 @@
 import { Yard, YardContext, YardOperationLog, YardStats, YardStack } from '../types/yard';
 import { Container } from '../types';
+import { stackService } from './stackService';
 
 /**
  * Yard Service - Manages multiple independent yards
@@ -17,9 +18,6 @@ export class YardService {
    * Initialize default yards for the system
    */
   private initializeDefaultYards(): void {
-    // Import stack service to get dynamic stacks
-    const { stackService } = require('./stackService');
-    
     const defaultYards: Yard[] = [
       {
         id: 'depot-tantarelli',
