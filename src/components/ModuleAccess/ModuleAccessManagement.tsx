@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, XCircle, Plus, CreditCard as Edit, Trash2, UserPlus, Sparkles, Zap, Lock, Unlock, Eye, EyeOff, Star, Award, Crown, Gem, User } from 'lucide-react';
+import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, XCircle, Plus, CreditCard as Edit, Trash2, UserPlus, Sparkles, Zap, Lock, Unlock, Eye, EyeOff, Star, Award, Crown, Gem, User as UserIcon } from 'lucide-react';
 import type { ModuleAccess, ModulePermission } from '../../types';
 import type { User } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -554,7 +554,7 @@ export const ModuleAccessManagement: React.FC = () => {
       case 'admin': return Crown;
       case 'supervisor': return Award;
       case 'operator': return Users;
-      case 'client': return User;
+      case 'client': return UserIcon;
       default: return Users;
     }
   };
