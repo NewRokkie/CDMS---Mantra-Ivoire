@@ -351,7 +351,7 @@ export const ModuleAccessManagement: React.FC = () => {
     const selectedUsers = selectionMode === 'single' ? (selectedUserId ? 1 : 0) : bulkSelectedUserIds.length;
 
     return { totalUsers, totalModules, adminUsers, selectedUsers };
-  }, [filteredUsers, selectedUserIds]);
+  }, [filteredUsers, selectedUserId, bulkSelectedUserIds, selectionMode]);
 
   const getRoleIcon = (role: 'admin' | 'supervisor' | 'operator' | 'client') => {
     switch (role) {
