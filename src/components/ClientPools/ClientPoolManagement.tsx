@@ -35,12 +35,6 @@ export const ClientPoolManagement: React.FC = () => {
   const { user } = useAuth();
   const { currentYard } = useYard();
 
-  // Helper function for stack number extraction (before the component or in a utils section)
-  const extractStackNumber = (stackId: string): number => {
-    const match = stackId.match(/stack-(\d+)/);
-    return match ? parseInt(match[1], 10) : 0;
-  };
-
   // Mock yard data for the form
   const mockYard = {
     id: 'depot-tantarelli',
@@ -130,12 +124,12 @@ export const ClientPoolManagement: React.FC = () => {
   const loadClientPools = async () => {
     try {
       setIsLoading(true);
-
+      
       // Get pools for current yard only
-      const pools = currentYard
+      const pools = currentYard 
         ? clientPoolService.getClientPoolsForYard(currentYard.id)
         : clientPoolService.getClientPools();
-
+        
       const poolStats = clientPoolService.getClientPoolStats();
 
       setClientPools(pools);
@@ -165,20 +159,15 @@ export const ClientPoolManagement: React.FC = () => {
   };
 
   const getPriorityBadge = (
-    priority: string // Accept string to handle potential invalid data
+    priority: 'high' | 'medium' | 'low'
   ) => {
-    // Type guard to validate priority
-    const validPriority = (priority as 'high' | 'medium' | 'low') in { high: true, medium: true, low: true }
-      ? priority as 'high' | 'medium' | 'low'
-      : 'low';
-
     const config = {
       high: { color: 'bg-red-100 text-red-800', label: 'High' },
       medium: { color: 'bg-yellow-100 text-yellow-800', label: 'Medium' },
       low: { color: 'bg-green-100 text-green-800', label: 'Low' }
     };
 
-    const { color, label } = config[validPriority];
+    const { color, label } = config[priority] || config['low'];
 
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${color}`}>
@@ -195,7 +184,6 @@ export const ClientPoolManagement: React.FC = () => {
         data.clientName,
         data.assignedStacks,
         data.maxCapacity,
-        'medium' as const, // Added missing priority parameter with default value
         new Date(data.contractStartDate),
         data.contractEndDate ? new Date(data.contractEndDate) : undefined,
         data.notes
@@ -264,7 +252,7 @@ export const ClientPoolManagement: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Client Pool Management</h2>
           <p className="text-gray-600">
-            Manage customer-specific stack assignments and capacity allocation{' '}
+            Manage customer-specific stack assignments and capacity allocation
             {currentYard && (
               <span className="ml-2 text-blue-600 font-medium">
                 • {currentYard.name} ({currentYard.code})
@@ -405,11 +393,11 @@ export const ClientPoolManagement: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap out">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{pool.assignedStacks.length} stacks</div>
                       <div className="text-sm text-gray-500">
                         {pool.assignedStacks.slice(0, 3).map(stackId =>
-                          `S${extractStackNumber(stackId).toString().padStart(2, '0')}`
+                          `S${clientPoolService['extractStackNumber'](stackId).toString().padStart(2, '0')}`
                         ).join(', ')} {pool.assignedStacks.length > 3 && ` +${pool.assignedStacks.length - 3} more`}
                       </div>
                     </td>
@@ -420,11 +408,13 @@ export const ClientPoolManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-1">
-                          <div className={`text-sm font-medium ${getUtilizationColor(pool.currentOccupancy, pool.maxCapacity)}`}>
+                          <div
+                            className={`text-sm font-medium ${getUtilizationColor(pool.currentOccupancy, pool.maxCapacity)}`}>
                             {utilizationRate.toFixed(1)}%
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                            <div className={`h-2 rounded-full ${
+                            <div
+                              className={`h-2 rounded-full ${
                                 utilizationRate >= 90 ? 'bg-red-500' :
                                 utilizationRate >= 75 ? 'bg-orange-500' :
                                 utilizationRate >= 25 ? 'bg-green-500' : 'bg-blue-500'
@@ -485,7 +475,7 @@ export const ClientPoolManagement: React.FC = () => {
             <Users className="h-8 w-8 mx-auto mb-2 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No client pools found</h3>
             <p className="text-gray-600">
-              {searchTerm ? 'Try adjusting your search criteria.' : 'No client pools have been created yet.'}
+              {searchTerm ? "Try adjusting your search criteria." : "No client pools have been created yet."}
             </p>
           </div>
         )}
