@@ -915,8 +915,8 @@ export const ModuleAccessManagement: React.FC = () => {
                 <div>
                   <h3 className="text-base lg:text-lg font-semibold text-gray-900">Module Access Configuration</h3>
                   <p className="text-xs lg:text-sm text-gray-600">
-                    {selectedUserIds.length > 0 
-                      ? `Configuring access for ${selectedUserIds.length} selected user${selectedUserIds.length !== 1 ? 's' : ''}`
+                    {(selectionMode === 'single' ? selectedUserId : bulkSelectedUserIds.length > 0) 
+                      ? `Configuring access for ${selectionMode === 'single' ? '1' : bulkSelectedUserIds.length} selected user${(selectionMode === 'single' ? 1 : bulkSelectedUserIds.length) !== 1 ? 's' : ''}`
                       : 'Select users to configure their module access'
                     }
                   </p>
