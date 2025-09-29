@@ -8,39 +8,7 @@ import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
 import { MobileGateInStats } from './GateIn/MobileGateInStats';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
-
-// Enhanced interface for the new gate-in process
-export interface GateInFormData {
-  // Step 1: Container Information
-  containerSize: '20ft' | '40ft';
-  containerType: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
-  containerQuantity: 1 | 2;
-  status: 'FULL' | 'EMPTY';
-  isDamaged: boolean;
-  clientId: string;
-  clientCode: string;
-  clientName: string;
-  bookingReference: string;
-  bookingType: 'IMPORT' | 'EXPORT';
-  containerNumber: string;
-  secondContainerNumber: string; // For when quantity is 2
-
-  // Step 2: Transport Details
-  driverName: string;
-  truckNumber: string;
-  transportCompany: string;
-
-  // Location & Validation (Step 3)
-  assignedLocation: string;
-  truckArrivalDate: string;
-  truckArrivalTime: string;
-  truckDepartureDate: string;
-  truckDepartureTime: string;
-
-  // Additional fields
-  notes: string;
-  operationStatus: 'pending' | 'completed';
-}
+import { GateInFormData } from './GateIn/types';
 
 // Mock client data with code - name format
 const mockClients = [
