@@ -783,35 +783,39 @@ export const ModuleAccessManagement: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">
-                <h3 className="text-base lg:text-lg font-semibold text-gray-900">Users</h3>
-                <div className="flex items-center space-x-3">
-                  {/* Selection Mode Indicator */}
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    selectionMode === 'single' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-purple-100 text-purple-800'
-                  }`}>
-                    {selectionMode === 'single' ? 'Single Select' : 'Bulk Select'}
-                  </span>
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">Users</h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      {filteredUsers.length}
+                    </span>
+                  </div>
                   
-                  <span className="text-xs lg:text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium">
-                    {filteredUsers.length} users
-                  </span>
-                  
-                  {/* Select All Button - Only in bulk mode */}
-                  {selectionMode === 'bulk' && (
-                    <button
-                      onClick={handleSelectAllBulk}
-                      className="text-xs lg:text-sm text-purple-600 hover:text-purple-800 font-medium"
-                    >
-                      {bulkSelectedUserIds.length === filteredUsers.length ? 'Deselect All' : 'Select All'}
-                    </button>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {/* Selection Mode Indicator - Compact */}
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      selectionMode === 'single' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {selectionMode === 'single' ? 'Single' : 'Bulk'}
+                    </span>
+                    
+                    {/* Select All Button - Only in bulk mode */}
+                    {selectionMode === 'bulk' && (
+                      <button
+                        onClick={handleSelectAllBulk}
+                        className="text-xs text-purple-600 hover:text-purple-800 font-medium px-2 py-1 hover:bg-purple-50 rounded transition-colors"
+                      >
+                        {bulkSelectedUserIds.length === filteredUsers.length ? 'Clear' : 'All'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="divide-y divide-gray-200 max-h-96 lg:max-h-[500px] overflow-y-auto">
+            <div className="divide-y divide-gray-200 h-96 lg:h-[500px] overflow-y-auto scrollbar-none">
               {filteredUsers.map((user) => {
                 // Determine if user is selected based on current mode
                 const isSelected = selectionMode === 'single' 
@@ -826,12 +830,12 @@ export const ModuleAccessManagement: React.FC = () => {
                       ? handleSingleUserSelect(user.id) 
                       : handleBulkUserSelect(user.id)
                     }
-                    className={`w-full text-left p-3 lg:p-4 transition-all duration-200 hover:bg-gray-50 relative border-2 rounded-lg mx-2 my-1 ${
+                    className={`w-full text-left p-3 lg:p-4 transition-all duration-200 hover:bg-gray-50 relative ${
                       isSelected 
                         ? selectionMode === 'single'
-                          ? 'bg-blue-50 border-blue-500 shadow-lg shadow-blue-500/20 ring-2 ring-blue-200'
-                          : 'bg-purple-50 border-purple-500 shadow-lg shadow-purple-500/20 ring-2 ring-purple-200'
-                        : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                          ? 'bg-blue-50 border-l-4 border-blue-500'
+                          : 'bg-purple-50 border-l-4 border-purple-500'
+                        : 'border-l-4 border-transparent hover:border-gray-300'
                     }`}
                   >
                     <div className="flex items-start space-x-3">
@@ -924,7 +928,7 @@ export const ModuleAccessManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 lg:p-6">
+            <div className="p-4 lg:p-6 h-96 lg:h-[500px] overflow-y-auto scrollbar-none">
               {(selectionMode === 'single' ? !selectedUserId : bulkSelectedUserIds.length === 0) ? (
                 <div className="text-center py-8 lg:py-12">
                   <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
