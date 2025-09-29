@@ -18,7 +18,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
-  const { availableYards, refresh } = useYard();
+  const { availableYards } = useYard();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -31,13 +31,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     isActive: true,
     password: ''
   });
-
-  // Refresh yards when modal opens to get latest data
-  useEffect(() => {
-    if (isOpen) {
-      refresh();
-    }
-  }, [isOpen, refresh]);
 
   // Initialize form data when editing
   useEffect(() => {
@@ -99,39 +92,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const triggerAutoSave = () => {
     setAutoSaving(true);
     setTimeout(() => setAutoSaving(false), 1000);
-  };
-
-  const getRoleBadge = (role: User['role']) => {
-    const config = {
-      admin: {
-        color: 'bg-red-100 text-red-800',
-        label: 'Admin'
-      },
-      supervisor: {
-        color: 'bg-blue-100 text-blue-800',
-        label: 'Supervisor'
-      },
-      operator: {
-        color: 'bg-green-100 text-green-800',
-        label: 'Operator'
-      },
-      client: {
-        color: 'bg-yellow-100 text-yellow-800',
-        label: 'Client'
-      }
-    };
-
-    const { color, label } = (
-      config[role] || config['operator']
-    ) as { color: string; label: string };
-
-    return (
-      <span
-        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${color}`}
-      >
-        {label}
-      </span>
-    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
