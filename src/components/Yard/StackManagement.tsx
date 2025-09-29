@@ -316,13 +316,26 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     try {
       setIsFormLoading(true);
       
+      // Calculate dimensions based on container size
+      const dimensions = {
+        width: data.containerSize === '40ft' ? 24 : 12, // 40ft = 24m, 20ft = 12m
+        length: 6 // Standard length
+      };
+      
+      // Calculate position (simplified - in production this would be more sophisticated)
+      const position = {
+        x: data.stackNumber * 15, // Simple spacing
+        y: 20, // Default Y position
+        z: 0 // Ground level
+      };
+      
       if (selectedStack) {
         // Update existing stack
         await yardService.updateStack(activeYard.id, selectedStack.stackId, {
           rows: data.rows,
           maxTiers: data.maxTiers,
-          position: data.position,
-          dimensions: data.dimensions
+          position: position,
+          dimensions: dimensions
         }, user?.name);
         
         alert(`Stack ${selectedStack.stackNumber.toString().padStart(2, '0')} updated successfully!`);
@@ -335,8 +348,8 @@ export const StackManagement: React.FC<StackManagementProps> = ({
             stackNumber: data.stackNumber,
             rows: data.rows,
             maxTiers: data.maxTiers,
-            position: data.position,
-            dimensions: data.dimensions
+            position: position,
+            dimensions: dimensions
           },
           user?.name
         );
@@ -348,8 +361,8 @@ export const StackManagement: React.FC<StackManagementProps> = ({
             stackNumber: newStack.stackNumber,
             sectionId: newStack.sectionId,
             sectionName: activeYard.sections.find(s => s.id === newStack.sectionId)?.name || 'Unknown',
-            containerSize: '20feet',
-            isSpecialStack: SPECIAL_STACKS.includes(newStack.stackNumber),
+            containerSize: data.containerSize === '40ft' ? '40feet' : '20feet',
+            isSpecialStack: data.stackType === 'special',
             lastModified: new Date(),
             modifiedBy: user?.name || 'System'
           };

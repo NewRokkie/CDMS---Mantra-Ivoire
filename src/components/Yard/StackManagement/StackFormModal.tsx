@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader, Package, MapPin, Grid3x3 as Grid3X3, Ruler, AlertTriangle } from 'lucide-react';
+import { X, Save, Loader, Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings } from 'lucide-react';
 import { Yard } from '../../../types';
 import { yardService } from '../../../services/yardService';
 
@@ -34,10 +34,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   const [formData, setFormData] = useState({
     stackNumber: 0,
     sectionId: '',
+    containerSize: '20ft' as '20ft' | '40ft',
+    stackType: 'regular' as 'regular' | 'special',
     rows: 4,
     maxTiers: 5,
-    position: { x: 0, y: 0, z: 0 },
-    dimensions: { width: 12, length: 6 }
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [autoSaving, setAutoSaving] = useState(false);
@@ -53,10 +53,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         setFormData({
           stackNumber: stack.stackNumber,
           sectionId: stack.sectionId,
+          containerSize: '20ft', // Default, could be determined from existing config
+          stackType: [1, 31, 101, 103].includes(stack.stackNumber) ? 'special' : 'regular',
           rows: stack.rows,
           maxTiers: stack.maxTiers,
-          position: stack.position,
-          dimensions: stack.dimensions
         });
       }
     } else {
@@ -67,10 +67,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       setFormData({
         stackNumber: suggestedNumber,
         sectionId: firstSection?.id || '',
+        containerSize: '20ft',
+        stackType: 'regular',
         rows: 4,
         maxTiers: 5,
-        position: { x: 0, y: 0, z: 0 },
-        dimensions: { width: 12, length: 6 }
       });
     }
     setErrors({});
@@ -103,12 +103,17 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       newErrors.length = 'Length must be greater than 0';
     }
 
-    // Check for duplicate stack number (only for new stacks)
-    if (!selectedStack) {
-      const section = yard.sections.find(s => s.id === formData.sectionId);
-      if (section && section.stacks.some(s => s.stackNumber === formData.stackNumber)) {
-        newErrors.stackNumber = 'Stack number already exists in this section';
+    // Auto-adjust rows and tiers based on container size
+    if (formData.containerSize === '40ft') {
+      // 40ft containers typically need more space
+      if (formData.rows < 4) {
+        setFormData(prev => ({ ...prev, rows: 4 }));
       }
+    }
+
+    // Special stacks can only be 20ft
+    if (formData.stackType === 'special' && formData.containerSize === '40ft') {
+      newErrors.containerSize = 'Special stacks can only accommodate 20ft containers';
     }
 
     setErrors(newErrors);
@@ -116,20 +121,42 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   };
 
   const handleInputChange = (field: string, value: any) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof typeof prev] as any,
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+
+    // Auto-adjust settings based on container size
+    if (field === 'containerSize') {
+      if (value === '40ft') {
+        setFormData(prev => ({
+          ...prev,
+          containerSize: value,
+          rows: Math.max(prev.rows, 4), // Ensure minimum 4 rows for 40ft
+          stackType: 'regular' // Force regular for 40ft
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          containerSize: value
+        }));
+      }
+    }
+
+    // Auto-adjust container size based on stack type
+    if (field === 'stackType') {
+      if (value === 'special') {
+        setFormData(prev => ({
+          ...prev,
+          stackType: value,
+          containerSize: '20ft' // Force 20ft for special stacks
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          stackType: value
+        }));
+      }
     }
 
     // Clear error for this field
@@ -157,6 +184,18 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
   const calculateCapacity = () => {
     return formData.rows * formData.maxTiers;
+  };
+
+  const getContainerSizeDescription = (size: '20ft' | '40ft') => {
+    return size === '20ft' 
+      ? 'Standard containers, single slot per container'
+      : 'High capacity containers, requires paired stacks';
+  };
+
+  const getStackTypeDescription = (type: 'regular' | 'special') => {
+    return type === 'regular'
+      ? 'Can accommodate both 20ft and 40ft containers'
+      : 'Limited to 20ft containers only, used for special operations';
   };
 
   const getLayoutSuggestions = () => {
@@ -233,15 +272,15 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             </div>
 
             {/* Basic Stack Information */}
-            <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-              <h4 className="font-semibold text-green-900 mb-4 flex items-center">
+            <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+              <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                 <Package className="h-5 w-5 mr-2" />
                 Stack Information
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-green-800 mb-2">
+                  <label className="block text-sm font-medium text-blue-800 mb-2">
                     Stack Number *
                   </label>
                   <input
@@ -257,14 +296,14 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   />
                   {errors.stackNumber && <p className="mt-1 text-sm text-red-600">{errors.stackNumber}</p>}
                   {yard.layout === 'tantarelli' && !selectedStack && (
-                    <p className="mt-1 text-xs text-green-600">
+                    <p className="mt-1 text-xs text-blue-600">
                       Suggested: {yardService.getNextStackNumber(yard.id, formData.sectionId)}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-800 mb-2">
+                  <label className="block text-sm font-medium text-blue-800 mb-2">
                     Section *
                   </label>
                   <select
@@ -290,9 +329,166 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   </select>
                   {errors.sectionId && <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>}
                 </div>
+              </div>
+            </div>
+
+            {/* Container Size Selection */}
+            <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+              <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
+                <Package className="h-5 w-5 mr-2" />
+                Container Size Configuration
+              </h4>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-purple-800 mb-3">
+                    Container Size *
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('containerSize', '20ft')}
+                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                        formData.containerSize === '20ft'
+                          ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20'
+                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">📦</div>
+                        <div className="font-bold text-lg text-gray-900">20ft</div>
+                        <div className="text-sm text-gray-600 mt-1">Standard Size</div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          {getContainerSizeDescription('20ft')}
+                        </div>
+                      </div>
+                      {formData.containerSize === '20ft' && (
+                        <div className="mt-3 flex justify-center">
+                          <div className="bg-blue-500 text-white rounded-full p-1">
+                            <Package className="h-3 w-3" />
+                          </div>
+                        </div>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('containerSize', '40ft')}
+                      disabled={formData.stackType === 'special'}
+                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                        formData.containerSize === '40ft'
+                          ? 'border-orange-500 bg-orange-50 shadow-lg shadow-orange-500/20'
+                          : formData.stackType === 'special'
+                          ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
+                          : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">📦📦</div>
+                        <div className="font-bold text-lg text-gray-900">40ft</div>
+                        <div className="text-sm text-gray-600 mt-1">High Capacity</div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          {getContainerSizeDescription('40ft')}
+                        </div>
+                      </div>
+                      {formData.containerSize === '40ft' && (
+                        <div className="mt-3 flex justify-center">
+                          <div className="bg-orange-500 text-white rounded-full p-1">
+                            <Package className="h-3 w-3" />
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                  {formData.stackType === 'special' && (
+                    <p className="mt-2 text-xs text-purple-600">
+                      Special stacks are limited to 20ft containers only
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Stack Type Selection */}
+            <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+              <h4 className="font-semibold text-green-900 mb-4 flex items-center">
+                <Shield className="h-5 w-5 mr-2" />
+                Stack Type Configuration
+              </h4>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-green-800 mb-3">
+                    Stack Type *
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('stackType', 'regular')}
+                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                        formData.stackType === 'regular'
+                          ? 'border-green-500 bg-green-50 shadow-lg shadow-green-500/20'
+                          : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">⚙️</div>
+                        <div className="font-bold text-lg text-gray-900">Regular</div>
+                        <div className="text-sm text-gray-600 mt-1">Standard Operations</div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          {getStackTypeDescription('regular')}
+                        </div>
+                      </div>
+                      {formData.stackType === 'regular' && (
+                        <div className="mt-3 flex justify-center">
+                          <div className="bg-green-500 text-white rounded-full p-1">
+                            <Settings className="h-3 w-3" />
+                          </div>
+                        </div>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('stackType', 'special')}
+                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                        formData.stackType === 'special'
+                          ? 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-500/20'
+                          : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">🛡️</div>
+                        <div className="font-bold text-lg text-gray-900">Special</div>
+                        <div className="text-sm text-gray-600 mt-1">Limited Operations</div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          {getStackTypeDescription('special')}
+                        </div>
+                      </div>
+                      {formData.stackType === 'special' && (
+                        <div className="mt-3 flex justify-center">
+                          <div className="bg-purple-500 text-white rounded-full p-1">
+                            <Shield className="h-3 w-3" />
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Capacity Configuration */}
+            <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+              <h4 className="font-semibold text-orange-900 mb-4 flex items-center">
+                <Grid3X3 className="h-5 w-5 mr-2" />
+                Capacity Configuration
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 <div>
-                  <label className="block text-sm font-medium text-green-800 mb-2">
+                  <label className="block text-sm font-medium text-orange-800 mb-2">
                     Rows *
                   </label>
                   <input
@@ -306,11 +502,11 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     placeholder="4"
                   />
                   {errors.rows && <p className="mt-1 text-sm text-red-600">{errors.rows}</p>}
-                  <p className="mt-1 text-xs text-green-600">Number of container rows (depth)</p>
+                  <p className="mt-1 text-xs text-orange-600">Number of container rows (depth)</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-800 mb-2">
+                  <label className="block text-sm font-medium text-orange-800 mb-2">
                     Max Tiers *
                   </label>
                   <input
@@ -324,123 +520,20 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     placeholder="5"
                   />
                   {errors.maxTiers && <p className="mt-1 text-sm text-red-600">{errors.maxTiers}</p>}
-                  <p className="mt-1 text-xs text-green-600">Maximum stacking height</p>
+                  <p className="mt-1 text-xs text-orange-600">Maximum stacking height</p>
                 </div>
               </div>
 
               {/* Capacity Display */}
-              <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
+              <div className="mt-4 p-4 bg-white rounded-lg border border-orange-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-green-800">Total Capacity:</span>
-                  <span className="text-lg font-bold text-green-900">
+                  <span className="text-sm font-medium text-orange-800">Total Capacity:</span>
+                  <span className="text-lg font-bold text-orange-900">
                     {calculateCapacity()} containers
                   </span>
                 </div>
-                <div className="text-xs text-green-600 mt-1">
+                <div className="text-xs text-orange-600 mt-1">
                   {formData.rows} rows × {formData.maxTiers} tiers = {calculateCapacity()} container positions
-                </div>
-              </div>
-            </div>
-
-            {/* Position & Dimensions */}
-            <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-              <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
-                <MapPin className="h-5 w-5 mr-2" />
-                Position & Dimensions
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-purple-800 mb-2">
-                    X Position (meters)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.position.x}
-                    onChange={(e) => handleInputChange('position.x', parseFloat(e.target.value) || 0)}
-                    className="form-input w-full"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-purple-800 mb-2">
-                    Y Position (meters)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.position.y}
-                    onChange={(e) => handleInputChange('position.y', parseFloat(e.target.value) || 0)}
-                    className="form-input w-full"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-purple-800 mb-2">
-                    Z Position (meters)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.position.z}
-                    onChange={(e) => handleInputChange('position.z', parseFloat(e.target.value) || 0)}
-                    className="form-input w-full"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-purple-800 mb-2">
-                    Width (meters) *
-                  </label>
-                  <div className="relative">
-                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 h-5 w-5" />
-                    <input
-                      type="number"
-                      required
-                      step="0.1"
-                      min="0.1"
-                      value={formData.dimensions.width}
-                      onChange={(e) => handleInputChange('dimensions.width', parseFloat(e.target.value) || 0)}
-                      className={`form-input w-full pl-12 ${errors.width ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                      placeholder="12"
-                    />
-                  </div>
-                  {errors.width && <p className="mt-1 text-sm text-red-600">{errors.width}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-purple-800 mb-2">
-                    Length (meters) *
-                  </label>
-                  <div className="relative">
-                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 h-5 w-5" />
-                    <input
-                      type="number"
-                      required
-                      step="0.1"
-                      min="0.1"
-                      value={formData.dimensions.length}
-                      onChange={(e) => handleInputChange('dimensions.length', parseFloat(e.target.value) || 0)}
-                      className={`form-input w-full pl-12 ${errors.length ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                      placeholder="6"
-                    />
-                  </div>
-                  {errors.length && <p className="mt-1 text-sm text-red-600">{errors.length}</p>}
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-white rounded-lg border border-purple-200">
-                <div className="text-xs text-purple-700">
-                  <div><strong>Standard Dimensions:</strong></div>
-                  <div>• 20ft containers: 12m width × 6m length</div>
-                  <div>• 40ft containers: 24m width × 6m length (or paired stacks)</div>
-                  <div>• Position coordinates are relative to yard origin</div>
                 </div>
               </div>
             </div>
@@ -448,7 +541,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             {/* Stack Preview */}
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
               <h4 className="font-semibold text-gray-900 mb-4">Stack Preview</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Stack Number:</span>
                   <div className="font-medium text-gray-900">S{formData.stackNumber.toString().padStart(2, '0')}</div>
@@ -464,19 +557,32 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   <div className="font-medium text-gray-900">{calculateCapacity()} containers</div>
                 </div>
                 <div>
+                  <span className="text-gray-600">Container Size:</span>
+                  <div className="font-medium text-gray-900">{formData.containerSize}</div>
+                </div>
+                <div>
                   <span className="text-gray-600">Type:</span>
                   <div className="font-medium text-gray-900">
-                    {[1, 31, 101, 103].includes(formData.stackNumber) ? 'Special' : 'Regular'}
+                    {formData.stackType === 'special' ? 'Special' : 'Regular'}
                   </div>
                 </div>
               </div>
 
-              {/* Special Stack Warning */}
-              {[1, 31, 101, 103].includes(formData.stackNumber) && (
+              {/* Configuration Warnings */}
+              {formData.stackType === 'special' && (
                 <div className="mt-4 flex items-start p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-yellow-800">
-                    <strong>Special Stack:</strong> This stack will be automatically configured for 20ft containers only and cannot be changed to 40ft.
+                    <strong>Special Stack:</strong> This stack will be limited to 20ft containers only and cannot accommodate 40ft containers.
+                  </div>
+                </div>
+              )}
+              
+              {formData.containerSize === '40ft' && formData.stackType === 'regular' && (
+                <div className="mt-4 flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <Package className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <strong>40ft Configuration:</strong> This stack will be configured for high-capacity 40ft containers and may require pairing with adjacent stacks.
                   </div>
                 </div>
               )}
