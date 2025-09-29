@@ -21,9 +21,10 @@ import { StackManagement } from './components/Yard/StackManagement';
 import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessManagement';
 import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
 import { ReportsModule } from './components/Reports/ReportsModule';
-import { Yard, YardSection, YardStack } from './types/yard';
+import { StackCRUDManagement } from './components/Yard/StackCRUDManagement';
+import { Yard, YardSection, YardStack, YardPosition } from './types/yard';
 import { DepotManagement } from './components/Yard/DepotManagement';
-import { DynamicStackManagement } from './components/Yard/DynamicStackManagement';
+import SupabaseTest from './components/Test/SupabaseTest';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -81,13 +82,15 @@ function AppContent() {
       case 'depot-management':
         return hasModuleAccess('depotManagement') ? <DepotManagement /> : <AccessDenied />;
       case 'stack-management':
-        return hasModuleAccess('yard') ? <DynamicStackManagement /> : <AccessDenied />;
+        return hasModuleAccess('yard') ? <StackCRUDManagement /> : <AccessDenied />;
       case 'client-pools':
         return hasModuleAccess('clients') ? <ClientPoolManagement /> : <AccessDenied />;
       case 'module-access':
         return hasModuleAccess('moduleAccess') ? <ModuleAccessManagement /> : <AccessDenied />;
       case 'reports':
         return hasModuleAccess('reports') ? <ReportsModule /> : <AccessDenied />;
+      case 'supabase-test':
+        return hasModuleAccess('users') ? <SupabaseTest /> : <AccessDenied />;
       default:
         return <DashboardOverview />;
     }
@@ -99,8 +102,7 @@ function AppContent() {
         <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
         <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
           <Header />
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}
-          </main>
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}</main>
         </div>
       </div>
     </YardContext.Provider>
@@ -126,7 +128,9 @@ function AppContent() {
 const AccessDenied: React.FC = () => (
   <div className="text-center py-12">
     <div className="h-12 w-12 text-red-400 mx-auto mb-4">🚫</div>
-    <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+    <h3 className="text-lg font-medium text-gray-900 mb-2">
+      Access Denied
+    </h3>
     <p className="text-gray-600">
       You don't have permission to access this module.
     </p>
@@ -137,6 +141,232 @@ const AccessDenied: React.FC = () => (
 );
 
 // Dedicated Stack Management Module Component with complete yard data
+const StackManagementModule: React.FC = () => {
+  // Complete mock yard data matching YardManagement
+  const createCompleteDepotTantarelli = () => {
+    const sections: YardSection[] = [];
+    const allStacks: YardStack[] = [];
+
+    // Top Section (Blue) - Stack 01 to 31
+    const topSection: YardSection = {
+      id: 'section-top',
+      name: 'Top Section',
+      yardId: 'depot-tantarelli',
+      stacks: [] as YardStack[],
+      position: { x: 0, y: 0, z: 0 },
+      dimensions: { width: 400, length: 120 },
+      color: '#3b82f6',
+    };
+
+    const topStacks = [
+      { stackNumber: 1, rows: 4, x: 20, y: 20 },
+      { stackNumber: 3, rows: 5, x: 50, y: 20 },
+      { stackNumber: 5, rows: 5, x: 80, y: 20 },
+      { stackNumber: 7, rows: 5, x: 110, y: 20 },
+      { stackNumber: 9, rows: 5, x: 140, y: 20 },
+      { stackNumber: 11, rows: 5, x: 170, y: 20 },
+      { stackNumber: 13, rows: 5, x: 200, y: 20 },
+      { stackNumber: 15, rows: 5, x: 230, y: 20 },
+      { stackNumber: 17, rows: 5, x: 260, y: 20 },
+      { stackNumber: 19, rows: 5, x: 290, y: 20 },
+      { stackNumber: 21, rows: 5, x: 320, y: 20 },
+      { stackNumber: 23, rows: 5, x: 350, y: 20 },
+      { stackNumber: 25, rows: 5, x: 350, y: 20 },
+      { stackNumber: 27, rows: 5, x: 50, y: 60 },
+      { stackNumber: 29, rows: 5, x: 80, y: 60 },
+      { stackNumber: 31, rows: 7, x: 110, y: 60 },
+    ];
+
+    topStacks.forEach((stack) => {
+      const capacity = stack.rows * 5;
+      const currentOccupancy = Math.floor(Math.random() * capacity);
+      const yardStack: YardStack = {
+        id: `stack-${stack.stackNumber}`,
+        stackNumber: stack.stackNumber,
+        sectionId: topSection.id,
+        rows: stack.rows,
+        maxTiers: 5,
+        currentOccupancy,
+        capacity,
+        position: { x: stack.x, y: stack.y, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: true,
+      };
+      allStacks.push(yardStack);
+    });
+
+    topSection.stacks = allStacks.filter(
+      (s) => s.sectionId === topSection.id,
+    );
+
+    // Center Section (Orange) - Stack 33 to 55
+    const centerSection: YardSection = {
+      id: 'section-center',
+      name: 'Center Section',
+      yardId: 'depot-tantarelli',
+      stacks: [] as YardStack[],
+      position: { x: 0, y: 140, z: 0 },
+      dimensions: { width: 400, length: 100 },
+      color: '#f59e0b',
+    };
+
+    const centerStacks = [
+      { stackNumber: 33, rows: 5, x: 20, y: 160 },
+      { stackNumber: 35, rows: 5, x: 50, y: 160 },
+      { stackNumber: 37, rows: 5, x: 80, y: 160 },
+      { stackNumber: 39, rows: 5, x: 110, y: 160 },
+      { stackNumber: 41, rows: 4, x: 140, y: 160 },
+      { stackNumber: 43, rows: 4, x: 170, y: 160 },
+      { stackNumber: 45, rows: 4, x: 200, y: 160 },
+      { stackNumber: 47, rows: 4, x: 230, y: 160 },
+      { stackNumber: 49, rows: 4, x: 260, y: 160 },
+      { stackNumber: 51, rows: 4, x: 290, y: 160 },
+      { stackNumber: 53, rows: 4, x: 320, y: 160 },
+      { stackNumber: 55, rows: 4, x: 350, y: 160 },
+    ];
+
+    centerStacks.forEach((stack) => {
+      const capacity = stack.rows * 5;
+      const currentOccupancy = Math.floor(Math.random() * capacity);
+      const yardStack: YardStack = {
+        id: `stack-${stack.stackNumber}`,
+        stackNumber: stack.stackNumber,
+        sectionId: centerSection.id,
+        rows: stack.rows,
+        maxTiers: 5,
+        currentOccupancy,
+        capacity,
+        position: { x: stack.x, y: stack.y, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: true,
+      };
+      allStacks.push(yardStack);
+    });
+
+    centerSection.stacks = allStacks.filter(
+      (s) => s.sectionId === centerSection.id,
+    );
+
+    // Bottom Section (Green) - Stack 61 to 103
+    const bottomSection: YardSection = {
+      id: 'section-bottom',
+      name: 'Bottom Section',
+      yardId: 'depot-tantarelli',
+      stacks: [] as YardStack[],
+      position: { x: 0, y: 260, z: 0 },
+      dimensions: { width: 400, length: 140 },
+      color: '#10b981',
+    };
+
+    const bottomStacks = [
+      // High capacity stacks (6 rows)
+      { stackNumber: 61, rows: 6, x: 20, y: 280 },
+      { stackNumber: 63, rows: 6, x: 50, y: 280 },
+      { stackNumber: 65, rows: 6, x: 80, y: 280 },
+      { stackNumber: 67, rows: 6, x: 110, y: 280 },
+      { stackNumber: 69, rows: 6, x: 140, y: 280 },
+      { stackNumber: 71, rows: 6, x: 170, y: 280 },
+      // Standard stacks (4 rows)
+      { stackNumber: 73, rows: 4, x: 200, y: 280 },
+      { stackNumber: 75, rows: 4, x: 230, y: 280 },
+      { stackNumber: 77, rows: 4, x: 260, y: 280 },
+      { stackNumber: 79, rows: 4, x: 290, y: 280 },
+      { stackNumber: 81, rows: 4, x: 320, y: 280 },
+      { stackNumber: 83, rows: 4, x: 350, y: 280 },
+      { stackNumber: 85, rows: 4, x: 20, y: 320 },
+      { stackNumber: 87, rows: 4, x: 50, y: 320 },
+      { stackNumber: 89, rows: 4, x: 80, y: 320 },
+      { stackNumber: 91, rows: 4, x: 110, y: 320 },
+      { stackNumber: 93, rows: 4, x: 140, y: 320 },
+      { stackNumber: 95, rows: 4, x: 170, y: 320 },
+      { stackNumber: 97, rows: 4, x: 200, y: 320 },
+      { stackNumber: 99, rows: 4, x: 230, y: 320 },
+      // Special stacks
+      { stackNumber: 101, rows: 1, x: 260, y: 320 },
+      { stackNumber: 103, rows: 2, x: 290, y: 320 },
+    ];
+
+    bottomStacks.forEach((stack) => {
+      const capacity = stack.rows * 5;
+      const currentOccupancy = Math.floor(Math.random() * capacity);
+      const yardStack: YardStack = {
+        id: `stack-${stack.stackNumber}`,
+        stackNumber: stack.stackNumber,
+        sectionId: bottomSection.id,
+        rows: stack.rows,
+        maxTiers: 5,
+        currentOccupancy,
+        capacity,
+        position: { x: stack.x, y: stack.y, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: true,
+      };
+      allStacks.push(yardStack);
+    });
+
+    bottomSection.stacks = allStacks.filter(
+      (s) => s.sectionId === bottomSection.id,
+    );
+
+    sections.push(topSection, centerSection, bottomSection);
+
+    return {
+      id: 'depot-tantarelli',
+      name: 'Depot Tantarelli',
+      description:
+        'Main container depot with specialized odd-numbered stack layout',
+      location: 'Tantarelli Port Complex',
+      isActive: true,
+      totalCapacity: allStacks.reduce((sum, stack) => sum + stack.capacity, 0),
+      currentOccupancy: allStacks.reduce((sum, stack) => sum + stack.currentOccupancy, 0),
+      sections,
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date(),
+      createdBy: 'system',
+      layout: 'tantarelli',
+      code: 'DEPOT-TAN',
+      timezone: 'UTC',
+      operatingHours: { start: '06:00', end: '22:00' },
+      contactInfo: {
+        manager: 'John Doe',
+        phone: '+123456789',
+        email: 'manager@example.com',
+      },
+      address: {
+        street: '123 Main St',
+        city: 'City',
+        state: 'State',
+        zipCode: '12345',
+        country: 'Country',
+      },
+      settings: {
+        autoAssignLocation: true,
+        requiresApproval: false,
+        maxContainersPerOperation: 10,
+        defaultFreeDays: 7,
+      },
+    } as Yard;
+  };
+
+  console.time('createYardData');
+  const [selectedYard] = React.useState(createCompleteDepotTantarelli());
+  console.timeEnd('createYardData');
+
+  const handleConfigurationChange = (configurations: any[]) => {
+    console.log('Stack configurations updated:', configurations);
+    // In a real app, this would update the backend
+  };
+
+  return (
+    <StackManagement
+      yard={selectedYard}
+      onConfigurationChange={handleConfigurationChange}
+    />
+  );
+};
 
 function App() {
   const authProvider = useAuthProvider();

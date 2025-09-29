@@ -33,7 +33,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   const [locationSearch, setLocationSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [containerValidationError, setContainerValidationError] = useState('');
-
+  const canEditContainers = user && (user.role === 'operator' || user.role === 'supervisor');
   // Helper function to validate container number format
   const validateContainerNumber = (containerNumber: string): { isValid: boolean; message?: string } => {
     if (!containerNumber) {
@@ -95,6 +95,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
     client.code.toLowerCase().includes(clientSearch.toLowerCase())
   );
+
 
   const selectedClient = mockClients.find(client =>
     client.name === formData.client || client.code === formData.clientCode
@@ -169,12 +170,21 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!user) {
+      alert('Please log in to edit containers.');
+      onClose();
+      return;
+    }
+
+    const canEditContainers = user.role === 'operator' || user.role === 'supervisor';
+    console.log('User role:', user.role, 'Can edit containers:', canEditContainers); // Debug log
+
     if (!canEditContainers) {
       alert('You do not have permission to edit containers.');
       return;
     }
-    
+
     setIsLoading(true);
 
     try {
@@ -234,7 +244,6 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-
             {/* Basic Information */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
@@ -320,8 +329,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
             {/* Location Information */}
             <div className="bg-green-50 rounded-xl p-6 border border-green-200">
               <h4 className="font-semibold text-green-900 mb-4 flex items-center">
-                <MapPin className="h-5 w-5 mr-2" />
-                Location Information
+                <MapPin className="h-5 w-5 mr-2" />Location Information
               </h4>
 
               <div>
@@ -332,12 +340,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
-                    className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${
-                      isLocationDropdownOpen
-                        ? 'border-green-500 shadow-lg shadow-green-500/20 ring-4 ring-green-500/10'
-                        : formData.location
-                        ? 'border-green-400 shadow-md shadow-green-400/10'
-                        : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
+                    className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${isLocationDropdownOpen ? 'border-green-500 shadow-lg shadow-green-500/20 ring-4 ring-green-500/10' : formData.location ? 'border-green-400 shadow-md shadow-green-400/10' : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -350,9 +353,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                         )}
                       </div>
                     </div>
-                    <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${
-                      isLocationDropdownOpen ? 'rotate-180' : ''
-                    }`} />
+                    <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isLocationDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Location Dropdown */}
@@ -379,17 +380,11 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                             key={location.id}
                             type="button"
                             onClick={() => handleLocationSelect(location)}
-                            className={`w-full text-left p-4 transition-all duration-200 group ${
-                              formData.location === location.name
-                                ? 'bg-green-50 border-l-4 border-green-500'
-                                : 'hover:bg-gray-50 border-l-4 border-transparent'
+                            className={`w-full text-left p-4 transition-all duration-200 group ${formData.location === location.name ? 'bg-green-50 border-l-4 border-green-500' : 'hover:bg-gray-50 border-l-4 border-transparent'
                             }`}
                           >
                             <div className="flex items-center space-x-3">
-                              <div className={`p-2 rounded-lg transition-all duration-200 ${
-                                formData.location === location.name
-                                  ? 'bg-green-100 text-green-600'
-                                  : 'bg-gray-100 text-gray-500 group-hover:bg-green-100 group-hover:text-green-600'
+                              <div className={`p-2 rounded-lg transition-all duration-200 ${formData.location === location.name ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500 group-hover:bg-green-100 group-hover:text-green-600'
                               }`}>
                                 <MapPin className="h-4 w-4" />
                               </div>
@@ -397,9 +392,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                                 <div className="font-medium text-gray-900">{location.name}</div>
                                 <div className="text-sm text-gray-600">{location.section}</div>
                               </div>
-                              {formData.location === location.name && (
-                                <Check className="h-4 w-4 text-green-600" />
-                              )}
+                              {formData.location === location.name && <Check className="h-4 w-4 text-green-600" />}
                             </div>
                           </button>
                         ))}
@@ -426,12 +419,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-                      className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${
-                        isClientDropdownOpen
-                          ? 'border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-500/10'
-                          : selectedClient
-                          ? 'border-purple-400 shadow-md shadow-purple-400/10'
-                          : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
+                      className={`w-full flex items-center justify-between p-4 bg-white border-2 rounded-xl transition-all duration-300 ${isClientDropdownOpen ? 'border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-500/10' : selectedClient ? 'border-purple-400 shadow-md shadow-purple-400/10' : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
@@ -444,9 +432,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                           )}
                         </div>
                       </div>
-                      <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${
-                        isClientDropdownOpen ? 'rotate-180' : ''
-                      }`} />
+                      <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isClientDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {/* Client Dropdown */}
@@ -473,26 +459,18 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
                               key={client.id}
                               type="button"
                               onClick={() => handleClientSelect(client)}
-                              className={`w-full text-left p-4 transition-all duration-200 group ${
-                                selectedClient?.id === client.id
-                                  ? 'bg-purple-50 border-l-4 border-purple-500'
-                                  : 'hover:bg-gray-50 border-l-4 border-transparent'
+                              className={`w-full text-left p-4 transition-all duration-200 group ${selectedClient?.id === client.id ? 'bg-purple-50 border-l-4 border-purple-500' : 'hover:bg-gray-50 border-l-4 border-transparent'
                               }`}
                             >
                               <div className="flex items-center space-x-3">
-                                <div className={`p-2 rounded-lg transition-all duration-200 ${
-                                  selectedClient?.id === client.id
-                                    ? 'bg-purple-100 text-purple-600'
-                                    : 'bg-gray-100 text-gray-500 group-hover:bg-purple-100 group-hover:text-purple-600'
+                                <div className={`p-2 rounded-lg transition-all duration-200 ${selectedClient?.id === client.id ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500 group-hover:bg-purple-100 group-hover:text-purple-600'
                                 }`}>
                                   <Building className="h-4 w-4" />
                                 </div>
                                 <div className="flex-1">
                                   <div className="font-medium text-gray-900">{client.name}</div>
                                 </div>
-                                {selectedClient?.id === client.id && (
-                                  <Check className="h-4 w-4 text-purple-600" />
-                                )}
+                                {selectedClient?.id === client.id && <Check className="h-4 w-4 text-purple-600" />}
                               </div>
                             </button>
                           ))}
@@ -593,7 +571,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={isLoading || !isFormValid}
+              disabled={isLoading || !isFormValid || !canEditContainers}
               className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isLoading ? (

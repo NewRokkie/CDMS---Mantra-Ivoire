@@ -1,24 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Building,
-  Package,
-  Settings,
-  Plus,
-  Search,
-  Filter,
-  Edit,
-  Trash2,
-  Eye,
-  AlertTriangle,
-  CheckCircle,
-  TrendingUp,
-  MapPin,
-  Users,
-  Clock,
-  X,
-  Loader,
-  Calendar
-} from 'lucide-react';
+import { Building, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, TrendingUp, MapPin, Users, Clock, X, Loader, Calendar } from 'lucide-react';
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -39,7 +20,7 @@ export const DepotManagement: React.FC = () => {
   const [isFormLoading, setIsFormLoading] = useState(false);
   const [isAssignmentLoading, setIsAssignmentLoading] = useState(false);
   const { user } = useAuth();
-  const { currentYard, refreshYards } = useYard();
+  const { currentYard, refresh } = useYard();
 
   // Mock stats for depots
   const [stats, setStats] = useState({
@@ -58,7 +39,7 @@ export const DepotManagement: React.FC = () => {
   const loadDepots = async () => {
     try {
       setIsLoading(true);
-      const availableDepots = yardService.getAvailableYards();
+      const availableDepots = await yardService.getAvailableYards();
 
       setDepots(availableDepots);
 
@@ -113,12 +94,12 @@ export const DepotManagement: React.FC = () => {
   const handleCreateDepot = async (data: any) => {
     try {
       setIsFormLoading(true);
-      const newDepot = yardService.createYard(data, user?.name);
+      const newDepot = await yardService.createYard(data, user?.name);
       await loadDepots();
-      await refreshYards(); // Refresh yard context
+      await refresh(); // Refresh yard context
       setShowForm(false);
       setSelectedDepot(null);
-      alert(`Depot "${newDepot.name}" created successfully!`);
+      alert(`Depot "${newDepot?.name || 'New depot'}" created successfully!`);
     } catch (error) {
       alert(`Error creating depot: ${error}`);
     } finally {
@@ -131,10 +112,10 @@ export const DepotManagement: React.FC = () => {
 
     try {
       setIsFormLoading(true);
-      const updatedDepot = yardService.updateYard(selectedDepot.id, data, user?.name);
+      const updatedDepot = await yardService.updateYard(selectedDepot.id, data, user?.name);
       if (updatedDepot) {
         await loadDepots();
-        await refreshYards(); // Refresh yard context
+        await refresh(); // Refresh yard context
         setShowForm(false);
         setSelectedDepot(null);
         alert(`Depot "${updatedDepot.name}" updated successfully!`);
@@ -156,10 +137,10 @@ export const DepotManagement: React.FC = () => {
 
     if (confirm(`Are you sure you want to delete the depot "${depot.name}"? This action cannot be undone.`)) {
       try {
-        const success = yardService.deleteYard(depot.id, user?.name);
+        const success = await yardService.deleteYard(depot.id, user?.name);
         if (success) {
           await loadDepots();
-          await refreshYards(); // Refresh yard context
+          await refresh(); // Refresh yard context
           alert(`Depot "${depot.name}" deleted successfully!`);
         } else {
           alert('Error deleting depot: Depot not found or cannot be deleted');

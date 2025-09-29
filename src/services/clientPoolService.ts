@@ -1,357 +1,191 @@
+/**
+ * Client Pool Service - Database-connected client pool management
+ * Manages client pool assignments and container placement with PostgreSQL backend
+ */
+
 import { ClientPool, StackAssignment, ClientPoolStats, ContainerAssignmentRequest, StackAvailabilityResult } from '../types/clientPool';
 import { Yard, YardStack, Container } from '../types';
-import { yardService } from './yardService'; // Correct import for yardService in same directory
+import { dbService } from './database/DatabaseService';
+import { yardService } from './yardService';
+
+export interface DatabaseClientPool {
+  id: string;
+  client_id: string;
+  client_code: string;
+  client_name: string;
+  max_capacity: number;
+  current_occupancy: number;
+  is_active: boolean;
+  priority: 'low' | 'medium' | 'high';
+  contract_start_date: string;
+  contract_end_date?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  updated_by?: string;
+  notes?: string;
+}
+
+export interface DatabaseStackAssignment {
+  id: string;
+  stack_id: string;
+  stack_number: number;
+  client_pool_id: string;
+  client_code: string;
+  assignment_type: 'exclusive' | 'shared' | 'temporary' | 'emergency';
+  priority: number;
+  is_exclusive: boolean;
+  assigned_at: string;
+  assigned_by: string;
+  is_active: boolean;
+  notes?: string;
+}
+
+interface OptimalStackResult {
+  stack_id: string;
+  stack_number: number;
+  section_name: string;
+  available_slots: number;
+  total_capacity: number;
+  utilization_rate: number;
+  priority_score: number;
+}
 
 /**
- * Client Pool Service
- * Manages customer-specific stack assignments and container placement logic
+ * Client Pool Service - Database-connected implementation
  */
 export class ClientPoolService {
-  private clientPools: Map<string, ClientPool> = new Map();
-  private stackAssignments: Map<string, StackAssignment[]> = new Map(); // stackId -> assignments
-  private clientStackMap: Map<string, string[]> = new Map(); // clientCode -> stackIds
-
-  constructor() {
-    this.initializeDefaultPools();
-  }
 
   /**
-   * Initialize default client pools with realistic assignments
+   * Get all client pools from database
    */
-  private initializeDefaultPools(): void {
-    const defaultPools: ClientPool[] = [
-      {
-        id: 'pool-maeu',
-        clientId: '1',
-        clientCode: 'MAEU',
-        clientName: 'Maersk Line',
-        assignedStacks: ['stack-1', 'stack-3', 'stack-5', 'stack-61', 'stack-63'],
-        maxCapacity: 150,
-        currentOccupancy: 89,
-        isActive: true,
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date('2025-01-11'),
-        createdBy: 'System',
-        updatedBy: 'System',
-        priority: 'high',
-        contractStartDate: new Date('2024-01-01'),
-        contractEndDate: new Date('2025-12-31'),
-        notes: 'Premium client with dedicated high-capacity stacks'
-      },
-      {
-        id: 'pool-mscu',
-        clientId: '2',
-        clientCode: 'MSCU',
-        clientName: 'MSC Mediterranean Shipping',
-        assignedStacks: ['stack-7', 'stack-9', 'stack-11', 'stack-65', 'stack-67'],
-        maxCapacity: 140,
-        currentOccupancy: 76,
-        isActive: true,
-        createdAt: new Date('2024-02-01'),
-        updatedAt: new Date('2025-01-10'),
-        createdBy: 'System',
-        updatedBy: 'System',
-        priority: 'high',
-        contractStartDate: new Date('2024-02-01'),
-        contractEndDate: new Date('2025-12-31'),
-        notes: 'High-volume client requiring reefer-capable stacks'
-      },
-      {
-        id: 'pool-cmdu',
-        clientId: '3',
-        clientCode: 'CMDU',
-        clientName: 'CMA CGM',
-        assignedStacks: ['stack-13', 'stack-15', 'stack-33', 'stack-35'],
-        maxCapacity: 100,
-        currentOccupancy: 45,
-        isActive: true,
-        createdAt: new Date('2024-03-01'),
-        updatedAt: new Date('2025-01-08'),
-        createdBy: 'System',
-        updatedBy: 'System',
-        priority: 'medium',
-        contractStartDate: new Date('2024-03-01'),
-        contractEndDate: new Date('2025-12-31'),
-        notes: 'Standard client with mixed container requirements'
-      },
-      {
-        id: 'pool-ship001',
-        clientId: '4',
-        clientCode: 'SHIP001',
-        clientName: 'Shipping Solutions Inc',
-        assignedStacks: ['stack-17', 'stack-19', 'stack-37'],
-        maxCapacity: 75,
-        currentOccupancy: 32,
-        isActive: true,
-        createdAt: new Date('2024-04-01'),
-        updatedAt: new Date('2025-01-09'),
-        createdBy: 'System',
-        updatedBy: 'System',
-        priority: 'medium',
-        contractStartDate: new Date('2024-04-01'),
-        contractEndDate: new Date('2025-12-31'),
-        notes: 'Growing client with expanding container volume'
-      }
-    ];
+  async getClientPools(): Promise<ClientPool[]> {
+    try {
+      const dbPools = await dbService.select<DatabaseClientPool>(
+        'client_pools',
+        '*',
+        undefined,
+        'client_name ASC'
+      );
 
-    // Initialize pools and mappings
-    defaultPools.forEach(pool => {
-      this.clientPools.set(pool.clientCode, pool);
-      this.clientStackMap.set(pool.clientCode, pool.assignedStacks);
-
-      // Create stack assignments
-      pool.assignedStacks.forEach(stackId => {
-        const assignment: StackAssignment = {
-          id: `assign-${pool.clientCode}-${stackId}`,
-          stackId,
-          stackNumber: this.extractStackNumber(stackId),
-          clientPoolId: pool.id,
-          clientCode: pool.clientCode,
-          assignedAt: pool.createdAt,
-          assignedBy: 'System',
-          isExclusive: true,
-          priority: pool.priority === 'high' ? 3 : pool.priority === 'medium' ? 2 : 1,
-          notes: `Assigned to ${pool.clientName} under contract`
-        };
-
-        if (!this.stackAssignments.has(stackId)) {
-          this.stackAssignments.set(stackId, []);
-        }
-        this.stackAssignments.get(stackId)!.push(assignment);
-      });
-    });
-
-    console.log('Client Pool Service initialized with', defaultPools.length, 'client pools');
-  }
-
-  /**
-   * Extract stack number from stack ID (e.g., 'stack-1' -> 1)
-   */
-  private extractStackNumber(stackId: string): number {
-    const match = stackId.match(/stack-(\d+)/);
-    return match ? parseInt(match[1]) : 0;
-  }
-
-  /**
-   * Get all client pools
-   */
-  getClientPools(): ClientPool[] {
-    return Array.from(this.clientPools.values());
+      return dbPools.map(pool => this.mapDatabasePoolToClientPool(pool));
+    } catch (error) {
+      console.error('Failed to get client pools:', error);
+      return [];
+    }
   }
 
   /**
    * Get client pool by client code
    */
-  getClientPool(clientCode: string): ClientPool | null {
-    return this.clientPools.get(clientCode) || null;
+  async getClientPool(clientCode: string): Promise<ClientPool | null> {
+    try {
+      const dbPool = await dbService.selectOne<DatabaseClientPool>(
+        'client_pools',
+        '*',
+        { client_code: clientCode }
+      );
+
+      return dbPool ? this.mapDatabasePoolToClientPool(dbPool) : null;
+    } catch (error) {
+      console.error('Failed to get client pool:', error);
+      return null;
+    }
   }
 
   /**
    * Get stacks assigned to a specific client
    */
-  getClientStacks(clientCode: string): string[] {
-    return this.clientStackMap.get(clientCode) || [];
+  async getClientStacks(clientCode: string): Promise<string[]> {
+    try {
+      const assignments = await dbService.select<{ stack_id: string }>(
+        'stack_assignments',
+        'stack_id',
+        { client_code: clientCode, is_active: true }
+      );
+
+      return assignments.map(a => a.stack_id);
+    } catch (error) {
+      console.error('Failed to get client stacks:', error);
+      return [];
+    }
   }
 
   /**
    * Check if a stack is assigned to a specific client
    */
-  isStackAssignedToClient(stackId: string, clientCode: string): boolean {
-    const clientStacks = this.getClientStacks(clientCode);
-    return clientStacks.includes(stackId);
+  async isStackAssignedToClient(stackId: string, clientCode: string): Promise<boolean> {
+    try {
+      return await dbService.exists('stack_assignments', {
+        stack_id: stackId,
+        client_code: clientCode,
+        is_active: true
+      });
+    } catch (error) {
+      console.error('Failed to check stack assignment:', error);
+      return false;
+    }
   }
 
   /**
    * Get available stacks for a client based on container requirements
    */
-  getAvailableStacksForClient(
+  async getAvailableStacksForClient(
     clientCode: string,
     containerSize: '20ft' | '40ft',
-    yard: Yard,
-    containers: Container[],
     yardId?: string
-  ): StackAvailabilityResult[] {
-    // Use current yard if not specified
-    const targetYard = yardId ? yardService.getYardById(yardId) : yard;
-    if (!targetYard) {
-      console.warn('No valid yard found for stack availability check');
+  ): Promise<StackAvailabilityResult[]> {
+    try {
+      // Use stored procedure for optimal stack selection
+      const result = await dbService.callProcedure<OptimalStackResult>(
+        'find_optimal_stack_for_container',
+        [clientCode, containerSize, yardId]
+      );
+
+      return result.rows.map(stack => ({
+        stackId: stack.stack_id,
+        stackNumber: stack.stack_number,
+        sectionName: stack.section_name,
+        availableSlots: stack.available_slots,
+        totalCapacity: stack.total_capacity,
+        isRecommended: stack.utilization_rate < 80, // Consider < 80% as recommended
+        distance: 0, // Could be calculated based on position
+      }));
+    } catch (error) {
+      console.error('Failed to get available stacks for client:', error);
       return [];
     }
-
-    const clientStacks = this.getClientStacks(clientCode);
-    const availableStacks: StackAvailabilityResult[] = [];
-
-    // Get all stacks from target yard
-    const allStacks = targetYard.sections.flatMap(section => section.stacks);
-
-    clientStacks.forEach(stackId => {
-      const stack = allStacks.find(s => s.id === stackId);
-      if (!stack) return;
-
-      // Calculate current occupancy for this stack in the specific yard
-      const stackContainers = containers.filter(c => {
-        const isInStack = c.location.includes(`Stack S${stack.stackNumber}`);
-        const isInYard = yardService.isContainerInYard ? yardService.isContainerInYard(c, targetYard.id) : true;
-        return isInStack && isInYard;
-      });
-      const currentOccupancy = stackContainers.length;
-      const availableSlots = stack.capacity - currentOccupancy;
-
-      // Check if stack can accommodate the container size
-      const canAccommodateSize = this.canStackAccommodateSize(stack, containerSize);
-
-      if (availableSlots > 0 && canAccommodateSize) {
-        const section = targetYard.sections.find(s => s.id === stack.sectionId);
-
-        availableStacks.push({
-          stackId: stack.id,
-          stackNumber: stack.stackNumber,
-          sectionName: section?.name || 'Unknown',
-          availableSlots,
-          totalCapacity: stack.capacity,
-          isRecommended: this.isStackRecommended(stack, containerSize, currentOccupancy),
-          distance: this.calculateStackDistance(stack, containerSize)
-        });
-      }
-    });
-
-    // Sort by recommendation, then by available slots, then by distance
-    return availableStacks.sort((a, b) => {
-      if (a.isRecommended !== b.isRecommended) {
-        return a.isRecommended ? -1 : 1;
-      }
-      if (a.availableSlots !== b.availableSlots) {
-        return b.availableSlots - a.availableSlots;
-      }
-      return (a.distance || 0) - (b.distance || 0);
-    });
   }
 
   /**
    * Get available stacks for a client in a specific yard
    */
-  getAvailableStacksForClientInYard(
+  async getAvailableStacksForClientInYard(
     clientCode: string,
     containerSize: '20ft' | '40ft',
-    yardId: string,
-    containers: Container[]
-  ): StackAvailabilityResult[] {
-    const yard = yardService.getYardById(yardId);
-    if (!yard) {
-      console.warn(`Yard ${yardId} not found`);
-      return [];
-    }
-
-    return this.getAvailableStacksForClient(clientCode, containerSize, yard, containers, yardId);
+    yardId: string
+  ): Promise<StackAvailabilityResult[]> {
+    return this.getAvailableStacksForClient(clientCode, containerSize, yardId);
   }
 
   /**
    * Get client pools for a specific yard
    */
-  getClientPoolsForYard(yardId: string): ClientPool[] {
-    // Filter client pools that have stacks in the specified yard
-    return Array.from(this.clientPools.values()).filter(pool => {
-      // Check if any of the pool's assigned stacks belong to this yard
-      return pool.assignedStacks.some(stackId => {
-        // In a real implementation, you'd check the stack's yard association
-        // For now, we'll use a simple pattern matching
-        return this.isStackInYard(stackId, yardId);
-      });
-    });
-  }
+  async getClientPoolsForYard(yardId: string): Promise<ClientPool[]> {
+    try {
+      const dbPools = await dbService.query<DatabaseClientPool>(`
+        SELECT DISTINCT cp.* FROM client_pools cp
+        JOIN stack_assignments sa ON cp.id = sa.client_pool_id
+        JOIN yard_stacks ys ON sa.stack_id = ys.id
+        WHERE ys.yard_id = $1 AND sa.is_active = true AND cp.is_active = true
+        ORDER BY cp.client_name ASC
+      `, [yardId]);
 
-  /**
-   * Check if a stack belongs to a specific yard
-   */
-  private isStackInYard(stackId: string, yardId: string): boolean {
-    const yard = yardService.getYardById(yardId);
-    if (!yard) return false;
-
-    // Check if stack exists in any section of this yard
-    return yard.sections.some(section =>
-      section.stacks.some(stack => stack.id === stackId)
-    );
-  }
-
-  /**
-   * Check if a stack can accommodate a specific container size
-   */
-  private canStackAccommodateSize(stack: YardStack, containerSize: '20ft' | '40ft'): boolean {
-    // For 20ft containers, any stack can accommodate
-    if (containerSize === '20ft') return true;
-
-    // For 40ft containers, check if stack supports 40ft or is part of a valid pair
-    // This logic should match your existing stack configuration rules
-    const stackNumber = stack.stackNumber;
-
-    // Special stacks (1, 31, 101, 103) can only handle 20ft
-    const specialStacks = [1, 31, 101, 103];
-    if (specialStacks.includes(stackNumber)) return false;
-
-    // Check if stack is part of a valid 40ft pair
-    return this.isValidFortyFootStack(stackNumber);
-  }
-
-  /**
-   * Check if a stack number is valid for 40ft containers
-   */
-  private isValidFortyFootStack(stackNumber: number): boolean {
-    // Valid pairs for 40ft: 03+05, 07+09, 11+13, etc.
-    const validPairs = [
-      [3, 5],
-      [7, 9],
-      [11, 13],
-      [15, 17],
-      [19, 21],
-      [23, 25],
-      [27, 29],
-      [33, 35],
-      [37, 39],
-      [41, 43],
-      [45, 47],
-      [49, 51],
-      [53, 55],
-      [61, 63],
-      [65, 67],
-      [69, 71],
-      [73, 75],
-      [77, 79],
-      [81, 83],
-      [85, 87],
-      [89, 91],
-      [93, 95],
-      [97, 99]
-    ];
-
-    return validPairs.some(pair => pair.includes(stackNumber));
-  }
-
-  /**
-   * Determine if a stack is recommended for a container
-   */
-  private isStackRecommended(stack: YardStack, containerSize: '20ft' | '40ft', currentOccupancy: number): boolean {
-    // Recommend stacks that are not too full but not empty (for efficiency)
-    const occupancyRate = currentOccupancy / stack.capacity;
-
-    // Prefer stacks with 20-80% occupancy for better space utilization
-    if (occupancyRate >= 0.2 && occupancyRate <= 0.8) return true;
-
-    // For 40ft containers, prefer larger stacks
-    if (containerSize === '40ft' && stack.capacity >= 25) return true;
-
-    return false;
-  }
-
-  /**
-   * Calculate distance/priority score for stack selection
-   */
-  private calculateStackDistance(stack: YardStack, containerSize: '20ft' | '40ft'): number {
-    // Simple distance calculation based on stack position
-    // Lower numbers = closer/better
-    const baseDistance = Math.abs(stack.position.x) + Math.abs(stack.position.y);
-
-    // Prefer stacks closer to gates (lower coordinates)
-    return baseDistance / 100;
+      return dbPools.rows.map(pool => this.mapDatabasePoolToClientPool(pool));
+    } catch (error) {
+      console.error('Failed to get client pools for yard:', error);
+      return [];
+    }
   }
 
   /**
@@ -359,58 +193,40 @@ export class ClientPoolService {
    */
   async assignContainerToClientStack(
     request: ContainerAssignmentRequest,
-    yard: Yard,
-    containers: Container[],
     userName?: string
   ): Promise<StackAvailabilityResult | null> {
     try {
       // Validate client has access
-      const clientPool = this.getClientPool(request.clientCode);
+      const clientPool = await this.getClientPool(request.clientCode);
       if (!clientPool || !clientPool.isActive) {
         throw new Error(`No active client pool found for ${request.clientCode}`);
       }
 
-      // Validate yard context
-      const currentYard = yardService.getCurrentYard();
-      if (!currentYard) {
-        throw new Error('No yard selected for container assignment');
-      }
-
-      // Get available stacks for this client
-      const availableStacks = this.getAvailableStacksForClient(
-        request.clientCode,
-        request.containerSize,
-        currentYard,
-        containers,
-        currentYard.id
+      // Use stored procedure for automatic assignment
+      const result = await dbService.callProcedure(
+        'auto_assign_container_to_stack',
+        [
+          request.containerId,
+          request.containerNumber,
+          request.clientCode,
+          request.containerSize,
+          userName || 'System'
+        ]
       );
 
-      if (availableStacks.length === 0) {
-        console.warn(`No available stacks found for client ${request.clientCode} with ${request.containerSize} containers`);
-        return null;
+      if (result.rows.length > 0) {
+        console.log(`✅ Container ${request.containerNumber} assigned to optimal stack for client ${request.clientCode}`);
+
+        // Get the assignment details
+        const availableStacks = await this.getAvailableStacksForClient(
+          request.clientCode,
+          request.containerSize
+        );
+
+        return availableStacks[0] || null;
       }
 
-      // Select the best stack (first in sorted list)
-      const selectedStack = availableStacks[0];
-
-      // Log the assignment for audit purposes
-      console.log(`Container ${request.containerNumber} assigned to Stack ${selectedStack.stackNumber} for client ${request.clientCode} in yard ${currentYard.code}`);
-
-      // Update client pool occupancy
-      this.updateClientPoolOccupancy(request.clientCode, 1, userName);
-
-      // Log operation using yardService
-      yardService.logOperation('container_assign', request.containerNumber, userName || 'System', {
-        clientCode: request.clientCode,
-        stackId: selectedStack.stackId,
-        yardId: currentYard.id,
-        yardCode: currentYard.code,
-        from: 'unassigned',
-        to: selectedStack.stackId,
-        userName: userName
-      });
-
-      return selectedStack;
+      return null;
     } catch (error) {
       console.error('Error assigning container to client stack:', error);
       throw error;
@@ -418,24 +234,9 @@ export class ClientPoolService {
   }
 
   /**
-   * Update client pool occupancy
-   */
-  private updateClientPoolOccupancy(clientCode: string, change: number, userName?: string): void {
-    const pool = this.clientPools.get(clientCode);
-    if (pool) {
-      pool.currentOccupancy = Math.max(0, pool.currentOccupancy + change);
-      pool.updatedAt = new Date();
-      if (userName) {
-        pool.updatedBy = userName;
-      }
-      this.clientPools.set(clientCode, pool);
-    }
-  }
-
-  /**
    * Assign a stack to a client pool
    */
-  assignStackToClient(
+  async assignStackToClient(
     stackId: string,
     stackNumber: number,
     clientCode: string,
@@ -443,90 +244,60 @@ export class ClientPoolService {
     isExclusive: boolean = true,
     priority: number = 2,
     userName?: string
-  ): StackAssignment {
-    const clientPool = this.getClientPool(clientCode);
-    if (!clientPool) {
-      throw new Error(`Client pool not found for ${clientCode}`);
+  ): Promise<StackAssignment> {
+    try {
+      const clientPool = await this.getClientPool(clientCode);
+      if (!clientPool) {
+        throw new Error(`Client pool not found for ${clientCode}`);
+      }
+
+      const newAssignment = await dbService.insert<DatabaseStackAssignment>('stack_assignments', {
+        stack_id: stackId,
+        stack_number: stackNumber,
+        client_pool_id: clientPool.id,
+        client_code: clientCode,
+        assignment_type: isExclusive ? 'exclusive' : 'shared',
+        priority: priority,
+        is_exclusive: isExclusive,
+        assigned_by: assignedBy,
+        notes: `Assigned to ${clientPool.clientName}`,
+      });
+
+      if (!newAssignment) {
+        throw new Error('Failed to create stack assignment');
+      }
+
+      console.log(`✅ Stack ${stackNumber} assigned to client ${clientCode} by ${assignedBy}`);
+
+      return {
+        id: newAssignment.id,
+        stackId: newAssignment.stack_id,
+        stackNumber: newAssignment.stack_number,
+        clientPoolId: newAssignment.client_pool_id,
+        clientCode: newAssignment.client_code,
+        assignedAt: new Date(newAssignment.assigned_at),
+        assignedBy: newAssignment.assigned_by,
+        isExclusive: newAssignment.is_exclusive,
+        priority: newAssignment.priority,
+        notes: newAssignment.notes,
+      };
+    } catch (error) {
+      console.error('Failed to assign stack to client:', error);
+      throw error;
     }
-
-    const effectiveUserName = assignedBy || userName || 'System';
-    const assignment: StackAssignment = {
-      id: `assign-${clientCode}-${stackId}-${Date.now()}`,
-      stackId,
-      stackNumber,
-      clientPoolId: clientPool.id,
-      clientCode,
-      assignedAt: new Date(),
-      assignedBy: effectiveUserName,
-      isExclusive,
-      priority,
-      notes: `Assigned to ${clientPool.clientName}`
-    };
-
-    // Add to stack assignments
-    if (!this.stackAssignments.has(stackId)) {
-      this.stackAssignments.set(stackId, []);
-    }
-    this.stackAssignments.get(stackId)!.push(assignment);
-
-    // Update client pool
-    if (!clientPool.assignedStacks.includes(stackId)) {
-      clientPool.assignedStacks.push(stackId);
-      clientPool.updatedAt = new Date();
-      clientPool.updatedBy = effectiveUserName;
-      this.clientPools.set(clientCode, clientPool);
-    }
-
-    // Update client stack mapping
-    const clientStacks = this.clientStackMap.get(clientCode) || [];
-    if (!clientStacks.includes(stackId)) {
-      clientStacks.push(stackId);
-      this.clientStackMap.set(clientCode, clientStacks);
-    }
-
-    // Log operation
-    yardService.logOperation('stack_assignment', undefined, effectiveUserName, {
-      stackId,
-      clientCode,
-      isExclusive
-    });
-
-    console.log(`Stack ${stackNumber} assigned to client ${clientCode} by ${effectiveUserName}`);
-    return assignment;
   }
 
   /**
    * Remove stack assignment from client
    */
-  removeStackFromClient(stackId: string, clientCode: string, userName?: string): boolean {
-    const effectiveUserName = userName || 'System';
+  async removeStackFromClient(stackId: string, clientCode: string, userName?: string): Promise<boolean> {
     try {
-      // Remove from stack assignments
-      const assignments = this.stackAssignments.get(stackId) || [];
-      const filteredAssignments = assignments.filter(a => a.clientCode !== clientCode);
-      this.stackAssignments.set(stackId, filteredAssignments);
+      await dbService.update('stack_assignments',
+        { is_active: false },
+        { stack_id: stackId, client_code: clientCode }
+      );
 
-      // Update client pool
-      const clientPool = this.clientPools.get(clientCode);
-      if (clientPool) {
-        clientPool.assignedStacks = clientPool.assignedStacks.filter(id => id !== stackId);
-        clientPool.updatedAt = new Date();
-        clientPool.updatedBy = effectiveUserName;
-        this.clientPools.set(clientCode, clientPool);
-      }
-
-      // Update client stack mapping
-      const clientStacks = this.clientStackMap.get(clientCode) || [];
-      this.clientStackMap.set(clientCode, clientStacks.filter(id => id !== stackId));
-
-      // Log operation
-      yardService.logOperation('stack_assignment', undefined, effectiveUserName, {
-        stackId,
-        clientCode,
-        action: 'remove'
-      });
-
-      console.log(`Stack ${stackId} removed from client ${clientCode} by ${effectiveUserName}`);
+      console.log(`✅ Stack ${stackId} removed from client ${clientCode} by ${userName || 'System'}`);
       return true;
     } catch (error) {
       console.error('Error removing stack from client:', error);
@@ -537,74 +308,167 @@ export class ClientPoolService {
   /**
    * Get stack assignments for a specific stack
    */
-  getStackAssignments(stackId: string): StackAssignment[] {
-    return this.stackAssignments.get(stackId) || [];
+  async getStackAssignments(stackId: string): Promise<StackAssignment[]> {
+    try {
+      const dbAssignments = await dbService.select<DatabaseStackAssignment>(
+        'stack_assignments',
+        '*',
+        { stack_id: stackId, is_active: true }
+      );
+
+      return dbAssignments.map(assignment => ({
+        id: assignment.id,
+        stackId: assignment.stack_id,
+        stackNumber: assignment.stack_number,
+        clientPoolId: assignment.client_pool_id,
+        clientCode: assignment.client_code,
+        assignedAt: new Date(assignment.assigned_at),
+        assignedBy: assignment.assigned_by,
+        isExclusive: assignment.is_exclusive,
+        priority: assignment.priority,
+        notes: assignment.notes,
+      }));
+    } catch (error) {
+      console.error('Failed to get stack assignments:', error);
+      return [];
+    }
   }
 
   /**
    * Get all stack assignments for a client
    */
-  getClientStackAssignments(clientCode: string): StackAssignment[] {
-    const assignments: StackAssignment[] = [];
-    this.stackAssignments.forEach((stackAssignments) => {
-      stackAssignments.forEach((assignment) => {
-        if (assignment.clientCode === clientCode) {
-          assignments.push(assignment);
-        }
-      });
-    });
-    return assignments;
+  async getClientStackAssignments(clientCode: string): Promise<StackAssignment[]> {
+    try {
+      const dbAssignments = await dbService.select<DatabaseStackAssignment>(
+        'stack_assignments',
+        '*',
+        { client_code: clientCode, is_active: true },
+        'priority DESC, stack_number ASC'
+      );
+
+      return dbAssignments.map(assignment => ({
+        id: assignment.id,
+        stackId: assignment.stack_id,
+        stackNumber: assignment.stack_number,
+        clientPoolId: assignment.client_pool_id,
+        clientCode: assignment.client_code,
+        assignedAt: new Date(assignment.assigned_at),
+        assignedBy: assignment.assigned_by,
+        isExclusive: assignment.is_exclusive,
+        priority: assignment.priority,
+        notes: assignment.notes,
+      }));
+    } catch (error) {
+      console.error('Failed to get client stack assignments:', error);
+      return [];
+    }
   }
 
   /**
    * Validate container assignment request
    */
-  validateContainerAssignment(
+  async validateContainerAssignment(
     request: ContainerAssignmentRequest,
     targetStackId: string
-  ): { isValid: boolean; reason?: string } {
-    // Check if client has access to the target stack
-    if (!this.isStackAssignedToClient(targetStackId, request.clientCode)) {
+  ): Promise<{ isValid: boolean; reason?: string }> {
+    try {
+      // Check if client has access to the target stack
+      const hasAccess = await this.isStackAssignedToClient(targetStackId, request.clientCode);
+      if (!hasAccess) {
+        return {
+          isValid: false,
+          reason: `Stack not assigned to client ${request.clientCode}`
+        };
+      }
+
+      // Check stack capacity
+      const stack = await dbService.selectOne('yard_stacks', 'capacity, current_occupancy', { id: targetStackId });
+      if (!stack) {
+        return {
+          isValid: false,
+          reason: 'Stack not found'
+        };
+      }
+
+      if (stack.current_occupancy >= stack.capacity) {
+        return {
+          isValid: false,
+          reason: 'Stack is at full capacity'
+        };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      console.error('Failed to validate container assignment:', error);
       return {
         isValid: false,
-        reason: `Stack not assigned to client ${request.clientCode}`
+        reason: 'Validation error occurred'
       };
     }
-
-    // Check if stack can accommodate container size
-    const assignments = this.getStackAssignments(targetStackId);
-    if (assignments.length === 0) {
-      return {
-        isValid: false,
-        reason: 'Stack has no valid assignments'
-      };
-    }
-
-    return { isValid: true };
   }
 
   /**
-   * Get client pool statistics
+   * Get client pool statistics from database
    */
-  getClientPoolStats(): ClientPoolStats {
-    const pools = Array.from(this.clientPools.values());
-    const totalAssignedStacks = Array.from(this.stackAssignments.keys()).length;
+  async getClientPoolStats(): Promise<ClientPoolStats> {
+    try {
+      const stats = await dbService.queryOne(`
+        SELECT
+          COUNT(*) as total_pools,
+          COUNT(*) FILTER (WHERE is_active = true) as active_clients,
+          COALESCE(SUM(
+            (SELECT COUNT(*) FROM stack_assignments sa WHERE sa.client_pool_id = cp.id AND sa.is_active = true)
+          ), 0) as total_assigned_stacks,
+          COALESCE(AVG(
+            CASE WHEN max_capacity > 0 THEN (current_occupancy::DECIMAL / max_capacity) * 100 ELSE 0 END
+          ), 0) as average_occupancy
+        FROM client_pools cp
+      `);
 
-    return {
-      totalPools: pools.length,
-      activeClients: pools.filter(p => p.isActive).length,
-      totalAssignedStacks,
-      averageOccupancy: pools.length > 0
-        ? pools.reduce((sum, p) => sum + (p.currentOccupancy / p.maxCapacity), 0) / pools.length * 100
-        : 0,
-      unassignedStacks: 0 // Would need total stack count to calculate
-    };
+      if (!stats) {
+        return {
+          totalPools: 0,
+          activeClients: 0,
+          totalAssignedStacks: 0,
+          averageOccupancy: 0,
+          unassignedStacks: 0
+        };
+      }
+
+      // Get unassigned stacks count
+      const unassignedCount = await dbService.queryOne(`
+        SELECT COUNT(*) as unassigned_stacks
+        FROM yard_stacks ys
+        WHERE ys.is_active = true
+        AND NOT EXISTS (
+          SELECT 1 FROM stack_assignments sa
+          WHERE sa.stack_id = ys.id AND sa.is_active = true
+        )
+      `);
+
+      return {
+        totalPools: parseInt(stats.total_pools) || 0,
+        activeClients: parseInt(stats.active_clients) || 0,
+        totalAssignedStacks: parseInt(stats.total_assigned_stacks) || 0,
+        averageOccupancy: parseFloat(stats.average_occupancy) || 0,
+        unassignedStacks: parseInt(unassignedCount?.unassigned_stacks) || 0,
+      };
+    } catch (error) {
+      console.error('Failed to get client pool statistics:', error);
+      return {
+        totalPools: 0,
+        activeClients: 0,
+        totalAssignedStacks: 0,
+        averageOccupancy: 0,
+        unassignedStacks: 0
+      };
+    }
   }
 
   /**
    * Create a new client pool
    */
-  createClientPool(
+  async createClientPool(
     clientId: string,
     clientCode: string,
     clientName: string,
@@ -615,246 +479,431 @@ export class ClientPoolService {
     contractEndDate?: Date,
     notes?: string,
     userName?: string
-  ): ClientPool {
-    const effectiveUserName = userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
-    const pool: ClientPool = {
-      id: `pool-${clientCode.toLowerCase()}`,
-      clientId,
-      clientCode,
-      clientName,
-      assignedStacks,
-      maxCapacity,
-      currentOccupancy: 0,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: effectiveUserName,
-      updatedBy: effectiveUserName,
-      priority,
-      contractStartDate,
-      contractEndDate,
-      notes
-    };
+  ): Promise<ClientPool> {
+    try {
+      // Create client pool
+      const newPool = await dbService.insert<DatabaseClientPool>('client_pools', {
+        client_id: clientId,
+        client_code: clientCode,
+        client_name: clientName,
+        max_capacity: maxCapacity,
+        priority: priority,
+        contract_start_date: contractStartDate.toISOString().split('T')[0],
+        contract_end_date: contractEndDate?.toISOString().split('T')[0],
+        notes: notes,
+      });
 
-    this.clientPools.set(clientCode, pool);
-    this.clientStackMap.set(clientCode, assignedStacks);
+      if (!newPool) {
+        throw new Error('Failed to create client pool');
+      }
 
-    // Create stack assignments for each assigned stack
-    assignedStacks.forEach(stackId => {
-      const stackNumber = this.extractStackNumber(stackId);
-      this.assignStackToClient(stackId, stackNumber, clientCode, effectiveUserName, true, 2, effectiveUserName);
-    });
+      // Assign stacks to the pool
+      for (const stackId of assignedStacks) {
+        try {
+          // Get stack number
+          const stack = await dbService.selectOne('yard_stacks', 'stack_number', { id: stackId });
+          if (stack) {
+            await this.assignStackToClient(
+              stackId,
+              stack.stack_number,
+              clientCode,
+              userName || 'System',
+              true,
+              priority === 'high' ? 3 : priority === 'medium' ? 2 : 1,
+              userName
+            );
+          }
+        } catch (stackError) {
+          console.error(`Failed to assign stack ${stackId}:`, stackError);
+        }
+      }
 
-    // Log creation
-    yardService.logOperation('client_pool_create', undefined, effectiveUserName, {
-      clientCode,
-      yardId: currentYard?.id,
-      yardCode: currentYard?.code,
-      maxCapacity,
-      assignedStacksCount: assignedStacks.length
-    });
-
-    console.log(`Created new client pool for ${clientName} (${clientCode}) by ${effectiveUserName}`);
-    return pool;
+      console.log(`✅ Created new client pool for ${clientName} (${clientCode}) by ${userName || 'System'}`);
+      return this.mapDatabasePoolToClientPool(newPool);
+    } catch (error) {
+      console.error('Failed to create client pool:', error);
+      throw error;
+    }
   }
 
   /**
    * Update client pool configuration
    */
-  updateClientPool(clientCode: string, updates: Partial<ClientPool>, userName?: string): ClientPool | null {
-    const pool = this.clientPools.get(clientCode);
-    if (!pool) return null;
+  async updateClientPool(clientCode: string, updates: Partial<ClientPool>, userName?: string): Promise<ClientPool | null> {
+    try {
+      const updateData: Partial<DatabaseClientPool> = {};
 
-    const effectiveUserName = userName || 'System';
-    const updatedPool = {
-      ...pool,
-      ...updates,
-      updatedAt: new Date(),
-      updatedBy: effectiveUserName
-    };
+      if (updates.clientName) updateData.client_name = updates.clientName;
+      if (updates.maxCapacity !== undefined) updateData.max_capacity = updates.maxCapacity;
+      if (updates.priority) updateData.priority = updates.priority;
+      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+      if (updates.notes) updateData.notes = updates.notes;
+      if (updates.contractStartDate) updateData.contract_start_date = updates.contractStartDate.toISOString().split('T')[0];
+      if (updates.contractEndDate) updateData.contract_end_date = updates.contractEndDate.toISOString().split('T')[0];
 
-    this.clientPools.set(clientCode, updatedPool);
+      await dbService.update('client_pools', updateData, { client_code: clientCode });
 
-    // Update stack mapping if stacks changed
-    if (updates.assignedStacks) {
-      this.clientStackMap.set(clientCode, updates.assignedStacks);
+      console.log(`✅ Updated client pool for ${clientCode} by ${userName || 'System'}`);
+      return this.getClientPool(clientCode);
+    } catch (error) {
+      console.error('Failed to update client pool:', error);
+      return null;
     }
-
-    // Log update
-    yardService.logOperation('client_pool_update', undefined, effectiveUserName, {
-      clientCode,
-      updates: Object.keys(updates)
-    });
-
-    console.log(`Updated client pool for ${clientCode} by ${effectiveUserName}`);
-    return updatedPool;
   }
 
   /**
-   * Get unassigned stacks (stacks not assigned to any client)
+   * Get unassigned stacks for a yard
    */
-  getUnassignedStacks(yard: Yard): YardStack[] {
-    const allStacks = yard.sections.flatMap(section => section.stacks);
-    const assignedStackIds = new Set(Array.from(this.stackAssignments.keys()));
+  async getUnassignedStacks(yardId: string): Promise<YardStack[]> {
+    try {
+      const dbStacks = await dbService.query<any>(`
+        SELECT ys.*, ysec.name as section_name
+        FROM yard_stacks ys
+        JOIN yard_sections ysec ON ys.section_id = ysec.id
+        WHERE ys.yard_id = $1
+        AND ys.is_active = true
+        AND NOT EXISTS (
+          SELECT 1 FROM stack_assignments sa
+          WHERE sa.stack_id = ys.id AND sa.is_active = true
+        )
+        ORDER BY ysec.name, ys.stack_number
+      `, [yardId]);
 
-    return allStacks.filter(stack => !assignedStackIds.has(stack.id));
+      return dbStacks.rows.map(stack => ({
+        id: stack.id,
+        stackNumber: stack.stack_number,
+        sectionId: stack.section_id,
+        rows: stack.rows,
+        maxTiers: stack.max_tiers,
+        currentOccupancy: stack.current_occupancy,
+        capacity: stack.capacity,
+        position: {
+          x: stack.position_x,
+          y: stack.position_y,
+          z: stack.position_z,
+        },
+        dimensions: {
+          width: stack.width,
+          length: stack.length,
+        },
+        containerPositions: [], // Would need separate query
+        isOddStack: stack.is_odd_stack,
+      }));
+    } catch (error) {
+      console.error('Failed to get unassigned stacks:', error);
+      return [];
+    }
   }
 
   /**
    * Find optimal stack for container placement
    */
-  findOptimalStackForContainer(
-    request: ContainerAssignmentRequest,
-    yard: Yard,
-    containers: Container[]
-  ): StackAvailabilityResult | null {
-    const availableStacks = this.getAvailableStacksForClient(
-      request.clientCode,
-      request.containerSize,
-      yard,
-      containers
-    );
-    if (availableStacks.length === 0) return null;
-
-    // Apply additional filtering based on requirements
-    let filteredStacks = availableStacks;
-
-    // Filter by preferred section if specified
-    if (request.preferredSection) {
-      const sectionFiltered = filteredStacks.filter(s =>
-        s.sectionName.toLowerCase().includes(request.preferredSection!.toLowerCase())
+  async findOptimalStackForContainer(
+    request: ContainerAssignmentRequest
+  ): Promise<StackAvailabilityResult | null> {
+    try {
+      const availableStacks = await this.getAvailableStacksForClient(
+        request.clientCode,
+        request.containerSize
       );
-      if (sectionFiltered.length > 0) {
-        filteredStacks = sectionFiltered;
+
+      if (availableStacks.length === 0) return null;
+
+      // Apply additional filtering based on requirements
+      let filteredStacks = availableStacks;
+
+      // Filter by preferred section if specified
+      if (request.preferredSection) {
+        const sectionFiltered = filteredStacks.filter(s =>
+          s.sectionName.toLowerCase().includes(request.preferredSection!.toLowerCase())
+        );
+        if (sectionFiltered.length > 0) {
+          filteredStacks = sectionFiltered;
+        }
       }
-    }
 
-    // Handle special requirements
-    if (request.requiresSpecialHandling) {
-      // Prefer stacks with lower occupancy for special handling
-      filteredStacks = filteredStacks.filter(s => s.availableSlots >= s.totalCapacity * 0.5);
-    }
+      // Handle special requirements
+      if (request.requiresSpecialHandling) {
+        // Prefer stacks with lower occupancy for special handling
+        filteredStacks = filteredStacks.filter(s => s.availableSlots >= s.totalCapacity * 0.5);
+      }
 
-    return filteredStacks[0] || null;
+      return filteredStacks[0] || null;
+    } catch (error) {
+      console.error('Failed to find optimal stack:', error);
+      return null;
+    }
   }
 
   /**
    * Get client pool utilization report
    */
-  getClientPoolUtilization(): Array<{
+  async getClientPoolUtilization(): Promise<Array<{
     clientCode: string;
     clientName: string;
     assignedStacks: number;
     occupancyRate: number;
     availableCapacity: number;
     status: 'optimal' | 'high' | 'critical' | 'underutilized';
-  }> {
-    return Array.from(this.clientPools.values()).map(pool => {
-      const occupancyRate = (pool.currentOccupancy / pool.maxCapacity) * 100;
-      const availableCapacity = pool.maxCapacity - pool.currentOccupancy;
+  }>> {
+    try {
+      const utilization = await dbService.query(`
+        SELECT
+          cp.client_code,
+          cp.client_name,
+          COUNT(sa.stack_id) as assigned_stacks,
+          ROUND((cp.current_occupancy::DECIMAL / NULLIF(cp.max_capacity, 0)) * 100, 2) as occupancy_rate,
+          (cp.max_capacity - cp.current_occupancy) as available_capacity
+        FROM client_pools cp
+        LEFT JOIN stack_assignments sa ON cp.id = sa.client_pool_id AND sa.is_active = true
+        WHERE cp.is_active = true
+        GROUP BY cp.id, cp.client_code, cp.client_name, cp.current_occupancy, cp.max_capacity
+        ORDER BY cp.client_name
+      `);
 
-      let status: 'optimal' | 'high' | 'critical' | 'underutilized';
-      if (occupancyRate >= 90) status = 'critical';
-      else if (occupancyRate >= 75) status = 'high';
-      else if (occupancyRate >= 25) status = 'optimal';
-      else status = 'underutilized';
+      return utilization.rows.map(item => {
+        const occupancyRate = parseFloat(item.occupancy_rate) || 0;
+        let status: 'optimal' | 'high' | 'critical' | 'underutilized';
 
-      return {
-        clientCode: pool.clientCode,
-        clientName: pool.clientName,
-        assignedStacks: pool.assignedStacks.length,
-        occupancyRate,
-        availableCapacity,
-        status
-      };
-    });
+        if (occupancyRate >= 90) status = 'critical';
+        else if (occupancyRate >= 75) status = 'high';
+        else if (occupancyRate >= 25) status = 'optimal';
+        else status = 'underutilized';
+
+        return {
+          clientCode: item.client_code,
+          clientName: item.client_name,
+          assignedStacks: parseInt(item.assigned_stacks) || 0,
+          occupancyRate,
+          availableCapacity: parseInt(item.available_capacity) || 0,
+          status,
+        };
+      });
+    } catch (error) {
+      console.error('Failed to get client pool utilization:', error);
+      return [];
+    }
   }
 
   /**
    * Bulk assign stacks to client
    */
-  bulkAssignStacksToClient(
+  async bulkAssignStacksToClient(
     stackIds: string[],
     clientCode: string,
     assignedBy: string,
     userName?: string
-  ): StackAssignment[] {
-    const effectiveUserName = assignedBy || userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
-    const assignments: StackAssignment[] = [];
-    stackIds.forEach(stackId => {
-      try {
-        const stackNumber = this.extractStackNumber(stackId);
-        const assignment = this.assignStackToClient(
-          stackId,
-          stackNumber,
-          clientCode,
-          effectiveUserName,
-          true,
-          2,
-          effectiveUserName
-        );
-        assignments.push(assignment);
-      } catch (error) {
-        console.error(`Failed to assign stack ${stackId} to client ${clientCode}:`, error);
+  ): Promise<StackAssignment[]> {
+    try {
+      const assignments: StackAssignment[] = [];
+
+      for (const stackId of stackIds) {
+        try {
+          // Get stack number
+          const stack = await dbService.selectOne('yard_stacks', 'stack_number', { id: stackId });
+          if (stack) {
+            const assignment = await this.assignStackToClient(
+              stackId,
+              stack.stack_number,
+              clientCode,
+              assignedBy,
+              true,
+              2,
+              userName
+            );
+            assignments.push(assignment);
+          }
+        } catch (error) {
+          console.error(`Failed to assign stack ${stackId} to client ${clientCode}:`, error);
+        }
       }
-    });
 
-    // Log bulk assignment
-    yardService.logOperation('stack_bulk_assign', undefined, effectiveUserName, {
-      clientCode,
-      yardId: currentYard?.id,
-      yardCode: currentYard?.code,
-      stackCount: assignments.length,
-      action: 'bulk'
-    });
-
-    console.log(`Bulk assigned ${assignments.length} stacks to client ${clientCode} by ${effectiveUserName}`);
-    return assignments;
+      console.log(`✅ Bulk assigned ${assignments.length} stacks to client ${clientCode} by ${assignedBy}`);
+      return assignments;
+    } catch (error) {
+      console.error('Failed to bulk assign stacks:', error);
+      return [];
+    }
   }
 
   /**
    * Release container from client pool (when container leaves)
    */
-  releaseContainerFromPool(containerNumber: string, clientCode: string, userName?: string): void {
-    const effectiveUserName = userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
+  async releaseContainerFromPool(containerNumber: string, clientCode: string, userName?: string): Promise<void> {
     try {
-      this.updateClientPoolOccupancy(clientCode, -1, effectiveUserName);
-      // Log release
-      yardService.logOperation('container_release', containerNumber, effectiveUserName, {
-        clientCode,
-        yardId: currentYard?.id,
-        yardCode: currentYard?.code,
-        action: 'release'
-      });
-      console.log(`Container ${containerNumber} released from client pool ${clientCode} by ${effectiveUserName}`);
+      // Update client pool occupancy
+      await dbService.query(`
+        UPDATE client_pools
+        SET current_occupancy = GREATEST(0, current_occupancy - 1)
+        WHERE client_code = $1
+      `, [clientCode]);
+
+      console.log(`✅ Container ${containerNumber} released from client pool ${clientCode} by ${userName || 'System'}`);
     } catch (error) {
       console.error('Error releasing container from pool:', error);
     }
   }
 
-  getClientPoolDashboard() {
-    const pools = this.getClientPools();
-    const stats = this.getClientPoolStats();
-    const utilization = this.getClientPoolUtilization();
+  /**
+   * Get client pool dashboard data
+   */
+  async getClientPoolDashboard() {
+    try {
+      const [pools, stats, utilization] = await Promise.all([
+        this.getClientPools(),
+        this.getClientPoolStats(),
+        this.getClientPoolUtilization()
+      ]);
 
+      return {
+        pools,
+        stats,
+        utilization,
+        summary: {
+          totalClients: pools.length,
+          activeClients: pools.filter(p => p.isActive).length,
+          totalCapacity: pools.reduce((sum, p) => sum + p.maxCapacity, 0),
+          totalOccupancy: pools.reduce((sum, p) => sum + p.currentOccupancy, 0),
+          averageUtilization: stats.averageOccupancy
+        }
+      };
+    } catch (error) {
+      console.error('Failed to get client pool dashboard:', error);
+      return {
+        pools: [],
+        stats: {
+          totalPools: 0,
+          activeClients: 0,
+          totalAssignedStacks: 0,
+          averageOccupancy: 0,
+          unassignedStacks: 0
+        },
+        utilization: [],
+        summary: {
+          totalClients: 0,
+          activeClients: 0,
+          totalCapacity: 0,
+          totalOccupancy: 0,
+          averageUtilization: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Map database client pool to application interface
+   */
+  private mapDatabasePoolToClientPool(dbPool: DatabaseClientPool): ClientPool {
     return {
-      pools,
-      stats,
-      utilization,
-      summary: {
-        totalClients: pools.length,
-        activeClients: pools.filter(p => p.isActive).length,
-        totalCapacity: pools.reduce((sum, p) => sum + p.maxCapacity, 0),
-        totalOccupancy: pools.reduce((sum, p) => sum + p.currentOccupancy, 0),
-        averageUtilization: stats.averageOccupancy
-      }
+      id: dbPool.id,
+      clientId: dbPool.client_id,
+      clientCode: dbPool.client_code,
+      clientName: dbPool.client_name,
+      assignedStacks: [], // Would need separate query
+      maxCapacity: dbPool.max_capacity,
+      currentOccupancy: dbPool.current_occupancy,
+      isActive: dbPool.is_active,
+      createdAt: new Date(dbPool.created_at),
+      updatedAt: new Date(dbPool.updated_at),
+      createdBy: dbPool.created_by || 'system',
+      updatedBy: dbPool.updated_by,
+      notes: dbPool.notes,
+      priority: dbPool.priority,
+      contractStartDate: new Date(dbPool.contract_start_date),
+      contractEndDate: dbPool.contract_end_date ? new Date(dbPool.contract_end_date) : undefined,
     };
+  }
+
+  /**
+   * Get client pool with assigned stacks
+   */
+  async getClientPoolWithStacks(clientCode: string): Promise<ClientPool | null> {
+    try {
+      const pool = await this.getClientPool(clientCode);
+      if (!pool) return null;
+
+      const stackIds = await this.getClientStacks(clientCode);
+      pool.assignedStacks = stackIds;
+
+      return pool;
+    } catch (error) {
+      console.error('Failed to get client pool with stacks:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get stack assignment details with additional information
+   */
+  async getStackAssignmentDetails(clientCode: string): Promise<any[]> {
+    try {
+      const details = await dbService.queryView('v_stack_assignment_details', {
+        client_code: clientCode
+      });
+
+      return details;
+    } catch (error) {
+      console.error('Failed to get stack assignment details:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update client pool occupancy
+   */
+  async updateClientPoolOccupancy(clientCode: string, change: number): Promise<void> {
+    try {
+      await dbService.query(`
+        UPDATE client_pools
+        SET current_occupancy = GREATEST(0, current_occupancy + $1)
+        WHERE client_code = $2
+      `, [change, clientCode]);
+    } catch (error) {
+      console.error('Failed to update client pool occupancy:', error);
+    }
+  }
+
+  /**
+   * Get containers for client pool
+   */
+  async getClientPoolContainers(clientCode: string, yardId?: string): Promise<Container[]> {
+    try {
+      let query = `
+        SELECT * FROM v_container_overview
+        WHERE client_code = $1
+      `;
+      const params: any[] = [clientCode];
+
+      if (yardId) {
+        query += ` AND current_yard_name = (SELECT name FROM yards WHERE id = $2)`;
+        params.push(yardId);
+      }
+
+      query += ` ORDER BY gate_in_date DESC`;
+
+      const containers = await dbService.query(query, params);
+
+      return containers.rows.map(container => ({
+        id: container.id,
+        number: container.container_number,
+        type: container.container_type,
+        size: container.container_size,
+        status: container.status,
+        location: container.location_description || container.current_location,
+        gateInDate: container.gate_in_date ? new Date(container.gate_in_date) : undefined,
+        gateOutDate: container.gate_out_date ? new Date(container.gate_out_date) : undefined,
+        createdAt: container.created_at ? new Date(container.created_at) : undefined,
+        updatedAt: container.updated_at ? new Date(container.updated_at) : undefined,
+        createdBy: 'system',
+        client: container.client_name || container.client_code,
+        clientId: container.client_id,
+        clientCode: container.client_code,
+        damage: container.is_damaged ? ['damage detected'] : undefined,
+      }));
+    } catch (error) {
+      console.error('Failed to get client pool containers:', error);
+      return [];
+    }
   }
 }
 
