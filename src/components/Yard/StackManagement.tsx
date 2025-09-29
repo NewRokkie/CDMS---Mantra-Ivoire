@@ -381,7 +381,8 @@ export const StackManagement: React.FC<StackManagementProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       <StackManagementHeader
         hasChanges={hasChanges}
         onCreateStack={handleCreateStack}
@@ -414,19 +415,21 @@ export const StackManagement: React.FC<StackManagementProps> = ({
         getAdjacentStackNumber={getAdjacentStackNumber}
       />
     </div>
-      {/* Stack Form Modal */}
-      {showStackForm && (
-        <StackFormModal
-          isOpen={showStackForm}
-          onClose={() => {
-            setShowStackForm(false);
-            setSelectedStack(null);
-          }}
-          onSubmit={handleStackFormSubmit}
-          selectedStack={selectedStack}
-          yard={activeYard}
-          isLoading={isFormLoading}
-        />
-      )}
+
+        {/* Stack Form Modal */}
+        {showStackForm && (
+          <StackFormModal
+            isOpen={showStackForm}
+            onClose={() => {
+              setShowStackForm(false);
+              setSelectedStack(null);
+            }}
+            onSubmit={handleStackFormSubmit}
+            selectedStack={selectedStack}
+            yard={activeYard}
+            isLoading={isFormLoading}
+          />
+        )}
+      </>
   );
 };
