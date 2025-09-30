@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Package, Filter, Home, ZoomIn, ZoomOut, Eye, X, Grid3X3, Building, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Package, Filter, Home, ZoomIn, ZoomOut, Eye, X, Grid3x3 as Grid3X3, Building, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { Container } from '../../types';
