@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, X, Package, MapPin, Calendar, User, Loader, Filter, Eye } from 'lucide-react';
+import { Search, X, Package, MapPin, Calendar, User, Loader, Filter, Eye, AlertTriangle } from 'lucide-react';
 import { Container } from '../../types';
 
 interface ContainerSearchPanelProps {
