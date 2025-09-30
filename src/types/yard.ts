@@ -89,6 +89,40 @@ export interface YardPosition {
   placedAt?: Date;
 }
 
+// Enhanced yard visualization types
+export interface YardSlot {
+  id: string;
+  stackNumber: number;
+  row: number;
+  tier: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  container: Container | null;
+  sectionId: string;
+  sectionColor: string;
+  isSelected?: boolean;
+  isHovered?: boolean;
+}
+
+export interface YardVisualizationConfig {
+  slotWidth: number;
+  slotHeight: number;
+  stackSpacing: number;
+  rowSpacing: number;
+  tierSpacing: number;
+  rotationAngle: number;
+  colors: {
+    available: string;
+    occupied: string;
+    maintenance: string;
+    cleaning: string;
+    damaged: string;
+    selected: string;
+  };
+}
+
 export interface YardBlock {
   id: string;
   name: string;
