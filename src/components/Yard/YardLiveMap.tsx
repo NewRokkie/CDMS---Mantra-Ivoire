@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye } from 'lucide-react';
+import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye, Truck } from 'lucide-react';
 import { Container } from '../../types';
 import { Yard, YardStack } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,6 +16,9 @@ interface ContainerSlot {
   row: number;
   tier: number;
   status: 'occupied' | 'priority' | 'damaged';
+  client?: string;
+  transporter?: string;
+  containerType?: string;
 }
 
 interface StackVisualization {
@@ -29,7 +32,55 @@ interface StackVisualization {
   capacity: number;
 }
 
-export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) => {
+// Add comprehensive mock container data for testing
+const generateMockContainers = (): Container[] => {
+  const mockContainers: Container[] = [
+    // Zone A - Stack 1 (20ft, special)
+    { id: 'c1', number: 'MAEU1234567', type: 'standard', size: '20ft', status: 'in_depot', location: 'S01-R1-H1', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c2', number: 'MAEU1234568', type: 'standard', size: '20ft', status: 'in_depot', location: 'S01-R1-H2', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c3', number: 'MAEU1234569', type: 'reefer', size: '20ft', status: 'in_depot', location: 'S01-R1-H3', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
+
+    // Zone A - Stack 3 (20ft)
+    { id: 'c4', number: 'MSCU2345678', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c5', number: 'MSCU2345679', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c6', number: 'MSCU2345680', type: 'open_top', size: '20ft', status: 'maintenance', location: 'S03-R3-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c7', number: 'MSCU2345681', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c8', number: 'MSCU2345682', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+
+    // Zone A - Stack 5 (20ft)
+    { id: 'c9', number: 'CMDU3456789', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c10', number: 'CMDU3456790', type: 'hi_cube', size: '20ft', status: 'in_depot', location: 'S05-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c11', number: 'CMDU3456791', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c12', number: 'CMDU3456792', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', damage: ['Minor dent'], createdBy: 'System', gateInDate: new Date() },
+
+    // Zone B - Stack 33 (20ft)
+    { id: 'c13', number: 'HLCU4567890', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c14', number: 'HLCU4567891', type: 'reefer', size: '20ft', status: 'in_depot', location: 'S33-R2-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c15', number: 'HLCU4567892', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R3-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c16', number: 'HLCU4567893', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c17', number: 'HLCU4567894', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R2-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+
+    // Zone B - Stack 35 (20ft)
+    { id: 'c18', number: 'ONEY5678901', type: 'standard', size: '20ft', status: 'in_depot', location: 'S35-R1-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c19', number: 'ONEY5678902', type: 'standard', size: '20ft', status: 'in_depot', location: 'S35-R2-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+
+    // Zone C - Stack 61 (20ft)
+    { id: 'c20', number: 'EGLV6789012', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R1-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c21', number: 'EGLV6789013', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R2-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c22', number: 'EGLV6789014', type: 'flat_rack', size: '20ft', status: 'in_depot', location: 'S61-R3-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c23', number: 'EGLV6789015', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R4-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c24', number: 'EGLV6789016', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R5-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c25', number: 'EGLV6789017', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R6-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+
+    // Zone C - Stack 101 (20ft, special - 1 row only)
+    { id: 'c26', number: 'YMLU7890123', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H1', client: 'Yang Ming', clientCode: 'YMLU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c27', number: 'YMLU7890124', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H2', client: 'Yang Ming', clientCode: 'YMLU', createdBy: 'System', gateInDate: new Date() },
+  ];
+
+  return mockContainers;
+};
+
+export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: propContainers }) => {
   const { user, canViewAllData } = useAuth();
   const [selectedZone, setSelectedZone] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +88,27 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
   const [selectedStack, setSelectedStack] = useState<YardStack | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [highlightedContainer, setHighlightedContainer] = useState<string | null>(null);
+  const [searchSuggestions, setSearchSuggestions] = useState<Container[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const stackRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // Merge prop containers with mock containers for testing
+  const allContainers = useMemo(() => {
+    const mockContainers = generateMockContainers();
+    const containerMap = new Map<string, Container>();
+
+    // Add prop containers first
+    propContainers.forEach(c => containerMap.set(c.id, c));
+
+    // Add mock containers (won't override existing)
+    mockContainers.forEach(c => {
+      if (!containerMap.has(c.id)) {
+        containerMap.set(c.id, c);
+      }
+    });
+
+    return Array.from(containerMap.values());
+  }, [propContainers]);
 
   const zones = useMemo(() => {
     if (!yard) return [];
@@ -76,8 +147,42 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
     return { containerSize: isOdd ? '20ft' : '40ft', isSpecialStack: false };
   };
 
+  // Validate container number format
+  const validateContainerInput = (input: string): string => {
+    // Remove any existing hyphens
+    let cleaned = input.replace(/-/g, '').toUpperCase();
+
+    // Limit to 11 characters max (4 letters + 7 numbers)
+    cleaned = cleaned.substring(0, 11);
+
+    // Ensure first 4 characters are letters only
+    const letters = cleaned.substring(0, 4).replace(/[^A-Z]/g, '');
+
+    // Ensure remaining characters are numbers only
+    const numbers = cleaned.substring(4).replace(/[^0-9]/g, '');
+
+    return letters + numbers;
+  };
+
+  // Handle search input with validation
+  const handleSearchChange = (value: string) => {
+    const validated = validateContainerInput(value);
+    setSearchTerm(validated);
+
+    if (validated.length >= 2) {
+      const suggestions = allContainers.filter(c =>
+        c.number.toUpperCase().startsWith(validated)
+      ).slice(0, 5);
+      setSearchSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
   const filteredContainers = useMemo(() => {
-    let filtered = containers;
+    let filtered = allContainers;
 
     if (!canViewAllData() && user?.clientCode) {
       filtered = filtered.filter(c => c.clientCode === user.clientCode);
@@ -103,15 +208,15 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
     }
 
     return filtered;
-  }, [containers, filterStatus, selectedZone, canViewAllData, user, yard]);
+  }, [allContainers, filterStatus, selectedZone, canViewAllData, user, yard]);
 
   const searchedContainer = useMemo(() => {
     if (!searchTerm.trim()) return null;
-    const found = containers.find(c =>
-      c.number.toLowerCase().includes(searchTerm.toLowerCase())
+    const found = allContainers.find(c =>
+      c.number.toUpperCase() === searchTerm.toUpperCase()
     );
     return found || null;
-  }, [containers, searchTerm]);
+  }, [allContainers, searchTerm]);
 
   useEffect(() => {
     if (searchedContainer) {
@@ -139,14 +244,14 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
   };
 
   const stats = useMemo(() => {
-    const total = containers.length;
-    const inDepot = containers.filter(c => c.status === 'in_depot').length;
-    const maintenance = containers.filter(c => c.status === 'maintenance').length;
-    const damaged = containers.filter(c => c.damage && c.damage.length > 0).length;
+    const total = allContainers.length;
+    const inDepot = allContainers.filter(c => c.status === 'in_depot').length;
+    const maintenance = allContainers.filter(c => c.status === 'maintenance').length;
+    const damaged = allContainers.filter(c => c.damage && c.damage.length > 0).length;
     const occupancyRate = yard ? ((yard.currentOccupancy / yard.totalCapacity) * 100) : 0;
 
     return { total, inDepot, maintenance, damaged, occupancyRate };
-  }, [containers, yard]);
+  }, [allContainers, yard]);
 
   const stacksData = useMemo(() => {
     if (!yard) return [];
@@ -154,6 +259,11 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
     const allStacks: StackVisualization[] = [];
 
     yard.sections.forEach((section, sectionIndex) => {
+      // Filter by zone if selected
+      if (selectedZone !== 'all' && section.id !== selectedZone) {
+        return; // Skip this section
+      }
+
       const zoneName = `Zone ${String.fromCharCode(65 + sectionIndex)}`;
       section.stacks.forEach(stack => {
         const config = getStackConfiguration(stack.stackNumber);
@@ -178,7 +288,10 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
             containerSize: c.size,
             row,
             tier,
-            status
+            status,
+            client: c.client,
+            transporter: 'Swift Transport', // Mock transporter
+            containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
           };
         });
 
@@ -200,7 +313,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
     });
 
     return allStacks.sort((a, b) => a.stack.stackNumber - b.stack.stackNumber);
-  }, [yard, filteredContainers]);
+  }, [yard, filteredContainers, selectedZone]);
 
   const stackContainers = useMemo(() => {
     if (!selectedStack) return [];
@@ -211,7 +324,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
   }, [selectedStack, filteredContainers]);
 
   const handleSlotClick = (slot: ContainerSlot) => {
-    const container = containers.find(c => c.id === slot.containerId);
+    const container = allContainers.find(c => c.id === slot.containerId);
     if (container) {
       setSelectedContainer(container);
       setSelectedStack(null);
@@ -244,19 +357,33 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
   const renderStackSlots = (stackViz: StackVisualization) => {
     const { stack, containerSize, isSpecialStack, containerSlots } = stackViz;
 
+    // Group containers by row to show as single slots
+    const rowSlots = new Map<number, ContainerSlot | null>();
+
+    // Initialize all rows as empty
+    for (let row = 1; row <= stack.rows; row++) {
+      rowSlots.set(row, null);
+    }
+
+    // Fill with actual containers (use the lowest height container for each row)
+    containerSlots.forEach(slot => {
+      const existing = rowSlots.get(slot.row);
+      if (!existing || slot.tier < existing.tier) {
+        rowSlots.set(slot.row, slot);
+      }
+    });
+
     if (isSpecialStack || containerSize === '20ft') {
       return (
         <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${stack.rows}, minmax(0, 1fr))` }}>
-          {Array.from({ length: stack.maxTiers * stack.rows }).map((_, idx) => {
-            const tier = Math.floor(idx / stack.rows) + 1;
-            const row = (idx % stack.rows) + 1;
-            const slot = containerSlots.find(s => s.row === row && s.tier === tier);
+          {Array.from(rowSlots.entries()).map(([row, slot]) => {
             const isHighlighted = slot && slot.containerId === highlightedContainer;
+            const containerCount = containerSlots.filter(s => s.row === row).length;
 
             return (
               <div
-                key={idx}
-                className={`aspect-square rounded border-2 transition-all cursor-pointer hover:scale-110 ${
+                key={row}
+                className={`aspect-square rounded border-2 transition-all cursor-pointer hover:scale-110 relative ${
                   slot
                     ? getSlotColor(slot, isHighlighted || false)
                     : 'bg-gray-200 border-gray-300'
@@ -265,30 +392,44 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                   e.stopPropagation();
                   if (slot) handleSlotClick(slot);
                 }}
-                title={slot ? `${slot.containerNumber} - ${containerSize}` : `Empty - R${row} H${tier}`}
-              />
+                title={slot ? `${slot.containerNumber} - ${containerSize}` : `Empty - R${row}`}
+              >
+                {containerCount > 1 && (
+                  <div className="absolute top-0 right-0 bg-white text-xs font-bold px-1 rounded-bl">
+                    {containerCount}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
       );
     } else {
+      // 40ft stacks - show pairs of rows as single wide slots
       const positions40ft = Math.floor(stack.rows / 2);
+      const positionSlots = new Map<number, ContainerSlot | null>();
+
+      for (let pos = 1; pos <= positions40ft; pos++) {
+        const baseRow = (pos - 1) * 2 + 1;
+        const slot = containerSlots.find(s =>
+          (s.row === baseRow || s.row === baseRow + 1) && s.containerSize === '40ft'
+        );
+        positionSlots.set(pos, slot || null);
+      }
+
       return (
         <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${positions40ft}, minmax(0, 1fr))` }}>
-          {Array.from({ length: stack.maxTiers * positions40ft }).map((_, idx) => {
-            const tier = Math.floor(idx / positions40ft) + 1;
-            const position = (idx % positions40ft) + 1;
-            const baseRow = (position - 1) * 2 + 1;
-
-            const slot = containerSlots.find(s =>
-              (s.row === baseRow || s.row === baseRow + 1) && s.tier === tier && s.containerSize === '40ft'
-            );
+          {Array.from(positionSlots.entries()).map(([position, slot]) => {
             const isHighlighted = slot && slot.containerId === highlightedContainer;
+            const baseRow = (position - 1) * 2 + 1;
+            const containerCount = containerSlots.filter(s =>
+              (s.row === baseRow || s.row === baseRow + 1) && s.containerSize === '40ft'
+            ).length;
 
             return (
               <div
-                key={idx}
-                className={`aspect-[2/1] rounded border-2 transition-all cursor-pointer hover:scale-105 ${
+                key={position}
+                className={`aspect-[2/1] rounded border-2 transition-all cursor-pointer hover:scale-105 relative ${
                   slot
                     ? getSlotColor(slot, isHighlighted || false)
                     : 'bg-gray-200 border-gray-300'
@@ -297,8 +438,14 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                   e.stopPropagation();
                   if (slot) handleSlotClick(slot);
                 }}
-                title={slot ? `${slot.containerNumber} - 40ft` : `Empty 40ft - Pos${position} H${tier}`}
-              />
+                title={slot ? `${slot.containerNumber} - 40ft` : `Empty 40ft - Pos${position}`}
+              >
+                {containerCount > 1 && (
+                  <div className="absolute top-0 right-0 bg-white text-xs font-bold px-1 rounded-bl">
+                    {containerCount}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -401,10 +548,32 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
               type="text"
               placeholder="Search container number..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+              maxLength={11}
             />
-            {searchedContainer && (
+
+            {showSuggestions && searchSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-auto">
+                {searchSuggestions.map(container => (
+                  <div
+                    key={container.id}
+                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                    onClick={() => {
+                      setSearchTerm(container.number);
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
+                    <div className="text-xs text-gray-500">{container.client} • {container.location}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {searchedContainer && !showSuggestions && (
               <div className="absolute top-full left-0 mt-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 shadow-lg z-10 flex items-center gap-2">
                 <div>
                   <p className="text-xs text-green-700 font-medium">Found: {searchedContainer.location}</p>
@@ -419,7 +588,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                 </button>
               </div>
             )}
-            {searchTerm && !searchedContainer && (
+            {searchTerm && !searchedContainer && !showSuggestions && (
               <div className="absolute top-full left-0 mt-1 bg-red-50 border border-red-200 rounded px-2 py-1 text-xs text-red-700 whitespace-nowrap z-10">
                 Container not found
               </div>
@@ -599,7 +768,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
 
       {selectedStack && !selectedContainer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedStack(null)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900">Stack S{selectedStack.stackNumber.toString().padStart(2, '0')} Details</h3>
               <button
@@ -648,26 +817,34 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Container
+                          Container Number
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Position
+                          Client Name
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Client
+                          Transporter Name
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Container Size
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Type
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
+                          Design
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Height
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {stackContainers.map((container) => {
-                        const match = container.location.match(/S\d+-R(\d+)-H(\d+)/);
-                        const position = match ? `R${match[1]} H${match[2]}` : '-';
+                        const match = container.location.match(/S\d+-R\d+-H(\d+)/);
+                        const height = match ? `H${match[1]}` : '-';
+                        const containerType = container.status === 'in_depot' ? 'FULL' : 'EMPTY';
+                        const transporter = 'Swift Transport'; // Mock transporter
 
                         return (
                           <tr
@@ -684,28 +861,35 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                               </div>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {position}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                               {container.client}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                              {container.type} • {container.size}
+                              <div className="flex items-center">
+                                <Truck className="h-4 w-4 mr-1 text-gray-400" />
+                                {transporter}
+                              </div>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
                               <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                container.status === 'in_depot' ? 'bg-green-100 text-green-800' :
-                                container.status === 'maintenance' ? 'bg-orange-100 text-orange-800' :
-                                container.status === 'cleaning' ? 'bg-blue-100 text-blue-800' :
-                                'bg-gray-100 text-gray-800'
+                                container.size === '40ft' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
                               }`}>
-                                {container.status.replace('_', ' ')}
+                                {container.size}
                               </span>
-                              {container.damage && container.damage.length > 0 && (
-                                <span className="ml-1 inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                                  Damaged
-                                </span>
-                              )}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                containerType === 'FULL' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {containerType}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 capitalize">
+                              {container.type.replace('_', ' ')}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-blue-50 text-blue-700">
+                                {height}
+                              </span>
                             </td>
                           </tr>
                         );
@@ -734,3 +918,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
     </div>
   );
 };
+
+
+export { YardLiveMap }
