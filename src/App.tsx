@@ -16,7 +16,6 @@ import { GateIn } from './components/Gates/GateIn';
 import { GateOut } from './components/Gates/GateOut';
 import { ClientMasterData } from './components/Clients/ClientMasterData';
 import { UserManagement } from './components/Users/UserManagement';
-import { YardManagement } from './components/Yard/YardManagement';
 import { StackManagement } from './components/Yard/StackManagement';
 import { ModuleAccessManagement } from './components/ModuleAccess/ModuleAccessManagement';
 import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagement';
@@ -75,8 +74,6 @@ function AppContent() {
         return hasModuleAccess('clients') ? <ClientMasterData /> : <AccessDenied />;
       case 'users':
         return hasModuleAccess('users') ? <UserManagement /> : <AccessDenied />;
-      case 'yard':
-        return hasModuleAccess('yard') ? <YardManagement /> : <AccessDenied />;
       case 'depot-management':
         return hasModuleAccess('depotManagement') ? <DepotManagement /> : <AccessDenied />;
       case 'stack-management':
