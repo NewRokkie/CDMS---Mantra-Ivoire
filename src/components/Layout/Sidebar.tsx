@@ -1,22 +1,5 @@
 import React, { useState } from 'react';
-import {
-  LayoutDashboard,
-  Container,
-  FileText,
-  Send,
-  LogIn,
-  LogOut as LogOutIcon,
-  BarChart3,
-  Building,
-  Users,
-  Grid3X3,
-  Shield,
-  Settings,
-  ChevronDown,
-  ChevronRight,
-  Cog,
-  X
-} from 'lucide-react';
+import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronDown, ChevronRight, Cog, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 
