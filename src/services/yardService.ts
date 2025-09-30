@@ -784,24 +784,21 @@ export class YardService {
     const yard = this.yards.get(yardId);
     if (!yard) return false;
 
-    // For Tantarelli yard, check for specific stack patterns
+    // For Tantarelli yard, check for specific stack patterns (new S##-R#-H# format)
     if (yardId === 'depot-tantarelli') {
-      return container.location.includes('Stack S') &&
-             /Stack S(1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35|37|39|41|43|45|47|49|51|53|55|61|63|65|67|69|71|73|75|77|79|81|83|85|87|89|91|93|95|97|99|101|103)/.test(container.location);
+      return /S(1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35|37|39|41|43|45|47|49|51|53|55|61|63|65|67|69|71|73|75|77|79|81|83|85|87|89|91|93|95|97|99|101|103)-R\d+-H\d+/.test(container.location);
     }
 
-    // For Vridi yard, check for standard stack patterns
+    // For Vridi yard, check for standard stack patterns (new S##-R#-H# format)
     if (yardId === 'depot-vridi') {
-      return container.location.includes('Stack') &&
-             (/vridi-section-a|vridi-section-b/.test(container.location) ||
-              container.location.includes(yard.code) || container.location.includes(yard.name));
+      return /S\d+-R\d+-H\d+/.test(container.location) &&
+             (container.location.includes(yard.code) || container.location.includes(yard.name));
     }
 
-    // For San Pedro yard, check for standard stack patterns
+    // For San Pedro yard, check for standard stack patterns (new S##-R#-H# format)
     if (yardId === 'depot-san-pedro') {
-      return container.location.includes('Stack') &&
-             (/sanpedro-section-a|sanpedro-section-b/.test(container.location) ||
-              container.location.includes(yard.code) || container.location.includes(yard.name));
+      return /S\d+-R\d+-H\d+/.test(container.location) &&
+             (container.location.includes(yard.code) || container.location.includes(yard.name));
     }
 
     // For other yards, use different patterns or explicit yard references

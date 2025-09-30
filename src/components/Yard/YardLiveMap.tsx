@@ -96,7 +96,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
       if (section) {
         const stackNumbers = section.stacks.map(s => s.stackNumber);
         filtered = filtered.filter(c => {
-          const match = c.location.match(/Stack S(\d+)/);
+          const match = c.location.match(/S(\d+)-R\d+-H\d+/);
           return match && stackNumbers.includes(parseInt(match[1]));
         });
       }
@@ -128,7 +128,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
   const scrollToContainer = () => {
     if (!searchedContainer) return;
 
-    const match = searchedContainer.location.match(/Stack S(\d+)/);
+    const match = searchedContainer.location.match(/S(\d+)-R\d+-H\d+/);
     if (match) {
       const stackNumber = parseInt(match[1]);
       const stackElement = stackRefs.current.get(stackNumber);
@@ -159,12 +159,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
         const config = getStackConfiguration(stack.stackNumber);
 
         const stackContainers = filteredContainers.filter(c => {
-          const match = c.location.match(/Stack S(\d+)/);
+          const match = c.location.match(/S(\d+)-R\d+-H\d+/);
           return match && parseInt(match[1]) === stack.stackNumber;
         });
 
         const containerSlots: ContainerSlot[] = stackContainers.map(c => {
-          const locMatch = c.location.match(/Row (\d+)-Tier (\d+)/);
+          const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
           const row = locMatch ? parseInt(locMatch[1]) : 1;
           const tier = locMatch ? parseInt(locMatch[2]) : 1;
 
@@ -205,7 +205,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
   const stackContainers = useMemo(() => {
     if (!selectedStack) return [];
     return filteredContainers.filter(c => {
-      const match = c.location.match(/Stack S(\d+)/);
+      const match = c.location.match(/S(\d+)-R\d+-H\d+/);
       return match && parseInt(match[1]) === selectedStack.stackNumber;
     });
   }, [selectedStack, filteredContainers]);
@@ -265,7 +265,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                   e.stopPropagation();
                   if (slot) handleSlotClick(slot);
                 }}
-                title={slot ? `${slot.containerNumber} - ${containerSize}` : `Empty - R${row} T${tier}`}
+                title={slot ? `${slot.containerNumber} - ${containerSize}` : `Empty - R${row} H${tier}`}
               />
             );
           })}
@@ -297,7 +297,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                   e.stopPropagation();
                   if (slot) handleSlotClick(slot);
                 }}
-                title={slot ? `${slot.containerNumber} - 40ft` : `Empty 40ft - Pos${position} T${tier}`}
+                title={slot ? `${slot.containerNumber} - 40ft` : `Empty 40ft - Pos${position} H${tier}`}
               />
             );
           })}
@@ -666,8 +666,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {stackContainers.map((container) => {
-                        const match = container.location.match(/Row (\d+)-Tier (\d+)/);
-                        const position = match ? `R${match[1]} T${match[2]}` : '-';
+                        const match = container.location.match(/S\d+-R(\d+)-H(\d+)/);
+                        const position = match ? `R${match[1]} H${match[2]}` : '-';
 
                         return (
                           <tr
