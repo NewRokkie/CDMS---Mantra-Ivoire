@@ -125,7 +125,7 @@ export class YardService {
     return [
       {
         id: 'section-top',
-        name: 'Top Section',
+        name: 'Zone A',
         yardId: 'depot-tantarelli',
         stacks: this.createTantarelliTopStacks(),
         position: { x: 0, y: 0, z: 0 },
@@ -134,7 +134,7 @@ export class YardService {
       },
       {
         id: 'section-center',
-        name: 'Center Section',
+        name: 'Zone B',
         yardId: 'depot-tantarelli',
         stacks: this.createTantarelliCenterStacks(),
         position: { x: 0, y: 140, z: 0 },
@@ -143,7 +143,7 @@ export class YardService {
       },
       {
         id: 'section-bottom',
-        name: 'Bottom Section',
+        name: 'Zone C',
         yardId: 'depot-tantarelli',
         stacks: this.createTantarelliBottomStacks(),
         position: { x: 0, y: 260, z: 0 },
@@ -160,7 +160,7 @@ export class YardService {
     return [
       {
         id: 'vridi-section-a',
-        name: 'Section A',
+        name: 'Zone A',
         yardId: 'depot-vridi',
         stacks: this.createStandardStacks('vridi-section-a', 1, 20, 4, 5),
         position: { x: 0, y: 0, z: 0 },
@@ -169,7 +169,7 @@ export class YardService {
       },
       {
         id: 'vridi-section-b',
-        name: 'Section B',
+        name: 'Zone B',
         yardId: 'depot-vridi',
         stacks: this.createStandardStacks('vridi-section-b', 21, 40, 5, 5),
         position: { x: 0, y: 120, z: 0 },
@@ -186,7 +186,7 @@ export class YardService {
     return [
       {
         id: 'sanpedro-section-a',
-        name: 'Section A',
+        name: 'Zone A',
         yardId: 'depot-san-pedro',
         stacks: this.createStandardStacks('sanpedro-section-a', 1, 15, 4, 4),
         position: { x: 0, y: 0, z: 0 },
@@ -195,7 +195,7 @@ export class YardService {
       },
       {
         id: 'sanpedro-section-b',
-        name: 'Section B',
+        name: 'Zone B',
         yardId: 'depot-san-pedro',
         stacks: this.createStandardStacks('sanpedro-section-b', 16, 30, 3, 4),
         position: { x: 0, y: 100, z: 0 },

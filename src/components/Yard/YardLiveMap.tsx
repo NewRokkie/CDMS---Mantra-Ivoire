@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Search, MapPin, Package, AlertCircle, X } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, MapPin, Package, X, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Container } from '../../types';
 import { Yard, YardStack } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
@@ -24,16 +24,18 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
   const [selectedStack, setSelectedStack] = useState<YardStack | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [highlightedContainer, setHighlightedContainer] = useState<string | null>(null);
 
   const zones = useMemo(() => {
     if (!yard) return [];
-    return yard.sections.map(section => {
+    return yard.sections.map((section, index) => {
       const stacks = section.stacks;
       const totalCapacity = stacks.reduce((sum, s) => sum + s.capacity, 0);
       const occupied = stacks.reduce((sum, s) => sum + s.currentOccupancy, 0);
+      const zoneName = `Zone ${String.fromCharCode(65 + index)}`;
       return {
         id: section.id,
-        name: section.name,
+        name: zoneName,
         color: section.color || '#3b82f6',
         capacity: totalCapacity,
         occupied,
@@ -47,13 +49,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
 
     if (!canViewAllData() && user?.clientCode) {
       filtered = filtered.filter(c => c.clientCode === user.clientCode);
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(c =>
-        c.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.client.toLowerCase().includes(searchTerm.toLowerCase())
-      );
     }
 
     if (filterStatus !== 'all') {
@@ -76,24 +71,45 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
     }
 
     return filtered;
-  }, [containers, searchTerm, filterStatus, selectedZone, canViewAllData, user, yard]);
+  }, [containers, filterStatus, selectedZone, canViewAllData, user, yard]);
+
+  const searchedContainer = useMemo(() => {
+    if (!searchTerm.trim()) return null;
+    const found = containers.find(c =>
+      c.number.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return found || null;
+  }, [containers, searchTerm]);
+
+  useEffect(() => {
+    if (searchedContainer) {
+      setHighlightedContainer(searchedContainer.id);
+      const timer = setTimeout(() => {
+        setHighlightedContainer(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setHighlightedContainer(null);
+    }
+  }, [searchedContainer]);
 
   const stats = useMemo(() => {
-    const total = filteredContainers.length;
-    const inDepot = filteredContainers.filter(c => c.status === 'in_depot').length;
-    const maintenance = filteredContainers.filter(c => c.status === 'maintenance').length;
-    const damaged = filteredContainers.filter(c => c.damage && c.damage.length > 0).length;
+    const total = containers.length;
+    const inDepot = containers.filter(c => c.status === 'in_depot').length;
+    const maintenance = containers.filter(c => c.status === 'maintenance').length;
+    const damaged = containers.filter(c => c.damage && c.damage.length > 0).length;
     const occupancyRate = yard ? ((yard.currentOccupancy / yard.totalCapacity) * 100) : 0;
 
     return { total, inDepot, maintenance, damaged, occupancyRate };
-  }, [filteredContainers, yard]);
+  }, [containers, yard]);
 
   const stacksData = useMemo(() => {
     if (!yard) return [];
 
-    const allStacks: { stack: YardStack; section: any; slots: StackSlot[] }[] = [];
+    const allStacks: { stack: YardStack; section: any; zoneName: string; slots: StackSlot[] }[] = [];
 
-    yard.sections.forEach(section => {
+    yard.sections.forEach((section, sectionIndex) => {
+      const zoneName = `Zone ${String.fromCharCode(65 + sectionIndex)}`;
       section.stacks.forEach(stack => {
         const slots: StackSlot[] = [];
 
@@ -118,7 +134,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
           }
         }
 
-        allStacks.push({ stack, section, slots });
+        allStacks.push({ stack, section, zoneName, slots });
       });
     });
 
@@ -145,15 +161,23 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
     setSelectedContainer(null);
   };
 
-  const getSlotColor = (status: StackSlot['status'], isSelected: boolean) => {
-    if (isSelected) return 'bg-yellow-400 border-yellow-600';
-    switch (status) {
+  const getSlotColor = (slot: StackSlot, isHighlighted: boolean) => {
+    if (isHighlighted) return 'bg-yellow-400 border-yellow-600 animate-pulse';
+    if (selectedContainer?.id === slot.container?.id) return 'bg-yellow-400 border-yellow-600';
+
+    switch (slot.status) {
       case 'empty': return 'bg-gray-200 border-gray-300';
       case 'occupied': return 'bg-blue-500 border-blue-600';
       case 'priority': return 'bg-orange-500 border-orange-600';
       case 'damaged': return 'bg-red-500 border-red-600';
       default: return 'bg-gray-200 border-gray-300';
     }
+  };
+
+  const getProgressBarColor = (percentage: number) => {
+    if (percentage >= 80) return 'bg-red-500';
+    if (percentage >= 50) return 'bg-orange-500';
+    return 'bg-green-500';
   };
 
   if (!yard) {
@@ -202,16 +226,68 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg px-4 py-3 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-blue-600 font-medium uppercase">Total Containers</div>
+                <div className="text-2xl font-bold text-blue-900 mt-1">{stats.total}</div>
+              </div>
+              <Package className="h-8 w-8 text-blue-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg px-4 py-3 border border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-green-600 font-medium uppercase">In Depot</div>
+                <div className="text-2xl font-bold text-green-900 mt-1">{stats.inDepot}</div>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg px-4 py-3 border border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-orange-600 font-medium uppercase">Maintenance</div>
+                <div className="text-2xl font-bold text-orange-900 mt-1">{stats.maintenance}</div>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-orange-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg px-4 py-3 border border-red-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-red-600 font-medium uppercase">Damaged</div>
+                <div className="text-2xl font-bold text-red-900 mt-1">{stats.damaged}</div>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search container..."
+              placeholder="Search container number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            {searchedContainer && (
+              <div className="absolute top-full left-0 mt-1 bg-green-50 border border-green-200 rounded px-2 py-1 text-xs text-green-700 whitespace-nowrap z-10">
+                Found: {searchedContainer.location}
+              </div>
+            )}
+            {searchTerm && !searchedContainer && (
+              <div className="absolute top-full left-0 mt-1 bg-red-50 border border-red-200 rounded px-2 py-1 text-xs text-red-700 whitespace-nowrap z-10">
+                Container not found
+              </div>
+            )}
           </div>
 
           <select
@@ -222,7 +298,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
             <option value="all">All Zones</option>
             {zones.map(zone => (
               <option key={zone.id} value={zone.id}>
-                {zone.name}
+                {zone.name} ({zone.percentage.toFixed(0)}%)
               </option>
             ))}
           </select>
@@ -238,60 +314,52 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
             <option value="cleaning">Cleaning</option>
             <option value="damaged">Damaged</option>
           </select>
-
-          <div className="flex gap-2 ml-auto">
-            <div className="bg-blue-50 rounded-lg px-4 py-2 text-center min-w-[100px]">
-              <div className="text-xs text-blue-600 font-medium">Total</div>
-              <div className="text-xl font-bold text-blue-900">{stats.total}</div>
-            </div>
-            <div className="bg-green-50 rounded-lg px-4 py-2 text-center min-w-[100px]">
-              <div className="text-xs text-green-600 font-medium">In Depot</div>
-              <div className="text-xl font-bold text-green-900">{stats.inDepot}</div>
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 p-6 overflow-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
-            {stacksData.map(({ stack, section, slots }) => {
-              const occupancyPercent = (stack.currentOccupancy / stack.capacity) * 100;
+      <div className="flex-1 p-6 overflow-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+          {stacksData.map(({ stack, section, zoneName, slots }) => {
+            const occupancyPercent = (stack.currentOccupancy / stack.capacity) * 100;
+            const hasHighlightedContainer = slots.some(slot => slot.container?.id === highlightedContainer);
 
-              return (
+            return (
+              <div
+                key={stack.id}
+                className={`bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer ${
+                  hasHighlightedContainer
+                    ? 'border-yellow-500 shadow-lg ring-2 ring-yellow-300'
+                    : 'border-gray-200 hover:border-blue-400'
+                }`}
+                onClick={() => handleStackClick(stack)}
+              >
                 <div
-                  key={stack.id}
-                  className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all overflow-hidden cursor-pointer"
-                  onClick={() => handleStackClick(stack)}
+                  className="px-3 py-2 border-b"
+                  style={{ backgroundColor: `${section.color}15`, borderColor: section.color }}
                 >
-                  <div
-                    className="px-3 py-2 border-b"
-                    style={{ backgroundColor: `${section.color}15`, borderColor: section.color }}
-                  >
-                    <div className="flex items-center justify-center mb-2">
-                      <span className="font-bold text-lg">S{stack.stackNumber.toString().padStart(2, '0')}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          occupancyPercent > 80 ? 'bg-red-500' :
-                          occupancyPercent > 50 ? 'bg-orange-500' : 'bg-green-500'
-                        }`}
-                        style={{ width: `${occupancyPercent}%` }}
-                      />
-                    </div>
-                    <div className="text-xs text-center text-gray-600 mt-1">
-                      {occupancyPercent.toFixed(0)}%
-                    </div>
+                  <div className="flex items-center justify-center mb-2">
+                    <span className="font-bold text-lg">S{stack.stackNumber.toString().padStart(2, '0')}</span>
                   </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all ${getProgressBarColor(occupancyPercent)}`}
+                      style={{ width: `${Math.min(occupancyPercent, 100)}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-center text-gray-600 mt-1">
+                    {occupancyPercent.toFixed(0)}%
+                  </div>
+                </div>
 
-                  <div className="p-3">
-                    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${stack.rows}, minmax(0, 1fr))` }}>
-                      {slots.map((slot, idx) => (
+                <div className="p-3">
+                  <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${stack.rows}, minmax(0, 1fr))` }}>
+                    {slots.map((slot, idx) => {
+                      const isHighlighted = slot.container?.id === highlightedContainer;
+                      return (
                         <div
                           key={idx}
                           className={`aspect-square rounded border-2 transition-all cursor-pointer hover:scale-110 ${
-                            getSlotColor(slot.status, selectedContainer?.id === slot.container?.id)
+                            getSlotColor(slot, isHighlighted)
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -299,77 +367,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                           }}
                           title={slot.container ? `${slot.container.number} - R${slot.row} T${slot.tier}` : `Empty - R${slot.row} T${slot.tier}`}
                         />
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900">Zone Statistics</h2>
-          </div>
-
-          <div className="flex-1 overflow-auto p-6 space-y-4">
-            {zones.map(zone => (
-              <button
-                key={zone.id}
-                onClick={() => setSelectedZone(zone.id)}
-                className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                  selectedZone === zone.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-gray-900">{zone.name}</span>
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: zone.color }} />
-                </div>
-                <div className="text-sm text-gray-600 mb-2">
-                  {zone.occupied} / {zone.capacity} containers
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="h-2 rounded-full transition-all"
-                    style={{
-                      width: `${zone.percentage}%`,
-                      backgroundColor: zone.color
-                    }}
-                  />
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {zone.percentage.toFixed(1)}% occupied
-                </div>
-              </button>
-            ))}
-
-            {stats.maintenance > 0 && (
-              <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
-                <div className="flex items-center text-orange-800 mb-2">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  <span className="font-semibold text-sm">Maintenance Required</span>
-                </div>
-                <p className="text-sm text-orange-700">
-                  {stats.maintenance} container{stats.maintenance > 1 ? 's' : ''} in maintenance
-                </p>
               </div>
-            )}
-
-            {stats.damaged > 0 && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-                <div className="flex items-center text-red-800 mb-2">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  <span className="font-semibold text-sm">Damaged Containers</span>
-                </div>
-                <p className="text-sm text-red-700">
-                  {stats.damaged} damaged container{stats.damaged > 1 ? 's' : ''} require attention
-                </p>
-              </div>
-            )}
-          </div>
+            );
+          })}
         </div>
       </div>
 
@@ -469,7 +473,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
       {selectedStack && !selectedContainer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedStack(null)}>
           <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900">Stack S{selectedStack.stackNumber.toString().padStart(2, '0')} Details</h3>
               <button
                 onClick={() => setSelectedStack(null)}
@@ -479,7 +483,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
               </button>
             </div>
 
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
               <div className="grid grid-cols-4 gap-4">
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Rows</label>
@@ -490,14 +494,16 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{selectedStack.maxTiers}</p>
                 </div>
                 <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-500 uppercase">Occupancy</label>
-                  <p className="text-sm text-gray-900 mt-1">
+                  <label className="text-xs font-medium text-gray-500 uppercase block mb-2">Occupancy</label>
+                  <p className="text-sm text-gray-900 mb-2">
                     {selectedStack.currentOccupancy} / {selectedStack.capacity} containers
                   </p>
-                  <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                     <div
-                      className="h-3 rounded-full bg-blue-600 transition-all"
-                      style={{ width: `${(selectedStack.currentOccupancy / selectedStack.capacity) * 100}%` }}
+                      className={`h-3 rounded-full transition-all ${
+                        getProgressBarColor((selectedStack.currentOccupancy / selectedStack.capacity) * 100)
+                      }`}
+                      style={{ width: `${Math.min((selectedStack.currentOccupancy / selectedStack.capacity) * 100, 100)}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -507,7 +513,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-6 min-h-0">
               <h4 className="font-bold text-gray-900 mb-3">Containers in this Stack ({stackContainers.length})</h4>
               {stackContainers.length > 0 ? (
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -587,7 +593,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers }) =>
               )}
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex-shrink-0">
               <button
                 onClick={() => setSelectedStack(null)}
                 className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
