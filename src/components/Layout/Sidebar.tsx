@@ -85,7 +85,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
     // 5. Containers - Overview after operations
     { id: 'containers', icon: Container, label: t('nav.containers'), moduleKey: 'containers' as const },
 
-    // 6. Supporting modules
+    // 6. Yard Management - Visual yard overview
+    { id: 'yard-management', icon: Grid3X3, label: t('nav.yard'), moduleKey: 'yard' as const },
+
+    // 7. Supporting modules
     { id: 'edi', icon: Send, label: t('nav.edi'), moduleKey: 'edi' as const },
     { id: 'reports', icon: BarChart3, label: t('nav.reports'), moduleKey: 'reports' as const }
   ];

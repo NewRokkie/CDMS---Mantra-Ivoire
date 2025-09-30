@@ -22,6 +22,7 @@ import { ClientPoolManagement } from './components/ClientPools/ClientPoolManagem
 import { ReportsModule } from './components/Reports/ReportsModule';
 import { Yard, YardSection, YardStack } from './types/yard';
 import { DepotManagement } from './components/Yard/DepotManagement';
+import { YardManagement } from './components/Yard/YardManagement';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,6 +71,8 @@ function AppContent() {
         return hasModuleAccess('releases') ? <ReleaseOrderList /> : <AccessDenied />;
       case 'edi':
         return hasModuleAccess('edi') ? <EDIManagement /> : <AccessDenied />;
+      case 'yard-management':
+        return hasModuleAccess('yard') ? <YardManagement /> : <AccessDenied />;
       case 'clients':
         return hasModuleAccess('clients') ? <ClientMasterData /> : <AccessDenied />;
       case 'users':
