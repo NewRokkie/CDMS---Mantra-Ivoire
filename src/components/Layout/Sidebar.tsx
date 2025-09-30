@@ -87,7 +87,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
 
     // 6. Supporting modules
     { id: 'edi', icon: Send, label: t('nav.edi'), moduleKey: 'edi' as const },
-    { id: 'yard', icon: Grid3X3, label: 'Yard Management', moduleKey: 'yard' as const },
     { id: 'reports', icon: BarChart3, label: t('nav.reports'), moduleKey: 'reports' as const }
   ];
 
