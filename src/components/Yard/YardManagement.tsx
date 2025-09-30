@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, ZoomIn, ZoomOut, RotateCcw, MapPin, Package, TrendingUp, AlertTriangle, Eye, Grid3x3 as Grid3X3, Layers, Map as MapIcon } from 'lucide-react';
+import { Search, Filter, ZoomIn, ZoomOut, RotateCcw, MapPin, Package, TrendingUp, AlertTriangle, Eye, Grid3x3 as Grid3X3, Layers, Map } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -218,7 +218,7 @@ export const YardManagement: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-              <MapIcon className="h-6 w-6 mr-3 text-blue-600" />
+              <Map className="h-6 w-6 mr-3 text-blue-600" />
               {t('yard.title')}
             </h1>
             {currentYard && (
