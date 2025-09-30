@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Grid3X3 } from 'lucide-react';
+import { Layers, Grid3x3 as Grid3X3 } from 'lucide-react';
 import { Container } from '../../types';
 
 interface YardZoneSelectorProps {

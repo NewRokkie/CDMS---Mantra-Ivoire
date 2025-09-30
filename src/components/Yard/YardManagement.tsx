@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, ZoomIn, ZoomOut, RotateCcw, MapPin, Package, TrendingUp, AlertTriangle, Eye, Grid3X3, Layers, Map } from 'lucide-react';
+import { Search, Filter, ZoomIn, ZoomOut, RotateCcw, MapPin, Package, TrendingUp, AlertTriangle, Eye, Grid3x3 as Grid3X3, Layers, Map } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { useLanguage } from '../../hooks/useLanguage';
