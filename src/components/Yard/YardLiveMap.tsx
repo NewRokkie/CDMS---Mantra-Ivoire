@@ -44,44 +44,32 @@ const generateMockContainers = (): Container[] => {
     { id: 'c2', number: 'MAEU1234568', type: 'standard', size: '20ft', status: 'in_depot', location: 'S01-R1-H2', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c3', number: 'MAEU1234569', type: 'reefer', size: '20ft', status: 'in_depot', location: 'S01-R1-H3', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
 
-    // Zone A - Stack 3 (20ft) - Can pair with S05 for virtual S04
-    { id: 'c4', number: 'MSCU2345678', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c5', number: 'MSCU2345679', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c6', number: 'MSCU2345680', type: 'open_top', size: '20ft', status: 'maintenance', location: 'S03-R3-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c7', number: 'MSCU2345681', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c8', number: 'MSCU2345682', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c9', number: 'MSCU2345683', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R4-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c30', number: 'MSCU2345690', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H3', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c31', number: 'MSCU2345691', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H3', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    // Zone A - Stack 3+5 (40ft paired - ONLY 40ft containers)
+    // When S03 and S05 are configured as 40ft, they store 40ft containers on both stacks
+    { id: 'c40', number: 'CMAU4000001', type: 'standard', size: '40ft', status: 'in_depot', location: 'S03-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c41', number: 'CMAU4000002', type: 'standard', size: '40ft', status: 'in_depot', location: 'S03-R1-H2', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c42', number: 'CMAU4000003', type: 'standard', size: '40ft', status: 'in_depot', location: 'S03-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c43', number: 'CMAU4000004', type: 'hi_cube', size: '40ft', status: 'in_depot', location: 'S05-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c44', number: 'CMAU4000005', type: 'standard', size: '40ft', status: 'in_depot', location: 'S05-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c45', number: 'CMAU4000006', type: 'standard', size: '40ft', status: 'in_depot', location: 'S05-R5-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c46', number: 'CMAU4000007', type: 'standard', size: '40ft', status: 'in_depot', location: 'S03-R2-H2', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c47', number: 'CMAU4000008', type: 'reefer', size: '40ft', status: 'in_depot', location: 'S05-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c48', number: 'CMAU4000009', type: 'standard', size: '40ft', status: 'in_depot', location: 'S03-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c49', number: 'CMAU4000010', type: 'standard', size: '40ft', status: 'in_depot', location: 'S05-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', damage: ['Minor dent'], createdBy: 'System', gateInDate: new Date() },
 
-    // Virtual Stack 4 (40ft containers spanning S03 and S05)
-    { id: 'c40', number: 'CMAU4000001', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c41', number: 'CMAU4000002', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H2', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c42', number: 'CMAU4000003', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c43', number: 'CMAU4000004', type: 'hi_cube', size: '40ft', status: 'in_depot', location: 'S04-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c44', number: 'CMAU4000005', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c45', number: 'CMAU4000006', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R5-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c46', number: 'CMAU4000007', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R2-H2', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    // Zone A - Stack 7+9 (40ft paired - ONLY 40ft containers)
+    { id: 'c60', number: 'HLBU8000001', type: 'standard', size: '40ft', status: 'in_depot', location: 'S07-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c61', number: 'HLBU8000002', type: 'reefer', size: '40ft', status: 'in_depot', location: 'S07-R1-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c62', number: 'HLBU8000003', type: 'standard', size: '40ft', status: 'in_depot', location: 'S09-R2-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c63', number: 'HLBU8000004', type: 'standard', size: '40ft', status: 'in_depot', location: 'S07-R3-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', damage: ['Scratch on door'], createdBy: 'System', gateInDate: new Date() },
+    { id: 'c64', number: 'HLBU8000005', type: 'standard', size: '40ft', status: 'in_depot', location: 'S09-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c65', number: 'HLBU8000006', type: 'hi_cube', size: '40ft', status: 'in_depot', location: 'S09-R4-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
 
-    // Zone A - Stack 5 (20ft) - Can pair with S03 for virtual S04
-    { id: 'c10', number: 'CMDU3456789', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c11', number: 'CMDU3456790', type: 'hi_cube', size: '20ft', status: 'in_depot', location: 'S05-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c12', number: 'CMDU3456791', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c13', number: 'CMDU3456792', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', damage: ['Minor dent'], createdBy: 'System', gateInDate: new Date() },
-
-    // Zone A - Stack 7 (20ft) - Can pair with S09 for virtual S08
-    { id: 'c50', number: 'ONEY6000001', type: 'standard', size: '20ft', status: 'in_depot', location: 'S07-R1-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c51', number: 'ONEY6000002', type: 'standard', size: '20ft', status: 'in_depot', location: 'S07-R2-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
-
-    // Virtual Stack 8 (40ft containers spanning S07 and S09)
-    { id: 'c60', number: 'HLBU8000001', type: 'standard', size: '40ft', status: 'in_depot', location: 'S08-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c61', number: 'HLBU8000002', type: 'reefer', size: '40ft', status: 'in_depot', location: 'S08-R1-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c62', number: 'HLBU8000003', type: 'standard', size: '40ft', status: 'in_depot', location: 'S08-R2-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c63', number: 'HLBU8000004', type: 'standard', size: '40ft', status: 'in_depot', location: 'S08-R3-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', damage: ['Scratch on door'], createdBy: 'System', gateInDate: new Date() },
-
-    // Zone A - Stack 9 (20ft) - Can pair with S07 for virtual S08
-    { id: 'c52', number: 'ONEY6000003', type: 'standard', size: '20ft', status: 'in_depot', location: 'S09-R1-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c53', number: 'ONEY6000004', type: 'standard', size: '20ft', status: 'in_depot', location: 'S09-R3-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+    // Zone A - Stack 11 (20ft - NOT paired)
+    { id: 'c50', number: 'ONEY6000001', type: 'standard', size: '20ft', status: 'in_depot', location: 'S11-R1-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c51', number: 'ONEY6000002', type: 'standard', size: '20ft', status: 'in_depot', location: 'S11-R2-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c52', number: 'ONEY6000003', type: 'standard', size: '20ft', status: 'in_depot', location: 'S11-R1-H2', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c53', number: 'ONEY6000004', type: 'standard', size: '20ft', status: 'in_depot', location: 'S11-R3-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
 
     // Zone B - Stack 33 (20ft)
     { id: 'c14', number: 'HLCU4567890', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
@@ -309,6 +297,22 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     const match = searchedContainer.location.match(/S(\d+)-R\d+-H\d+/);
     if (match) {
       const stackNumber = parseInt(match[1]);
+
+      // For 40ft containers, also try to scroll to the virtual stack
+      if (searchedContainer.size === '40ft') {
+        const config = getStackConfiguration(stackNumber);
+        if (config.pairedWith) {
+          // Calculate virtual stack number
+          const virtualStackNum = Math.min(stackNumber, config.pairedWith) + 1;
+          const virtualStackElement = stackRefs.current.get(virtualStackNum);
+          if (virtualStackElement) {
+            virtualStackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+        }
+      }
+
+      // Default: scroll to the physical stack
       const stackElement = stackRefs.current.get(stackNumber);
       if (stackElement) {
         stackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -382,13 +386,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
             const virtualCapacity = stack.rows * stack.maxTiers;
 
-            // Add the first odd stack (20ft + 40ft containers from virtual stack)
+            // Add the first odd stack - ONLY containers from this specific stack
+            // When configured as 40ft, it will only have 40ft containers directly on this stack
             const stack1Containers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
               const matchedStack = match ? parseInt(match[1]) : null;
-              // Include 20ft from this stack OR 40ft from the virtual stack between this and partner
-              return (matchedStack === stack.stackNumber && c.size === '20ft') ||
-                     (matchedStack === virtualStackNumber && c.size === '40ft');
+              return matchedStack === stack.stackNumber;
             });
 
             const stack1Slots: ContainerSlot[] = stack1Containers.map(c => {
@@ -419,7 +422,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               stack,
               section,
               zoneName,
-              containerSize: '20ft',
+              containerSize: '40ft',
               isSpecialStack: false,
               containerSlots: stack1Slots,
               currentOccupancy: stack1Slots.length,
@@ -444,13 +447,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               maxTiers: stack.maxTiers
             });
 
-            // Add the second odd stack (20ft + 40ft containers from virtual stack)
+            // Add the second odd stack - ONLY containers from this specific stack
+            // When configured as 40ft, it will only have 40ft containers directly on this stack
             const stack2Containers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
               const matchedStack = match ? parseInt(match[1]) : null;
-              // Include 20ft from this stack OR 40ft from the virtual stack between partner and this
-              return (matchedStack === nextOddStack.stackNumber && c.size === '20ft') ||
-                     (matchedStack === virtualStackNumber && c.size === '40ft');
+              return matchedStack === nextOddStack.stackNumber;
             });
 
             const stack2Slots: ContainerSlot[] = stack2Containers.map(c => {
@@ -481,7 +483,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               stack: nextOddStack,
               section,
               zoneName,
-              containerSize: '20ft',
+              containerSize: '40ft',
               isSpecialStack: false,
               containerSlots: stack2Slots,
               currentOccupancy: stack2Slots.length,
@@ -560,10 +562,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       // Include containers from this stack
       if (matchedStack === selectedStack.stackNumber) return true;
 
-      // If this stack is paired for 40ft, also include 40ft containers from the virtual stack
+      // If this stack is paired for 40ft, also include 40ft containers from the paired stack
       if (config.containerSize === '40ft' && adjacentStack) {
-        const virtualStackNum = Math.min(selectedStack.stackNumber, adjacentStack) + 1;
-        if (matchedStack === virtualStackNum && c.size === '40ft') return true;
+        if (matchedStack === adjacentStack && c.size === '40ft') return true;
       }
 
       return false;
