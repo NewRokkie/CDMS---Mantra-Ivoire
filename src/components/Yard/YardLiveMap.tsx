@@ -46,35 +46,36 @@ const generateMockContainers = (): Container[] => {
     { id: 'c6', number: 'MSCU2345680', type: 'open_top', size: '20ft', status: 'maintenance', location: 'S03-R3-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c7', number: 'MSCU2345681', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c8', number: 'MSCU2345682', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c9', number: 'MSCU2345683', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R4-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
 
     // Zone A - Stack 5 (20ft)
-    { id: 'c9', number: 'CMDU3456789', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c10', number: 'CMDU3456790', type: 'hi_cube', size: '20ft', status: 'in_depot', location: 'S05-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c11', number: 'CMDU3456791', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c12', number: 'CMDU3456792', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', damage: ['Minor dent'], createdBy: 'System', gateInDate: new Date() },
+    { id: 'c10', number: 'CMDU3456789', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c11', number: 'CMDU3456790', type: 'hi_cube', size: '20ft', status: 'in_depot', location: 'S05-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c12', number: 'CMDU3456791', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c13', number: 'CMDU3456792', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', damage: ['Minor dent'], createdBy: 'System', gateInDate: new Date() },
 
     // Zone B - Stack 33 (20ft)
-    { id: 'c13', number: 'HLCU4567890', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c14', number: 'HLCU4567891', type: 'reefer', size: '20ft', status: 'in_depot', location: 'S33-R2-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c15', number: 'HLCU4567892', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R3-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c16', number: 'HLCU4567893', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c17', number: 'HLCU4567894', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R2-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c14', number: 'HLCU4567890', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c15', number: 'HLCU4567891', type: 'reefer', size: '20ft', status: 'in_depot', location: 'S33-R2-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c16', number: 'HLCU4567892', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R3-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c17', number: 'HLCU4567893', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c18', number: 'HLCU4567894', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R2-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
 
     // Zone B - Stack 35 (20ft)
-    { id: 'c18', number: 'ONEY5678901', type: 'standard', size: '20ft', status: 'in_depot', location: 'S35-R1-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c19', number: 'ONEY5678902', type: 'standard', size: '20ft', status: 'in_depot', location: 'S35-R2-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c19', number: 'ONEY5678901', type: 'standard', size: '20ft', status: 'in_depot', location: 'S35-R1-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c20', number: 'ONEY5678902', type: 'standard', size: '20ft', status: 'in_depot', location: 'S35-R2-H1', client: 'ONE', clientCode: 'ONEY', createdBy: 'System', gateInDate: new Date() },
 
     // Zone C - Stack 61 (20ft)
-    { id: 'c20', number: 'EGLV6789012', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R1-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c21', number: 'EGLV6789013', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R2-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c22', number: 'EGLV6789014', type: 'flat_rack', size: '20ft', status: 'in_depot', location: 'S61-R3-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c23', number: 'EGLV6789015', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R4-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c24', number: 'EGLV6789016', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R5-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c25', number: 'EGLV6789017', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R6-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c21', number: 'EGLV6789012', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R1-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c22', number: 'EGLV6789013', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R2-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c23', number: 'EGLV6789014', type: 'flat_rack', size: '20ft', status: 'in_depot', location: 'S61-R3-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c24', number: 'EGLV6789015', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R4-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c25', number: 'EGLV6789016', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R5-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c26', number: 'EGLV6789017', type: 'standard', size: '20ft', status: 'in_depot', location: 'S61-R6-H1', client: 'Evergreen', clientCode: 'EGLV', createdBy: 'System', gateInDate: new Date() },
 
     // Zone C - Stack 101 (20ft, special - 1 row only)
-    { id: 'c26', number: 'YMLU7890123', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H1', client: 'Yang Ming', clientCode: 'YMLU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c27', number: 'YMLU7890124', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H2', client: 'Yang Ming', clientCode: 'YMLU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c27', number: 'YMLU7890123', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H1', client: 'Yang Ming', clientCode: 'YMLU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c28', number: 'YMLU7890124', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H2', client: 'Yang Ming', clientCode: 'YMLU', createdBy: 'System', gateInDate: new Date() },
   ];
 
   return mockContainers;
@@ -149,22 +150,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   // Validate container number format
   const validateContainerInput = (input: string): string => {
-    // Remove any existing hyphens
     let cleaned = input.replace(/-/g, '').toUpperCase();
-
-    // Limit to 11 characters max (4 letters + 7 numbers)
     cleaned = cleaned.substring(0, 11);
-
-    // Ensure first 4 characters are letters only
     const letters = cleaned.substring(0, 4).replace(/[^A-Z]/g, '');
-
-    // Ensure remaining characters are numbers only
     const numbers = cleaned.substring(4).replace(/[^0-9]/g, '');
-
     return letters + numbers;
   };
 
-  // Handle search input with validation
   const handleSearchChange = (value: string) => {
     const validated = validateContainerInput(value);
     setSearchTerm(validated);
@@ -259,9 +251,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     const allStacks: StackVisualization[] = [];
 
     yard.sections.forEach((section, sectionIndex) => {
-      // Filter by zone if selected
       if (selectedZone !== 'all' && section.id !== selectedZone) {
-        return; // Skip this section
+        return;
       }
 
       const zoneName = `Zone ${String.fromCharCode(65 + sectionIndex)}`;
@@ -290,7 +281,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             tier,
             status,
             client: c.client,
-            transporter: 'Swift Transport', // Mock transporter
+            transporter: 'Swift Transport',
             containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
           };
         });
@@ -336,15 +327,16 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     setSelectedContainer(null);
   };
 
-  const getSlotColor = (slot: ContainerSlot, isHighlighted: boolean) => {
+  const getSlotColor = (slot: ContainerSlot | null, isHighlighted: boolean, is40ft: boolean = false) => {
+    if (!slot) return is40ft ? 'bg-green-100 border-green-300' : 'bg-green-100 border-green-300';
     if (isHighlighted) return 'bg-yellow-400 border-yellow-600 animate-pulse';
     if (selectedContainer?.id === slot.containerId) return 'bg-yellow-400 border-yellow-600';
 
     switch (slot.status) {
-      case 'occupied': return 'bg-blue-500 border-blue-600';
-      case 'priority': return 'bg-orange-500 border-orange-600';
+      case 'occupied': return is40ft ? 'bg-orange-400 border-orange-600' : 'bg-blue-500 border-blue-600';
+      case 'priority': return 'bg-purple-500 border-purple-600';
       case 'damaged': return 'bg-red-500 border-red-600';
-      default: return 'bg-blue-500 border-blue-600';
+      default: return is40ft ? 'bg-orange-400 border-orange-600' : 'bg-blue-500 border-blue-600';
     }
   };
 
@@ -357,94 +349,86 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const renderStackSlots = (stackViz: StackVisualization) => {
     const { stack, containerSize, isSpecialStack, containerSlots } = stackViz;
 
-    // Group containers by row to show as single slots
-    const rowSlots = new Map<number, ContainerSlot | null>();
-
-    // Initialize all rows as empty
-    for (let row = 1; row <= stack.rows; row++) {
-      rowSlots.set(row, null);
-    }
-
-    // Fill with actual containers (use the lowest height container for each row)
-    containerSlots.forEach(slot => {
-      const existing = rowSlots.get(slot.row);
-      if (!existing || slot.tier < existing.tier) {
-        rowSlots.set(slot.row, slot);
-      }
-    });
-
     if (isSpecialStack || containerSize === '20ft') {
+      // Create vertical columns, one for each row
       return (
-        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${stack.rows}, minmax(0, 1fr))` }}>
-          {Array.from(rowSlots.entries()).map(([row, slot]) => {
-            const isHighlighted = slot && slot.containerId === highlightedContainer;
-            const containerCount = containerSlots.filter(s => s.row === row).length;
+        <div className="flex gap-1" style={{ height: '120px' }}>
+          {Array.from({ length: stack.rows }, (_, rowIndex) => {
+            const row = rowIndex + 1;
+            const rowContainers = containerSlots.filter(s => s.row === row).sort((a, b) => a.tier - b.tier);
 
             return (
-              <div
-                key={row}
-                className={`aspect-square rounded border-2 transition-all cursor-pointer hover:scale-110 relative ${
-                  slot
-                    ? getSlotColor(slot, isHighlighted || false)
-                    : 'bg-gray-200 border-gray-300'
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (slot) handleSlotClick(slot);
-                }}
-                title={slot ? `${slot.containerNumber} - ${containerSize}` : `Empty - R${row}`}
-              >
-                {containerCount > 1 && (
-                  <div className="absolute top-0 right-0 bg-white text-xs font-bold px-1 rounded-bl">
-                    {containerCount}
-                  </div>
-                )}
+              <div key={row} className="flex-1 flex flex-col-reverse gap-0.5">
+                {Array.from({ length: stack.maxTiers }, (_, tierIndex) => {
+                  const tier = tierIndex + 1;
+                  const slot = rowContainers.find(s => s.tier === tier) || null;
+                  const isHighlighted = slot && slot.containerId === highlightedContainer;
+
+                  return (
+                    <div
+                      key={tier}
+                      className={`flex-1 rounded border-2 transition-all cursor-pointer hover:opacity-80 relative ${
+                        getSlotColor(slot, isHighlighted || false, false)
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (slot) handleSlotClick(slot);
+                      }}
+                      title={slot ? `${slot.containerNumber} - R${row} H${tier}` : `Empty - R${row} H${tier}`}
+                    >
+                      {slot && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[8px] font-bold text-white drop-shadow">H{tier}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
         </div>
       );
     } else {
-      // 40ft stacks - show pairs of rows as single wide slots
+      // 40ft stacks - pairs of rows shown as wider columns
       const positions40ft = Math.floor(stack.rows / 2);
-      const positionSlots = new Map<number, ContainerSlot | null>();
-
-      for (let pos = 1; pos <= positions40ft; pos++) {
-        const baseRow = (pos - 1) * 2 + 1;
-        const slot = containerSlots.find(s =>
-          (s.row === baseRow || s.row === baseRow + 1) && s.containerSize === '40ft'
-        );
-        positionSlots.set(pos, slot || null);
-      }
 
       return (
-        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${positions40ft}, minmax(0, 1fr))` }}>
-          {Array.from(positionSlots.entries()).map(([position, slot]) => {
-            const isHighlighted = slot && slot.containerId === highlightedContainer;
+        <div className="flex gap-1" style={{ height: '120px' }}>
+          {Array.from({ length: positions40ft }, (_, posIndex) => {
+            const position = posIndex + 1;
             const baseRow = (position - 1) * 2 + 1;
-            const containerCount = containerSlots.filter(s =>
+            const positionContainers = containerSlots.filter(s =>
               (s.row === baseRow || s.row === baseRow + 1) && s.containerSize === '40ft'
-            ).length;
+            ).sort((a, b) => a.tier - b.tier);
 
             return (
-              <div
-                key={position}
-                className={`aspect-[2/1] rounded border-2 transition-all cursor-pointer hover:scale-105 relative ${
-                  slot
-                    ? getSlotColor(slot, isHighlighted || false)
-                    : 'bg-gray-200 border-gray-300'
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (slot) handleSlotClick(slot);
-                }}
-                title={slot ? `${slot.containerNumber} - 40ft` : `Empty 40ft - Pos${position}`}
-              >
-                {containerCount > 1 && (
-                  <div className="absolute top-0 right-0 bg-white text-xs font-bold px-1 rounded-bl">
-                    {containerCount}
-                  </div>
-                )}
+              <div key={position} className="flex-1 flex flex-col-reverse gap-0.5">
+                {Array.from({ length: stack.maxTiers }, (_, tierIndex) => {
+                  const tier = tierIndex + 1;
+                  const slot = positionContainers.find(s => s.tier === tier) || null;
+                  const isHighlighted = slot && slot.containerId === highlightedContainer;
+
+                  return (
+                    <div
+                      key={tier}
+                      className={`flex-1 rounded border-2 transition-all cursor-pointer hover:opacity-80 relative ${
+                        getSlotColor(slot, isHighlighted || false, true)
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (slot) handleSlotClick(slot);
+                      }}
+                      title={slot ? `${slot.containerNumber} - 40ft - H${tier}` : `Empty 40ft - Pos${position} H${tier}`}
+                    >
+                      {slot && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[8px] font-bold text-white drop-shadow">H{tier}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -476,26 +460,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             <p className="text-sm text-gray-600 mt-1">
               {yard.code} • Capacity: {yard.currentOccupancy}/{yard.totalCapacity} ({stats.occupancyRate.toFixed(1)}%)
             </p>
-          </div>
-
-          <div className="flex items-center gap-3 text-sm">
-            <span className="font-medium text-gray-700">Status:</span>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-blue-500 rounded" />
-              <span>Occupied</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-gray-200 border border-gray-300 rounded" />
-              <span>Empty</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-orange-500 rounded" />
-              <span>Priority</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-500 rounded" />
-              <span>Damaged</span>
-            </div>
           </div>
         </div>
 
@@ -537,6 +501,35 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 <div className="text-2xl font-bold text-red-900 mt-1">{stats.damaged}</div>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
+            </div>
+          </div>
+        </div>
+
+        {/* Color Legend */}
+        <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4 border border-gray-200">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Legend:</span>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-4 bg-green-100 border-2 border-green-300 rounded" />
+                <span className="text-gray-700">Empty</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-4 bg-blue-500 border-2 border-blue-600 rounded" />
+                <span className="text-gray-700">20ft Occupied</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-4 bg-orange-400 border-2 border-orange-600 rounded" />
+                <span className="text-gray-700">40ft Occupied</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-4 bg-purple-500 border-2 border-purple-600 rounded" />
+                <span className="text-gray-700">Maintenance</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-4 bg-red-500 border-2 border-red-600 rounded" />
+                <span className="text-gray-700">Damaged</span>
+              </div>
             </div>
           </div>
         </div>
@@ -844,7 +837,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                         const match = container.location.match(/S\d+-R\d+-H(\d+)/);
                         const height = match ? `H${match[1]}` : '-';
                         const containerType = container.status === 'in_depot' ? 'FULL' : 'EMPTY';
-                        const transporter = 'Swift Transport'; // Mock transporter
+                        const transporter = 'Swift Transport';
 
                         return (
                           <tr
@@ -918,6 +911,3 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     </div>
   );
 };
-
-
-export { YardLiveMap }
