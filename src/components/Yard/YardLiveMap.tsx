@@ -562,8 +562,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       // Include containers from this stack
       if (matchedStack === selectedStack.stackNumber) return true;
 
-      // If this stack is paired for 40ft, also include 40ft containers from the paired stack
-      if (config.containerSize === '40ft' && adjacentStack) {
+      // CRITICAL: If this physical stack is paired for 40ft, include ALL 40ft from the paired stack
+      // This makes S03 and S05 show IDENTICAL container lists
+      if (config.containerSize === '40ft' && adjacentStack && !selectedStack.isVirtual) {
         if (matchedStack === adjacentStack && c.size === '40ft') return true;
       }
 
