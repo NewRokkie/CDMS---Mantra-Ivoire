@@ -370,10 +370,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             // Create virtual stack between the two odd stacks
             const virtualStackNumber = stack.stackNumber + 1;
 
-            // Get ALL 40ft containers from the virtual stack (S04, S08, etc.)
+            // Get ALL 40ft containers from BOTH paired stacks (S03 + S05 = shown in virtual S04)
             const virtual40ftContainers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-              return match && parseInt(match[1]) === virtualStackNumber && c.size === '40ft';
+              const matchedStack = match ? parseInt(match[1]) : null;
+              // Include containers from BOTH paired stacks (S03 and S05)
+              return (matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber) && c.size === '40ft';
             });
 
             const containerSlots: ContainerSlot[] = virtual40ftContainers.map(c => {
@@ -401,9 +403,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             const virtualCapacity = stack.rows * stack.maxTiers;
 
             // S03 shows ONLY containers from virtual stack S04 (no duplication)
-            const stack1Containers = virtual40ftContainers;
-
-            const stack1Slots: ContainerSlot[] = stack1Containers.map(c => {
+            const stack1Slots: ContainerSlot[] = virtual40ftContainers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
               const row = locMatch ? parseInt(locMatch[1]) : 1;
               const tier = locMatch ? parseInt(locMatch[2]) : 1;
@@ -440,11 +440,19 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               maxTiers: stack.maxTiers
             });
 
-            // Add virtual 40ft stack
+            // Add virtual 40ft stack with a pseudo-stack object for clicking
+            const virtualStack = {
+              stackNumber: virtualStackNumber,
+              rows: stack.rows,
+              maxTiers: stack.maxTiers,
+              sectionId: stack.sectionId
+            };
+
             allStacks.push({
               stackNumber: virtualStackNumber,
               isVirtual: true,
               pairedWith: config.pairedWith,
+              stack: virtualStack as any,
               section,
               zoneName,
               containerSize: '40ft',
@@ -457,9 +465,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             });
 
             // S05 shows ONLY containers from virtual stack S04 (same as S03)
-            const stack2Containers = virtual40ftContainers;
-
-            const stack2Slots: ContainerSlot[] = stack2Containers.map(c => {
+            const stack2Slots: ContainerSlot[] = virtual40ftContainers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
               const row = locMatch ? parseInt(locMatch[1]) : 1;
               const tier = locMatch ? parseInt(locMatch[2]) : 1;
@@ -559,14 +565,25 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     const config = getStackConfiguration(selectedStack.stackNumber);
     const adjacentStack = getAdjacentStackNumber(selectedStack.stackNumber);
 
+    // If this is a virtual stack, show containers from BOTH paired physical stacks
+    if (selectedStack.isVirtual && selectedStack.pairedWith) {
+      return filteredContainers.filter(c => {
+        const match = c.location.match(/S(\d+)-R\d+-H\d+/);
+        const matchedStack = match ? parseInt(match[1]) : null;
+        // Virtual stack (S04) shows containers from S03 and S05
+        const stack1 = selectedStack.stackNumber - 1; // S03
+        const stack2 = selectedStack.pairedWith; // S05
+        return (matchedStack === stack1 || matchedStack === stack2) && c.size === '40ft';
+      });
+    }
+
     return filteredContainers.filter(c => {
       const match = c.location.match(/S(\d+)-R\d+-H\d+/);
       const matchedStack = match ? parseInt(match[1]) : null;
 
-      // For physical stacks paired for 40ft: show containers from the VIRTUAL stack
+      // For physical stacks paired for 40ft (S03, S05): show containers from BOTH stacks
       if (config.containerSize === '40ft' && adjacentStack && !selectedStack.isVirtual) {
-        const virtualStackNum = Math.min(selectedStack.stackNumber, adjacentStack) + 1;
-        return matchedStack === virtualStackNum && c.size === '40ft';
+        return (matchedStack === selectedStack.stackNumber || matchedStack === adjacentStack) && c.size === '40ft';
       }
 
       // Regular stacks: show only their own containers
@@ -834,7 +851,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               ? `S${stackViz.stackNumber.toString().padStart(2, '0')} (Virtual)`
               : `S${stackViz.stackNumber.toString().padStart(2, '0')}`;
 
-            // Render virtual stacks as orange circles
+            // Render virtual stacks as orange circles with connection lines
             if (stackViz.isVirtual) {
               return (
                 <div
@@ -842,27 +859,30 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                   ref={(el) => {
                     if (el) stackRefs.current.set(stackViz.stackNumber, el);
                   }}
-                  className="flex items-center justify-center relative"
-                  style={{ gridColumn: 'span 1' }}
+                  className="flex items-center justify-center relative py-4"
+                  style={{ gridColumn: 'span 1', minHeight: '200px' }}
                 >
-                  <div className="relative">
-                    {/* Connection lines */}
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ left: '-50%', width: '200%', top: '0', height: '100%' }}>
-                      {/* Left line to S03 */}
-                      <line x1="25%" y1="50%" x2="50%" y2="50%" stroke="#fb923c" strokeWidth="3" strokeDasharray="5,5" />
-                      {/* Right line to S05 */}
-                      <line x1="50%" y1="50%" x2="75%" y2="50%" stroke="#fb923c" strokeWidth="3" strokeDasharray="5,5" />
-                    </svg>
-
-                    {/* Orange circle */}
-                    <div
-                      className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 border-4 border-orange-600 shadow-lg cursor-pointer hover:scale-110 transition-transform flex flex-col items-center justify-center relative z-10"
-                      onClick={() => handleStackClick(stackViz)}
-                    >
-                      <span className="text-white font-bold text-xl">S{stackViz.stackNumber.toString().padStart(2, '0')}</span>
-                      <span className="text-white text-xs font-medium mt-1">{stackViz.containerSize}</span>
-                      <span className="text-white text-[10px] mt-0.5">{stackViz.currentOccupancy}/{stackViz.capacity}</span>
+                  {/* Connection lines using pseudo-elements and borders */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    {/* Left line */}
+                    <div className="absolute left-0 top-1/2 w-1/3 h-0.5 bg-gradient-to-r from-orange-400 to-orange-500" style={{ transform: 'translateY(-50%)' }}>
+                      <div className="absolute inset-0 bg-orange-500 opacity-30 animate-pulse"></div>
                     </div>
+                    {/* Right line */}
+                    <div className="absolute right-0 top-1/2 w-1/3 h-0.5 bg-gradient-to-l from-orange-400 to-orange-500" style={{ transform: 'translateY(-50%)' }}>
+                      <div className="absolute inset-0 bg-orange-500 opacity-30 animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* Orange circle */}
+                  <div
+                    className="w-28 h-28 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 border-4 border-orange-700 shadow-xl cursor-pointer hover:scale-110 transition-all flex flex-col items-center justify-center relative z-10"
+                    onClick={() => handleStackClick(stackViz)}
+                    title={`Click to view ${stackViz.currentOccupancy} containers`}
+                  >
+                    <span className="text-white font-bold text-2xl">S{stackViz.stackNumber.toString().padStart(2, '0')}</span>
+                    <span className="text-white text-xs font-medium mt-1 opacity-90">{stackViz.containerSize}</span>
+                    <span className="text-white text-xs mt-0.5 font-semibold">{stackViz.currentOccupancy}/{stackViz.capacity}</span>
                   </div>
                 </div>
               );
