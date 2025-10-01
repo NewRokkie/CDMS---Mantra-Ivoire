@@ -370,7 +370,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             // Create virtual stack between the two odd stacks
             const virtualStackNumber = stack.stackNumber + 1;
 
-            // Get 40ft containers assigned to this virtual stack
+            // Get ALL 40ft containers from the virtual stack (S04, S08, etc.)
             const virtual40ftContainers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
               return match && parseInt(match[1]) === virtualStackNumber && c.size === '40ft';
@@ -400,13 +400,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
             const virtualCapacity = stack.rows * stack.maxTiers;
 
-            // Add the first odd stack - Include ALL 40ft from BOTH paired stacks
-            // This makes S03 and S05 show the same containers
-            const stack1Containers = filteredContainers.filter(c => {
-              const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-              const matchedStack = match ? parseInt(match[1]) : null;
-              return (matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber) && c.size === '40ft';
-            });
+            // S03 shows ONLY containers from virtual stack S04 (no duplication)
+            const stack1Containers = virtual40ftContainers;
 
             const stack1Slots: ContainerSlot[] = stack1Containers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
@@ -461,13 +456,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               maxTiers: stack.maxTiers
             });
 
-            // Add the second odd stack - Include ALL 40ft from BOTH paired stacks
-            // This makes S03 and S05 show the same containers
-            const stack2Containers = filteredContainers.filter(c => {
-              const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-              const matchedStack = match ? parseInt(match[1]) : null;
-              return (matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber) && c.size === '40ft';
-            });
+            // S05 shows ONLY containers from virtual stack S04 (same as S03)
+            const stack2Containers = virtual40ftContainers;
 
             const stack2Slots: ContainerSlot[] = stack2Containers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
@@ -573,16 +563,14 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       const match = c.location.match(/S(\d+)-R\d+-H\d+/);
       const matchedStack = match ? parseInt(match[1]) : null;
 
-      // Include containers from this stack
-      if (matchedStack === selectedStack.stackNumber) return true;
-
-      // CRITICAL: If this physical stack is paired for 40ft, include ALL 40ft from the paired stack
-      // This makes S03 and S05 show IDENTICAL container lists
+      // For physical stacks paired for 40ft: show containers from the VIRTUAL stack
       if (config.containerSize === '40ft' && adjacentStack && !selectedStack.isVirtual) {
-        if (matchedStack === adjacentStack && c.size === '40ft') return true;
+        const virtualStackNum = Math.min(selectedStack.stackNumber, adjacentStack) + 1;
+        return matchedStack === virtualStackNum && c.size === '40ft';
       }
 
-      return false;
+      // Regular stacks: show only their own containers
+      return matchedStack === selectedStack.stackNumber;
     });
   }, [selectedStack, filteredContainers]);
 
@@ -846,22 +834,55 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               ? `S${stackViz.stackNumber.toString().padStart(2, '0')} (Virtual)`
               : `S${stackViz.stackNumber.toString().padStart(2, '0')}`;
 
+            // Render virtual stacks as orange circles
+            if (stackViz.isVirtual) {
+              return (
+                <div
+                  key={`${stackViz.stackNumber}-virtual`}
+                  ref={(el) => {
+                    if (el) stackRefs.current.set(stackViz.stackNumber, el);
+                  }}
+                  className="flex items-center justify-center relative"
+                  style={{ gridColumn: 'span 1' }}
+                >
+                  <div className="relative">
+                    {/* Connection lines */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ left: '-50%', width: '200%', top: '0', height: '100%' }}>
+                      {/* Left line to S03 */}
+                      <line x1="25%" y1="50%" x2="50%" y2="50%" stroke="#fb923c" strokeWidth="3" strokeDasharray="5,5" />
+                      {/* Right line to S05 */}
+                      <line x1="50%" y1="50%" x2="75%" y2="50%" stroke="#fb923c" strokeWidth="3" strokeDasharray="5,5" />
+                    </svg>
+
+                    {/* Orange circle */}
+                    <div
+                      className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 border-4 border-orange-600 shadow-lg cursor-pointer hover:scale-110 transition-transform flex flex-col items-center justify-center relative z-10"
+                      onClick={() => handleStackClick(stackViz)}
+                    >
+                      <span className="text-white font-bold text-xl">S{stackViz.stackNumber.toString().padStart(2, '0')}</span>
+                      <span className="text-white text-xs font-medium mt-1">{stackViz.containerSize}</span>
+                      <span className="text-white text-[10px] mt-0.5">{stackViz.currentOccupancy}/{stackViz.capacity}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Render regular stacks normally
             return (
               <div
-                key={`${stackViz.stackNumber}-${stackViz.isVirtual ? 'virtual' : 'physical'}`}
+                key={`${stackViz.stackNumber}-physical`}
                 ref={(el) => {
                   if (el) stackRefs.current.set(stackViz.stackNumber, el);
                 }}
-                className={`bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer ${
-                  stackViz.isVirtual ? 'border-orange-300 bg-orange-50/30' : 'border-gray-200 hover:border-blue-400'
-                }`}
+                className="bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer border-gray-200 hover:border-blue-400"
                 onClick={() => handleStackClick(stackViz)}
               >
                 <div
                   className="px-3 py-2 border-b"
                   style={{
-                    backgroundColor: stackViz.isVirtual ? '#fed7aa20' : `${stackViz.section.color}15`,
-                    borderColor: stackViz.isVirtual ? '#fb923c' : stackViz.section.color
+                    backgroundColor: `${stackViz.section.color}15`,
+                    borderColor: stackViz.section.color
                   }}
                 >
                   <div className="flex items-center justify-between mb-1">
