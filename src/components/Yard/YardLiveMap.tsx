@@ -196,6 +196,10 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       return { containerSize: '20ft', isSpecialStack: true };
     }
 
+    // Default 40ft configuration for demo stacks
+    const DEFAULT_40FT_STACKS = [3, 5, 7, 9];
+    const is40ftDefault = DEFAULT_40FT_STACKS.includes(stackNumber);
+
     const storedConfig = localStorage.getItem(`stack-config-${stackNumber}`);
     if (storedConfig) {
       const config = JSON.parse(storedConfig);
@@ -213,6 +217,16 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       return {
         containerSize,
         isSpecialStack: config.isSpecialStack || false
+      };
+    }
+
+    // If no config and this is a default 40ft stack, configure it as 40ft
+    if (is40ftDefault) {
+      const pairedWith = getAdjacentStackNumber(stackNumber);
+      return {
+        containerSize: '40ft',
+        isSpecialStack: false,
+        pairedWith: pairedWith || undefined
       };
     }
 
@@ -386,12 +400,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
             const virtualCapacity = stack.rows * stack.maxTiers;
 
-            // Add the first odd stack - ONLY containers from this specific stack
-            // When configured as 40ft, it will only have 40ft containers directly on this stack
+            // Add the first odd stack - Include ALL 40ft from BOTH paired stacks
+            // This makes S03 and S05 show the same containers
             const stack1Containers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
               const matchedStack = match ? parseInt(match[1]) : null;
-              return matchedStack === stack.stackNumber;
+              return (matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber) && c.size === '40ft';
             });
 
             const stack1Slots: ContainerSlot[] = stack1Containers.map(c => {
@@ -447,12 +461,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               maxTiers: stack.maxTiers
             });
 
-            // Add the second odd stack - ONLY containers from this specific stack
-            // When configured as 40ft, it will only have 40ft containers directly on this stack
+            // Add the second odd stack - Include ALL 40ft from BOTH paired stacks
+            // This makes S03 and S05 show the same containers
             const stack2Containers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
               const matchedStack = match ? parseInt(match[1]) : null;
-              return matchedStack === nextOddStack.stackNumber;
+              return (matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber) && c.size === '40ft';
             });
 
             const stack2Slots: ContainerSlot[] = stack2Containers.map(c => {
@@ -1089,7 +1103,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                               </span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="font-mono text-xs text-gray-900 font-medium">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700 font-mono">
                                 {locationId}
                               </span>
                             </td>
