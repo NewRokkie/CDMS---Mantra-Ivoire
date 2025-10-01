@@ -32,7 +32,6 @@ interface StackVisualization {
   capacity: number;
 }
 
-// Add comprehensive mock container data for testing
 const generateMockContainers = (): Container[] => {
   const mockContainers: Container[] = [
     // Zone A - Stack 1 (20ft, special)
@@ -40,19 +39,25 @@ const generateMockContainers = (): Container[] => {
     { id: 'c2', number: 'MAEU1234568', type: 'standard', size: '20ft', status: 'in_depot', location: 'S01-R1-H2', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c3', number: 'MAEU1234569', type: 'reefer', size: '20ft', status: 'in_depot', location: 'S01-R1-H3', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
 
-    // Zone A - Stack 3 (20ft)
+    // Zone A - Stack 3 (20ft) - More containers for testing
     { id: 'c4', number: 'MSCU2345678', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c5', number: 'MSCU2345679', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c6', number: 'MSCU2345680', type: 'open_top', size: '20ft', status: 'maintenance', location: 'S03-R3-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c7', number: 'MSCU2345681', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c8', number: 'MSCU2345682', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H2', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c9', number: 'MSCU2345683', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R4-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c30', number: 'MSCU2345690', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H3', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c31', number: 'MSCU2345691', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H3', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
 
-    // Zone A - Stack 5 (20ft)
+    // Zone A - Stack 5 (20ft) - with pairing test for 40ft
     { id: 'c10', number: 'CMDU3456789', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c11', number: 'CMDU3456790', type: 'hi_cube', size: '20ft', status: 'in_depot', location: 'S05-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c12', number: 'CMDU3456791', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c13', number: 'CMDU3456792', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', damage: ['Minor dent'], createdBy: 'System', gateInDate: new Date() },
+
+    // Zone B - Stack 4 (40ft paired) - Add 40ft containers
+    { id: 'c32', number: 'HLBU5000001', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c33', number: 'HLBU5000002', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
 
     // Zone B - Stack 33 (20ft)
     { id: 'c14', number: 'HLCU4567890', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
@@ -93,21 +98,15 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const [showSuggestions, setShowSuggestions] = useState(false);
   const stackRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  // Merge prop containers with mock containers for testing
   const allContainers = useMemo(() => {
     const mockContainers = generateMockContainers();
     const containerMap = new Map<string, Container>();
-
-    // Add prop containers first
     propContainers.forEach(c => containerMap.set(c.id, c));
-
-    // Add mock containers (won't override existing)
     mockContainers.forEach(c => {
       if (!containerMap.has(c.id)) {
         containerMap.set(c.id, c);
       }
     });
-
     return Array.from(containerMap.values());
   }, [propContainers]);
 
@@ -148,7 +147,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     return { containerSize: isOdd ? '20ft' : '40ft', isSpecialStack: false };
   };
 
-  // Validate container number format
   const validateContainerInput = (input: string): string => {
     let cleaned = input.replace(/-/g, '').toUpperCase();
     cleaned = cleaned.substring(0, 11);
@@ -224,7 +222,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   const scrollToContainer = () => {
     if (!searchedContainer) return;
-
     const match = searchedContainer.location.match(/S(\d+)-R\d+-H\d+/);
     if (match) {
       const stackNumber = parseInt(match[1]);
@@ -314,11 +311,17 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     });
   }, [selectedStack, filteredContainers]);
 
-  const handleSlotClick = (slot: ContainerSlot) => {
-    const container = allContainers.find(c => c.id === slot.containerId);
-    if (container) {
-      setSelectedContainer(container);
-      setSelectedStack(null);
+  const handleRowClick = (stackViz: StackVisualization, row: number) => {
+    const rowContainers = stackViz.containerSlots.filter(s => s.row === row);
+    if (rowContainers.length === 1) {
+      const container = allContainers.find(c => c.id === rowContainers[0].containerId);
+      if (container) {
+        setSelectedContainer(container);
+        setSelectedStack(null);
+      }
+    } else if (rowContainers.length > 1) {
+      setSelectedStack(stackViz.stack);
+      setSelectedContainer(null);
     }
   };
 
@@ -327,108 +330,97 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     setSelectedContainer(null);
   };
 
-  const getSlotColor = (slot: ContainerSlot | null, isHighlighted: boolean, is40ft: boolean = false) => {
-    if (!slot) return is40ft ? 'bg-green-100 border-green-300' : 'bg-green-100 border-green-300';
-    if (isHighlighted) return 'bg-yellow-400 border-yellow-600 animate-pulse';
-    if (selectedContainer?.id === slot.containerId) return 'bg-yellow-400 border-yellow-600';
-
-    switch (slot.status) {
-      case 'occupied': return is40ft ? 'bg-orange-400 border-orange-600' : 'bg-blue-500 border-blue-600';
-      case 'priority': return 'bg-purple-500 border-purple-600';
-      case 'damaged': return 'bg-red-500 border-red-600';
-      default: return is40ft ? 'bg-orange-400 border-orange-600' : 'bg-blue-500 border-blue-600';
-    }
-  };
-
   const getProgressBarColor = (percentage: number) => {
     if (percentage >= 80) return 'bg-red-500';
     if (percentage >= 50) return 'bg-orange-500';
     return 'bg-green-500';
   };
 
-  const renderStackSlots = (stackViz: StackVisualization) => {
+  const renderStackRows = (stackViz: StackVisualization) => {
     const { stack, containerSize, isSpecialStack, containerSlots } = stackViz;
 
     if (isSpecialStack || containerSize === '20ft') {
-      // Create vertical columns, one for each row
+      // 20ft stacks - each row shown individually
       return (
-        <div className="flex gap-1" style={{ height: '120px' }}>
+        <div className="flex flex-col gap-1">
           {Array.from({ length: stack.rows }, (_, rowIndex) => {
             const row = rowIndex + 1;
-            const rowContainers = containerSlots.filter(s => s.row === row).sort((a, b) => a.tier - b.tier);
+            const rowContainers = containerSlots.filter(s => s.row === row);
+            const count = rowContainers.length;
+            const hasContainer = count > 0;
+            const hasDamaged = rowContainers.some(s => s.status === 'damaged');
+            const hasPriority = rowContainers.some(s => s.status === 'priority');
+
+            let bgColor = 'bg-green-100 border-green-300';
+            if (hasContainer) {
+              if (hasDamaged) bgColor = 'bg-red-500 border-red-600';
+              else if (hasPriority) bgColor = 'bg-purple-500 border-purple-600';
+              else bgColor = 'bg-blue-500 border-blue-600';
+            }
 
             return (
-              <div key={row} className="flex-1 flex flex-col-reverse gap-0.5">
-                {Array.from({ length: stack.maxTiers }, (_, tierIndex) => {
-                  const tier = tierIndex + 1;
-                  const slot = rowContainers.find(s => s.tier === tier) || null;
-                  const isHighlighted = slot && slot.containerId === highlightedContainer;
-
-                  return (
-                    <div
-                      key={tier}
-                      className={`flex-1 rounded border-2 transition-all cursor-pointer hover:opacity-80 relative ${
-                        getSlotColor(slot, isHighlighted || false, false)
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (slot) handleSlotClick(slot);
-                      }}
-                      title={slot ? `${slot.containerNumber} - R${row} H${tier}` : `Empty - R${row} H${tier}`}
-                    >
-                      {slot && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-[8px] font-bold text-white drop-shadow">H{tier}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              <div
+                key={row}
+                className={`h-8 rounded-lg border-2 transition-all cursor-pointer hover:opacity-80 flex items-center justify-center ${bgColor}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRowClick(stackViz, row);
+                }}
+                title={hasContainer ? `Row ${row} - ${count} container(s)` : `Row ${row} - Empty`}
+              >
+                <span className={`text-sm font-bold ${hasContainer ? 'text-white' : 'text-gray-500'}`}>
+                  {hasContainer ? count : 0}
+                </span>
               </div>
             );
           })}
         </div>
       );
     } else {
-      // 40ft stacks - pairs of rows shown as wider columns
+      // 40ft stacks - paired rows
       const positions40ft = Math.floor(stack.rows / 2);
 
       return (
-        <div className="flex gap-1" style={{ height: '120px' }}>
+        <div className="flex flex-col gap-1">
           {Array.from({ length: positions40ft }, (_, posIndex) => {
             const position = posIndex + 1;
             const baseRow = (position - 1) * 2 + 1;
-            const positionContainers = containerSlots.filter(s =>
-              (s.row === baseRow || s.row === baseRow + 1) && s.containerSize === '40ft'
-            ).sort((a, b) => a.tier - b.tier);
+            const row1 = baseRow;
+            const row2 = baseRow + 1;
+
+            const row1Containers = containerSlots.filter(s => s.row === row1 && s.containerSize === '40ft');
+            const row2Containers = containerSlots.filter(s => s.row === row2 && s.containerSize === '40ft');
+
+            const totalCount = row1Containers.length + row2Containers.length;
+            const hasContainer = totalCount > 0;
+            const hasDamaged = [...row1Containers, ...row2Containers].some(s => s.status === 'damaged');
+            const hasPriority = [...row1Containers, ...row2Containers].some(s => s.status === 'priority');
+
+            let bgColor = 'bg-green-100 border-green-300';
+            if (hasContainer) {
+              if (hasDamaged) bgColor = 'bg-red-500 border-red-600';
+              else if (hasPriority) bgColor = 'bg-purple-500 border-purple-600';
+              else bgColor = 'bg-orange-400 border-orange-600';
+            }
 
             return (
-              <div key={position} className="flex-1 flex flex-col-reverse gap-0.5">
-                {Array.from({ length: stack.maxTiers }, (_, tierIndex) => {
-                  const tier = tierIndex + 1;
-                  const slot = positionContainers.find(s => s.tier === tier) || null;
-                  const isHighlighted = slot && slot.containerId === highlightedContainer;
-
-                  return (
-                    <div
-                      key={tier}
-                      className={`flex-1 rounded border-2 transition-all cursor-pointer hover:opacity-80 relative ${
-                        getSlotColor(slot, isHighlighted || false, true)
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (slot) handleSlotClick(slot);
-                      }}
-                      title={slot ? `${slot.containerNumber} - 40ft - H${tier}` : `Empty 40ft - Pos${position} H${tier}`}
-                    >
-                      {slot && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-[8px] font-bold text-white drop-shadow">H{tier}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              <div
+                key={position}
+                className={`h-8 rounded-lg border-2 transition-all cursor-pointer hover:opacity-80 flex items-center justify-center relative ${bgColor}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRowClick(stackViz, row1);
+                }}
+                title={hasContainer ? `Row ${row1}+${row2} (40ft) - ${totalCount} container(s)` : `Row ${row1}+${row2} (40ft) - Empty`}
+              >
+                {hasContainer && (
+                  <div className="absolute top-0 right-0 bg-orange-600 text-white text-[9px] px-1 rounded-bl font-bold">
+                    40ft
+                  </div>
+                )}
+                <span className={`text-sm font-bold ${hasContainer ? 'text-white' : 'text-gray-500'}`}>
+                  {hasContainer ? totalCount : 0}
+                </span>
               </div>
             );
           })}
@@ -505,7 +497,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           </div>
         </div>
 
-        {/* Color Legend */}
         <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Legend:</span>
@@ -619,7 +610,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
           {stacksData.map((stackViz) => {
             const occupancyPercent = (stackViz.currentOccupancy / stackViz.capacity) * 100;
-            const hasHighlightedContainer = stackViz.containerSlots.some(slot => slot.containerId === highlightedContainer);
 
             return (
               <div
@@ -627,11 +617,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 ref={(el) => {
                   if (el) stackRefs.current.set(stackViz.stack.stackNumber, el);
                 }}
-                className={`bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer ${
-                  hasHighlightedContainer
-                    ? 'border-yellow-500 shadow-lg ring-2 ring-yellow-300'
-                    : 'border-gray-200 hover:border-blue-400'
-                }`}
+                className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all overflow-hidden cursor-pointer"
                 onClick={() => handleStackClick(stackViz)}
               >
                 <div
@@ -641,7 +627,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-base">S{stackViz.stack.stackNumber.toString().padStart(2, '0')}</span>
                     <span className={`text-xs px-2 py-0.5 rounded ${
-                      stackViz.containerSize === '40ft' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+                      stackViz.containerSize === '40ft' ? 'bg-orange-100 text-orange-700 font-medium' : 'bg-blue-100 text-blue-700 font-medium'
                     }`}>
                       {stackViz.containerSize}
                     </span>
@@ -658,7 +644,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 </div>
 
                 <div className="p-3">
-                  {renderStackSlots(stackViz)}
+                  {renderStackRows(stackViz)}
                 </div>
               </div>
             );
@@ -809,27 +795,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Container Number
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Client Name
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Transporter Name
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Container Size
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Design
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Height
-                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Container Number</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transporter Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Container Size</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Design</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Height</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -849,13 +821,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                             }}
                           >
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <div className="font-mono text-sm font-medium text-gray-900">
-                                {container.number}
-                              </div>
+                              <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {container.client}
-                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{container.client}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                               <div className="flex items-center">
                                 <Truck className="h-4 w-4 mr-1 text-gray-400" />
