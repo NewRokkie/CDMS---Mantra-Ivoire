@@ -382,10 +382,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
             const virtualCapacity = stack.rows * stack.maxTiers;
 
-            // Add the first odd stack (20ft)
+            // Add the first odd stack (20ft + 40ft containers from virtual stack)
             const stack1Containers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-              return match && parseInt(match[1]) === stack.stackNumber && c.size === '20ft';
+              const matchedStack = match ? parseInt(match[1]) : null;
+              // Include 20ft from this stack OR 40ft from the virtual stack between this and partner
+              return (matchedStack === stack.stackNumber && c.size === '20ft') ||
+                     (matchedStack === virtualStackNumber && c.size === '40ft');
             });
 
             const stack1Slots: ContainerSlot[] = stack1Containers.map(c => {
@@ -441,10 +444,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               maxTiers: stack.maxTiers
             });
 
-            // Add the second odd stack (20ft)
+            // Add the second odd stack (20ft + 40ft containers from virtual stack)
             const stack2Containers = filteredContainers.filter(c => {
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-              return match && parseInt(match[1]) === nextOddStack.stackNumber && c.size === '20ft';
+              const matchedStack = match ? parseInt(match[1]) : null;
+              // Include 20ft from this stack OR 40ft from the virtual stack between partner and this
+              return (matchedStack === nextOddStack.stackNumber && c.size === '20ft') ||
+                     (matchedStack === virtualStackNumber && c.size === '40ft');
             });
 
             const stack2Slots: ContainerSlot[] = stack2Containers.map(c => {
@@ -542,9 +548,25 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   const stackContainers = useMemo(() => {
     if (!selectedStack) return [];
+
+    // Check if this stack is part of a 40ft pairing
+    const config = getStackConfiguration(selectedStack.stackNumber);
+    const adjacentStack = getAdjacentStackNumber(selectedStack.stackNumber);
+
     return filteredContainers.filter(c => {
       const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-      return match && parseInt(match[1]) === selectedStack.stackNumber;
+      const matchedStack = match ? parseInt(match[1]) : null;
+
+      // Include containers from this stack
+      if (matchedStack === selectedStack.stackNumber) return true;
+
+      // If this stack is paired for 40ft, also include 40ft containers from the virtual stack
+      if (config.containerSize === '40ft' && adjacentStack) {
+        const virtualStackNum = Math.min(selectedStack.stackNumber, adjacentStack) + 1;
+        if (matchedStack === virtualStackNum && c.size === '40ft') return true;
+      }
+
+      return false;
     });
   }, [selectedStack, filteredContainers]);
 
@@ -1003,13 +1025,18 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Container Size</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Design</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Row</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Height</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location ID</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {stackContainers.map((container) => {
-                        const match = container.location.match(/S\d+-R\d+-H(\d+)/);
-                        const height = match ? `H${match[1]}` : '-';
+                        const locMatch = container.location.match(/S(\d+)-R(\d+)-H(\d+)/);
+                        const stack = locMatch ? locMatch[1] : '-';
+                        const row = locMatch ? `R${locMatch[2]}` : '-';
+                        const height = locMatch ? `H${locMatch[3]}` : '-';
+                        const locationId = locMatch ? `S${locMatch[1].padStart(2, '0')}R${locMatch[2]}H${locMatch[3]}` : container.location;
                         const containerType = container.status === 'in_depot' ? 'FULL' : 'EMPTY';
                         const transporter = 'Swift Transport';
 
@@ -1050,8 +1077,18 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                               {container.type.replace('_', ' ')}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-purple-50 text-purple-700">
+                                {row}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
                               <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-blue-50 text-blue-700">
                                 {height}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="font-mono text-xs text-gray-900 font-medium">
+                                {locationId}
                               </span>
                             </td>
                           </tr>
