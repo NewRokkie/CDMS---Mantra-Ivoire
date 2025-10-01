@@ -22,7 +22,10 @@ interface ContainerSlot {
 }
 
 interface StackVisualization {
-  stack: YardStack;
+  stackNumber: number;
+  isVirtual: boolean;
+  pairedWith?: number;
+  stack?: YardStack;
   section: any;
   zoneName: string;
   containerSize: '20ft' | '40ft';
@@ -30,6 +33,8 @@ interface StackVisualization {
   containerSlots: ContainerSlot[];
   currentOccupancy: number;
   capacity: number;
+  rows: number;
+  maxTiers: number;
 }
 
 const generateMockContainers = (): Container[] => {
@@ -39,7 +44,7 @@ const generateMockContainers = (): Container[] => {
     { id: 'c2', number: 'MAEU1234568', type: 'standard', size: '20ft', status: 'in_depot', location: 'S01-R1-H2', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c3', number: 'MAEU1234569', type: 'reefer', size: '20ft', status: 'in_depot', location: 'S01-R1-H3', client: 'Maersk Line', clientCode: 'MAEU', createdBy: 'System', gateInDate: new Date() },
 
-    // Zone A - Stack 3 (20ft) - More containers for testing
+    // Zone A - Stack 3 (20ft)
     { id: 'c4', number: 'MSCU2345678', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c5', number: 'MSCU2345679', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c6', number: 'MSCU2345680', type: 'open_top', size: '20ft', status: 'maintenance', location: 'S03-R3-H1', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
@@ -49,15 +54,16 @@ const generateMockContainers = (): Container[] => {
     { id: 'c30', number: 'MSCU2345690', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R1-H3', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c31', number: 'MSCU2345691', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R2-H3', client: 'MSC', clientCode: 'MSCU', createdBy: 'System', gateInDate: new Date() },
 
-    // Zone A - Stack 5 (20ft) - with pairing test for 40ft
+    // Add 40ft containers that span S03 and S05 (creating virtual S04)
+    { id: 'c40', number: 'CMAU4000001', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c41', number: 'CMAU4000002', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H2', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+    { id: 'c42', number: 'CMAU4000003', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
+
+    // Zone A - Stack 5 (20ft)
     { id: 'c10', number: 'CMDU3456789', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R1-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c11', number: 'CMDU3456790', type: 'hi_cube', size: '20ft', status: 'in_depot', location: 'S05-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c12', number: 'CMDU3456791', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R3-H1', client: 'CMA CGM', clientCode: 'CMDU', createdBy: 'System', gateInDate: new Date() },
     { id: 'c13', number: 'CMDU3456792', type: 'standard', size: '20ft', status: 'in_depot', location: 'S05-R4-H1', client: 'CMA CGM', clientCode: 'CMDU', damage: ['Minor dent'], createdBy: 'System', gateInDate: new Date() },
-
-    // Zone B - Stack 4 (40ft paired) - Add 40ft containers
-    { id: 'c32', number: 'HLBU5000001', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
-    { id: 'c33', number: 'HLBU5000002', type: 'standard', size: '40ft', status: 'in_depot', location: 'S04-R1-H2', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
 
     // Zone B - Stack 33 (20ft)
     { id: 'c14', number: 'HLCU4567890', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', createdBy: 'System', gateInDate: new Date() },
@@ -128,7 +134,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     });
   }, [yard]);
 
-  const getStackConfiguration = (stackNumber: number): { containerSize: '20ft' | '40ft'; isSpecialStack: boolean } => {
+  const getStackConfiguration = (stackNumber: number): { containerSize: '20ft' | '40ft'; isSpecialStack: boolean; pairedWith?: number } => {
     const isOdd = stackNumber % 2 === 1;
 
     if (stackNumber === 1 || stackNumber === 101 || stackNumber === 103) {
@@ -142,6 +148,18 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         containerSize: config.containerSize === '40feet' ? '40ft' : '20ft',
         isSpecialStack: config.isSpecialStack || false
       };
+    }
+
+    // Check if this odd stack is paired with the next odd stack for 40ft
+    if (isOdd) {
+      const nextOdd = stackNumber + 2;
+      const pairedConfig = localStorage.getItem(`stack-config-${stackNumber}-paired`);
+      if (pairedConfig) {
+        const paired = JSON.parse(pairedConfig);
+        if (paired.is40ft) {
+          return { containerSize: '40ft', isSpecialStack: false, pairedWith: nextOdd };
+        }
+      }
     }
 
     return { containerSize: isOdd ? '20ft' : '40ft', isSpecialStack: false };
@@ -246,6 +264,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     if (!yard) return [];
 
     const allStacks: StackVisualization[] = [];
+    const processedStacks = new Set<number>();
 
     yard.sections.forEach((section, sectionIndex) => {
       if (selectedZone !== 'all' && section.id !== selectedZone) {
@@ -253,9 +272,159 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       }
 
       const zoneName = `Zone ${String.fromCharCode(65 + sectionIndex)}`;
-      section.stacks.forEach(stack => {
+      const sortedStacks = [...section.stacks].sort((a, b) => a.stackNumber - b.stackNumber);
+
+      sortedStacks.forEach(stack => {
+        if (processedStacks.has(stack.stackNumber)) return;
+
         const config = getStackConfiguration(stack.stackNumber);
 
+        // If this is an odd stack configured for 40ft pairing
+        if (config.containerSize === '40ft' && config.pairedWith && stack.stackNumber % 2 === 1) {
+          const nextOddStack = sortedStacks.find(s => s.stackNumber === config.pairedWith);
+          if (nextOddStack) {
+            // Create virtual stack between the two odd stacks
+            const virtualStackNumber = stack.stackNumber + 1;
+
+            // Get 40ft containers assigned to this virtual stack
+            const virtual40ftContainers = filteredContainers.filter(c => {
+              const match = c.location.match(/S(\d+)-R\d+-H\d+/);
+              return match && parseInt(match[1]) === virtualStackNumber && c.size === '40ft';
+            });
+
+            const containerSlots: ContainerSlot[] = virtual40ftContainers.map(c => {
+              const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
+              const row = locMatch ? parseInt(locMatch[1]) : 1;
+              const tier = locMatch ? parseInt(locMatch[2]) : 1;
+
+              let status: ContainerSlot['status'] = 'occupied';
+              if (c.damage && c.damage.length > 0) status = 'damaged';
+              else if (c.status === 'maintenance') status = 'priority';
+
+              return {
+                containerId: c.id,
+                containerNumber: c.number,
+                containerSize: c.size,
+                row,
+                tier,
+                status,
+                client: c.client,
+                transporter: 'Swift Transport',
+                containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
+              };
+            });
+
+            const virtualCapacity = stack.rows * stack.maxTiers;
+
+            // Add the first odd stack (20ft)
+            const stack1Containers = filteredContainers.filter(c => {
+              const match = c.location.match(/S(\d+)-R\d+-H\d+/);
+              return match && parseInt(match[1]) === stack.stackNumber && c.size === '20ft';
+            });
+
+            const stack1Slots: ContainerSlot[] = stack1Containers.map(c => {
+              const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
+              const row = locMatch ? parseInt(locMatch[1]) : 1;
+              const tier = locMatch ? parseInt(locMatch[2]) : 1;
+
+              let status: ContainerSlot['status'] = 'occupied';
+              if (c.damage && c.damage.length > 0) status = 'damaged';
+              else if (c.status === 'maintenance') status = 'priority';
+
+              return {
+                containerId: c.id,
+                containerNumber: c.number,
+                containerSize: c.size,
+                row,
+                tier,
+                status,
+                client: c.client,
+                transporter: 'Swift Transport',
+                containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
+              };
+            });
+
+            allStacks.push({
+              stackNumber: stack.stackNumber,
+              isVirtual: false,
+              stack,
+              section,
+              zoneName,
+              containerSize: '20ft',
+              isSpecialStack: false,
+              containerSlots: stack1Slots,
+              currentOccupancy: stack1Slots.length,
+              capacity: stack.rows * stack.maxTiers,
+              rows: stack.rows,
+              maxTiers: stack.maxTiers
+            });
+
+            // Add virtual 40ft stack
+            allStacks.push({
+              stackNumber: virtualStackNumber,
+              isVirtual: true,
+              pairedWith: config.pairedWith,
+              section,
+              zoneName,
+              containerSize: '40ft',
+              isSpecialStack: false,
+              containerSlots,
+              currentOccupancy: containerSlots.length,
+              capacity: virtualCapacity,
+              rows: stack.rows,
+              maxTiers: stack.maxTiers
+            });
+
+            // Add the second odd stack (20ft)
+            const stack2Containers = filteredContainers.filter(c => {
+              const match = c.location.match(/S(\d+)-R\d+-H\d+/);
+              return match && parseInt(match[1]) === nextOddStack.stackNumber && c.size === '20ft';
+            });
+
+            const stack2Slots: ContainerSlot[] = stack2Containers.map(c => {
+              const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
+              const row = locMatch ? parseInt(locMatch[1]) : 1;
+              const tier = locMatch ? parseInt(locMatch[2]) : 1;
+
+              let status: ContainerSlot['status'] = 'occupied';
+              if (c.damage && c.damage.length > 0) status = 'damaged';
+              else if (c.status === 'maintenance') status = 'priority';
+
+              return {
+                containerId: c.id,
+                containerNumber: c.number,
+                containerSize: c.size,
+                row,
+                tier,
+                status,
+                client: c.client,
+                transporter: 'Swift Transport',
+                containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
+              };
+            });
+
+            allStacks.push({
+              stackNumber: nextOddStack.stackNumber,
+              isVirtual: false,
+              stack: nextOddStack,
+              section,
+              zoneName,
+              containerSize: '20ft',
+              isSpecialStack: false,
+              containerSlots: stack2Slots,
+              currentOccupancy: stack2Slots.length,
+              capacity: nextOddStack.rows * nextOddStack.maxTiers,
+              rows: nextOddStack.rows,
+              maxTiers: nextOddStack.maxTiers
+            });
+
+            processedStacks.add(stack.stackNumber);
+            processedStacks.add(nextOddStack.stackNumber);
+            return;
+          }
+        }
+
+        // Regular stack processing
         const stackContainers = filteredContainers.filter(c => {
           const match = c.location.match(/S(\d+)-R\d+-H\d+/);
           return match && parseInt(match[1]) === stack.stackNumber;
@@ -283,11 +452,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           };
         });
 
-        const actualCapacity = config.containerSize === '40ft' && !config.isSpecialStack
-          ? Math.floor(stack.rows / 2) * stack.maxTiers
-          : stack.rows * stack.maxTiers;
-
         allStacks.push({
+          stackNumber: stack.stackNumber,
+          isVirtual: false,
           stack,
           section,
           zoneName,
@@ -295,12 +462,16 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           isSpecialStack: config.isSpecialStack,
           containerSlots,
           currentOccupancy: containerSlots.length,
-          capacity: actualCapacity
+          capacity: stack.rows * stack.maxTiers,
+          rows: stack.rows,
+          maxTiers: stack.maxTiers
         });
+
+        processedStacks.add(stack.stackNumber);
       });
     });
 
-    return allStacks.sort((a, b) => a.stack.stackNumber - b.stack.stackNumber);
+    return allStacks.sort((a, b) => a.stackNumber - b.stackNumber);
   }, [yard, filteredContainers, selectedZone]);
 
   const stackContainers = useMemo(() => {
@@ -319,15 +490,17 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         setSelectedContainer(container);
         setSelectedStack(null);
       }
-    } else if (rowContainers.length > 1) {
-      setSelectedStack(stackViz.stack);
+    } else if (rowContainers.length > 1 || stackViz.stack) {
+      setSelectedStack(stackViz.stack || null);
       setSelectedContainer(null);
     }
   };
 
   const handleStackClick = (stackViz: StackVisualization) => {
-    setSelectedStack(stackViz.stack);
-    setSelectedContainer(null);
+    if (stackViz.stack) {
+      setSelectedStack(stackViz.stack);
+      setSelectedContainer(null);
+    }
   };
 
   const getProgressBarColor = (percentage: number) => {
@@ -337,96 +510,51 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   };
 
   const renderStackRows = (stackViz: StackVisualization) => {
-    const { stack, containerSize, isSpecialStack, containerSlots } = stackViz;
+    const { rows, containerSize, isSpecialStack, containerSlots } = stackViz;
 
-    if (isSpecialStack || containerSize === '20ft') {
-      // 20ft stacks - each row shown individually
-      return (
-        <div className="flex flex-col gap-1">
-          {Array.from({ length: stack.rows }, (_, rowIndex) => {
-            const row = rowIndex + 1;
-            const rowContainers = containerSlots.filter(s => s.row === row);
-            const count = rowContainers.length;
-            const hasContainer = count > 0;
-            const hasDamaged = rowContainers.some(s => s.status === 'damaged');
-            const hasPriority = rowContainers.some(s => s.status === 'priority');
+    // For all stacks, show individual rows
+    return (
+      <div className="flex flex-col gap-1">
+        {Array.from({ length: rows }, (_, rowIndex) => {
+          const row = rowIndex + 1;
+          const rowContainers = containerSlots.filter(s => s.row === row);
+          const count = rowContainers.length;
+          const hasContainer = count > 0;
+          const hasDamaged = rowContainers.some(s => s.status === 'damaged');
+          const hasPriority = rowContainers.some(s => s.status === 'priority');
+          const is40ft = containerSize === '40ft' && !isSpecialStack;
 
-            let bgColor = 'bg-green-100 border-green-300';
-            if (hasContainer) {
-              if (hasDamaged) bgColor = 'bg-red-500 border-red-600';
-              else if (hasPriority) bgColor = 'bg-purple-500 border-purple-600';
-              else bgColor = 'bg-blue-500 border-blue-600';
-            }
+          let bgColor = 'bg-green-100 border-green-300';
+          if (hasContainer) {
+            if (hasDamaged) bgColor = 'bg-red-500 border-red-600';
+            else if (hasPriority) bgColor = 'bg-purple-500 border-purple-600';
+            else if (is40ft) bgColor = 'bg-orange-400 border-orange-600';
+            else bgColor = 'bg-blue-500 border-blue-600';
+          }
 
-            return (
-              <div
-                key={row}
-                className={`h-8 rounded-lg border-2 transition-all cursor-pointer hover:opacity-80 flex items-center justify-center ${bgColor}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRowClick(stackViz, row);
-                }}
-                title={hasContainer ? `Row ${row} - ${count} container(s)` : `Row ${row} - Empty`}
-              >
-                <span className={`text-sm font-bold ${hasContainer ? 'text-white' : 'text-gray-500'}`}>
-                  {hasContainer ? count : 0}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      );
-    } else {
-      // 40ft stacks - paired rows
-      const positions40ft = Math.floor(stack.rows / 2);
-
-      return (
-        <div className="flex flex-col gap-1">
-          {Array.from({ length: positions40ft }, (_, posIndex) => {
-            const position = posIndex + 1;
-            const baseRow = (position - 1) * 2 + 1;
-            const row1 = baseRow;
-            const row2 = baseRow + 1;
-
-            const row1Containers = containerSlots.filter(s => s.row === row1 && s.containerSize === '40ft');
-            const row2Containers = containerSlots.filter(s => s.row === row2 && s.containerSize === '40ft');
-
-            const totalCount = row1Containers.length + row2Containers.length;
-            const hasContainer = totalCount > 0;
-            const hasDamaged = [...row1Containers, ...row2Containers].some(s => s.status === 'damaged');
-            const hasPriority = [...row1Containers, ...row2Containers].some(s => s.status === 'priority');
-
-            let bgColor = 'bg-green-100 border-green-300';
-            if (hasContainer) {
-              if (hasDamaged) bgColor = 'bg-red-500 border-red-600';
-              else if (hasPriority) bgColor = 'bg-purple-500 border-purple-600';
-              else bgColor = 'bg-orange-400 border-orange-600';
-            }
-
-            return (
-              <div
-                key={position}
-                className={`h-8 rounded-lg border-2 transition-all cursor-pointer hover:opacity-80 flex items-center justify-center relative ${bgColor}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRowClick(stackViz, row1);
-                }}
-                title={hasContainer ? `Row ${row1}+${row2} (40ft) - ${totalCount} container(s)` : `Row ${row1}+${row2} (40ft) - Empty`}
-              >
-                {hasContainer && (
-                  <div className="absolute top-0 right-0 bg-orange-600 text-white text-[9px] px-1 rounded-bl font-bold">
-                    40ft
-                  </div>
-                )}
-                <span className={`text-sm font-bold ${hasContainer ? 'text-white' : 'text-gray-500'}`}>
-                  {hasContainer ? totalCount : 0}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
+          return (
+            <div
+              key={row}
+              className={`h-8 rounded-lg border-2 transition-all cursor-pointer hover:opacity-80 flex items-center justify-center relative ${bgColor}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRowClick(stackViz, row);
+              }}
+              title={hasContainer ? `Row ${row} - ${count} container(s)` : `Row ${row} - Empty`}
+            >
+              {is40ft && hasContainer && (
+                <div className="absolute top-0 right-0 bg-orange-600 text-white text-[9px] px-1 rounded-bl font-bold">
+                  40ft
+                </div>
+              )}
+              <span className={`text-sm font-bold ${hasContainer ? 'text-white' : 'text-gray-500'}`}>
+                {hasContainer ? count : 0}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   if (!yard) {
@@ -610,22 +738,30 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
           {stacksData.map((stackViz) => {
             const occupancyPercent = (stackViz.currentOccupancy / stackViz.capacity) * 100;
+            const displayName = stackViz.isVirtual
+              ? `S${stackViz.stackNumber.toString().padStart(2, '0')} (Virtual)`
+              : `S${stackViz.stackNumber.toString().padStart(2, '0')}`;
 
             return (
               <div
-                key={stackViz.stack.id}
+                key={`${stackViz.stackNumber}-${stackViz.isVirtual ? 'virtual' : 'physical'}`}
                 ref={(el) => {
-                  if (el) stackRefs.current.set(stackViz.stack.stackNumber, el);
+                  if (el) stackRefs.current.set(stackViz.stackNumber, el);
                 }}
-                className="bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all overflow-hidden cursor-pointer"
+                className={`bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer ${
+                  stackViz.isVirtual ? 'border-orange-300 bg-orange-50/30' : 'border-gray-200 hover:border-blue-400'
+                }`}
                 onClick={() => handleStackClick(stackViz)}
               >
                 <div
                   className="px-3 py-2 border-b"
-                  style={{ backgroundColor: `${stackViz.section.color}15`, borderColor: stackViz.section.color }}
+                  style={{
+                    backgroundColor: stackViz.isVirtual ? '#fed7aa20' : `${stackViz.section.color}15`,
+                    borderColor: stackViz.isVirtual ? '#fb923c' : stackViz.section.color
+                  }}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-base">S{stackViz.stack.stackNumber.toString().padStart(2, '0')}</span>
+                    <span className="font-bold text-base">{displayName}</span>
                     <span className={`text-xs px-2 py-0.5 rounded ${
                       stackViz.containerSize === '40ft' ? 'bg-orange-100 text-orange-700 font-medium' : 'bg-blue-100 text-blue-700 font-medium'
                     }`}>
