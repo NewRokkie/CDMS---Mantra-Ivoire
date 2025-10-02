@@ -331,29 +331,32 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   const scrollToContainer = () => {
     if (!searchedContainer) return;
-    const match = searchedContainer.location.match(/S(\d+)-R\d+-H\d+/);
-    if (match) {
-      const stackNumber = parseInt(match[1]);
 
-      // For 40ft containers, also try to scroll to the virtual stack
-      if (searchedContainer.size === '40ft') {
-        const config = getStackConfiguration(stackNumber);
-        if (config.pairedWith) {
-          // Calculate virtual stack number
-          const virtualStackNum = Math.min(stackNumber, config.pairedWith) + 1;
-          const virtualStackElement = stackRefs.current.get(virtualStackNum);
-          if (virtualStackElement) {
-            virtualStackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
-          }
+    const match = searchedContainer.location.match(/S(\d+)-R\d+-H\d+/);
+    if (!match) return;
+
+    const stackNumber = parseInt(match[1]);
+
+    // For 40ft containers, try to scroll to the virtual stack
+    if (searchedContainer.size === '40ft') {
+      const config = getStackConfiguration(stackNumber);
+
+      if (config.pairedWith) {
+        // Calculate virtual stack number
+        const virtualStackNum = Math.min(stackNumber, config.pairedWith) + 1;
+        const virtualStackElement = stackRefs.current.get(virtualStackNum);
+
+        if (virtualStackElement) {
+          virtualStackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
         }
       }
+    }
 
-      // Default: scroll to the physical stack
-      const stackElement = stackRefs.current.get(stackNumber);
-      if (stackElement) {
-        stackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+    // Default: scroll to the physical stack
+    const stackElement = stackRefs.current.get(stackNumber);
+    if (stackElement) {
+      stackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
@@ -793,13 +796,20 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             )}
 
             {searchedContainer && !showSuggestions && (
-              <div className="absolute top-full left-0 mt-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 shadow-lg z-10 flex items-center gap-2">
+              <div
+                className="absolute top-full left-0 mt-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 shadow-lg z-10 flex items-center gap-2"
+                onMouseDown={(e) => e.preventDefault()}
+              >
                 <div>
                   <p className="text-xs text-green-700 font-medium">Found: {getVirtualLocation(searchedContainer, getStackConfiguration)}</p>
                   <p className="text-xs text-green-600">{searchedContainer.size} • {searchedContainer.type}</p>
                 </div>
                 <button
-                  onClick={scrollToContainer}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    scrollToContainer();
+                  }}
                   className="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors flex items-center gap-1"
                 >
                   <Eye className="h-3 w-3" />
