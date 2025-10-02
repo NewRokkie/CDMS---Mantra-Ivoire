@@ -370,13 +370,17 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             // Create virtual stack between the two odd stacks
             const virtualStackNumber = stack.stackNumber + 1;
 
-            // Get ALL 40ft containers from BOTH paired stacks (S03 + S05 = shown in virtual S04)
+            // Get ALL 40ft containers from BOTH paired stacks (S03 + S05 = shown in all three)
             const virtual40ftContainers = filteredContainers.filter(c => {
+              if (c.size !== '40ft') return false;
               const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-              const matchedStack = match ? parseInt(match[1]) : null;
+              if (!match) return false;
+              const matchedStack = parseInt(match[1]);
               // Include containers from BOTH paired stacks (S03 and S05)
-              return (matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber) && c.size === '40ft';
+              return matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber;
             });
+
+            console.log(`[VIRTUAL STACK] S${stack.stackNumber}+S${nextOddStack.stackNumber} -> Found ${virtual40ftContainers.length} containers:`, virtual40ftContainers.map(c => c.number));
 
             const containerSlots: ContainerSlot[] = virtual40ftContainers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
@@ -402,7 +406,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
             const virtualCapacity = stack.rows * stack.maxTiers;
 
-            // S03 shows ONLY containers from virtual stack S04 (no duplication)
+            // S03 shows ALL containers from BOTH stacks (S03+S05)
             const stack1Slots: ContainerSlot[] = virtual40ftContainers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
               const row = locMatch ? parseInt(locMatch[1]) : 1;
@@ -464,7 +468,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               maxTiers: stack.maxTiers
             });
 
-            // S05 shows ONLY containers from virtual stack S04 (same as S03)
+            // S05 shows ALL containers from BOTH stacks (S03+S05, same as S03)
             const stack2Slots: ContainerSlot[] = virtual40ftContainers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
               const row = locMatch ? parseInt(locMatch[1]) : 1;
@@ -651,11 +655,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               }}
               title={hasContainer ? `Row ${row} - ${count} container(s)` : `Row ${row} - Empty`}
             >
-              {is40ft && hasContainer && (
-                <div className="absolute top-0 right-0 bg-orange-600 text-white text-[9px] px-1 rounded-bl font-bold">
-                  40ft
-                </div>
-              )}
               <span className={`text-sm font-bold ${hasContainer ? 'text-white' : 'text-gray-500'}`}>
                 {hasContainer ? count : 0}
               </span>
@@ -730,6 +729,16 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 <div className="text-2xl font-bold text-red-900 mt-1">{stats.damaged}</div>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg px-4 py-3 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-gray-600 font-medium uppercase">Empty Locations</div>
+                <div className="text-2xl font-bold text-gray-900 mt-1">{yard.totalCapacity - yard.currentOccupancy}</div>
+              </div>
+              <MapPin className="h-8 w-8 text-gray-600 opacity-50" />
             </div>
           </div>
         </div>
@@ -839,13 +848,14 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             <option value="maintenance">Maintenance</option>
             <option value="cleaning">Cleaning</option>
             <option value="damaged">Damaged</option>
+            <option value="empty">Empty Stacks</option>
           </select>
         </div>
       </div>
 
       <div className="flex-1 p-6 overflow-auto">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
-          {stacksData.map((stackViz) => {
+          {stacksData.filter(stackViz => filterStatus !== 'empty' || stackViz.currentOccupancy === 0).map((stackViz) => {
             const occupancyPercent = (stackViz.currentOccupancy / stackViz.capacity) * 100;
             const displayName = stackViz.isVirtual
               ? `S${stackViz.stackNumber.toString().padStart(2, '0')} (Virtual)`
@@ -874,15 +884,14 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     </div>
                   </div>
 
-                  {/* Orange circle */}
+                  {/* Orange circle - reduced size */}
                   <div
-                    className="w-28 h-28 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 border-4 border-orange-700 shadow-xl cursor-pointer hover:scale-110 transition-all flex flex-col items-center justify-center relative z-10"
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 border-4 border-orange-700 shadow-xl cursor-pointer hover:scale-110 transition-all flex flex-col items-center justify-center relative z-10"
                     onClick={() => handleStackClick(stackViz)}
                     title={`Click to view ${stackViz.currentOccupancy} containers`}
                   >
-                    <span className="text-white font-bold text-2xl">S{stackViz.stackNumber.toString().padStart(2, '0')}</span>
-                    <span className="text-white text-xs font-medium mt-1 opacity-90">{stackViz.containerSize}</span>
-                    <span className="text-white text-xs mt-0.5 font-semibold">{stackViz.currentOccupancy}/{stackViz.capacity}</span>
+                    <span className="text-white font-bold text-lg">S{stackViz.stackNumber.toString().padStart(2, '0')}</span>
+                    <span className="text-white text-[10px] font-semibold mt-0.5">{stackViz.currentOccupancy}/{stackViz.capacity}</span>
                   </div>
                 </div>
               );
@@ -907,11 +916,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-base">{displayName}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      stackViz.containerSize === '40ft' ? 'bg-orange-100 text-orange-700 font-medium' : 'bg-blue-100 text-blue-700 font-medium'
-                    }`}>
-                      {stackViz.containerSize}
-                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div
