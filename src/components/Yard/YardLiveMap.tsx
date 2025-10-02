@@ -406,8 +406,10 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               };
             });
 
-            // Virtual stack capacity = sum of BOTH physical stacks
-            const virtualCapacity = (stack.rows * stack.maxTiers) + (nextOddStack.rows * nextOddStack.maxTiers);
+            // Virtual stack capacity: 2 slots of 20ft = 1 slot of 40ft
+            // So capacity stays the same as ONE physical stack (not doubled)
+            // Example: S03 (5×5=25) + S05 (5×5=25) = S04 (5×5=25 for 40ft containers)
+            const virtualCapacity = stack.rows * stack.maxTiers;
 
             // S03 shows ALL containers from BOTH stacks (S03+S05)
             const stack1Slots: ContainerSlot[] = virtual40ftContainers.map(c => {
