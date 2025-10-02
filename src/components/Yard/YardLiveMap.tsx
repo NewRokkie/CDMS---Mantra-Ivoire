@@ -678,110 +678,84 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-              <MapPin className="h-6 w-6 mr-3 text-blue-600" />
-              {yard.name} - Live Map
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              {yard.code} • Capacity: {yard.currentOccupancy}/{yard.totalCapacity} ({stats.occupancyRate.toFixed(1)}%)
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg px-4 py-3 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-blue-600 font-medium uppercase">Total Containers</div>
-                <div className="text-2xl font-bold text-blue-900 mt-1">{stats.total}</div>
-              </div>
-              <Package className="h-8 w-8 text-blue-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg px-4 py-3 border border-green-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-green-600 font-medium uppercase">In Depot</div>
-                <div className="text-2xl font-bold text-green-900 mt-1">{stats.inDepot}</div>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg px-4 py-3 border border-orange-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-orange-600 font-medium uppercase">Maintenance</div>
-                <div className="text-2xl font-bold text-orange-900 mt-1">{stats.maintenance}</div>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-orange-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg px-4 py-3 border border-red-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-red-600 font-medium uppercase">Damaged</div>
-                <div className="text-2xl font-bold text-red-900 mt-1">{stats.damaged}</div>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg px-4 py-3 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-gray-600 font-medium uppercase">Empty Locations</div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">{yard.totalCapacity - yard.currentOccupancy}</div>
-              </div>
-              <MapPin className="h-8 w-8 text-gray-600 opacity-50" />
+      <div className="bg-white border-b border-gray-200 px-4 py-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 flex items-center">
+                <MapPin className="h-4 w-4 mr-2 text-blue-600" />
+                {yard.name} - Live Map
+              </h1>
+              <p className="text-xs text-gray-600">
+                {yard.code} • {yard.currentOccupancy}/{yard.totalCapacity} ({stats.occupancyRate.toFixed(1)}%)
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Legend:</span>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-4 bg-green-100 border-2 border-green-300 rounded" />
-                <span className="text-gray-700">Empty</span>
+        <div className="grid grid-cols-5 gap-2 mb-2">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded px-2 py-1.5 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-blue-600 font-medium uppercase">Total</div>
+                <div className="text-lg font-bold text-blue-900">{stats.total}</div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-4 bg-blue-500 border-2 border-blue-600 rounded" />
-                <span className="text-gray-700">20ft Occupied</span>
+              <Package className="h-5 w-5 text-blue-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded px-2 py-1.5 border border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-green-600 font-medium uppercase">In Depot</div>
+                <div className="text-lg font-bold text-green-900">{stats.inDepot}</div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-4 bg-orange-400 border-2 border-orange-600 rounded" />
-                <span className="text-gray-700">40ft Occupied</span>
+              <TrendingUp className="h-5 w-5 text-green-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded px-2 py-1.5 border border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-orange-600 font-medium uppercase">Maintenance</div>
+                <div className="text-lg font-bold text-orange-900">{stats.maintenance}</div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-4 bg-purple-500 border-2 border-purple-600 rounded" />
-                <span className="text-gray-700">Maintenance</span>
+              <AlertTriangle className="h-5 w-5 text-orange-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded px-2 py-1.5 border border-red-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-red-600 font-medium uppercase">Damaged</div>
+                <div className="text-lg font-bold text-red-900">{stats.damaged}</div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-4 bg-red-500 border-2 border-red-600 rounded" />
-                <span className="text-gray-700">Damaged</span>
+              <AlertTriangle className="h-5 w-5 text-red-600 opacity-50" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded px-2 py-1.5 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-gray-600 font-medium uppercase">Empty</div>
+                <div className="text-lg font-bold text-gray-900">{yard.totalCapacity - yard.currentOccupancy}</div>
               </div>
+              <MapPin className="h-5 w-5 text-gray-600 opacity-50" />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
             <input
               type="text"
-              placeholder="Search container number..."
+              placeholder="Search container..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
               onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+              className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent font-mono"
               maxLength={11}
             />
 
@@ -828,7 +802,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           <select
             value={selectedZone}
             onChange={(e) => setSelectedZone(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Zones</option>
             {zones.map(zone => (
@@ -841,7 +815,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Status</option>
             <option value="in_depot">In Depot</option>
@@ -850,11 +824,35 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             <option value="damaged">Damaged</option>
             <option value="empty">Empty Stacks</option>
           </select>
+
+          <div className="flex items-center gap-3 text-xs ml-auto">
+            <span className="font-medium text-gray-600">Legend:</span>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-green-100 border border-green-300 rounded" />
+              <span className="text-gray-600">Empty</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-500 rounded" />
+              <span className="text-gray-600">20ft</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-orange-400 rounded" />
+              <span className="text-gray-600">40ft</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-purple-500 rounded" />
+              <span className="text-gray-600">Maint.</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-red-500 rounded" />
+              <span className="text-gray-600">Damaged</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+      <div className="flex-1 p-4 overflow-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
           {stacksData.filter(stackViz => filterStatus !== 'empty' || stackViz.currentOccupancy === 0).map((stackViz) => {
             const occupancyPercent = (stackViz.currentOccupancy / stackViz.capacity) * 100;
             const displayName = stackViz.isVirtual
