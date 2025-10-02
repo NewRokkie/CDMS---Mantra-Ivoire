@@ -1,8 +1,29 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye, Truck, Maximize2, Minimize2 } from 'lucide-react';
+import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye, Truck, Maximize2, Minimize2, Calendar, FileText } from 'lucide-react';
 import { Container } from '../../types';
 import { Yard, YardStack } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
+
+// Helper function to calculate virtual location for 40ft containers
+const getVirtualLocation = (container: Container, getStackConfiguration: (stackNum: number) => any): string => {
+  const match = container.location.match(/S(\d+)-R(\d+)-H(\d+)/);
+  if (!match) return container.location;
+
+  const stackNum = parseInt(match[1]);
+  const row = match[2];
+  const height = match[3];
+
+  // For 40ft containers in paired stacks, show virtual stack location
+  if (container.size === '40ft') {
+    const config = getStackConfiguration(stackNum);
+    if (config.pairedWith) {
+      const virtualStackNum = Math.min(stackNum, config.pairedWith) + 1;
+      return `S${virtualStackNum.toString().padStart(2, '0')}-R${row}-H${height}`;
+    }
+  }
+
+  return container.location;
+};
 
 interface YardLiveMapProps {
   yard: Yard | null;
@@ -765,7 +786,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     }}
                   >
                     <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
-                    <div className="text-xs text-gray-500">{container.client} • {container.location}</div>
+                    <div className="text-xs text-gray-500">{container.client} • {getVirtualLocation(container, getStackConfiguration)}</div>
                   </div>
                 ))}
               </div>
@@ -774,7 +795,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             {searchedContainer && !showSuggestions && (
               <div className="absolute top-full left-0 mt-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 shadow-lg z-10 flex items-center gap-2">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Found: {searchedContainer.location}</p>
+                  <p className="text-xs text-green-700 font-medium">Found: {getVirtualLocation(searchedContainer, getStackConfiguration)}</p>
                   <p className="text-xs text-green-600">{searchedContainer.size} • {searchedContainer.type}</p>
                 </div>
                 <button
@@ -942,89 +963,120 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
       {selectedContainer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedContainer(null)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center">
-                <Package className="h-6 w-6 text-blue-600 mr-3" />
-                <h3 className="text-xl font-bold text-gray-900">Container Details</h3>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <Package className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Container Details</h3>
+                    <p className="text-blue-100 text-sm font-mono">{selectedContainer.number}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedContainer(null)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-white" />
+                </button>
               </div>
-              <button
-                onClick={() => setSelectedContainer(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Container Number</label>
-                <p className="font-mono text-lg font-bold text-gray-900 mt-1">{selectedContainer.number}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Type</label>
-                  <p className="text-sm text-gray-900 mt-1 capitalize">{selectedContainer.type.replace('_', ' ')}</p>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Type</label>
+                  </div>
+                  <p className="text-lg font-bold text-blue-900 capitalize">{selectedContainer.type.replace('_', ' ')}</p>
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Size</label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedContainer.size}</p>
+
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Package className="h-4 w-4 text-purple-600" />
+                    <label className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Size</label>
+                  </div>
+                  <p className="text-lg font-bold text-purple-900">{selectedContainer.size}</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Truck className="h-4 w-4 text-green-600" />
+                    <label className="text-xs font-semibold text-green-900 uppercase tracking-wide">Client</label>
+                  </div>
+                  <p className="text-lg font-bold text-green-900">{selectedContainer.client}</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MapPin className="h-4 w-4 text-orange-600" />
+                    <label className="text-xs font-semibold text-orange-900 uppercase tracking-wide">Location</label>
+                  </div>
+                  <p className="text-lg font-bold text-orange-900 font-mono">{getVirtualLocation(selectedContainer, getStackConfiguration)}</p>
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Client</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedContainer.client}</p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Location</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedContainer.location}</p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
-                <div className="mt-1">
-                  <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                    selectedContainer.status === 'in_depot' ? 'bg-green-100 text-green-800' :
-                    selectedContainer.status === 'maintenance' ? 'bg-orange-100 text-orange-800' :
-                    selectedContainer.status === 'cleaning' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {selectedContainer.status.replace('_', ' ').toUpperCase()}
-                  </span>
-                </div>
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 block">Status</label>
+                <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-lg ${
+                  selectedContainer.status === 'in_depot' ? 'bg-green-100 text-green-800 border-2 border-green-300' :
+                  selectedContainer.status === 'maintenance' ? 'bg-orange-100 text-orange-800 border-2 border-orange-300' :
+                  selectedContainer.status === 'cleaning' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' :
+                  'bg-gray-100 text-gray-800 border-2 border-gray-300'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    selectedContainer.status === 'in_depot' ? 'bg-green-500' :
+                    selectedContainer.status === 'maintenance' ? 'bg-orange-500' :
+                    selectedContainer.status === 'cleaning' ? 'bg-blue-500' :
+                    'bg-gray-500'
+                  }`} />
+                  {selectedContainer.status.replace('_', ' ').toUpperCase()}
+                </span>
               </div>
 
               {selectedContainer.damage && selectedContainer.damage.length > 0 && (
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Damage Report</label>
-                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="bg-red-50 p-4 rounded-xl border-2 border-red-200">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <label className="text-sm font-bold text-red-900 uppercase tracking-wide">Damage Report</label>
+                  </div>
+                  <div className="space-y-2">
                     {selectedContainer.damage.map((d, i) => (
-                      <p key={i} className="text-sm text-red-700 flex items-center">
-                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2" />
-                        {d}
-                      </p>
+                      <div key={i} className="flex items-start space-x-2 bg-white p-2 rounded-lg">
+                        <span className="w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0" />
+                        <p className="text-sm text-red-800 font-medium">{d}</p>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
 
               {selectedContainer.gateInDate && (
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Gate In Date</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {new Date(selectedContainer.gateInDate).toLocaleDateString()} {new Date(selectedContainer.gateInDate).toLocaleTimeString()}
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                    <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Gate In Date</label>
+                  </div>
+                  <p className="text-base font-bold text-blue-900">
+                    {new Date(selectedContainer.gateInDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-t border-gray-200">
               <button
                 onClick={() => setSelectedContainer(null)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
               >
                 Close
               </button>
