@@ -4,6 +4,7 @@ import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { UserFormModal } from './UserFormModal';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 // Helper function to get module access based on role
 const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
@@ -291,7 +292,7 @@ export const UserManagement: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
@@ -536,5 +537,22 @@ export const UserManagement: React.FC = () => {
         onSubmit={handleSubmit}
       />
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="User Management"
+          reason="Managing user accounts, roles, permissions, and detailed access controls requires comprehensive admin interfaces optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

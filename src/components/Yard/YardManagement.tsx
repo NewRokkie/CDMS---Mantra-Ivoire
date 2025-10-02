@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useYard } from '../../hooks/useYard';
 import { YardLiveMap } from './YardLiveMap';
 import { Container } from '../../types';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 const generateMockContainers = (): Container[] => {
   const containers: Container[] = [];
@@ -69,5 +70,20 @@ export const YardManagement: React.FC = () => {
   const { currentYard } = useYard();
   const [containers] = useState<Container[]>(generateMockContainers());
 
-  return <YardLiveMap yard={currentYard} containers={containers} />;
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Yard Management"
+          reason="The interactive 3D yard visualization and detailed position management require a larger screen for optimal performance."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <YardLiveMap yard={currentYard} containers={containers} />
+      </div>
+    </>
+  );
 };

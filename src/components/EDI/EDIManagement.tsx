@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Send, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle, 
-  Clock, 
-  FileText, 
+import {
+  Send,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  FileText,
   Upload,
   Download,
   Settings
@@ -14,6 +14,7 @@ import { EDIService } from '../../services/edifact/ediService';
 import { EDITransmissionLog, EDITransmissionConfig } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 export const EDIManagement: React.FC = () => {
   const [transmissionLogs, setTransmissionLogs] = useState<EDITransmissionLog[]>([]);
@@ -179,7 +180,7 @@ export const EDIManagement: React.FC = () => {
     );
   }
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">EDI Management</h2>
@@ -432,5 +433,23 @@ export const EDIManagement: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="EDI Management"
+          reason="Managing EDI messages, CODECO generation, transmission logs, and technical configurations requires detailed interfaces optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

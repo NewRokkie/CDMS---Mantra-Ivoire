@@ -8,6 +8,7 @@ import { ReleaseOrderKPICards } from './ReleaseOrderKPICards';
 import { ReleaseOrderViewToggle } from './ReleaseOrderViewToggle';
 import { ReleaseOrderDetailedView } from './ReleaseOrderDetailedView';
 import { ReleaseOrderHeader } from './ReleaseOrderHeader';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 // Mock containers available for release
 const mockAvailableContainers: Container[] = [
@@ -292,16 +293,16 @@ export const ReleaseOrderList: React.FC = () => {
 
   const stats = getOrderStats();
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <ReleaseOrderHeader onCreateOrder={handleCreateOrder} currentYard={currentYard} />
 
       <ReleaseOrderKPICards stats={stats} />
 
       <div className="flex items-center justify-end">
-        <ReleaseOrderViewToggle 
-          viewMode={viewMode} 
-          onViewModeChange={setViewMode} 
+        <ReleaseOrderViewToggle
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
       </div>
 
@@ -330,5 +331,22 @@ export const ReleaseOrderList: React.FC = () => {
         />
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Booking Reference"
+          reason="Managing release orders with detailed container assignments, status tracking, and comprehensive booking information requires extensive tables and forms optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

@@ -4,6 +4,7 @@ import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 // Mock data
 const mockClients: Client[] = [
@@ -142,7 +143,7 @@ export const ClientMasterData: React.FC = () => {
     }).format(amount);
   };
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Client Master Data</h2>
@@ -381,5 +382,22 @@ export const ClientMasterData: React.FC = () => {
         />
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Client Master Data"
+          reason="Managing detailed client information, contact persons, billing details, and comprehensive client profiles requires extensive forms optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

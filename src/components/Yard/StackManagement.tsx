@@ -3,6 +3,7 @@ import { Shield, AlertTriangle, Plus, CreditCard as Edit, Trash2 } from 'lucide-
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { StackManagementHeader } from './StackManagement/StackManagementHeader';
 import { StackManagementFilters } from './StackManagement/StackManagementFilters';
 import { StackConfigurationTable } from './StackManagement/StackConfigurationTable';
@@ -393,7 +394,7 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     );
   }
 
-  return (
+  const DesktopContent = () => (
     <>
       <div className="space-y-6">
       <StackManagementHeader
@@ -444,5 +445,22 @@ export const StackManagement: React.FC<StackManagementProps> = ({
           />
         )}
       </>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Stack Management"
+          reason="Configuring stack layouts, pairing rules, and container size assignments requires detailed management tools optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

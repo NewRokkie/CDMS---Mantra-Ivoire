@@ -23,6 +23,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ClientPoolForm } from './ClientPoolForm';
 import { useYard } from '../../hooks/useYard';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
@@ -246,7 +247,7 @@ export const ClientPoolManagement: React.FC = () => {
     );
   }
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -522,5 +523,22 @@ export const ClientPoolManagement: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Client Pools"
+          reason="Managing client groups, capacity assignments, and detailed pool analytics requires comprehensive tables and forms optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

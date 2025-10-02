@@ -26,6 +26,7 @@ import { yardService } from '../../services/yardService';
 import { DepotFormModal } from './DepotFormModal';
 import { DepotDetailModal } from './DepotDetailModal';
 import { DepotAssignmentModal } from './DepotAssignmentModal';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 export const DepotManagement: React.FC = () => {
   const [depots, setDepots] = useState<Yard[]>([]);
@@ -233,7 +234,7 @@ export const DepotManagement: React.FC = () => {
     );
   }
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -513,5 +514,22 @@ export const DepotManagement: React.FC = () => {
         />
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Depot Management"
+          reason="Managing depots, capacity, and user assignments requires detailed forms and tables best suited for desktop screens."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

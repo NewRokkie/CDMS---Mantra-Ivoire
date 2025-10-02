@@ -7,6 +7,7 @@ import { useYard } from '../../hooks/useYard';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ContainerViewModal } from './ContainerViewModal';
 import { ContainerEditModal } from './ContainerEditModal';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 // Helper function to format container number for display (adds hyphens)
 const formatContainerNumberForDisplay = (containerNumber: string): string => {
@@ -259,7 +260,7 @@ export const ContainerList: React.FC = () => {
   // Show client restriction notice
   const showClientNotice = !canViewAllData() && user?.role === 'client';
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -508,5 +509,23 @@ export const ContainerList: React.FC = () => {
         )}
       </div>
     </div>
+  );
+
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Containers"
+          reason="Managing detailed container inventory, statuses, locations, and comprehensive filtering requires extensive data tables optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };
