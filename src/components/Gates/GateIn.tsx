@@ -563,171 +563,149 @@ export const GateIn: React.FC = () => {
 
   // Main Overview
   return (
-    <div className="lg:space-y-6">
-      {/* Mobile-First Header */}
-      <div className="lg:hidden">
-        <MobileGateInHeader
-          pendingCount={pendingOperations.length}
-          onShowPending={() => setActiveView('pending')}
-          onShowForm={() => setShowForm(true)}
-          isMobileMenuOpen={isMobileMenuOpen}
-          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        />
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden lg:flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setActiveView('pending')}
-            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-          >
-            <Clock className="h-4 w-4" />
-            <span>Pending ({pendingOperations.length})</span>
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="btn-success flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Gate In</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile-Optimized Statistics */}
-      <div className="px-4 py-6 lg:px-0 lg:py-0 space-y-6">
-        <div className="lg:hidden">
-          <MobileGateInStats
-            todayGateIns={12}
-            pendingOperations={pendingOperations.length}
-            containersProcessed={892}
-            damagedContainers={3}
-          />
-        </div>
-
-        {/* Desktop Stats */}
-        <div className="hidden lg:grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Truck className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500">Today's Gate Ins</p>
-                <p className="text-lg font-semibold text-gray-900">12</p>
-              </div>
+    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
+      {/* Unified Mobile-First Header */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-4 lg:px-6 py-4 lg:py-6">
+          {/* Title Section */}
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate In</h1>
+              <p className="text-sm text-gray-600 hidden lg:block">Container entry management</p>
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500">Pending Operations</p>
-                <p className="text-lg font-semibold text-gray-900">{pendingOperations.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <ContainerIcon className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500">Containers Processed</p>
-                <p className="text-lg font-semibold text-gray-900">892</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500">Damaged Containers</p>
-                <p className="text-lg font-semibold text-gray-900">3</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Mobile Filter Chips */}
-        <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
-          {['all', 'pending', 'completed', 'damaged'].map((filter) => (
+          {/* Action Buttons - Mobile First */}
+          <div className="grid grid-cols-2 gap-3 lg:flex lg:justify-end lg:space-x-3">
             <button
-              key={filter}
-              onClick={() => setSelectedFilter(filter)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedFilter === filter
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
+              onClick={() => setShowForm(true)}
+              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl lg:rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
+              <span className="text-sm lg:text-base">New Gate In</span>
             </button>
-          ))}
-        </div>
 
-        {/* Mobile Search */}
-        <div className="lg:hidden bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Search operations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-12 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              onClick={() => setActiveView('pending')}
+              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
+            >
+              <Clock className="h-5 w-5 lg:h-4 lg:w-4" />
+              <span className="text-sm lg:text-base">Pending ({pendingOperations.length})</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Unified Responsive Statistics */}
+      <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
+        {/* Mobile: 2x2 Grid | Tablet+: 4x1 Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          {/* Today's Gate Ins */}
+          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
+              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
+              </div>
+              <div className="lg:ml-3">
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">12</p>
+                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Today's Gate Ins</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Operations */}
+          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
+              <div className="p-3 lg:p-2 bg-orange-500 lg:bg-yellow-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-yellow-600" />
+              </div>
+              <div className="lg:ml-3">
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
+                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">Pending Operations</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Containers Processed */}
+          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
+              <div className="p-3 lg:p-2 bg-blue-500 lg:bg-blue-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <ContainerIcon className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-blue-600" />
+              </div>
+              <div className="lg:ml-3">
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">892</p>
+                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">Containers Processed</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Damaged Containers */}
+          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
+              <div className="p-3 lg:p-2 bg-red-500 lg:bg-purple-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-purple-600" />
+              </div>
+              <div className="lg:ml-3">
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">3</p>
+                <p className="text-xs font-medium text-red-700 lg:text-gray-500 leading-tight">Damaged Containers</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Desktop Search and Filter */}
-        <div className="hidden lg:block bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Search operations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
+        {/* Unified Search and Filter */}
+        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-4 lg:p-4">
+            {/* Search Bar */}
+            <div className="relative mb-4 lg:mb-0">
+              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
+              <input
+                type="text"
+                placeholder="Search operations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 lg:bg-white focus:bg-white transition-colors"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <X className="h-5 w-5 lg:h-4 lg:w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Chips (Mobile) / Dropdown (Desktop) */}
+            <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4">
+              {['all', 'pending', 'completed', 'damaged'].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setSelectedFilter(filter)}
+                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                    selectedFilter === filter
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                  }`}
+                >
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden lg:flex items-center space-x-3">
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
                 <option value="damaged">Damaged</option>
               </select>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <button className="btn-secondary flex items-center space-x-2">
-                <Filter className="h-4 w-4" />
-                <span>Filter</span>
-              </button>
               {searchTerm && (
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg font-medium">
                   {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
                 </span>
               )}
@@ -735,122 +713,13 @@ export const GateIn: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile-Optimized Operations List */}
-        <div className="lg:hidden">
-          <MobileOperationsTable
-            operations={filteredOperations}
-            searchTerm={searchTerm}
-            selectedFilter={selectedFilter}
-            onOperationClick={handlePendingOperationClick}
-          />
-        </div>
-
-        {/* Desktop Operations Table */}
-        <div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Gate In Operations</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entry Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Container
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Truck
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Driver Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status & Details
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOperations.map((operation) => (
-                  <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {operation.date.toLocaleDateString()}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {operation.date.toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operation.containerNumber}</div>
-                      {operation.secondContainerNumber && (
-                        <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
-                      )}
-                      <div className="text-sm text-gray-500">
-                        {operation.containerSize}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {operation.containerType?.charAt(0).toUpperCase() + operation.containerType?.slice(1).replace('_', ' ')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operation.clientCode} - {operation.clientName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {operation.truckNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
-                      <div className="text-sm text-gray-500">{operation.transportCompany}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge(operation.operationStatus)}
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {operation.status}
-                        </span>
-                        {operation.isDamaged && (
-                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                            Damaged
-                          </span>
-                        )}
-                      </div>
-                      {operation.bookingReference && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Booking: {operation.bookingReference}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {operation.assignedLocation || (
-                        <span className="text-gray-400 italic">Pending assignment</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredOperations.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
-              <p className="text-gray-600">
-                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been created yet."}
-              </p>
-            </div>
-          )}
-        </div>
+        {/* Unified Operations List - Mobile First */}
+        <MobileOperationsTable
+          operations={filteredOperations}
+          searchTerm={searchTerm}
+          selectedFilter={selectedFilter}
+          onOperationClick={handlePendingOperationClick}
+        />
       </div>
 
       {/* Gate In Form Modal */}
