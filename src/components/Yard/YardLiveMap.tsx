@@ -406,7 +406,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               };
             });
 
-            const virtualCapacity = stack.rows * stack.maxTiers;
+            // Virtual stack capacity = sum of BOTH physical stacks
+            const virtualCapacity = (stack.rows * stack.maxTiers) + (nextOddStack.rows * nextOddStack.maxTiers);
 
             // S03 shows ALL containers from BOTH stacks (S03+S05)
             const stack1Slots: ContainerSlot[] = virtual40ftContainers.map(c => {
@@ -1092,10 +1093,17 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     <tbody className="bg-white divide-y divide-gray-200">
                       {stackContainers.map((container) => {
                         const locMatch = container.location.match(/S(\d+)-R(\d+)-H(\d+)/);
-                        const stack = locMatch ? locMatch[1] : '-';
                         const row = locMatch ? `R${locMatch[2]}` : '-';
                         const height = locMatch ? `H${locMatch[3]}` : '-';
-                        const locationId = locMatch ? `S${locMatch[1].padStart(2, '0')}R${locMatch[2]}H${locMatch[3]}` : container.location;
+
+                        // If this is a virtual stack, display the virtual stack number instead of physical
+                        const displayStackNumber = selectedStackViz?.isVirtual
+                          ? selectedStackViz.stackNumber
+                          : (locMatch ? parseInt(locMatch[1]) : 0);
+
+                        const locationId = locMatch
+                          ? `S${displayStackNumber.toString().padStart(2, '0')}R${locMatch[2]}H${locMatch[3]}`
+                          : container.location;
                         const containerType = container.status === 'in_depot' ? 'FULL' : 'EMPTY';
                         const transporter = 'Swift Transport';
 
