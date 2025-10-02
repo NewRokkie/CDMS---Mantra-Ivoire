@@ -435,6 +435,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             allStacks.push({
               stackNumber: stack.stackNumber,
               isVirtual: false,
+              pairedWith: nextOddStack.stackNumber,
               stack,
               section,
               zoneName,
@@ -497,6 +498,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             allStacks.push({
               stackNumber: nextOddStack.stackNumber,
               isVirtual: false,
+              pairedWith: stack.stackNumber,
               stack: nextOddStack,
               section,
               zoneName,
@@ -1096,10 +1098,22 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                         const row = locMatch ? `R${locMatch[2]}` : '-';
                         const height = locMatch ? `H${locMatch[3]}` : '-';
 
-                        // If this is a virtual stack, display the virtual stack number instead of physical
-                        const displayStackNumber = selectedStackViz?.isVirtual
-                          ? selectedStackViz.stackNumber
-                          : (locMatch ? parseInt(locMatch[1]) : 0);
+                        // For 40ft paired stacks (S03, S04 virtual, S05), ALL display the virtual stack number (S04)
+                        // Because a 40ft container occupies BOTH S03 AND S05 physically
+                        let displayStackNumber = locMatch ? parseInt(locMatch[1]) : 0;
+
+                        if (selectedStackViz) {
+                          if (selectedStackViz.isVirtual) {
+                            // Virtual stack: use virtual number
+                            displayStackNumber = selectedStackViz.stackNumber;
+                          } else if (selectedStackViz.containerSize === '40ft' && selectedStackViz.pairedWith) {
+                            // Physical stack paired for 40ft: calculate the virtual stack number
+                            // Virtual stack is always (lower_stack + 1)
+                            // Example: S03 paired with S05 -> virtual is S04
+                            const lowerStack = Math.min(selectedStackViz.stackNumber, selectedStackViz.pairedWith);
+                            displayStackNumber = lowerStack + 1;
+                          }
+                        }
 
                         const locationId = locMatch
                           ? `S${displayStackNumber.toString().padStart(2, '0')}R${locMatch[2]}H${locMatch[3]}`
