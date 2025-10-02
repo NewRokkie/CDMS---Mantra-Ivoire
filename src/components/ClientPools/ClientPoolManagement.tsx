@@ -1,23 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Users,
-  Package,
-  Settings,
-  Plus,
-  Search,
-  Filter,
-  Edit,
-  Trash2,
-  Eye,
-  AlertTriangle,
-  CheckCircle,
-  BarChart3,
-  TrendingUp,
-  Building,
-  X,
-  Loader,
-  Calendar
-} from 'lucide-react';
+import { Users, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Building, X, Loader, Calendar } from 'lucide-react';
 import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/clientPoolService';

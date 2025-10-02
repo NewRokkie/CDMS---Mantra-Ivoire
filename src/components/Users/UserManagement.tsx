@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Edit, Eye, Trash2, User as UserIcon, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, User as UserIcon, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';

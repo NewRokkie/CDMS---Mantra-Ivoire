@@ -1,24 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Building,
-  Package,
-  Settings,
-  Plus,
-  Search,
-  Filter,
-  Edit,
-  Trash2,
-  Eye,
-  AlertTriangle,
-  CheckCircle,
-  TrendingUp,
-  MapPin,
-  Users,
-  Clock,
-  X,
-  Loader,
-  Calendar
-} from 'lucide-react';
+import { Building, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, TrendingUp, MapPin, Users, Clock, X, Loader, Calendar } from 'lucide-react';
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Edit, Eye, Trash2, Building, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
+import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { ClientSearchField } from '../Common/ClientSearchField';
