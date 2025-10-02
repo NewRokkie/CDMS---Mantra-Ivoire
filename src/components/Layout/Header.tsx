@@ -22,15 +22,23 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 relative z-30">
+      <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 relative z-50">
         <div className="flex items-center justify-between">
-          {/* Left Section - Logo & Title */}
+          {/* Left Section - Logo (Clickable) & Title */}
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+            {/* Logo - Opens Sidebar on Mobile */}
+            <button
+              onClick={() => {
+                if (onToggleSidebar) {
+                  onToggleSidebar();
+                }
+              }}
+              className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg hover:bg-blue-700 active:scale-95 transition-all lg:cursor-default lg:hover:bg-blue-600 lg:active:scale-100"
+            >
               <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
-            </div>
+            </button>
             <div className="min-w-0 flex-1">
               <h1 className="text-base lg:text-xl font-bold text-gray-900 truncate">
                 Container Depot
@@ -43,8 +51,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
           {/* Right Section - Actions */}
           <div className="flex items-center space-x-2 lg:space-x-4">
-            {/* Yard Selector - Desktop Only */}
-            <div className="hidden lg:block">
+            {/* Yard Selector - Mobile & Desktop */}
+            <div className="lg:block">
               <YardSelector />
             </div>
 
@@ -89,12 +97,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               </div>
             </div>
 
-            {/* Mobile: User Avatar + Menu Button */}
-            <div className="lg:hidden flex items-center space-x-2">
-              <div className="h-9 w-9 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
-                <User className="h-4 w-4 text-white" />
-              </div>
-
+            {/* Mobile: Menu Button Only */}
+            <div className="lg:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
@@ -116,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           />
 
           {/* Mobile Menu Panel */}
-          <div className="lg:hidden fixed top-[73px] left-0 right-0 bottom-0 bg-white z-50 overflow-y-auto animate-slideDown">
+          <div className="lg:hidden fixed top-[73px] left-0 right-0 bottom-0 bg-white z-[60] overflow-y-auto animate-slideDown">
             <div className="px-4 py-6 space-y-6">
               {/* User Profile Card */}
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200 shadow-lg">
@@ -131,39 +135,12 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 </div>
               </div>
 
-              {/* Yard Selector for Mobile */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide px-1">
-                  <MapPin className="h-3 w-3 inline mr-1" />
-                  Current Depot
-                </label>
-                <YardSelector />
-              </div>
-
               {/* Quick Actions Grid */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide px-1">
                   Quick Actions
                 </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Navigation Menu */}
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      if (onToggleSidebar) {
-                        setTimeout(() => onToggleSidebar(), 300);
-                      }
-                    }}
-                    className="flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl hover:from-blue-100 hover:to-blue-200 transition-all border-2 border-blue-200 shadow-sm active:scale-95"
-                  >
-                    <div className="p-3 bg-white rounded-xl shadow-md">
-                      <LayoutGrid className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-blue-700 font-bold">Navigation</p>
-                    </div>
-                  </button>
-
+                <div className="grid grid-cols-2 gap-3">
                   {/* Language Switcher */}
                   <button
                     onClick={() => {

@@ -66,38 +66,38 @@ export const YardSelector: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         disabled={isChanging}
         className={`
-          flex items-center space-x-2 lg:space-x-3 px-3 lg:px-4 py-2 bg-white border-2 rounded-xl
-          transition-all duration-300 min-w-[200px]
-          ${isOpen 
-            ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10' 
-            : currentYard 
-            ? 'border-green-400 shadow-md shadow-green-400/10' 
+          flex items-center space-x-2 px-2.5 lg:px-4 py-2 bg-white border-2 rounded-xl
+          transition-all duration-300 max-w-[140px] lg:min-w-[200px] lg:max-w-none
+          ${isOpen
+            ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
+            : currentYard
+            ? 'border-green-400 shadow-md shadow-green-400/10'
             : 'border-gray-200 hover:border-gray-300 shadow-sm'
           }
           ${isChanging ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}
         `}
       >
-        <div className="flex items-center space-x-1 lg:space-x-2">
+        <div className="flex items-center space-x-1.5 lg:space-x-2 min-w-0 flex-1">
           {isChanging ? (
-            <Loader className="h-4 w-4 text-blue-500 animate-spin" />
+            <Loader className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-blue-500 animate-spin flex-shrink-0" />
           ) : (
-            <MapPin className={`h-4 w-4 ${currentYard ? 'text-green-500' : 'text-gray-400'}`} />
+            <MapPin className={`h-3.5 w-3.5 lg:h-4 lg:w-4 flex-shrink-0 ${currentYard ? 'text-green-500' : 'text-gray-400'}`} />
           )}
           <div className="text-left min-w-0 flex-1">
             {currentYard ? (
               <>
-                <div className="font-medium text-gray-900 text-sm truncate">{currentYard.name}</div>
-                <div className="text-xs text-gray-500 truncate">{currentYard.code}</div>
+                <div className="font-semibold text-gray-900 text-xs lg:text-sm truncate">{currentYard.name}</div>
+                <div className="text-[10px] lg:text-xs text-gray-500 truncate hidden lg:block">{currentYard.code}</div>
               </>
             ) : (
-              <div className="text-gray-500 text-sm truncate">Select Yard...</div>
+              <div className="text-gray-500 text-xs lg:text-sm truncate">Select...</div>
             )}
           </div>
         </div>
-        
-        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${
+
+        <ChevronDown className={`h-3.5 w-3.5 lg:h-4 lg:w-4 text-gray-400 transition-transform duration-300 flex-shrink-0 ${
           isOpen ? 'rotate-180' : ''
-        } flex-shrink-0`} />
+        }`} />
       </button>
 
       {/* Error Display */}
