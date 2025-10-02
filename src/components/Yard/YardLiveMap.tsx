@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye, Truck } from 'lucide-react';
+import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye, Truck, Maximize2, Minimize2 } from 'lucide-react';
 import { Container } from '../../types';
 import { Yard, YardStack } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
@@ -104,10 +104,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
   const [selectedStack, setSelectedStack] = useState<YardStack | null>(null);
+  const [selectedStackViz, setSelectedStackViz] = useState<StackVisualization | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [highlightedContainer, setHighlightedContainer] = useState<string | null>(null);
   const [searchSuggestions, setSearchSuggestions] = useState<Container[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const stackRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const allContainers = useMemo(() => {
@@ -563,37 +565,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   }, [yard, filteredContainers, selectedZone]);
 
   const stackContainers = useMemo(() => {
-    if (!selectedStack) return [];
+    if (!selectedStackViz) return [];
 
-    // Check if this stack is part of a 40ft pairing
-    const config = getStackConfiguration(selectedStack.stackNumber);
-    const adjacentStack = getAdjacentStackNumber(selectedStack.stackNumber);
-
-    // If this is a virtual stack, show containers from BOTH paired physical stacks
-    if (selectedStack.isVirtual && selectedStack.pairedWith) {
-      return filteredContainers.filter(c => {
-        const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-        const matchedStack = match ? parseInt(match[1]) : null;
-        // Virtual stack (S04) shows containers from S03 and S05
-        const stack1 = selectedStack.stackNumber - 1; // S03
-        const stack2 = selectedStack.pairedWith; // S05
-        return (matchedStack === stack1 || matchedStack === stack2) && c.size === '40ft';
-      });
-    }
-
-    return filteredContainers.filter(c => {
-      const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-      const matchedStack = match ? parseInt(match[1]) : null;
-
-      // For physical stacks paired for 40ft (S03, S05): show containers from BOTH stacks
-      if (config.containerSize === '40ft' && adjacentStack && !selectedStack.isVirtual) {
-        return (matchedStack === selectedStack.stackNumber || matchedStack === adjacentStack) && c.size === '40ft';
-      }
-
-      // Regular stacks: show only their own containers
-      return matchedStack === selectedStack.stackNumber;
-    });
-  }, [selectedStack, filteredContainers]);
+    // Use the containerSlots from the visualization which already has the correct containers
+    const containerIds = selectedStackViz.containerSlots.map(slot => slot.containerId);
+    return allContainers.filter(c => containerIds.includes(c.id));
+  }, [selectedStackViz, allContainers]);
 
   const handleRowClick = (stackViz: StackVisualization, row: number) => {
     const rowContainers = stackViz.containerSlots.filter(s => s.row === row);
@@ -602,9 +579,11 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       if (container) {
         setSelectedContainer(container);
         setSelectedStack(null);
+        setSelectedStackViz(null);
       }
     } else if (rowContainers.length > 1 || stackViz.stack) {
       setSelectedStack(stackViz.stack || null);
+      setSelectedStackViz(stackViz);
       setSelectedContainer(null);
     }
   };
@@ -612,6 +591,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const handleStackClick = (stackViz: StackVisualization) => {
     if (stackViz.stack) {
       setSelectedStack(stackViz.stack);
+      setSelectedStackViz(stackViz);
       setSelectedContainer(null);
     }
   };
@@ -678,20 +658,29 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-4 py-2">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-lg font-bold text-gray-900 flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-                {yard.name} - Live Map
-              </h1>
-              <p className="text-xs text-gray-600">
-                {yard.code} • {yard.currentOccupancy}/{yard.totalCapacity} ({stats.occupancyRate.toFixed(1)}%)
-              </p>
+      {!isFullscreen && (
+        <div className="bg-white border-b border-gray-200 px-4 py-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 flex items-center">
+                  <MapPin className="h-4 w-4 mr-2 text-blue-600" />
+                  {yard.name} - Live Map
+                </h1>
+                <p className="text-xs text-gray-600">
+                  {yard.code} • {yard.currentOccupancy}/{yard.totalCapacity} ({stats.occupancyRate.toFixed(1)}%)
+                </p>
+              </div>
             </div>
+            <button
+              onClick={() => setIsFullscreen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              title="Fullscreen Live Map"
+            >
+              <Maximize2 className="h-4 w-4" />
+              Fullscreen
+            </button>
           </div>
-        </div>
 
         <div className="grid grid-cols-5 gap-2 mb-2">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded px-2 py-1.5 border border-blue-200">
@@ -850,8 +839,19 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           </div>
         </div>
       </div>
+      )}
 
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-4 overflow-auto relative">
+        {isFullscreen && (
+          <button
+            onClick={() => setIsFullscreen(false)}
+            className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-100 rounded-lg shadow-lg transition-colors border border-gray-300"
+            title="Exit Fullscreen"
+          >
+            <Minimize2 className="h-4 w-4" />
+            Exit Fullscreen
+          </button>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
           {stacksData.filter(stackViz => filterStatus !== 'empty' || stackViz.currentOccupancy === 0).map((stackViz) => {
             const occupancyPercent = (stackViz.currentOccupancy / stackViz.capacity) * 100;
@@ -1029,12 +1029,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       )}
 
       {selectedStack && !selectedContainer && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedStack(null)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setSelectedStack(null); setSelectedStackViz(null); }}>
           <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900">Stack S{selectedStack.stackNumber.toString().padStart(2, '0')} Details</h3>
               <button
-                onClick={() => setSelectedStack(null)}
+                onClick={() => { setSelectedStack(null); setSelectedStackViz(null); }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="h-5 w-5 text-gray-500" />
@@ -1106,6 +1106,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                             onClick={() => {
                               setSelectedContainer(container);
                               setSelectedStack(null);
+                              setSelectedStackViz(null);
                             }}
                           >
                             <td className="px-4 py-3 whitespace-nowrap">
@@ -1165,7 +1166,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex-shrink-0">
               <button
-                onClick={() => setSelectedStack(null)}
+                onClick={() => { setSelectedStack(null); setSelectedStackViz(null); }}
                 className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
               >
                 Close
