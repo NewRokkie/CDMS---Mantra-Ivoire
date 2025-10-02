@@ -107,7 +107,7 @@ function AppContent() {
           setIsMobileMenuOpen={setIsSidebarOpen}
         />
         <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
-          <Header onToggleSidebar={toggleSidebar} />
+          <Header onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}
           </main>
         </div>

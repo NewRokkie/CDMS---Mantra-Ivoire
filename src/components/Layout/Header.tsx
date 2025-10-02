@@ -7,9 +7,10 @@ import { YardSelector } from './YardSelector';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
+export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
@@ -22,7 +23,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 relative z-50">
+      <header className={`bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 relative z-50 ${
+        (isSidebarOpen || isMobileMenuOpen) ? 'lg:block hidden' : 'block'
+      }`}>
         <div className="flex items-center justify-between">
           {/* Left Section - Logo (Clickable) & Title */}
           <div className="flex items-center space-x-3 flex-1 min-w-0">
