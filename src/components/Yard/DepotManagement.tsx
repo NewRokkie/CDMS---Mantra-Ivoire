@@ -1,24 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Building,
-  Package,
-  Settings,
-  Plus,
-  Search,
-  Filter,
-  Edit,
-  Trash2,
-  Eye,
-  AlertTriangle,
-  CheckCircle,
-  TrendingUp,
-  MapPin,
-  Users,
-  Clock,
-  X,
-  Loader,
-  Calendar
-} from 'lucide-react';
+import { Building, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, TrendingUp, MapPin, Users, Clock, X, Loader, Calendar } from 'lucide-react';
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -26,6 +7,7 @@ import { yardService } from '../../services/yardService';
 import { DepotFormModal } from './DepotFormModal';
 import { DepotDetailModal } from './DepotDetailModal';
 import { DepotAssignmentModal } from './DepotAssignmentModal';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 export const DepotManagement: React.FC = () => {
   const [depots, setDepots] = useState<Yard[]>([]);
@@ -233,7 +215,7 @@ export const DepotManagement: React.FC = () => {
     );
   }
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -513,5 +495,22 @@ export const DepotManagement: React.FC = () => {
         />
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Depot Management"
+          reason="Managing depots, capacity, and user assignments requires detailed forms and tables best suited for desktop screens."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

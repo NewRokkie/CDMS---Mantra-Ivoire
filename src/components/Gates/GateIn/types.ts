@@ -1,7 +1,7 @@
 export interface GateInFormData {
   // Step 1: Container Information
   containerSize: '20ft' | '40ft';
-  containerType: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  containerType: 'standard' | 'hi_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   containerQuantity: 1 | 2;
   status: 'FULL' | 'EMPTY';
   isDamaged: boolean;

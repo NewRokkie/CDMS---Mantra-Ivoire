@@ -1,6 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { User, ModuleAccess } from '../types';
-import { userService } from '../services/database/UserService';
+import type { User, ModuleAccess } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -23,7 +22,7 @@ export const useAuth = () => {
   return context;
 };
 
-// Database-connected authentication provider
+// Mock authentication for demo purposes
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,37 +37,14 @@ export const useAuthProvider = () => {
 
         if (storedUser && storedToken) {
           const userData = JSON.parse(storedUser);
-
-          // Validate token expiry
+          // Validate token expiry (in production, this would be more sophisticated)
           const tokenData = JSON.parse(atob(storedToken.split('.')[1] || '{}'));
           const isExpired = tokenData.exp && Date.now() >= tokenData.exp * 1000;
 
           if (!isExpired) {
             console.log('Restoring user session for:', userData.name);
-
-            // Verify user still exists and is active in database
-            try {
-              const currentUser = await userService.getUserById(userData.id);
-              if (currentUser && currentUser.isActive) {
-                setUser(currentUser);
-                setIsAuthenticated(true);
-
-                // Update last activity
-                await userService.updateLastLogin(currentUser.id);
-              } else {
-                // User no longer exists or is inactive
-                console.log('User no longer active, clearing session');
-                localStorage.removeItem('depot_user');
-                localStorage.removeItem('depot_token');
-                setUser(null);
-                setIsAuthenticated(false);
-              }
-            } catch (dbError) {
-              console.warn('Could not verify user in database, using cached data:', dbError);
-              // Use cached data if database is unavailable
-              setUser(userData);
-              setIsAuthenticated(true);
-            }
+            setUser(userData);
+            setIsAuthenticated(true);
           } else {
             // Token expired, clear storage
             console.log('Token expired, clearing session');
@@ -99,70 +75,191 @@ export const useAuthProvider = () => {
 
   const login = async (email: string, password: string) => {
     console.log('Login attempt for:', email);
-    setIsLoading(true);
 
     try {
-      // Authenticate with database
-      const authenticatedUser = await userService.authenticateUser(email, password);
+      // Simulate network delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (!authenticatedUser) {
-        throw new Error('Authentication failed - invalid credentials');
-      }
-
-      console.log('Authentication successful for:', authenticatedUser.name);
-
-      // Generate JWT token (in production, this would be done by backend)
-      const tokenPayload = {
-        userId: authenticatedUser.id,
-        email: authenticatedUser.email,
-        role: authenticatedUser.role,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+      const mockUsers: { [key: string]: User } = {
+        'admin@depot.com': {
+          id: '1',
+          name: 'John Administrator',
+          email: 'admin@depot.com',
+          role: 'admin',
+          company: 'Container Depot Ltd',
+          phone: '+1-555-1001',
+          department: 'Administration',
+          isActive: true,
+          lastLogin: new Date('2025-01-11T08:30:00'),
+          createdAt: new Date('2024-01-01'),
+          yardAssignments: ['depot-tantarelli', 'depot-vridi', 'depot-san-pedro'], // Admin has access to all yards
+          moduleAccess: {
+            dashboard: true,
+            containers: true,
+            gateIn: true,
+            gateOut: true,
+            releases: true,
+            edi: true,
+            yard: true,
+            clients: true,
+            users: true,
+            moduleAccess: true,
+            reports: true,
+            depotManagement: true
+          },
+          createdBy: "system"
+        },
+        'operator@depot.com': {
+          id: '2',
+          name: 'Jane Operator',
+          email: 'operator@depot.com',
+          role: 'operator',
+          company: 'Container Depot Ltd',
+          phone: '+1-555-1002',
+          department: 'Operations',
+          isActive: true,
+          lastLogin: new Date('2025-01-11T07:15:00'),
+          createdAt: new Date('2024-02-15'),
+          yardAssignments: ['depot-tantarelli'], // Operator assigned to main depot
+          moduleAccess: {
+            dashboard: true,
+            containers: true,
+            gateIn: true,
+            gateOut: true,
+            releases: true,
+            edi: false,
+            yard: true,
+            clients: false,
+            users: false,
+            moduleAccess: false,
+            reports: false,
+            depotManagement: true
+          },
+          createdBy: "system"
+        },
+        'supervisor@depot.com': {
+          id: '3',
+          name: 'Mike Supervisor',
+          email: 'supervisor@depot.com',
+          role: 'supervisor',
+          company: 'Container Depot Ltd',
+          phone: '+1-555-1003',
+          department: 'Operations',
+          isActive: true,
+          lastLogin: new Date('2025-01-10T16:45:00'),
+          createdAt: new Date('2024-01-20'),
+          yardAssignments: ['depot-tantarelli', 'depot-vridi'], // Supervisor manages two depots
+          moduleAccess: {
+            dashboard: true,
+            containers: true,
+            gateIn: true,
+            gateOut: true,
+            releases: true,
+            edi: true,
+            yard: true,
+            clients: true,
+            users: false,
+            moduleAccess: false,
+            reports: true,
+            depotManagement: true
+          },
+          createdBy: "system"
+        },
+        'client@shipping.com': {
+          id: '4',
+          name: 'Sarah Client',
+          email: 'client@shipping.com',
+          role: 'client',
+          company: 'Shipping Solutions Inc',
+          phone: '+1-555-2001',
+          department: 'Logistics',
+          isActive: true,
+          lastLogin: new Date('2025-01-09T14:20:00'),
+          createdAt: new Date('2024-03-10'),
+          clientCode: 'SHIP001',
+          yardAssignments: ['depot-tantarelli'], // Client has access to main depot only
+          moduleAccess: {
+            dashboard: true,
+            containers: true,
+            gateIn: false,
+            gateOut: false,
+            releases: true,
+            edi: false,
+            yard: true,
+            clients: false,
+            users: false,
+            moduleAccess: false,
+            reports: false,
+            depotManagement: true
+          },
+          createdBy: "system"
+        },
+        'client2@maersk.com': {
+          id: '5',
+          name: 'John Maersk Client',
+          email: 'client2@maersk.com',
+          role: 'client',
+          company: 'Maersk Line',
+          phone: '+1-555-2002',
+          department: 'Logistics',
+          isActive: true,
+          lastLogin: new Date('2025-01-08T11:30:00'),
+          createdAt: new Date('2024-04-15'),
+          clientCode: 'MAER001',
+          yardAssignments: ['depot-tantarelli', 'depot-san-pedro'], // Maersk client has access to multiple yards
+          moduleAccess: {
+            dashboard: true,
+            containers: true,
+            gateIn: false,
+            gateOut: false,
+            releases: true,
+            edi: false,
+            yard: true,
+            clients: false,
+            users: false,
+            moduleAccess: false,
+            reports: false,
+            depotManagement: true
+          },
+          createdBy: "system"
+        }
       };
 
-      const mockToken = `header.${btoa(JSON.stringify(tokenPayload))}.signature`;
+      const mockUser = mockUsers[email];
+      if (mockUser && password === 'demo123') {
+        console.log('Authentication successful for:', mockUser.name);
 
-      // Store user data and token
-      localStorage.setItem('depot_user', JSON.stringify(authenticatedUser));
-      localStorage.setItem('depot_token', mockToken);
+        // Generate mock JWT token
+        const tokenPayload = {
+          userId: mockUser.id,
+          email: mockUser.email,
+          role: mockUser.role,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+        };
 
-      // Create session record in database
-      try {
-        await userService.createUserSession(
-          authenticatedUser.id,
-          mockToken,
-          '127.0.0.1', // In production, get real IP
-          navigator.userAgent
-        );
-      } catch (sessionError) {
-        console.warn('Could not create session record:', sessionError);
+        const mockToken = `header.${btoa(JSON.stringify(tokenPayload))}.signature`;
+
+        // Store user data and token
+        localStorage.setItem('depot_user', JSON.stringify(mockUser));
+        localStorage.setItem('depot_token', mockToken);
+
+        setUser(mockUser);
+        setIsAuthenticated(true);
+        console.log('User state updated, authentication complete');
+      } else {
+        console.log('Authentication failed: Invalid credentials');
+        throw new Error('Invalid credentials. Please check your email and password.');
       }
-
-      setUser(authenticatedUser);
-      setIsAuthenticated(true);
-      console.log('User state updated, authentication complete');
     } catch (error) {
       console.error('Login error:', error);
       setUser(null);
       setIsAuthenticated(false);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const logout = async () => {
-    const currentToken = localStorage.getItem('depot_token');
-
-    // Invalidate session in database
-    if (currentToken) {
-      try {
-        await userService.invalidateUserSession(currentToken);
-      } catch (error) {
-        console.warn('Could not invalidate session in database:', error);
-      }
-    }
-
+  const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
 
@@ -171,8 +268,6 @@ export const useAuthProvider = () => {
     localStorage.removeItem('depot_token');
     localStorage.removeItem('depot_preferences');
     localStorage.removeItem('language');
-
-    console.log('User logged out successfully');
   };
 
   const hasModuleAccess = (module: keyof ModuleAccess): boolean => {

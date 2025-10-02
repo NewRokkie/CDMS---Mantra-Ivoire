@@ -8,13 +8,14 @@ import { ReleaseOrderKPICards } from './ReleaseOrderKPICards';
 import { ReleaseOrderViewToggle } from './ReleaseOrderViewToggle';
 import { ReleaseOrderDetailedView } from './ReleaseOrderDetailedView';
 import { ReleaseOrderHeader } from './ReleaseOrderHeader';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 // Mock containers available for release
 const mockAvailableContainers: Container[] = [
   {
     id: '1',
     number: 'MSKU-123456-7',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_depot',
     location: 'Block A-12',
@@ -25,7 +26,7 @@ const mockAvailableContainers: Container[] = [
   {
     id: '4',
     number: 'SHIP-111222-8',
-    type: 'dry',
+    type: 'standard',
     size: '20ft',
     status: 'in_depot',
     location: 'Block B-05',
@@ -130,7 +131,7 @@ const mockBookingReferences: ReleaseOrder[] = [
         id: 'roc-4',
         containerId: '4',
         containerNumber: 'SHIP-111222-8',
-        containerType: 'dry',
+        containerType: 'standard',
         containerSize: '20ft',
         currentLocation: 'Block B-05',
         status: 'pending',
@@ -223,7 +224,7 @@ const mockBookingReferences: ReleaseOrder[] = [
         id: 'roc-10',
         containerId: '11',
         containerNumber: 'CMDU-123789-9',
-        containerType: 'dry',
+        containerType: 'standard',
         containerSize: '40ft',
         currentLocation: 'Block E-02',
         status: 'pending',
@@ -292,16 +293,16 @@ export const ReleaseOrderList: React.FC = () => {
 
   const stats = getOrderStats();
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <ReleaseOrderHeader onCreateOrder={handleCreateOrder} currentYard={currentYard} />
 
       <ReleaseOrderKPICards stats={stats} />
 
       <div className="flex items-center justify-end">
-        <ReleaseOrderViewToggle 
-          viewMode={viewMode} 
-          onViewModeChange={setViewMode} 
+        <ReleaseOrderViewToggle
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
       </div>
 
@@ -330,5 +331,22 @@ export const ReleaseOrderList: React.FC = () => {
         />
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Booking Reference"
+          reason="Managing release orders with detailed container assignments, status tracking, and comprehensive booking information requires extensive tables and forms optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

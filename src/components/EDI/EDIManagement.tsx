@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Send, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle, 
-  Clock, 
-  FileText, 
+import {
+  Send,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  FileText,
   Upload,
   Download,
   Settings
@@ -14,6 +14,7 @@ import { EDIService } from '../../services/edifact/ediService';
 import { EDITransmissionLog, EDITransmissionConfig } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 export const EDIManagement: React.FC = () => {
   const [transmissionLogs, setTransmissionLogs] = useState<EDITransmissionLog[]>([]);
@@ -88,6 +89,53 @@ export const EDIManagement: React.FC = () => {
     }
   };
 
+  const handleGenerateSapXml = async () => {
+    setIsLoading(true);
+    try {
+      // Create mock container data for demonstration
+      const mockContainer = {
+        id: 'mock-container-' + Date.now(),
+        number: 'PCIU9507070',
+        size: '40ft' as const,
+        type: 'dry' as const,
+        status: 'available' as const,
+        location: 'A-01-01',
+        clientId: 'client-001',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: user?.name || 'System',
+        updatedBy: user?.name || 'System'
+      };
+
+      const xmlContent = await ediService.generateSapXmlReport(
+        mockContainer,
+        operation,
+        'PROPRE MOYEN', // transporter
+        '028-AA-01', // vehicleNumber
+        '0001052069', // clientCode
+        user?.name || 'System', // userName
+        'FULL' // containerLoadStatus
+      );
+
+      // Create and download the XML file
+      const blob = new Blob([xmlContent], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SAP_CODECO_${operation}_${mockContainer.number}_${Date.now()}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert('SAP XML file generated and downloaded successfully!');
+    } catch (error) {
+      alert(`Error generating SAP XML: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getStatusIcon = (status: EDITransmissionLog['status']) => {
     switch (status) {
       case 'PENDING':
@@ -132,7 +180,7 @@ export const EDIManagement: React.FC = () => {
     );
   }
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">EDI Management</h2>
@@ -221,7 +269,36 @@ export const EDIManagement: React.FC = () => {
 
       {/* File Upload Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Process EDI from File</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">EDI Processing Options</h3>
+        
+        {/* SAP XML Generation */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-3">Generate SAP CODECO XML</h4>
+          <p className="text-sm text-blue-700 mb-4">
+            Generate SAP-format XML for CODECO transmission (uses sample container data)
+          </p>
+          <div className="flex items-center space-x-4">
+            <select
+              value={operation}
+              onChange={(e) => setOperation(e.target.value as 'GATE_IN' | 'GATE_OUT')}
+              className="px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="GATE_IN">Gate In</option>
+              <option value="GATE_OUT">Gate Out</option>
+            </select>
+            <button
+              onClick={handleGenerateSapXml}
+              disabled={isLoading}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="h-4 w-4" />
+              <span>{isLoading ? 'Generating...' : 'Generate SAP XML'}</span>
+            </button>
+          </div>
+        </div>
+        
+        {/* File Upload */}
+        <h4 className="font-medium text-gray-900 mb-4">Process EDI from File</h4>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -356,5 +433,23 @@ export const EDIManagement: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="EDI Management"
+          reason="Managing EDI messages, CODECO generation, transmission logs, and technical configurations requires detailed interfaces optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

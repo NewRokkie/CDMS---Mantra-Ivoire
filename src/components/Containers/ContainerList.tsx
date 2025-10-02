@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, Eye, Edit, AlertTriangle, Package } from 'lucide-react';
+import { Search, Filter, Download, Eye, CreditCard as Edit, AlertTriangle, Package } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,6 +7,7 @@ import { useYard } from '../../hooks/useYard';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ContainerViewModal } from './ContainerViewModal';
 import { ContainerEditModal } from './ContainerEditModal';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
 // Helper function to format container number for display (adds hyphens)
 const formatContainerNumberForDisplay = (containerNumber: string): string => {
@@ -24,10 +25,10 @@ const initialContainers: Container[] = [
   {
     id: '1',
     number: 'MSKU1234567',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_depot',
-    location: 'Stack S1-Row 1-Tier 1',
+    location: 'S01-R1-H1',
     gateInDate: new Date('2025-01-10T08:30:00'),
     client: 'Maersk Line',
     clientId: '1',
@@ -48,7 +49,7 @@ const initialContainers: Container[] = [
     type: 'reefer',
     size: '20ft',
     status: 'out_depot',
-    location: 'Stack S3-Row 2-Tier 1',
+    location: 'S03-R2-H1',
     gateInDate: new Date('2025-01-09T14:15:00'),
     gateOutDate: new Date('2025-01-11T10:00:00'),
     client: 'MSC',
@@ -68,10 +69,10 @@ const initialContainers: Container[] = [
   {
     id: '3',
     number: 'GESU4567891',
-    type: 'dry',
+    type: 'standard',
     size: '40ft',
     status: 'in_service',
-    location: 'Stack S5-Row 1-Tier 3',
+    location: 'S05-R1-H3',
     gateInDate: new Date('2025-01-08T16:45:00'),
     client: 'CMA CGM',
     clientId: '3',
@@ -90,10 +91,10 @@ const initialContainers: Container[] = [
   {
     id: '4',
     number: 'SHIP1112228',
-    type: 'dry',
+    type: 'standard',
     size: '20ft',
     status: 'in_depot',
-    location: 'Stack S7-Row 3-Tier 2',
+    location: 'S07-R3-H2',
     gateInDate: new Date('2025-01-11T09:15:00'),
     client: 'Shipping Solutions Inc',
     clientId: '4',
@@ -101,7 +102,7 @@ const initialContainers: Container[] = [
     createdBy: 'System',
     updatedBy: 'System',
     auditLogs: [
-      { timestamp: new Date('2025-01-11T09:15:00'), user: 'System', action: 'created', details: 'Standard dry container added' },
+      { timestamp: new Date('2025-01-11T09:15:00'), user: 'System', action: 'created', details: 'Standard standard container added' },
       { timestamp: new Date('2025-01-11T11:00:00'), user: 'Yard Operator', action: 'moved', details: 'Placed in Stack S7 stack' },
       { timestamp: new Date('2025-01-12T10:30:00'), user: 'Client Rep', action: 'viewed', details: 'Verified container position' },
       { timestamp: new Date('2025-01-12T14:00:00'), user: 'Admin', action: 'edited', details: 'Updated client code to SHIP001' },
@@ -114,7 +115,7 @@ const initialContainers: Container[] = [
     type: 'reefer',
     size: '40ft',
     status: 'maintenance',
-    location: 'Stack S9-Row 2-Tier 4',
+    location: 'S09-R2-H4',
     gateInDate: new Date('2025-01-07T13:20:00'),
     client: 'Shipping Solutions Inc',
     clientId: '4',
@@ -259,7 +260,7 @@ export const ContainerList: React.FC = () => {
   // Show client restriction notice
   const showClientNotice = !canViewAllData() && user?.role === 'client';
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -508,5 +509,23 @@ export const ContainerList: React.FC = () => {
         )}
       </div>
     </div>
+  );
+
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Containers"
+          reason="Managing detailed container inventory, statuses, locations, and comprehensive filtering requires extensive data tables optimized for desktop."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

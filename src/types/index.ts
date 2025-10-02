@@ -187,7 +187,7 @@ export interface YardPosition {
 export interface Container {
   id: string;
   number: string;
-  type: 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  type: 'standard' | 'hi_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   size: '20ft' | '40ft';
   status: 'in_depot' | 'out_depot' | 'in_service' | 'maintenance' | 'cleaning';
   location: string;
@@ -204,6 +204,18 @@ export interface Container {
   releaseOrderId?: string;
   damage?: string[];
   auditLogs?: AuditLog[];
+  // Enhanced yard management fields
+  coordinates?: string; // Grid coordinates (e.g., "A-12-03")
+  weight?: number; // Container weight in kg
+  contents?: string; // Description of container contents
+  origin?: string; // Origin location
+  destination?: string; // Destination location
+  arrivalDate?: Date; // Arrival at yard
+  departureDate?: Date; // Expected departure
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  temperature?: number; // For reefer containers
+  hazardous?: boolean; // Hazardous materials flag
+  customsStatus?: 'pending' | 'cleared' | 'hold';
 }
 
 export interface ReleaseOrderContainer {

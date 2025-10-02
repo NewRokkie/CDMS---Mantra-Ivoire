@@ -1,816 +1,808 @@
-/**
- * Yard Service - Database-connected yard management
- * Manages multiple independent yards with PostgreSQL backend
- */
-
-import { Yard, YardContext, YardOperationLog, YardStats, YardStack, YardSection, YardPosition } from '../types/yard';
+import { Yard, YardContext, YardOperationLog, YardStats, YardStack } from '../types/yard';
 import { Container } from '../types';
-import { dbService } from './database/DatabaseService';
-
-export interface DatabaseYard {
-  id: string;
-  name: string;
-  code: string;
-  description: string;
-  location: string;
-  layout: 'tantarelli' | 'standard';
-  is_active: boolean;
-  total_capacity: number;
-  current_occupancy: number;
-  timezone: string;
-  contact_manager: string;
-  contact_phone: string;
-  contact_email: string;
-  address_street: string;
-  address_city: string;
-  address_state: string;
-  address_zip_code: string;
-  address_country: string;
-  created_at: string;
-  updated_at: string;
-  created_by?: string;
-  updated_by?: string;
-}
-
-export interface DatabaseYardSection {
-  id: string;
-  yard_id: string;
-  name: string;
-  description: string;
-  position_x: number;
-  position_y: number;
-  position_z: number;
-  width: number;
-  length: number;
-  color_hex: string;
-  is_active: boolean;
-}
-
-export interface DatabaseYardStack {
-  id: string;
-  yard_id: string;
-  section_id: string;
-  stack_number: number;
-  rows: number;
-  max_tiers: number;
-  capacity: number;
-  current_occupancy: number;
-  position_x: number;
-  position_y: number;
-  position_z: number;
-  width: number;
-  length: number;
-  is_odd_stack: boolean;
-  is_active: boolean;
-}
-
-export interface DatabaseYardPosition {
-  id: string;
-  yard_id: string;
-  section_id: string;
-  stack_id: string;
-  row_number: number;
-  bay_number: number;
-  tier_number: number;
-  position_x: number;
-  position_y: number;
-  position_z: number;
-  is_occupied: boolean;
-  container_id?: string;
-  container_number?: string;
-  container_size?: '20ft' | '40ft';
-  client_code?: string;
-  placed_at?: string;
-}
 
 /**
- * Yard Service - Database-connected implementation
+ * Yard Service - Manages multiple independent yards
  */
 export class YardService {
+  private yards: Map<string, Yard> = new Map();
   private currentYardId: string | null = null;
+  private operationLogs: YardOperationLog[] = [];
 
   constructor() {
-    // Initialize with default yard if available
-    this.initializeCurrentYard();
+    this.initializeDefaultYards();
   }
 
   /**
-   * Initialize current yard from database or default
+   * Initialize default yards for the system
    */
-  private async initializeCurrentYard(): Promise<void> {
-    try {
-      const yards = await this.getAvailableYards();
-      if (yards.length > 0) {
-        // Set Tantarelli as default if available
-        const tantarelli = yards.find(y => y.code === 'DEPOT-01');
-        this.currentYardId = tantarelli ? tantarelli.id : yards[0].id;
-        console.log('✅ Current yard initialized:', this.currentYardId);
+  private initializeDefaultYards(): void {
+    const defaultYards: Yard[] = [
+      {
+        id: 'depot-tantarelli',
+        name: 'Depot Tantarelli',
+        code: 'DEPOT-01',
+        description: 'Main container depot with specialized odd-numbered stack layout',
+        location: 'Tantarelli Port Complex',
+        isActive: true,
+        totalCapacity: 2500,
+        currentOccupancy: 1847,
+        sections: this.createTantarelliSections(),
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date(),
+        createdBy: 'System',
+        updatedBy: 'System',
+        layout: 'tantarelli',
+        timezone: 'Africa/Abidjan',
+        contactInfo: {
+          manager: 'Jean-Baptiste Kouassi',
+          phone: '+225 XX XX XX XX XX',
+          email: 'manager.tantarelli@depot.ci'
+        },
+        address: {
+          street: 'Zone Portuaire de Tantarelli',
+          city: 'Abidjan',
+          state: 'Lagunes',
+          zipCode: '01 BP 1234',
+          country: 'Côte d\'Ivoire'
+        }
+      },
+      {
+        id: 'depot-vridi',
+        name: 'Depot Vridi',
+        code: 'DEPOT-02',
+        description: 'Secondary container depot with standard grid layout',
+        location: 'Port Autonome d\'Abidjan - Vridi',
+        isActive: true,
+        totalCapacity: 1800,
+        currentOccupancy: 1245,
+        sections: this.createVridiSections(),
+        createdAt: new Date('2024-02-01'),
+        updatedAt: new Date(),
+        createdBy: 'System',
+        updatedBy: 'System',
+        layout: 'standard',
+        timezone: 'Africa/Abidjan',
+        contactInfo: {
+          manager: 'Marie Adjoua',
+          phone: '+225 YY YY YY YY YY',
+          email: 'manager.vridi@depot.ci'
+        },
+        address: {
+          street: 'Boulevard de Vridi',
+          city: 'Abidjan',
+          state: 'Lagunes',
+          zipCode: '08 BP 5678',
+          country: 'Côte d\'Ivoire'
+        }
+      },
+      {
+        id: 'depot-san-pedro',
+        name: 'Depot San Pedro',
+        code: 'DEPOT-03',
+        description: 'Coastal container depot with specialized handling',
+        location: 'Port Autonome de San Pedro',
+        isActive: true,
+        totalCapacity: 1200,
+        currentOccupancy: 890,
+        sections: this.createSanPedroSections(),
+        createdAt: new Date('2024-03-01'),
+        updatedAt: new Date(),
+        createdBy: 'System',
+        updatedBy: 'System',
+        layout: 'standard',
+        timezone: 'Africa/Abidjan',
+        contactInfo: {
+          manager: 'Pierre Kouadio',
+          phone: '+225 ZZ ZZ ZZ ZZ ZZ',
+          email: 'manager.sanpedro@depot.ci'
+        },
+        address: {
+          street: 'Zone Portuaire San Pedro',
+          city: 'San Pedro',
+          state: 'Bas-Sassandra',
+          zipCode: '10 BP 3456',
+          country: 'Côte d\'Ivoire'
+        }
       }
-    } catch (error) {
-      console.error('Failed to initialize current yard:', error);
-    }
+    ];
+
+    defaultYards.forEach(yard => {
+      this.yards.set(yard.id, yard);
+    });
+
+    // Set default yard
+    this.currentYardId = 'depot-tantarelli';
+
+    console.log('Yard Service initialized with', defaultYards.length, 'yards');
   }
 
   /**
-   * Get all available yards from database
+   * Create Tantarelli yard sections (existing layout)
    */
-  async getAvailableYards(): Promise<Yard[]> {
-    try {
-      const dbYards = await dbService.select<DatabaseYard>(
-        'yards',
-        '*',
-        { is_active: true },
-        'name ASC'
-      );
-
-      const yards = await Promise.all(
-        dbYards.map(async (dbYard) => {
-          const sections = await this.getYardSections(dbYard.id);
-          return this.mapDatabaseYardToYard(dbYard, sections);
-        })
-      );
-
-      return yards;
-    } catch (error) {
-      console.error('Failed to get available yards:', error);
-      return [];
-    }
+  private createTantarelliSections() {
+    // Return the existing Tantarelli layout
+    return [
+      {
+        id: 'section-top',
+        name: 'Zone A',
+        yardId: 'depot-tantarelli',
+        stacks: this.createTantarelliTopStacks(),
+        position: { x: 0, y: 0, z: 0 },
+        dimensions: { width: 400, length: 120 },
+        color: '#3b82f6'
+      },
+      {
+        id: 'section-center',
+        name: 'Zone B',
+        yardId: 'depot-tantarelli',
+        stacks: this.createTantarelliCenterStacks(),
+        position: { x: 0, y: 140, z: 0 },
+        dimensions: { width: 400, length: 100 },
+        color: '#f59e0b'
+      },
+      {
+        id: 'section-bottom',
+        name: 'Zone C',
+        yardId: 'depot-tantarelli',
+        stacks: this.createTantarelliBottomStacks(),
+        position: { x: 0, y: 260, z: 0 },
+        dimensions: { width: 400, length: 140 },
+        color: '#10b981'
+      }
+    ];
   }
 
   /**
-   * Get current yard from database
+   * Create Vridi yard sections (standard grid layout)
    */
-  async getCurrentYard(): Promise<Yard | null> {
-    if (!this.currentYardId) {
-      await this.initializeCurrentYard();
+  private createVridiSections() {
+    return [
+      {
+        id: 'vridi-section-a',
+        name: 'Zone A',
+        yardId: 'depot-vridi',
+        stacks: this.createStandardStacks('vridi-section-a', 1, 20, 4, 5),
+        position: { x: 0, y: 0, z: 0 },
+        dimensions: { width: 300, length: 100 },
+        color: '#3b82f6'
+      },
+      {
+        id: 'vridi-section-b',
+        name: 'Zone B',
+        yardId: 'depot-vridi',
+        stacks: this.createStandardStacks('vridi-section-b', 21, 40, 5, 5),
+        position: { x: 0, y: 120, z: 0 },
+        dimensions: { width: 300, length: 100 },
+        color: '#10b981'
+      }
+    ];
+  }
+
+  /**
+   * Create San Pedro yard sections (standard grid layout)
+   */
+  private createSanPedroSections() {
+    return [
+      {
+        id: 'sanpedro-section-a',
+        name: 'Zone A',
+        yardId: 'depot-san-pedro',
+        stacks: this.createStandardStacks('sanpedro-section-a', 1, 15, 4, 4),
+        position: { x: 0, y: 0, z: 0 },
+        dimensions: { width: 250, length: 80 },
+        color: '#3b82f6'
+      },
+      {
+        id: 'sanpedro-section-b',
+        name: 'Zone B',
+        yardId: 'depot-san-pedro',
+        stacks: this.createStandardStacks('sanpedro-section-b', 16, 30, 3, 4),
+        position: { x: 0, y: 100, z: 0 },
+        dimensions: { width: 250, length: 60 },
+        color: '#10b981'
+      }
+    ];
+  }
+
+  /**
+   * Helper methods for creating stacks
+   */
+  private createTantarelliTopStacks(): YardStack[] {
+    const stacks: YardStack[] = [];
+    const stackNumbers = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31];
+
+    stackNumbers.forEach((num, index) => {
+      stacks.push({
+        id: `stack-${num}`,
+        stackNumber: num,
+        sectionId: 'section-top',
+        rows: num === 1 ? 4 : num === 31 ? 7 : 5,
+        maxTiers: 5,
+        currentOccupancy: Math.floor(Math.random() * 25),
+        capacity: (num === 1 ? 4 : num === 31 ? 7 : 5) * 5,
+        position: { x: index * 25, y: 20, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: true
+      });
+    });
+
+    return stacks;
+  }
+
+  private createTantarelliCenterStacks(): YardStack[] {
+    const stacks: YardStack[] = [];
+    const stackNumbers = [33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55];
+
+    stackNumbers.forEach((num, index) => {
+      stacks.push({
+        id: `stack-${num}`,
+        stackNumber: num,
+        sectionId: 'section-center',
+        rows: index < 4 ? 5 : 4,
+        maxTiers: 5,
+        currentOccupancy: Math.floor(Math.random() * 25),
+        capacity: (index < 4 ? 5 : 4) * 5,
+        position: { x: index * 25, y: 160, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: true
+      });
+    });
+
+    return stacks;
+  }
+
+  private createTantarelliBottomStacks(): YardStack[] {
+    const stacks: YardStack[] = [];
+    const stackNumbers = [61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103];
+
+    stackNumbers.forEach((num, index) => {
+      const rows = index < 6 ? 6 : index < 18 ? 4 : (num === 101 ? 1 : 2);
+      stacks.push({
+        id: `stack-${num}`,
+        stackNumber: num,
+        sectionId: 'section-bottom',
+        rows,
+        maxTiers: 5,
+        currentOccupancy: Math.floor(Math.random() * 30),
+        capacity: rows * 5,
+        position: { x: index * 20, y: 280, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: true
+      });
+    });
+
+    return stacks;
+  }
+
+  private createStandardStacks(sectionId: string, startNum: number, endNum: number, rows: number, tiers: number): YardStack[] {
+    const stacks: YardStack[] = [];
+
+    for (let i = startNum; i <= endNum; i++) {
+      stacks.push({
+        id: `${sectionId}-stack-${i}`,
+        stackNumber: i,
+        sectionId,
+        rows,
+        maxTiers: tiers,
+        currentOccupancy: Math.floor(Math.random() * (rows * tiers)),
+        capacity: rows * tiers,
+        position: { x: (i - startNum) * 15, y: 20, z: 0 },
+        dimensions: { width: 12, length: 6 },
+        containerPositions: [],
+        isOddStack: false
+      });
     }
 
-    if (!this.currentYardId) return null;
+    return stacks;
+  }
 
-    return this.getYardById(this.currentYardId);
+  /**
+   * Get all available yards
+   */
+  getAvailableYards(): Yard[] {
+    return Array.from(this.yards.values()).filter(yard => yard.isActive);
+  }
+
+  /**
+   * Get current yard
+   */
+  getCurrentYard(): Yard | null {
+    return this.currentYardId ? this.yards.get(this.currentYardId) || null : null;
   }
 
   /**
    * Set current yard
    */
-  async setCurrentYard(yardId: string, userName?: string): Promise<boolean> {
-    try {
-      const yard = await this.getYardById(yardId);
-      if (yard && yard.isActive) {
-        this.currentYardId = yardId;
-
-        // Log yard switch operation
-        await this.logOperation('yard_switch', undefined, userName || 'System', {
-          previousYard: this.currentYardId,
-          newYard: yardId
-        });
-
-        console.log(`✅ Current yard set to: ${yard.name} (${yard.code})`);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Failed to set current yard:', error);
-      return false;
+  setCurrentYard(yardId: string, userName?: string): boolean {
+    const yard = this.yards.get(yardId);
+    if (yard && yard.isActive) {
+      this.currentYardId = yardId;
+      const effectiveUserName = userName || 'System';
+      this.logOperation('yard_switch', undefined, effectiveUserName, { previousYard: this.currentYardId, newYard: yardId });
+      return true;
     }
+    return false;
   }
 
   /**
-   * Get yard by ID from database
+   * Get yard by ID
    */
-  async getYardById(yardId: string): Promise<Yard | null> {
-    try {
-      const dbYard = await dbService.selectOne<DatabaseYard>('yards', '*', { id: yardId });
-
-      if (!dbYard) return null;
-
-      const sections = await this.getYardSections(yardId);
-      return this.mapDatabaseYardToYard(dbYard, sections);
-    } catch (error) {
-      console.error('Failed to get yard by ID:', error);
-      return null;
-    }
+  getYardById(yardId: string): Yard | null {
+    return this.yards.get(yardId) || null;
   }
 
   /**
-   * Get yard by code from database
+   * Get yard by code
    */
-  async getYardByCode(yardCode: string): Promise<Yard | null> {
-    try {
-      const dbYard = await dbService.selectOne<DatabaseYard>('yards', '*', { code: yardCode });
-
-      if (!dbYard) return null;
-
-      const sections = await this.getYardSections(dbYard.id);
-      return this.mapDatabaseYardToYard(dbYard, sections);
-    } catch (error) {
-      console.error('Failed to get yard by code:', error);
-      return null;
-    }
+  getYardByCode(yardCode: string): Yard | null {
+    return Array.from(this.yards.values()).find(yard => yard.code === yardCode) || null;
   }
 
   /**
    * Validate yard access for user
    */
-  async validateYardAccess(yardId: string, userId: string): Promise<boolean> {
-    try {
-      const hasAccess = await dbService.exists('user_yard_assignments', {
-        user_id: userId,
-        yard_id: yardId,
-        is_active: true
-      });
-
-      return hasAccess;
-    } catch (error) {
-      console.error('Failed to validate yard access:', error);
-      return false;
-    }
+  validateYardAccess(yardId: string, userId: string, userYardAssignments: string[]): boolean {
+    // Check if user has access to this yard
+    return userYardAssignments.includes(yardId) || userYardAssignments.includes('all');
   }
 
   /**
    * Get yards accessible by user
    */
-  async getAccessibleYards(userId: string): Promise<Yard[]> {
-    try {
-      const dbYards = await dbService.query<DatabaseYard>(`
-        SELECT y.* FROM yards y
-        JOIN user_yard_assignments uya ON y.id = uya.yard_id
-        WHERE uya.user_id = $1 AND uya.is_active = true AND y.is_active = true
-        ORDER BY y.name ASC
-      `, [userId]);
-
-      const yards = await Promise.all(
-        dbYards.rows.map(async (dbYard) => {
-          const sections = await this.getYardSections(dbYard.id);
-          return this.mapDatabaseYardToYard(dbYard, sections);
-        })
-      );
-
-      return yards;
-    } catch (error) {
-      console.error('Failed to get accessible yards:', error);
-      return [];
+  getAccessibleYards(userYardAssignments: string[]): Yard[] {
+    if (userYardAssignments.includes('all')) {
+      return this.getAvailableYards();
     }
+
+    const allYards = Array.from(this.yards.values());
+
+    return allYards.filter(yard =>
+      yard.isActive && userYardAssignments.includes(yard.id)
+    );
   }
 
   /**
-   * Log yard operation to database
+   * Log yard operation
    */
-  async logOperation(
+  logOperation(
     operationType: YardOperationLog['operationType'],
     containerNumber: string | undefined,
     userName: string,
     details: Record<string, any> = {}
-  ): Promise<void> {
-    try {
-      const currentYard = await this.getCurrentYard();
-      if (!currentYard) {
-        console.warn('Cannot log operation: No current yard selected');
-        return;
+  ): void {
+    const currentYard = this.getCurrentYard();
+    if (!currentYard) {
+      console.warn('Cannot log operation: No current yard selected');
+      return;
+    }
+
+    const log: YardOperationLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      yardId: currentYard.id,
+      yardCode: currentYard.code,
+      operationType,
+      containerNumber,
+      userId: 'system', // TODO: Replace with actual user ID from auth context
+      userName,
+      timestamp: new Date(),
+      details,
+      status: 'success'
+    };
+
+    this.operationLogs.push(log);
+  }
+
+  /**
+   * Get operation logs for a yard
+   */
+  getYardOperationLogs(yardId: string, limit: number = 100): YardOperationLog[] {
+    return this.operationLogs
+      .filter(log => log.yardId === yardId)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
+  }
+
+  /**
+   * Get yard statistics
+   */
+  getYardStats(yardId: string): YardStats | null {
+    const yard = this.yards.get(yardId);
+    if (!yard) return null;
+
+    // In a real implementation, these would be calculated from actual data
+    return {
+      yardId: yard.id,
+      yardCode: yard.code,
+      totalContainers: yard.currentOccupancy,
+      containersIn: Math.floor(yard.currentOccupancy * 0.7),
+      containersOut: Math.floor(yard.currentOccupancy * 0.3),
+      occupancyRate: (yard.currentOccupancy / yard.totalCapacity) * 100,
+      pendingOperations: Math.floor(Math.random() * 10) + 2,
+      lastUpdated: new Date()
+    };
+  }
+
+  /**
+   * Add a new stack to a yard section
+   */
+  addStackToSection(
+    yardId: string,
+    sectionId: string,
+    stackData: {
+      stackNumber: number;
+      rows: number;
+      maxTiers: number;
+      position: { x: number; y: number; z: number };
+      dimensions: { width: number; length: number };
+    },
+    userName?: string
+  ): YardStack | null {
+    const yard = this.yards.get(yardId);
+    if (!yard) return null;
+
+    const section = yard.sections.find(s => s.id === sectionId);
+    if (!section) return null;
+
+    // Check if stack number already exists
+    const existingStack = section.stacks.find(s => s.stackNumber === stackData.stackNumber);
+    if (existingStack) {
+      throw new Error(`Stack ${stackData.stackNumber} already exists in this section`);
+    }
+
+    const newStack: YardStack = {
+      id: `stack-${stackData.stackNumber}`,
+      stackNumber: stackData.stackNumber,
+      sectionId,
+      rows: stackData.rows,
+      maxTiers: stackData.maxTiers,
+      currentOccupancy: 0,
+      capacity: stackData.rows * stackData.maxTiers,
+      position: stackData.position,
+      dimensions: stackData.dimensions,
+      containerPositions: [],
+      isOddStack: stackData.stackNumber % 2 === 1
+    };
+
+    section.stacks.push(newStack);
+    section.stacks.sort((a, b) => a.stackNumber - b.stackNumber);
+
+    // Update yard capacity
+    yard.totalCapacity += newStack.capacity;
+    yard.updatedAt = new Date();
+    if (userName) {
+      yard.updatedBy = userName;
+    }
+
+    this.yards.set(yardId, yard);
+
+    // Log operation
+    this.logOperation('stack_create', undefined, userName || 'System', {
+      yardId,
+      yardCode: yard.code,
+      sectionId,
+      stackNumber: stackData.stackNumber,
+      capacity: newStack.capacity
+    });
+
+    console.log(`Created stack ${stackData.stackNumber} in section ${sectionId} of yard ${yard.name}`);
+    return newStack;
+  }
+
+  /**
+   * Update an existing stack
+   */
+  updateStack(
+    yardId: string,
+    stackId: string,
+    updates: Partial<{
+      rows: number;
+      maxTiers: number;
+      position: { x: number; y: number; z: number };
+      dimensions: { width: number; length: number };
+    }>,
+    userName?: string
+  ): YardStack | null {
+    const yard = this.yards.get(yardId);
+    if (!yard) return null;
+
+    let targetStack: YardStack | null = null;
+    let targetSection: any = null;
+
+    // Find the stack across all sections
+    for (const section of yard.sections) {
+      const stack = section.stacks.find(s => s.id === stackId);
+      if (stack) {
+        targetStack = stack;
+        targetSection = section;
+        break;
       }
-
-      await dbService.insert('yard_operation_logs', {
-        yard_id: currentYard.id,
-        yard_code: currentYard.code,
-        operation_type: operationType,
-        container_number: containerNumber,
-        user_name: userName,
-        details: JSON.stringify(details),
-        status: 'success',
-      });
-    } catch (error) {
-      console.error('Failed to log yard operation:', error);
     }
+
+    if (!targetStack || !targetSection) return null;
+
+    // Check if stack has containers before allowing capacity changes
+    if ((updates.rows || updates.maxTiers) && targetStack.currentOccupancy > 0) {
+      throw new Error('Cannot modify stack capacity while containers are present');
+    }
+
+    const oldCapacity = targetStack.capacity;
+
+    // Apply updates
+    if (updates.rows !== undefined) {
+      targetStack.rows = updates.rows;
+    }
+    if (updates.maxTiers !== undefined) {
+      targetStack.maxTiers = updates.maxTiers;
+    }
+    if (updates.position !== undefined) {
+      targetStack.position = updates.position;
+    }
+    if (updates.dimensions !== undefined) {
+      targetStack.dimensions = updates.dimensions;
+    }
+
+    // Recalculate capacity
+    const newCapacity = targetStack.rows * targetStack.maxTiers;
+    targetStack.capacity = newCapacity;
+
+    // Update yard total capacity
+    yard.totalCapacity = yard.totalCapacity - oldCapacity + newCapacity;
+    yard.updatedAt = new Date();
+    if (userName) {
+      yard.updatedBy = userName;
+    }
+
+    this.yards.set(yardId, yard);
+
+    // Log operation
+    this.logOperation('stack_update', undefined, userName || 'System', {
+      yardId,
+      yardCode: yard.code,
+      stackId,
+      stackNumber: targetStack.stackNumber,
+      oldCapacity,
+      newCapacity,
+      updates
+    });
+
+    console.log(`Updated stack ${targetStack.stackNumber} in yard ${yard.name}`);
+    return targetStack;
   }
 
   /**
-   * Get operation logs for a yard from database
+   * Delete a stack from a yard section
    */
-  async getYardOperationLogs(yardId: string, limit: number = 100): Promise<YardOperationLog[]> {
-    try {
-      const logs = await dbService.select(
-        'yard_operation_logs',
-        '*',
-        { yard_id: yardId },
-        'timestamp DESC',
-        limit
-      );
+  deleteStack(yardId: string, stackId: string, userName?: string): boolean {
+    const yard = this.yards.get(yardId);
+    if (!yard) return false;
 
-      return logs.map(log => ({
-        id: log.id,
-        yardId: log.yard_id,
-        yardCode: log.yard_code,
-        operationType: log.operation_type,
-        containerNumber: log.container_number,
-        userId: log.user_id || 'system',
-        userName: log.user_name,
-        timestamp: new Date(log.timestamp),
-        details: JSON.parse(log.details || '{}'),
-        status: log.status,
-      }));
-    } catch (error) {
-      console.error('Failed to get yard operation logs:', error);
-      return [];
+    let targetStack: YardStack | null = null;
+    let targetSection: any = null;
+    let stackIndex = -1;
+
+    // Find the stack across all sections
+    for (const section of yard.sections) {
+      const index = section.stacks.findIndex(s => s.id === stackId);
+      if (index !== -1) {
+        targetStack = section.stacks[index];
+        targetSection = section;
+        stackIndex = index;
+        break;
+      }
     }
+
+    if (!targetStack || !targetSection || stackIndex === -1) return false;
+
+    // Check if stack has containers
+    if (targetStack.currentOccupancy > 0) {
+      throw new Error('Cannot delete stack with containers. Please move all containers first.');
+    }
+
+    // Remove stack from section
+    targetSection.stacks.splice(stackIndex, 1);
+
+    // Update yard capacity
+    yard.totalCapacity -= targetStack.capacity;
+    yard.updatedAt = new Date();
+    if (userName) {
+      yard.updatedBy = userName;
+    }
+
+    this.yards.set(yardId, yard);
+
+    // Log operation
+    this.logOperation('stack_delete', undefined, userName || 'System', {
+      yardId,
+      yardCode: yard.code,
+      sectionId: targetSection.id,
+      stackId,
+      stackNumber: targetStack.stackNumber,
+      capacity: targetStack.capacity
+    });
+
+    console.log(`Deleted stack ${targetStack.stackNumber} from yard ${yard.name}`);
+    return true;
   }
 
   /**
-   * Get yard statistics from database
+   * Get available stack numbers for a section (to avoid duplicates)
    */
-  async getYardStats(yardId: string): Promise<YardStats | null> {
-    try {
-      const yard = await this.getYardById(yardId);
-      if (!yard) return null;
+  getAvailableStackNumbers(yardId: string, sectionId: string): number[] {
+    const yard = this.yards.get(yardId);
+    if (!yard) return [];
 
-      // Get real-time statistics from database views
-      const stats = await dbService.queryOne(`
-        SELECT
-          y.id as yard_id,
-          y.code as yard_code,
-          y.current_occupancy as total_containers,
-          COUNT(c.id) FILTER (WHERE c.status = 'in_depot') as containers_in,
-          COUNT(c.id) FILTER (WHERE c.status = 'out_depot') as containers_out,
-          ROUND((y.current_occupancy::DECIMAL / NULLIF(y.total_capacity, 0)) * 100, 2) as occupancy_rate,
-          COUNT(gio.id) FILTER (WHERE gio.operation_status = 'pending') +
-          COUNT(goo.id) FILTER (WHERE goo.operation_status = 'pending') as pending_operations
-        FROM yards y
-        LEFT JOIN containers c ON c.current_yard_id = y.id
-        LEFT JOIN gate_in_operations gio ON gio.assigned_yard_id = y.id
-        LEFT JOIN gate_out_operations goo ON goo.current_yard_id = y.id
-        WHERE y.id = $1
-        GROUP BY y.id, y.code, y.current_occupancy, y.total_capacity
-      `, [yardId]);
+    const section = yard.sections.find(s => s.id === sectionId);
+    if (!section) return [];
 
-      if (!stats) return null;
-
-      return {
-        yardId: stats.yard_id,
-        yardCode: stats.yard_code,
-        totalContainers: parseInt(stats.total_containers) || 0,
-        containersIn: parseInt(stats.containers_in) || 0,
-        containersOut: parseInt(stats.containers_out) || 0,
-        occupancyRate: parseFloat(stats.occupancy_rate) || 0,
-        pendingOperations: parseInt(stats.pending_operations) || 0,
-        lastUpdated: new Date(),
-      };
-    } catch (error) {
-      console.error('Failed to get yard statistics:', error);
-      return null;
-    }
+    const existingNumbers = section.stacks.map(s => s.stackNumber);
+    const allNumbers = Array.from({ length: 200 }, (_, i) => i + 1);
+    
+    return allNumbers.filter(num => !existingNumbers.includes(num));
   }
 
+  /**
+   * Get next suggested stack number for a section
+   */
+  getNextStackNumber(yardId: string, sectionId: string): number {
+    const yard = this.yards.get(yardId);
+    if (!yard) return 1;
+
+    const section = yard.sections.find(s => s.id === sectionId);
+    if (!section || section.stacks.length === 0) return 1;
+
+    const maxNumber = Math.max(...section.stacks.map(s => s.stackNumber));
+    
+    // For Tantarelli layout, suggest next odd number
+    if (yard.layout === 'tantarelli') {
+      return maxNumber % 2 === 0 ? maxNumber + 1 : maxNumber + 2;
+    }
+    
+    return maxNumber + 1;
+  }
   /**
    * Create new yard
    */
-  async createYard(yardData: Omit<Yard, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>, userName?: string): Promise<Yard | null> {
-    try {
-      const newYard = await dbService.insert<DatabaseYard>('yards', {
-        name: yardData.name,
-        code: yardData.code,
-        description: yardData.description,
-        location: yardData.location,
-        layout: yardData.layout,
-        is_active: yardData.isActive,
-        total_capacity: yardData.totalCapacity,
-        current_occupancy: yardData.currentOccupancy,
-        timezone: yardData.timezone || 'Africa/Abidjan',
-        contact_manager: yardData.contactInfo?.manager,
-        contact_phone: yardData.contactInfo?.phone,
-        contact_email: yardData.contactInfo?.email,
-        address_street: yardData.address?.street,
-        address_city: yardData.address?.city,
-        address_state: yardData.address?.state,
-        address_zip_code: yardData.address?.zipCode,
-        address_country: yardData.address?.country || 'Côte d\'Ivoire',
-      });
+  createYard(yardData: Omit<Yard, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>, userName?: string): Yard {
+    const effectiveUserName = userName || 'System';
+    const yard: Yard = {
+      ...yardData,
+      id: `yard-${Date.now()}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: effectiveUserName,
+      updatedBy: effectiveUserName
+    };
 
-      if (!newYard) {
-        throw new Error('Failed to create yard');
-      }
-
-      console.log(`✅ Created new yard ${newYard.name} by ${userName || 'System'}`);
-      return this.getYardById(newYard.id);
-    } catch (error) {
-      console.error('Failed to create yard:', error);
-      throw error;
-    }
+    this.yards.set(yard.id, yard);
+    console.log(`Created new yard ${yard.name} by ${effectiveUserName}`);
+    return yard;
   }
 
   /**
    * Update yard
    */
-  async updateYard(yardId: string, updates: Partial<Yard>, userName?: string): Promise<Yard | null> {
-    try {
-      const updateData: Partial<DatabaseYard> = {};
+  updateYard(yardId: string, updates: Partial<Yard>, userName?: string): Yard | null {
+    const yard = this.yards.get(yardId);
 
-      if (updates.name) updateData.name = updates.name;
-      if (updates.code) updateData.code = updates.code;
-      if (updates.description) updateData.description = updates.description;
-      if (updates.location) updateData.location = updates.location;
-      if (updates.layout) updateData.layout = updates.layout;
-      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
-      if (updates.totalCapacity) updateData.total_capacity = updates.totalCapacity;
-      if (updates.currentOccupancy !== undefined) updateData.current_occupancy = updates.currentOccupancy;
-      if (updates.timezone) updateData.timezone = updates.timezone;
+    if (!yard) return null;
 
-      if (updates.contactInfo) {
-        updateData.contact_manager = updates.contactInfo.manager;
-        updateData.contact_phone = updates.contactInfo.phone;
-        updateData.contact_email = updates.contactInfo.email;
-      }
+    const effectiveUserName = userName || 'System';
+    const updatedYard = {
+      ...yard,
+      ...updates,
+      updatedAt: new Date(),
+      updatedBy: effectiveUserName
+    };
 
-      if (updates.address) {
-        updateData.address_street = updates.address.street;
-        updateData.address_city = updates.address.city;
-        updateData.address_state = updates.address.state;
-        updateData.address_zip_code = updates.address.zipCode;
-        updateData.address_country = updates.address.country;
-      }
-
-      await dbService.update('yards', updateData, { id: yardId });
-
-      console.log(`✅ Updated yard ${yardId} by ${userName || 'System'}`);
-      return this.getYardById(yardId);
-    } catch (error) {
-      console.error('Failed to update yard:', error);
-      throw error;
-    }
+    this.yards.set(yardId, updatedYard);
+    console.log(`Updated yard ${yardId} by ${effectiveUserName}`);
+    return updatedYard;
   }
 
   /**
    * Delete yard
    */
-  async deleteYard(yardId: string, userName?: string): Promise<boolean> {
-    try {
-      const yard = await this.getYardById(yardId);
-      if (!yard) return false;
+  deleteYard(yardId: string, userName?: string): boolean {
+    const yard = this.yards.get(yardId);
+    if (!yard) return false;
 
-      // Prevent deletion of the current yard
-      if (this.currentYardId === yardId) {
-        throw new Error('Cannot delete the currently selected yard');
-      }
-
-      // Check if yard has containers
-      const containerCount = await dbService.count('containers', { current_yard_id: yardId });
-      if (containerCount > 0) {
-        throw new Error('Cannot delete yard with containers. Please move all containers first.');
-      }
-
-      await dbService.delete('yards', { id: yardId });
-
-      // Log deletion
-      await this.logOperation('yard_delete', undefined, userName || 'System', {
-        deletedYardId: yardId,
-        deletedYardName: yard.name,
-        deletedYardCode: yard.code
-      });
-
-      console.log(`✅ Deleted yard ${yardId} (${yard.name}) by ${userName || 'System'}`);
-      return true;
-    } catch (error) {
-      console.error('Failed to delete yard:', error);
-      throw error;
+    const effectiveUserName = userName || 'System';
+    
+    // Prevent deletion of the current yard
+    if (this.currentYardId === yardId) {
+      throw new Error('Cannot delete the currently selected yard');
     }
+
+    // Check if yard has containers (in a real implementation)
+    if (yard.currentOccupancy > 0) {
+      throw new Error('Cannot delete yard with containers. Please move all containers first.');
+    }
+
+    this.yards.delete(yardId);
+    
+    // Log deletion
+    this.logOperation('yard_delete', undefined, effectiveUserName, {
+      deletedYardId: yardId,
+      deletedYardName: yard.name,
+      deletedYardCode: yard.code
+    });
+
+    console.log(`Deleted yard ${yardId} (${yard.name}) by ${effectiveUserName}`);
+    return true;
   }
 
   /**
    * Get yard context for UI
    */
-  async getYardContext(): Promise<YardContext> {
-    try {
-      const [currentYard, availableYards] = await Promise.all([
-        this.getCurrentYard(),
-        this.getAvailableYards()
-      ]);
-
-      return {
-        currentYard,
-        availableYards,
-        isLoading: false,
-        error: null
-      };
-    } catch (error) {
-      console.error('Failed to get yard context:', error);
-      return {
-        currentYard: null,
-        availableYards: [],
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-
-  /**
-   * Get yard sections from database
-   */
-  private async getYardSections(yardId: string): Promise<YardSection[]> {
-    try {
-      const dbSections = await dbService.select<DatabaseYardSection>(
-        'yard_sections',
-        '*',
-        { yard_id: yardId, is_active: true },
-        'name ASC'
-      );
-
-      const sections = await Promise.all(
-        dbSections.map(async (dbSection) => {
-          const stacks = await this.getSectionStacks(dbSection.id);
-          return this.mapDatabaseSectionToSection(dbSection, stacks);
-        })
-      );
-
-      return sections;
-    } catch (error) {
-      console.error('Failed to get yard sections:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get stacks for a section from database
-   */
-  private async getSectionStacks(sectionId: string): Promise<YardStack[]> {
-    try {
-      const dbStacks = await dbService.select<DatabaseYardStack>(
-        'yard_stacks',
-        '*',
-        { section_id: sectionId, is_active: true },
-        'stack_number ASC'
-      );
-
-      const stacks = await Promise.all(
-        dbStacks.map(async (dbStack) => {
-          const positions = await this.getStackPositions(dbStack.id);
-          return this.mapDatabaseStackToStack(dbStack, positions);
-        })
-      );
-
-      return stacks;
-    } catch (error) {
-      console.error('Failed to get section stacks:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get positions for a stack from database
-   */
-  private async getStackPositions(stackId: string): Promise<YardPosition[]> {
-    try {
-      const dbPositions = await dbService.select<DatabaseYardPosition>(
-        'yard_positions',
-        '*',
-        { stack_id: stackId },
-        'tier_number ASC, row_number ASC'
-      );
-
-      return dbPositions.map(dbPos => this.mapDatabasePositionToPosition(dbPos));
-    } catch (error) {
-      console.error('Failed to get stack positions:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get containers for current yard
-   */
-  async getYardContainers(yardId: string): Promise<Container[]> {
-    try {
-      const containers = await dbService.query<any>(`
-        SELECT * FROM v_container_overview
-        WHERE current_yard_name IS NOT NULL
-        AND current_yard_code = (SELECT code FROM yards WHERE id = $1)
-        ORDER BY container_number ASC
-      `, [yardId]);
-
-      return containers.rows.map(container => ({
-        id: container.id,
-        number: container.container_number,
-        type: container.container_type,
-        size: container.container_size,
-        status: container.status,
-        location: container.location_description || container.current_location,
-        gateInDate: container.gate_in_date ? new Date(container.gate_in_date) : undefined,
-        gateOutDate: container.gate_out_date ? new Date(container.gate_out_date) : undefined,
-        createdAt: container.created_at ? new Date(container.created_at) : undefined,
-        updatedAt: container.updated_at ? new Date(container.updated_at) : undefined,
-        createdBy: 'system',
-        client: container.client_name || container.client_code,
-        clientId: container.client_id,
-        clientCode: container.client_code,
-        damage: container.is_damaged ? ['damage detected'] : undefined,
-      }));
-    } catch (error) {
-      console.error('Failed to get yard containers:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Check if container belongs to specific yard
-   */
-  async isContainerInYard(container: Container, yardId: string): Promise<boolean> {
-    try {
-      const count = await dbService.count('containers', {
-        container_number: container.number,
-        current_yard_id: yardId
-      });
-      return count > 0;
-    } catch (error) {
-      console.error('Failed to check container in yard:', error);
-      return false;
-    }
+  getYardContext(): YardContext {
+    return {
+      currentYard: this.getCurrentYard(),
+      availableYards: this.getAvailableYards(),
+      isLoading: false,
+      error: null
+    };
   }
 
   /**
    * Validate container operation in current yard
    */
-  async validateContainerOperation(containerNumber: string, operation: string): Promise<{ isValid: boolean; message?: string }> {
-    try {
-      const currentYard = await this.getCurrentYard();
-      if (!currentYard) {
-        return { isValid: false, message: 'No yard selected' };
-      }
-
-      if (!currentYard.isActive) {
-        return { isValid: false, message: 'Current yard is not active' };
-      }
-
-      // Additional validation based on operation type
-      if (operation === 'gate_out') {
-        const container = await dbService.selectOne('containers', 'status', {
-          container_number: containerNumber,
-          current_yard_id: currentYard.id
-        });
-
-        if (!container) {
-          return { isValid: false, message: 'Container not found in current yard' };
-        }
-
-        if (container.status !== 'in_depot') {
-          return { isValid: false, message: 'Container is not available for gate out' };
-        }
-      }
-
-      return { isValid: true };
-    } catch (error) {
-      console.error('Failed to validate container operation:', error);
-      return { isValid: false, message: 'Validation error occurred' };
+  validateContainerOperation(containerNumber: string, operation: string): { isValid: boolean; message?: string } {
+    const currentYard = this.getCurrentYard();
+    if (!currentYard) {
+      return { isValid: false, message: 'No yard selected' };
     }
-  }
 
-  /**
-   * Map database yard to application yard interface
-   */
-  private mapDatabaseYardToYard(dbYard: DatabaseYard, sections: YardSection[]): Yard {
-    return {
-      id: dbYard.id,
-      name: dbYard.name,
-      code: dbYard.code,
-      description: dbYard.description,
-      location: dbYard.location,
-      isActive: dbYard.is_active,
-      totalCapacity: dbYard.total_capacity,
-      currentOccupancy: dbYard.current_occupancy,
-      sections,
-      createdAt: new Date(dbYard.created_at),
-      updatedAt: new Date(dbYard.updated_at),
-      createdBy: dbYard.created_by || 'system',
-      updatedBy: dbYard.updated_by,
-      layout: dbYard.layout,
-      timezone: dbYard.timezone,
-      contactInfo: {
-        manager: dbYard.contact_manager,
-        phone: dbYard.contact_phone,
-        email: dbYard.contact_email,
-      },
-      address: {
-        street: dbYard.address_street,
-        city: dbYard.address_city,
-        state: dbYard.address_state,
-        zipCode: dbYard.address_zip_code,
-        country: dbYard.address_country,
-      },
-    };
-  }
-
-  /**
-   * Map database section to application section interface
-   */
-  private mapDatabaseSectionToSection(dbSection: DatabaseYardSection, stacks: YardStack[]): YardSection {
-    return {
-      id: dbSection.id,
-      name: dbSection.name,
-      yardId: dbSection.yard_id,
-      stacks,
-      position: {
-        x: dbSection.position_x,
-        y: dbSection.position_y,
-        z: dbSection.position_z,
-      },
-      dimensions: {
-        width: dbSection.width,
-        length: dbSection.length,
-      },
-      color: dbSection.color_hex,
-    };
-  }
-
-  /**
-   * Map database stack to application stack interface
-   */
-  private mapDatabaseStackToStack(dbStack: DatabaseYardStack, positions: YardPosition[]): YardStack {
-    return {
-      id: dbStack.id,
-      stackNumber: dbStack.stack_number,
-      sectionId: dbStack.section_id,
-      rows: dbStack.rows,
-      maxTiers: dbStack.max_tiers,
-      currentOccupancy: dbStack.current_occupancy,
-      capacity: dbStack.capacity,
-      position: {
-        x: dbStack.position_x,
-        y: dbStack.position_y,
-        z: dbStack.position_z,
-      },
-      dimensions: {
-        width: dbStack.width,
-        length: dbStack.length,
-      },
-      containerPositions: positions,
-      isOddStack: dbStack.is_odd_stack,
-    };
-  }
-
-  /**
-   * Map database position to application position interface
-   */
-  private mapDatabasePositionToPosition(dbPos: DatabaseYardPosition): YardPosition {
-    return {
-      id: dbPos.id,
-      yardId: dbPos.yard_id,
-      sectionId: dbPos.section_id,
-      stackId: dbPos.stack_id,
-      row: dbPos.row_number,
-      bay: dbPos.bay_number,
-      tier: dbPos.tier_number,
-      position: {
-        x: dbPos.position_x,
-        y: dbPos.position_y,
-        z: dbPos.position_z,
-      },
-      isOccupied: dbPos.is_occupied,
-      containerId: dbPos.container_id,
-      containerNumber: dbPos.container_number,
-      containerSize: dbPos.container_size,
-      clientCode: dbPos.client_code,
-      placedAt: dbPos.placed_at ? new Date(dbPos.placed_at) : undefined,
-    };
-  }
-
-  /**
-   * Get available positions in yard
-   */
-  async getAvailablePositions(yardId: string, containerSize?: '20ft' | '40ft'): Promise<YardPosition[]> {
-    try {
-      let query = `
-        SELECT yp.* FROM yard_positions yp
-        JOIN yard_stacks ys ON yp.stack_id = ys.id
-        WHERE yp.yard_id = $1 AND yp.is_occupied = false AND yp.is_accessible = true
-      `;
-      const params: any[] = [yardId];
-
-      if (containerSize === '40ft') {
-        query += ` AND ys.config_rule IN ('paired_40ft', 'both')`;
-      }
-
-      query += ` ORDER BY yp.tier_number ASC, yp.row_number ASC`;
-
-      const positions = await dbService.query<DatabaseYardPosition>(query, params);
-      return positions.rows.map(pos => this.mapDatabasePositionToPosition(pos));
-    } catch (error) {
-      console.error('Failed to get available positions:', error);
-      return [];
+    if (!currentYard.isActive) {
+      return { isValid: false, message: 'Current yard is not active' };
     }
+
+    // Add more validation logic as needed
+    return { isValid: true };
   }
 
   /**
-   * Reserve position for container
+   * Get containers for current yard
    */
-  async reservePosition(positionId: string, containerNumber: string, clientCode: string, userName?: string): Promise<boolean> {
-    try {
-      await dbService.update('yard_positions', {
-        reserved_until: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours
-        container_number: containerNumber,
-        client_code: clientCode,
-      }, { id: positionId });
+  getYardContainers(yardId: string, allContainers: Container[]): Container[] {
+    // Filter containers that belong to this yard
+    // This would typically be done via database query in production
+    return allContainers.filter(container => {
+      // For now, we'll use location patterns to determine yard association
+      // In production, containers would have explicit yardId fields
+      return this.isContainerInYard(container, yardId);
+    });
+  }
 
-      console.log(`✅ Position ${positionId} reserved for container ${containerNumber}`);
-      return true;
-    } catch (error) {
-      console.error('Failed to reserve position:', error);
-      return false;
+  /**
+   * Check if container belongs to specific yard
+   */
+  isContainerInYard(container: Container, yardId: string): boolean {
+    const yard = this.yards.get(yardId);
+    if (!yard) return false;
+
+    // For Tantarelli yard, check for specific stack patterns (new S##-R#-H# format)
+    if (yardId === 'depot-tantarelli') {
+      return /S(1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35|37|39|41|43|45|47|49|51|53|55|61|63|65|67|69|71|73|75|77|79|81|83|85|87|89|91|93|95|97|99|101|103)-R\d+-H\d+/.test(container.location);
     }
+
+    // For Vridi yard, check for standard stack patterns (new S##-R#-H# format)
+    if (yardId === 'depot-vridi') {
+      return /S\d+-R\d+-H\d+/.test(container.location) &&
+             (container.location.includes(yard.code) || container.location.includes(yard.name));
+    }
+
+    // For San Pedro yard, check for standard stack patterns (new S##-R#-H# format)
+    if (yardId === 'depot-san-pedro') {
+      return /S\d+-R\d+-H\d+/.test(container.location) &&
+             (container.location.includes(yard.code) || container.location.includes(yard.name));
+    }
+
+    // For other yards, use different patterns or explicit yard references
+    return container.location.includes(yard.code) || container.location.includes(yard.name);
   }
 }
 

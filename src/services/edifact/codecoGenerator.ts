@@ -59,11 +59,26 @@ export class CODECOGenerator {
       '40ft': '42G1', // 40ft General Purpose
     };
 
+    // Enhanced size/type mapping based on container type
+    const getContainerCode = (size: string, type: Container['type']): string => {
+      const typeCodeMap = {
+        'standard': size === '20ft' ? '22G1' : '42G1',
+        'hi_cube': size === '20ft' ? '25G1' : '45G1',
+        'hard_top': size === '20ft' ? '22H1' : '42H1',
+        'ventilated': size === '20ft' ? '22V1' : '42V1',
+        'reefer': size === '20ft' ? '22R1' : '42R1',
+        'tank': size === '20ft' ? '22T1' : '42T1',
+        'flat_rack': size === '20ft' ? '22F1' : '42F1',
+        'open_top': size === '20ft' ? '22U1' : '42U1'
+      };
+      return typeCodeMap[type] || (size === '20ft' ? '22G1' : '42G1');
+    };
+
     const detail: EquipmentDetail = {
       equipmentQualifier: 'CN',
       equipmentIdentification: container.number,
       equipmentSizeAndType: {
-        sizeTypeCode: sizeTypeMap[container.size] || '42G1',
+        sizeTypeCode: getContainerCode(container.size, container.type),
         codeListQualifier: '6'
       },
       statusOfEquipment: {

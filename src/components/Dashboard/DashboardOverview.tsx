@@ -9,21 +9,21 @@ import { DashboardStats } from '../../types';
 
 // Enhanced mock container data for dashboard analytics
 const mockContainerData = [
-  { id: '1', number: 'MSKU-123456-7', type: 'dry', size: '40ft', status: 'in_depot', location: 'Stack S1-Row 1-Tier 1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-10T08:30:00'), isDamaged: false },
+  { id: '1', number: 'MSKU-123456-7', type: 'standard', size: '40ft', status: 'in_depot', location: 'S01-R1-H1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-10T08:30:00'), isDamaged: false },
   { id: '2', number: 'TCLU-987654-3', type: 'reefer', size: '20ft', status: 'out_depot', location: 'Gate 2', client: 'MSC Mediterranean Shipping', clientCode: 'MSCU', gateInDate: new Date('2025-01-09T14:15:00'), isDamaged: false },
-  { id: '3', number: 'GESU-456789-1', type: 'dry', size: '40ft', status: 'in_service', location: 'Workshop 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-08T16:45:00'), isDamaged: true },
-  { id: '4', number: 'SHIP-111222-8', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S33-Row 3-Tier 1', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2025-01-11T09:15:00'), isDamaged: false },
+  { id: '3', number: 'GESU-456789-1', type: 'standard', size: '40ft', status: 'in_service', location: 'Workshop 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-08T16:45:00'), isDamaged: true },
+  { id: '4', number: 'SHIP-111222-8', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R3-H1', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2025-01-11T09:15:00'), isDamaged: false },
   { id: '5', number: 'SHIP-333444-9', type: 'reefer', size: '40ft', status: 'maintenance', location: 'Workshop 2', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2025-01-07T13:20:00'), isDamaged: true },
-  { id: '6', number: 'MAEU-555666-4', type: 'reefer', size: '40ft', status: 'in_depot', location: 'Stack S61-Row 2-Tier 3', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-07T11:20:00'), isDamaged: false },
-  { id: '7', number: 'CMDU-789012-5', type: 'dry', size: '40ft', status: 'out_depot', location: 'Gate 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-06T13:30:00'), isDamaged: false },
-  { id: '8', number: 'HLCU-345678-9', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S101-Row 1-Tier 1', client: 'Hapag-Lloyd', clientCode: 'HLCU', gateInDate: new Date('2025-01-05T15:45:00'), isDamaged: false },
-  { id: '9', number: 'SNFW-294074-0', type: 'reefer', size: '40ft', status: 'in_depot', location: 'Stack S67-Row 3-Tier 2', client: 'Shipping Network', clientCode: 'SNFW', gateInDate: new Date('2025-01-04T10:15:00'), isDamaged: false },
+  { id: '6', number: 'MAEU-555666-4', type: 'reefer', size: '40ft', status: 'in_depot', location: 'S61-R2-H3', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-07T11:20:00'), isDamaged: false },
+  { id: '7', number: 'CMDU-789012-5', type: 'standard', size: '40ft', status: 'out_depot', location: 'Gate 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-06T13:30:00'), isDamaged: false },
+  { id: '8', number: 'HLCU-345678-9', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', gateInDate: new Date('2025-01-05T15:45:00'), isDamaged: false },
+  { id: '9', number: 'SNFW-294074-0', type: 'reefer', size: '40ft', status: 'in_depot', location: 'S67-R3-H2', client: 'Shipping Network', clientCode: 'SNFW', gateInDate: new Date('2025-01-04T10:15:00'), isDamaged: false },
   { id: '10', number: 'MAEU-777888-1', type: 'tank', size: '20ft', status: 'cleaning', location: 'Cleaning Bay 1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-03T09:00:00'), isDamaged: true },
-  { id: '11', number: 'MSCU-999000-2', type: 'flat_rack', size: '40ft', status: 'in_depot', location: 'Stack S65-Row 1-Tier 1', client: 'MSC Mediterranean Shipping', clientCode: 'MSCU', gateInDate: new Date('2025-01-02T14:30:00'), isDamaged: false },
-  { id: '12', number: 'CMDU-111333-5', type: 'open_top', size: '20ft', status: 'in_depot', location: 'Stack S35-Row 2-Tier 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-01T16:00:00'), isDamaged: false },
-  { id: '13', number: 'SHIP-444555-6', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S17-Row 1-Tier 2', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2024-12-30T11:45:00'), isDamaged: false },
+  { id: '11', number: 'MSCU-999000-2', type: 'flat_rack', size: '40ft', status: 'in_depot', location: 'S65-R1-H1', client: 'MSC Mediterranean Shipping', clientCode: 'MSCU', gateInDate: new Date('2025-01-02T14:30:00'), isDamaged: false },
+  { id: '12', number: 'CMDU-111333-5', type: 'open_top', size: '20ft', status: 'in_depot', location: 'S35-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-01T16:00:00'), isDamaged: false },
+  { id: '13', number: 'SHIP-444555-6', type: 'standard', size: '20ft', status: 'in_depot', location: 'S17-R1-H2', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2024-12-30T11:45:00'), isDamaged: false },
   { id: '14', number: 'HLCU-666777-8', type: 'reefer', size: '40ft', status: 'maintenance', location: 'Workshop 3', client: 'Hapag-Lloyd', clientCode: 'HLCU', gateInDate: new Date('2024-12-29T08:20:00'), isDamaged: true },
-  { id: '15', number: 'MAEU-888999-0', type: 'dry', size: '20ft', status: 'in_depot', location: 'Stack S3-Row 4-Tier 1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2024-12-28T13:15:00'), isDamaged: false }
+  { id: '15', number: 'MAEU-888999-0', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R4-H1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2024-12-28T13:15:00'), isDamaged: false }
 ];
 
 type FilterType = 'customer' | 'yard' | 'type' | 'damage' | null;
@@ -127,7 +127,7 @@ export const DashboardOverview: React.FC = () => {
     const typeByCustomer = filteredContainers.reduce((acc, container) => {
       const customerKey = container.clientCode || container.client;
       if (!acc[customerKey]) {
-        acc[customerKey] = { dry: 0, reefer: 0, tank: 0, flat_rack: 0, open_top: 0, clientName: container.client };
+        acc[customerKey] = { standard: 0, reefer: 0, tank: 0, flat_rack: 0, open_top: 0, clientName: container.client };
       }
       acc[customerKey][container.type]++;
       return acc;
@@ -644,8 +644,8 @@ export const DashboardOverview: React.FC = () => {
       {/* Total by Type */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Total by Container Type</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {['dry', 'reefer', 'tank', 'flat_rack', 'open_top'].map(type => {
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          {['standard', 'hi_cube', 'hard_top', 'ventilated', 'reefer', 'tank', 'flat_rack', 'open_top'].map(type => {
             const count = filteredContainers.filter(c => c.type === type).length;
             return (
               <div

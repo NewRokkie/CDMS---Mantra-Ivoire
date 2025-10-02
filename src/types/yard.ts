@@ -89,6 +89,40 @@ export interface YardPosition {
   placedAt?: Date;
 }
 
+// Enhanced yard visualization types
+export interface YardSlot {
+  id: string;
+  stackNumber: number;
+  row: number;
+  tier: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  container: Container | null;
+  sectionId: string;
+  sectionColor: string;
+  isSelected?: boolean;
+  isHovered?: boolean;
+}
+
+export interface YardVisualizationConfig {
+  slotWidth: number;
+  slotHeight: number;
+  stackSpacing: number;
+  rowSpacing: number;
+  tierSpacing: number;
+  rotationAngle: number;
+  colors: {
+    available: string;
+    occupied: string;
+    maintenance: string;
+    cleaning: string;
+    damaged: string;
+    selected: string;
+  };
+}
+
 export interface YardBlock {
   id: string;
   name: string;
@@ -120,7 +154,7 @@ export interface YardOperationLog {
   id: string;
   yardId: string;
   yardCode: string;
-  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment' | 'yard_switch' | 'client_pool_create' | 'client_pool_update' | 'container_assign' | 'stack_remove' | 'stack_bulk_assign' | 'container_release' | 'yard_create' | 'yard_update' | 'yard_delete' | 'edi_transmission' | 'codeco_generate';
+  operationType: 'gate_in' | 'gate_out' | 'container_move' | 'stack_assignment' | 'yard_switch' | 'client_pool_create' | 'client_pool_update' | 'container_assign' | 'stack_remove' | 'stack_bulk_assign' | 'container_release' | 'yard_create' | 'yard_update' | 'yard_delete' | 'edi_transmission' | 'codeco_generate' | 'stack_create' | 'stack_update' | 'stack_delete';
   containerNumber?: string;
   userId: string;
   userName: string;

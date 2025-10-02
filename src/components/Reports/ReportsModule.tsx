@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { 
-  BarChart3, 
-  Calendar, 
-  DollarSign, 
-  Download, 
-  Filter, 
+import {
+  BarChart3,
+  Calendar,
+  DollarSign,
+  Download,
+  Filter,
  Globe,
-  Search, 
-  TrendingUp, 
-  Clock, 
-  Package, 
+  Search,
+  TrendingUp,
+  Clock,
+  Package,
   Building,
   AlertTriangle,
   CheckCircle,
@@ -18,6 +18,7 @@ import {
   Eye,
   X
 } from 'lucide-react';
+import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { yardService } from '../../services/yardService';
@@ -320,7 +321,7 @@ export const ReportsModule: React.FC = () => {
     );
   }
 
-  return (
+  const DesktopContent = () => (
     <div className="space-y-6">
       {/* Multi-Depot View Toggle for Managers */}
       {isManager && (
@@ -1076,5 +1077,22 @@ const BillingDetailModal: React.FC<{
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Only Message for Mobile */}
+      <div className="lg:hidden">
+        <DesktopOnlyMessage
+          moduleName="Reports"
+          reason="Viewing detailed analytics, charts, financial reports, and comprehensive data tables requires a larger screen for optimal visualization and analysis."
+        />
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <DesktopContent />
+      </div>
+    </>
   );
 };

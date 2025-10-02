@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader, User as UserIcon, Mail, Phone, Building, Shield, MapPin, Check } from 'lucide-react';
-import { User } from '../../types';
+import type { User } from '../../types';
 import { useYard } from '../../hooks/useYard';
 
 interface UserFormModalProps {

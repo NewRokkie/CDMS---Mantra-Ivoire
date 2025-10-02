@@ -533,7 +533,6 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                       onChange={setGateOutTime}
                       placeholder="Current system time"
                       required={false}
-                      includeSeconds={true}
                     />
                   </div>
                 </div>
