@@ -6,9 +6,16 @@ import { useLanguage } from '../../hooks/useLanguage';
 interface SidebarProps {
   activeModule: string;
   setActiveModule: (module: string) => void;
+  isMobileMenuOpen?: boolean;
+  setIsMobileMenuOpen?: (open: boolean) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeModule,
+  setActiveModule,
+  isMobileMenuOpen: externalIsMobileMenuOpen,
+  setIsMobileMenuOpen: externalSetIsMobileMenuOpen
+}) => {
   const { user, hasModuleAccess } = useAuth();
   const { t } = useLanguage();
   const [isConfigurationsOpen, setIsConfigurationsOpen] = useState(false);
@@ -120,38 +127,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule 
   const handleMainMenuClick = (itemId: string) => {
     saveScrollPosition();
     setActiveModule(itemId);
+    // Close mobile menu when an item is clicked
+    if (externalSetIsMobileMenuOpen) {
+      externalSetIsMobileMenuOpen(false);
+    }
   };
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Use external state if provided, otherwise use local state
+  const [localIsMobileMenuOpen, setLocalIsMobileMenuOpen] = useState(false);
+  const isMobileMenuOpen = externalIsMobileMenuOpen !== undefined ? externalIsMobileMenuOpen : localIsMobileMenuOpen;
+  const setIsMobileMenuOpen = externalSetIsMobileMenuOpen || setLocalIsMobileMenuOpen;
 
   return (
     <>
-      {/* Mobile Menu Button - Only visible on mobile */}
-      <button
-        onClick={() => setIsMobileMenuOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-3 bg-slate-900 text-white rounded-lg shadow-lg"
-      >
-        <Container className="h-6 w-6" />
-      </button>
-
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+        <div
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 animate-fadeIn"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        bg-slate-900 text-white h-screen flex flex-col transition-transform duration-300 ease-in-out
+        bg-slate-900 text-white h-screen flex flex-col transition-all duration-300 ease-out
         lg:w-72 lg:relative lg:translate-x-0
-        fixed top-0 left-0 w-80 z-50
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        fixed top-0 left-0 w-80 z-40
+        ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Mobile Close Button */}
         <button
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-white"
+          className="lg:hidden absolute top-6 right-6 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors z-10"
         >
           <X className="h-6 w-6" />
         </button>

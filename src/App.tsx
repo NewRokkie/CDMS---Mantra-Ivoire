@@ -52,8 +52,13 @@ function AppContent() {
   const { user, hasModuleAccess } = useAuth(); // Changed from useAuthProvider()
   const yardProvider = useYardProvider();
   const [activeModule, setActiveModule] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   console.log('App render - user:', user?.name, 'activeModule:', activeModule);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   const renderModule = () => {
     console.log('Rendering module:', activeModule);
@@ -95,9 +100,14 @@ function AppContent() {
   const MainApp = () => (
     <YardContext.Provider value={yardProvider}>
       <div className="flex h-screen bg-gray-100 overflow-hidden">
-        <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
+        <Sidebar
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
+          isMobileMenuOpen={isSidebarOpen}
+          setIsMobileMenuOpen={setIsSidebarOpen}
+        />
         <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
-          <Header />
+          <Header onToggleSidebar={toggleSidebar} />
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}
           </main>
         </div>

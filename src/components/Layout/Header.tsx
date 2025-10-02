@@ -1,11 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, User, Globe, LogOut, AlertCircle, Menu, X } from 'lucide-react';
+import { Bell, User, Globe, LogOut, Menu, X, MapPin, LayoutGrid } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { YardSelector } from './YardSelector';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onToggleSidebar?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
@@ -17,149 +21,238 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4">
-      <div className="flex items-center justify-between">
-        {/* Left Section - Title (Mobile: Compact, Desktop: Full) */}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg lg:text-2xl font-bold text-gray-900 truncate">
-            {t('dashboard.title')}
-          </h1>
-          <p className="hidden sm:block text-sm text-gray-600 truncate">
-            {t('dashboard.welcome')}, {user?.name}
-          </p>
-          {/* Mobile: Show welcome message in a more compact way */}
-          <p className="sm:hidden text-xs text-gray-600 truncate">
-            {user?.name}
-          </p>
-        </div>
-
-        {/* Right Section - Actions */}
-        <div className="flex items-center space-x-2 lg:space-x-4">
-          {/* Yard Selector - Hidden on small mobile, visible on larger screens */}
-          <div className="hidden md:block">
-            <YardSelector />
-          </div>
-
-          {/* Desktop Actions - Hidden on mobile */}
-          <div className="hidden lg:flex items-center space-x-4">
-            {/* Language Switcher */}
-            <button
-              onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Globe className="h-4 w-4" />
-              <span>{language.toUpperCase()}</span>
-            </button>
-
-            {/* Notifications */}
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                3
-              </span>
-            </button>
-
-            {/* User Menu */}
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-                <div className="text-sm">
-                  <p className="font-medium text-gray-900">{user?.name}</p>
-                  <p className="text-gray-600 capitalize">{user?.role}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-600 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
-                title={t('nav.logout')}
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
+    <>
+      <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 relative z-30">
+        <div className="flex items-center justify-between">
+          {/* Left Section - Logo & Title */}
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base lg:text-xl font-bold text-gray-900 truncate">
+                Container Depot
+              </h1>
+              <p className="hidden sm:block text-xs lg:text-sm text-gray-600 truncate">
+                {user?.role === 'admin' ? 'Administrator' : user?.role}
+              </p>
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-
-          {/* Mobile: User Avatar Only */}
-          <div className="lg:hidden">
-            <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <User className="h-4 w-4 text-white" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50">
-          <div className="px-4 py-4 space-y-4">
-          <div className="px-4 py-4 space-y-4">
-            {/* Mobile Yard Selector */}
-            <div className="md:hidden">
+          {/* Right Section - Actions */}
+          <div className="flex items-center space-x-2 lg:space-x-4">
+            {/* Yard Selector - Desktop Only */}
+            <div className="hidden lg:block">
               <YardSelector />
             </div>
 
-            {/* Mobile User Info */}
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <User className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{user?.name}</p>
-                <p className="text-sm text-gray-600 capitalize">{user?.role}</p>
-              </div>
-            </div>
-
-            {/* Mobile Actions */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Desktop Actions - Hidden on mobile */}
+            <div className="hidden lg:flex items-center space-x-2">
               {/* Language Switcher */}
               <button
-                onClick={() => {
-                  setLanguage(language === 'en' ? 'fr' : 'en');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
+                className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <Globe className="h-4 w-4" />
                 <span className="font-medium">{language.toUpperCase()}</span>
               </button>
 
               {/* Notifications */}
-              <button 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="relative flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              <button className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                   3
                 </span>
               </button>
+
+              {/* User Menu */}
+              <div className="flex items-center space-x-3 pl-2">
+                <div className="flex items-center space-x-2">
+                  <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">{user?.name}</p>
+                    <p className="text-xs text-gray-600 capitalize">{user?.role}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-gray-600 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                  title={t('nav.logout')}
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Mobile Logout */}
-            <button
-              onClick={() => {
-                handleLogout();
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="font-medium">{t('nav.logout')}</span>
-            </button>
-          </div>
+            {/* Mobile: User Avatar + Menu Button */}
+            <div className="lg:hidden flex items-center space-x-2">
+              <div className="h-9 w-9 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
+                <User className="h-4 w-4 text-white" />
+              </div>
+
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+              >
+                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
         </div>
+      </header>
+
+      {/* Mobile Menu Modal - Full Screen Overlay */}
+      {isMobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Mobile Menu Panel */}
+          <div className="lg:hidden fixed top-[73px] left-0 right-0 bottom-0 bg-white z-50 overflow-y-auto animate-slideDown">
+            <div className="px-4 py-6 space-y-6">
+              {/* User Profile Card */}
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200 shadow-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="h-14 w-14 bg-blue-600 rounded-full flex items-center justify-center shadow-xl">
+                    <User className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-lg font-bold text-gray-900">{user?.name}</p>
+                    <p className="text-sm text-blue-800 capitalize font-medium">{user?.role}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Yard Selector for Mobile */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide px-1">
+                  <MapPin className="h-3 w-3 inline mr-1" />
+                  Current Depot
+                </label>
+                <YardSelector />
+              </div>
+
+              {/* Quick Actions Grid */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide px-1">
+                  Quick Actions
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Navigation Menu */}
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      if (onToggleSidebar) {
+                        setTimeout(() => onToggleSidebar(), 300);
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl hover:from-blue-100 hover:to-blue-200 transition-all border-2 border-blue-200 shadow-sm active:scale-95"
+                  >
+                    <div className="p-3 bg-white rounded-xl shadow-md">
+                      <LayoutGrid className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-blue-700 font-bold">Navigation</p>
+                    </div>
+                  </button>
+
+                  {/* Language Switcher */}
+                  <button
+                    onClick={() => {
+                      setLanguage(language === 'en' ? 'fr' : 'en');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl hover:from-gray-100 hover:to-gray-200 transition-all border border-gray-200 shadow-sm active:scale-95"
+                  >
+                    <div className="p-3 bg-white rounded-xl shadow-md">
+                      <Globe className="h-6 w-6 text-gray-700" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-600 font-medium">{language.toUpperCase()}</p>
+                    </div>
+                  </button>
+
+                  {/* Notifications */}
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="relative flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl hover:from-gray-100 hover:to-gray-200 transition-all border border-gray-200 shadow-sm active:scale-95"
+                  >
+                    <div className="relative">
+                      <div className="p-3 bg-white rounded-xl shadow-md">
+                        <Bell className="h-6 w-6 text-gray-700" />
+                      </div>
+                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
+                        3
+                      </span>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-600 font-medium">3 New</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Logout Button */}
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95 font-bold"
+              >
+                <LogOut className="h-5 w-5" />
+                <span>Sign Out</span>
+              </button>
+
+              {/* App Info */}
+              <div className="pt-6 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center">
+                  Container Depot Management v1.0
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
       )}
-    </header>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out;
+        }
+      `}</style>
+    </>
   );
 };
