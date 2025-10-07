@@ -40,13 +40,14 @@ export const GateInOperationsTable: React.FC<GateInOperationsTableProps> = ({
     (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: 'pending' | 'completed') => { // Added specific type for clarity
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       completed: { color: 'bg-green-100 text-green-800', label: 'Completed' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    // This type assertion is safe because operationStatus is typed as 'pending' | 'completed'
+    const config = statusConfig[status];
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
         {config.label}
@@ -88,7 +89,11 @@ export const GateInOperationsTable: React.FC<GateInOperationsTableProps> = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredOperations.map((operation) => (
-              <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
+              <tr
+                key={operation.id}
+                className={`hover:bg-gray-50 transition-colors ${onOperationClick ? 'cursor-pointer' : ''}`} // Added cursor-pointer
+                onClick={() => onOperationClick?.(operation)} // Added onClick handler
+              >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
                     {operation.date.toLocaleDateString()}
@@ -106,7 +111,8 @@ export const GateInOperationsTable: React.FC<GateInOperationsTableProps> = ({
                     {operation.containerSize}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {operation.containerType?.charAt(0).toUpperCase() + operation.containerType?.slice(1).replace('_', ' ')}
+                    {/* Handles undefined/null containerType gracefully */}
+                    {operation.containerType?.charAt(0).toUpperCase() + (operation.containerType ? operation.containerType.slice(1).replace('_', ' ') : '')}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

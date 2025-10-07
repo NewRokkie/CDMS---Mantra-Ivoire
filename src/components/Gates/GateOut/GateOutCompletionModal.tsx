@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { X, Save, Loader, Package, CheckCircle, AlertTriangle, Plus, Trash2, Calendar, Clock } from 'lucide-react';
-import { PendingGateOut, ContainerInput } from './types';
-import { validateContainerNumber, formatContainerForDisplay, getStatusBadge } from './utils';
+import { PendingGateOut } from '../types';
+import { validateContainerNumber, formatContainerNumberForDisplay, getStatusBadgeConfig } from '../utils';
+
+// Local interface for ContainerInput since it's GateOut-specific
+interface ContainerInput {
+  containerNumber: string;
+  confirmContainerNumber: string;
+  isValid: boolean;
+  validationMessage: string;
+}
 import { DatePicker } from '../../Common/DatePicker';
 import { TimePicker } from '../../Common/TimePicker';
 import { useAuth } from '../../../hooks/useAuth';
@@ -45,7 +53,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 }) => {
   const { hasModuleAccess } = useAuth();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
-  
+
   const [containerInputs, setContainerInputs] = useState<ContainerInput[]>([
     { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
   ]);
@@ -91,45 +99,45 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
  // Check truck capacity constraints
  const checkTruckCapacity = (inputs: ContainerInput[]): { isValid: boolean; error?: string } => {
    const validInputs = inputs.filter(input => input.isValid);
-   
+
    if (validInputs.length === 0) return { isValid: true };
    if (validInputs.length === 1) return { isValid: true };
-   
+
    // Check first container size
    const firstContainerSize = getContainerSize(validInputs[0].containerNumber);
    if (!firstContainerSize) return { isValid: true }; // Skip validation if size unknown
-   
+
    // If first container is 40ft, no second container allowed
    if (firstContainerSize === '40ft' && validInputs.length > 1) {
-     return { 
-       isValid: false, 
-       error: 'Truck capacity exceeded: 40ft containers require full truck capacity (1 container max)' 
+     return {
+       isValid: false,
+       error: 'Truck capacity exceeded: 40ft containers require full truck capacity (1 container max)'
      };
    }
-   
+
    // If first container is 20ft, check second container
    if (firstContainerSize === '20ft' && validInputs.length === 2) {
      const secondContainerSize = getContainerSize(validInputs[1].containerNumber);
      if (!secondContainerSize) return { isValid: true }; // Skip validation if size unknown
-     
+
      if (secondContainerSize === '40ft') {
-       return { 
-         isValid: false, 
-         error: 'Invalid combination: Cannot load 40ft container after 20ft container' 
+       return {
+         isValid: false,
+         error: 'Invalid combination: Cannot load 40ft container after 20ft container'
        };
      }
    }
-   
+
    return { isValid: true };
  };
 
  // Check if second field should be enabled
  const shouldEnableSecondField = (): boolean => {
    if (containerInputs.length < 1) return false;
-   
+
    const firstInput = containerInputs[0];
    if (!firstInput.isValid) return false;
-   
+
    const firstContainerSize = getContainerSize(firstInput.containerNumber);
    // Only enable second field if first container is 20ft
    return firstContainerSize === '20ft';
@@ -138,7 +146,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
  // Get maximum allowed containers based on first container
  const getMaxContainers = (): number => {
    if (containerInputs.length === 0 || !containerInputs[0].isValid) return 2;
-   
+
    const firstContainerSize = getContainerSize(containerInputs[0].containerNumber);
    return firstContainerSize === '40ft' ? 1 : 2;
  };
@@ -146,14 +154,14 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
   const handleContainerNumberChange = (index: number, value: string) => {
     const cleanValue = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    
+
     if (cleanValue.length <= 11) {
       const letters = cleanValue.substring(0, 4);
       const numbers = cleanValue.substring(4, 11);
       const validLetters = letters.replace(/[^A-Za-z]/gi, '').toUpperCase();
       const validNumbers = numbers.replace(/[^0-9]/g, '');
       const validValue = validLetters + validNumbers;
-      
+
       setContainerInputs(prev => {
         const newInputs = [...prev];
         newInputs[index] = {
@@ -163,14 +171,14 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
           isValid: false,
           validationMessage: ''
         };
-        
+
         const validation = validateContainerNumber(validValue);
         newInputs[index].validationMessage = validation.message || '';
-        
+
        // Check truck capacity after updating
        const capacityCheck = checkTruckCapacity(newInputs);
        setTruckCapacityError(capacityCheck.error || '');
-       
+
         return newInputs;
       });
     }
@@ -178,43 +186,43 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
   const handleConfirmContainerNumberChange = (index: number, value: string) => {
     const cleanValue = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    
+
     if (cleanValue.length <= 11) {
       const letters = cleanValue.substring(0, 4);
       const numbers = cleanValue.substring(4, 11);
       const validLetters = letters.replace(/[^A-Za-z]/gi, '').toUpperCase();
       const validNumbers = numbers.replace(/[^0-9]/g, '');
       const validValue = validLetters + validNumbers;
-      
+
       setContainerInputs(prev => {
         const newInputs = [...prev];
         newInputs[index] = {
           ...newInputs[index],
           confirmContainerNumber: validValue
         };
-        
+
         const validation = validateContainerNumber(newInputs[index].containerNumber);
         const matches = newInputs[index].containerNumber === validValue;
         newInputs[index].isValid = validation.isValid && matches;
-        
+
        // Check truck capacity after updating
        const capacityCheck = checkTruckCapacity(newInputs);
        setTruckCapacityError(capacityCheck.error || '');
-       
+
         return newInputs;
       });
     }
   };
 
   const addContainerField = () => {
-   const maxContainers = getMaxContainers();
-   if (containerInputs.length < maxContainers && containerInputs.length < 2) {
-      setContainerInputs(prev => [
-        ...prev,
-        { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
-      ]);
-    }
-  };
+    const maxContainers = getMaxContainers();
+    if (containerInputs.length < maxContainers) {
+       setContainerInputs(prev => [
+         ...prev,
+         { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
+       ]);
+     }
+   };
 
   const removeContainerField = (index: number) => {
     if (containerInputs.length > 1) {
@@ -230,45 +238,47 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
   const handleSubmit = () => {
     setError('');
-    
+
    // Check truck capacity constraints
    const capacityCheck = checkTruckCapacity(containerInputs);
    if (!capacityCheck.isValid) {
      setError(capacityCheck.error || 'Truck capacity exceeded');
      return;
    }
-    
+
     const validContainers = containerInputs.filter(input => input.isValid);
-    
+
     if (validContainers.length === 0) {
       setError('Please enter at least one valid container number.');
       return;
     }
-    
+
    if (validContainers.length > 2) {
      setError('Truck capacity exceeded: Maximum 2 containers per truck.');
      return;
    }
-    
+
     // Use current system time if not manually set
     const finalGateOutDate = gateOutDate || new Date().toISOString().split('T')[0];
     const finalGateOutTime = gateOutTime || new Date().toTimeString().slice(0, 5);
-    
+
     const containerNumbers = validContainers.map(input => input.containerNumber);
-    onComplete(operation, containerNumbers, { gateOutDate: finalGateOutDate, gateOutTime: finalGateOutTime });
+    onComplete(operation, containerNumbers);
   };
 
   const areAllContainerNumbersValid = (): boolean => {
-   const capacityCheck = checkTruckCapacity(containerInputs);
-   return containerInputs.length > 0 && 
-          containerInputs.every(input => input.isValid) &&
-          capacityCheck.isValid;
+    const capacityCheck = checkTruckCapacity(containerInputs);
+    // Only check that valid containers are properly validated, allow empty optional fields
+    const validInputs = containerInputs.filter(input => input.containerNumber.trim() !== '');
+    return validInputs.length > 0 &&
+           validInputs.every(input => input.isValid) &&
+           capacityCheck.isValid;
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-slide-in-up mx-2 sm:mx-0">
-        
+
         {/* Modal Header */}
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -295,7 +305,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="space-y-6">
-            
+
             {/* Operation Summary */}
             <div className="bg-blue-50 rounded-xl p-4 sm:p-6 border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-3 text-sm sm:text-base">Operation Details</h4>
@@ -327,7 +337,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                   <span className="text-xs sm:text-sm text-gray-600">
                    {containerInputs.filter(input => input.isValid).length}/{Math.min(getMaxContainers(), 2)} containers
                   </span>
-                 {containerInputs.length < 2 && containerInputs.length < getMaxContainers() && shouldEnableSecondField() && (
+                 {containerInputs.length < getMaxContainers() && shouldEnableSecondField() && (
                     <button
                       type="button"
                       onClick={addContainerField}
@@ -362,8 +372,8 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
              )}
               {containerInputs.map((input, index) => (
                <div key={index} className={`space-y-3 p-3 sm:p-4 border rounded-lg transition-all duration-200 ${
-                 index === 1 && !shouldEnableSecondField() 
-                   ? 'border-gray-200 bg-gray-50 opacity-50' 
+                 index === 1 && !shouldEnableSecondField()
+                   ? 'border-gray-200 bg-gray-50 opacity-50'
                    : 'border-gray-200'
                }`}>
                   <div className="flex items-center justify-between">
@@ -371,8 +381,8 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                      <h5 className="font-medium text-gray-900 text-sm sm:text-base">Container {index + 1}</h5>
                      {index === 0 && containerInputs[0].isValid && (
                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                         getContainerSize(containerInputs[0].containerNumber) === '40ft' 
-                           ? 'bg-orange-100 text-orange-800' 
+                         getContainerSize(containerInputs[0].containerNumber) === '40ft'
+                           ? 'bg-orange-100 text-orange-800'
                            : 'bg-blue-100 text-blue-800'
                        }`}>
                          {getContainerSize(containerInputs[0].containerNumber)}
@@ -404,7 +414,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                         <input
                           type={inConfirmation ? 'password' : 'text'}
                           onFocus={()=> setInConfirmation(false)}
-                          onFocusOut={()=> setInConfirmation(true)}
+                          onBlur={()=> setInConfirmation(true)}
                           required
                           value={input.containerNumber}
                           onChange={(e) => handleContainerNumberChange(index, e.target.value)}
@@ -412,7 +422,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                           className={`form-input w-full pr-20 ${
                            index === 1 && !shouldEnableSecondField()
                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed py-4 sm:py-3'
-                             : 
+                             :
                             input.containerNumber && !validateContainerNumber(input.containerNumber).isValid
                               ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500 py-4 sm:py-3'
                               : input.containerNumber && validateContainerNumber(input.containerNumber).isValid
@@ -431,8 +441,8 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                                 <AlertTriangle className="h-5 w-5 sm:h-4 sm:w-4 text-red-500" />
                               )}
                               <span className={`hidden sm:inline text-xs font-medium ${
-                                validateContainerNumber(input.containerNumber).isValid 
-                                  ? 'text-green-600' 
+                                validateContainerNumber(input.containerNumber).isValid
+                                  ? 'text-green-600'
                                   : 'text-red-600'
                               }`}>
                                 {input.validationMessage}
@@ -490,7 +500,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                     <div className="flex items-center p-2 bg-green-50 border border-green-200 rounded">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
                       <span className="text-xs sm:text-sm text-green-800 break-all">
-                       Container {formatContainerForDisplay(input.containerNumber)} validated 
+                       Container {formatContainerNumberForDisplay(input.containerNumber)} validated
                        ({getContainerSize(input.containerNumber) || 'Unknown size'})
                       </span>
                     </div>
@@ -511,7 +521,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                     <p className="text-sm text-purple-700">Manual time tracking (Admin only) - Defaults to current system time</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-purple-800 mb-2">
@@ -550,34 +560,34 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="text-xs sm:text-sm text-gray-600">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs sm:text-sm text-gray-600 hidden sm:block">
              {containerInputs.filter(input => input.isValid).length} of {Math.min(getMaxContainers(), 2)} containers ready
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center gap-2 ml-auto">
               <button
                 onClick={onClose}
-                className="btn-secondary px-4 py-3 sm:px-6 sm:py-2"
+                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
               >
-                Cancel
+                <span className="sm:hidden">✕</span>
+                <span className="hidden sm:inline">Cancel</span>
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={isProcessing || !areAllContainerNumbersValid()}
-                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 px-4 py-3 sm:px-6 sm:py-2"
+                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
               >
                 {isProcessing ? (
                   <>
                     <Loader className="h-4 w-4 animate-spin" />
-                    <span className="hidden sm:inline">Processing...</span>
-                    <span className="sm:hidden">...</span>
+                    <span>...</span>
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    <span className="hidden sm:inline">Complete Gate Out</span>
                     <span className="sm:hidden">Complete</span>
+                    <span className="hidden sm:inline">Complete Gate Out</span>
                   </>
                 )}
               </button>

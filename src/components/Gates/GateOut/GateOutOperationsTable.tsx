@@ -1,7 +1,17 @@
 import React from 'react';
-import { FileText, Eye } from 'lucide-react';
-import { PendingGateOut } from './types';
-import { getStatusBadge, formatContainerForDisplay } from './utils';
+import { FileText } from 'lucide-react';
+import { PendingGateOut } from '../types';
+import { getStatusBadgeConfig } from '../utils';
+
+// Helper function to get status badge JSX
+const getStatusBadge = (status: string) => {
+  const config = getStatusBadgeConfig(status);
+  return (
+    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
+      {config.label}
+    </span>
+  );
+};
 
 interface GateOutOperationsTableProps {
   operations: PendingGateOut[];
@@ -15,10 +25,10 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
   onOperationClick
 }) => {
   const filteredOperations = operations.filter(op =>
-    (op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-    (op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-    (op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-    (op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+    op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -61,10 +71,10 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
               <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {operation.date?.toLocaleDateString() || '-'}
+                    {operation.date ? (typeof operation.date === 'string' ? new Date(operation.date).toLocaleDateString() : operation.date.toLocaleDateString()) : '-'}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {operation.date?.toLocaleTimeString() || '-'}
+                    {operation.date ? (typeof operation.date === 'string' ? new Date(operation.date).toLocaleTimeString() : operation.date.toLocaleTimeString()) : '-'}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -94,7 +104,7 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
                         {operation.processedContainers}/{operation.totalContainers}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {Math.round((operation.processedContainers / operation.totalContainers) * 100)}%
+                        {operation.totalContainers > 0 ? Math.round((operation.processedContainers / operation.totalContainers) * 100) : 0}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -106,7 +116,7 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
                             ? 'bg-blue-500'
                             : 'bg-gray-300'
                         }`}
-                        style={{ width: `${(operation.processedContainers / operation.totalContainers) * 100}%` }}
+                        style={{ width: `${operation.totalContainers > 0 ? (operation.processedContainers / operation.totalContainers) * 100 : 0}%` }}
                       ></div>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">

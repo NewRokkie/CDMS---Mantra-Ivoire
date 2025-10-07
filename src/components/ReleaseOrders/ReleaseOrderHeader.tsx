@@ -31,7 +31,7 @@ export const ReleaseOrderHeader: React.FC<ReleaseOrderHeaderProps> = ({ onCreate
           <div className="flex items-center mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <AlertTriangle className="h-4 w-4 text-blue-600 mr-2" />
             <p className="text-sm text-blue-800">
-              You are viewing bookings for <strong>{user?.company}</strong> only
+              You are viewing bookings for <strong>{user?.company || 'your company'}</strong> only
               {currentYard && (
                 <span className="ml-1">in <strong>{currentYard.name}</strong></span>
               )}.
@@ -40,7 +40,7 @@ export const ReleaseOrderHeader: React.FC<ReleaseOrderHeaderProps> = ({ onCreate
         )}
       </div>
       {canCreateOrders && (
-        <button 
+        <button
           onClick={onCreateOrder}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >

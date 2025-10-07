@@ -8,6 +8,7 @@ interface PendingOperation {
   containerNumber: string;
   secondContainerNumber?: string;
   containerSize: string;
+  containerQuantity: number;
   containerType?: string;
   clientCode: string;
   clientName: string;
@@ -26,7 +27,6 @@ interface PendingOperationsViewProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onBack: () => void;
-  onOperationClick: (operation: PendingOperation) => void;
   onComplete: (operation: PendingOperation, locationData: any) => void;
   isProcessing: boolean;
   mockLocations: any;
@@ -37,12 +37,10 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   searchTerm,
   onSearchChange,
   onBack,
-  onOperationClick,
   onComplete,
   isProcessing,
   mockLocations
 }) => {
-  const [typeFilter, setTypeFilter] = useState<'all'>('all');
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
 
@@ -51,8 +49,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                          operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all';
-    return matchesSearch && matchesType;
+    return matchesSearch;
   });
 
   const handleOperationClick = (operation: PendingOperation) => {
@@ -74,7 +71,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
 
     const config = statusConfig[status as keyof typeof statusConfig];
     const Icon = config.icon;
-    
+
     return (
       <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${config.color}`}>
         <Icon className="h-3 w-3 mr-1" />
@@ -84,8 +81,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -161,24 +158,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                {['all'].map(type => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setTypeFilter(type as any)}
-                    className={`px-3 py-2 text-xs font-medium rounded-md transition-colors ${
-                      typeFilter === type
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {type === 'all' ? 'All Types' : type}
-                  </button>
-                ))}
-              </div>
+
+            <div className="flex items-center justify-end">
               <span className="text-sm text-gray-500">
                 {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
               </span>
@@ -287,7 +268,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
               <p className="text-gray-600 text-sm px-4">
-                {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been created yet."}
               </p>
             </div>
           )}
@@ -373,13 +354,13 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               </tbody>
             </table>
           </div>
-          
+
           {filteredOperations.length === 0 && (
             <div className="text-center py-12">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
               <p className="text-gray-600">
-                {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been created yet."}
               </p>
             </div>
           )}

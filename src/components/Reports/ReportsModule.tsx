@@ -5,7 +5,7 @@ import {
   DollarSign,
   Download,
   Filter,
- Globe,
+  Globe,
   Search,
   TrendingUp,
   Clock,
@@ -26,6 +26,87 @@ import { DatePicker } from '../Common/DatePicker';
 import { AnalyticsTab } from './AnalyticsTab';
 import { OperationsTab } from './OperationsTab';
 
+// Constants
+const REPORT_TABS = [
+  { id: 'billing', label: 'Billing & Free Days', icon: DollarSign },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'operations', label: 'Operations', icon: Package }
+] as const;
+
+const DEPOT_STATUS_COLORS = {
+  high: 'text-red-600',
+  medium: 'text-orange-600',
+  low: 'text-green-600',
+  normal: 'text-blue-600'
+} as const;
+
+const UTILIZATION_THRESHOLDS = {
+  high: 90,
+  medium: 75,
+  low: 25
+} as const;
+
+// Utility functions
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount);
+};
+
+const formatDate = (date: Date): string => {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
+
+const formatDateTime = (date: Date): string => {
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const formatLongDate = (date: Date): string => {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+const getStatusBadge = (status: 'active' | 'completed') => {
+  return (
+    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+      status === 'active'
+        ? 'bg-green-100 text-green-800'
+        : 'bg-blue-100 text-blue-800'
+    }`}>
+      {status === 'active' ? 'Active' : 'Completed'}
+    </span>
+  );
+};
+
+const getUtilizationColor = (rate: number): string => {
+  if (rate >= UTILIZATION_THRESHOLDS.high) return DEPOT_STATUS_COLORS.high;
+  if (rate >= UTILIZATION_THRESHOLDS.medium) return DEPOT_STATUS_COLORS.medium;
+  if (rate >= UTILIZATION_THRESHOLDS.low) return DEPOT_STATUS_COLORS.low;
+  return DEPOT_STATUS_COLORS.normal;
+};
+
+const getUtilizationBgColor = (rate: number): string => {
+  if (rate >= UTILIZATION_THRESHOLDS.high) return 'bg-red-500';
+  if (rate >= UTILIZATION_THRESHOLDS.medium) return 'bg-orange-500';
+  if (rate >= UTILIZATION_THRESHOLDS.low) return 'bg-green-500';
+  return 'bg-blue-500';
+};
+
 interface ClientFreeDays {
   clientCode: string;
   clientName: string;
@@ -39,6 +120,7 @@ interface ContainerBilling {
   containerNumber: string;
   clientCode: string;
   clientName: string;
+  depotId: string; // Added depotId to uniquely assign containers to depots
   placedDate: Date;
   outDate?: Date;
   totalDays: number;
@@ -59,52 +141,174 @@ const mockClientFreeDays: ClientFreeDays[] = [
   { clientCode: 'HLCU', clientName: 'Hapag-Lloyd', freeDaysAllowed: 3, dailyRate: 46.00, currency: 'USD' }
 ];
 
-// Mock container billing data
+// Types for container data generation
+interface RawContainerData {
+  number: string;
+  clientCode: string;
+  depotId: string;
+  placedDaysAgo: number;
+  outDaysAgo: number | null;
+  location: string;
+}
+
+interface DepotData {
+  id: string;
+  name: string;
+}
+
+// Mock container billing data with improved error handling
 const generateMockBillingData = (): ContainerBilling[] => {
-  const containers = [
-    { number: 'MSKU-123456-7', clientCode: 'MAEU', placedDaysAgo: 5, outDaysAgo: null, location: 'Block A-12' },
-    { number: 'TCLU-987654-3', clientCode: 'MSCU', placedDaysAgo: 8, outDaysAgo: 1, location: 'Gate 2' },
-    { number: 'GESU-456789-1', clientCode: 'CMDU', placedDaysAgo: 12, outDaysAgo: null, location: 'Workshop 1' },
-    { number: 'SHIP-111222-8', clientCode: 'SHIP001', placedDaysAgo: 3, outDaysAgo: null, location: 'Block B-05' },
-    { number: 'SHIP-333444-9', clientCode: 'SHIP001', placedDaysAgo: 15, outDaysAgo: 2, location: 'Workshop 2' },
-    { number: 'MAEU-555666-4', clientCode: 'MAEU', placedDaysAgo: 7, outDaysAgo: null, location: 'Block A-08' },
-    { number: 'CMDU-789012-5', clientCode: 'CMDU', placedDaysAgo: 20, outDaysAgo: 5, location: 'Block C-03' },
-    { number: 'HLCU-345678-9', clientCode: 'HLCU', placedDaysAgo: 6, outDaysAgo: null, location: 'Block D-01' }
-  ];
+  try {
+    const availableDepots: DepotData[] = [
+      { id: 'depot-tantarelli', name: 'Tantarelli Depot' },
+      { id: 'depot-vridi', name: 'Vridi Terminal' },
+      { id: 'depot-san-pedro', name: 'San Pedro Port' }
+    ];
 
-  return containers.map((container, index) => {
-    const clientConfig = mockClientFreeDays.find(c => c.clientCode === container.clientCode);
-    if (!clientConfig) return null;
+    const containers: RawContainerData[] = [
+      { number: 'MSKU-123456-7', clientCode: 'MAEU', depotId: 'depot-tantarelli', placedDaysAgo: 5, outDaysAgo: null, location: 'Block A-12' },
+      { number: 'TCLU-987654-3', clientCode: 'MSCU', depotId: 'depot-tantarelli', placedDaysAgo: 8, outDaysAgo: 1, location: 'Gate 2' },
+      { number: 'GESU-456789-1', clientCode: 'CMDU', depotId: 'depot-tantarelli', placedDaysAgo: 12, outDaysAgo: null, location: 'Workshop 1' },
+      { number: 'SHIP-111222-8', clientCode: 'SHIP001', depotId: 'depot-vridi', placedDaysAgo: 3, outDaysAgo: null, location: 'Block B-05' },
+      { number: 'SHIP-333444-9', clientCode: 'SHIP001', depotId: 'depot-vridi', placedDaysAgo: 15, outDaysAgo: 2, location: 'Workshop 2' },
+      { number: 'MAEU-555666-4', clientCode: 'MAEU', depotId: 'depot-san-pedro', placedDaysAgo: 7, outDaysAgo: null, location: 'Block A-08' },
+      { number: 'CMDU-789012-5', clientCode: 'CMDU', depotId: 'depot-san-pedro', placedDaysAgo: 20, outDaysAgo: 5, location: 'Block C-03' },
+      { number: 'HLCU-345678-9', clientCode: 'HLCU', depotId: 'depot-vridi', placedDaysAgo: 6, outDaysAgo: null, location: 'Block D-01' }
+    ];
 
-    const now = new Date();
-    const placedDate = new Date(now.getTime() - (container.placedDaysAgo * 24 * 60 * 60 * 1000));
-    const outDate = container.outDaysAgo ? new Date(now.getTime() - (container.outDaysAgo * 24 * 60 * 60 * 1000)) : undefined;
+    return containers.map((container, index) => {
+      const clientConfig = mockClientFreeDays.find(c => c.clientCode === container.clientCode);
 
-    const totalDays = outDate 
-      ? Math.ceil((outDate.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24))
-      : Math.ceil((now.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24));
+      // Handle missing client configuration
+      if (!clientConfig) {
+        console.warn(`No client configuration found for client code: ${container.clientCode}`);
+        return null;
+      }
 
-    const freeDaysUsed = Math.min(totalDays, clientConfig.freeDaysAllowed);
-    const billableDays = Math.max(0, totalDays - clientConfig.freeDaysAllowed);
-    const totalAmount = billableDays * clientConfig.dailyRate;
+      // Validate depot exists
+      const depotExists = availableDepots.some(depot => depot.id === container.depotId);
+      if (!depotExists) {
+        console.warn(`Invalid depot ID: ${container.depotId}`);
+        return null;
+      }
 
-    return {
-      id: `billing-${index + 1}`,
-      containerNumber: container.number,
-      clientCode: container.clientCode,
-      clientName: clientConfig.clientName,
-      placedDate,
-      outDate,
-      totalDays,
-      freeDaysUsed,
-      billableDays,
-      dailyRate: clientConfig.dailyRate,
-      totalAmount,
-      status: outDate ? 'completed' : 'active',
-      location: container.location
-    } as ContainerBilling;
-  }).filter(Boolean) as ContainerBilling[];
+      try {
+        const now = new Date();
+
+        // Validate dates
+        if (container.placedDaysAgo < 0) {
+          console.warn(`Invalid placedDaysAgo for container ${container.number}: ${container.placedDaysAgo}`);
+          return null;
+        }
+
+        const placedDate = new Date(now.getTime() - (container.placedDaysAgo * 24 * 60 * 60 * 1000));
+
+        // Validate placed date
+        if (isNaN(placedDate.getTime())) {
+          console.warn(`Invalid placed date calculated for container ${container.number}`);
+          return null;
+        }
+
+        const outDate = container.outDaysAgo
+          ? new Date(now.getTime() - (container.outDaysAgo * 24 * 60 * 60 * 1000))
+          : undefined;
+
+        if (outDate && isNaN(outDate.getTime())) {
+          console.warn(`Invalid out date calculated for container ${container.number}`);
+          return null;
+        }
+
+        const totalDays = outDate
+          ? Math.ceil((outDate.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24))
+          : Math.ceil((now.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Validate total days calculation
+        if (totalDays < 0) {
+          console.warn(`Negative total days calculated for container ${container.number}: ${totalDays}`);
+          return null;
+        }
+
+        const freeDaysUsed = Math.min(totalDays, clientConfig.freeDaysAllowed);
+        const billableDays = Math.max(0, totalDays - clientConfig.freeDaysAllowed);
+        const totalAmount = billableDays * clientConfig.dailyRate;
+
+        return {
+          id: `billing-${index + 1}`,
+          containerNumber: container.number,
+          clientCode: container.clientCode,
+          clientName: clientConfig.clientName,
+          depotId: container.depotId,
+          placedDate,
+          outDate,
+          totalDays,
+          freeDaysUsed,
+          billableDays,
+          dailyRate: clientConfig.dailyRate,
+          totalAmount,
+          status: outDate ? 'completed' : 'active',
+          location: container.location
+        } as ContainerBilling;
+      } catch (error) {
+        console.error(`Error processing container ${container.number}:`, error);
+        return null;
+      }
+    }).filter((item): item is ContainerBilling => item !== null);
+  } catch (error) {
+    console.error('Error generating mock billing data:', error);
+    throw new Error('Failed to generate billing data');
+  }
 };
+
+// Error Boundary Component
+class ReportsErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ComponentType<{ error: Error; resetError: () => void }> },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Reports module error:', error, errorInfo);
+  }
+
+  resetError = () => {
+    this.setState({ hasError: false, error: undefined });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      const FallbackComponent = this.props.fallback || DefaultErrorFallback;
+      return <FallbackComponent error={this.state.error!} resetError={this.resetError} />;
+    }
+
+    return this.props.children;
+  }
+}
+
+// Default Error Fallback Component
+const DefaultErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+      <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
+      <p className="text-gray-600 mb-4">
+        We encountered an error while loading the reports. Please try refreshing the page.
+      </p>
+      <button
+        onClick={resetError}
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        Try Again
+      </button>
+    </div>
+  </div>
+);
 
 export const ReportsModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'billing' | 'analytics' | 'operations'>('billing');
@@ -116,11 +320,21 @@ export const ReportsModule: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [viewMode, setViewMode] = useState<'current' | 'global'>('current');
   const [selectedDepot, setSelectedDepot] = useState<string | null>(null);
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
 
-  const billingData = useMemo(() => generateMockBillingData(), []);
+  const billingData = useMemo(() => {
+    try {
+      return generateMockBillingData();
+    } catch (err) {
+      console.error('Error generating billing data:', err);
+      setError('Failed to load billing data');
+      return [];
+    }
+  }, []);
 
   const isManager = user?.role === 'admin' || user?.role === 'supervisor';
   const showClientNotice = !canViewAllData();
@@ -132,117 +346,108 @@ export const ReportsModule: React.FC = () => {
     { id: 'depot-san-pedro', name: 'San Pedro Port', code: 'SPP', currentOccupancy: 420, totalCapacity: 800 }
   ];
 
-  // Get multi-depot billing data for managers
-  const getMultiDepotBillingData = useCallback(() => {
-    if (!isManager) return billingData;
 
-    if (selectedDepot) {
-      // Filter data for specific depot
-      return billingData.filter(item => {
-        // In a real implementation, you'd check which depot the container belongs to
-        // For now, we'll use a simple distribution logic
-        const depot = availableYards.find(d => d.id === selectedDepot);
-        if (!depot) return false;
-        
-        // Distribute containers across depots based on client codes
-        if (selectedDepot === 'depot-tantarelli') {
-          return ['MAEU', 'MSCU', 'CMDU'].includes(item.clientCode);
-        } else if (selectedDepot === 'depot-vridi') {
-          return ['SHIP001', 'HLCU'].includes(item.clientCode);
-        } else if (selectedDepot === 'depot-san-pedro') {
-          return ['MAEU', 'CMDU'].includes(item.clientCode);
-        }
-        return true;
-      });
-    }
+  // Memoized depot statistics calculation for better performance
+  const depotStats = useMemo(() => {
+    if (!isManager || !billingData.length) return [];
 
-    // Return all data for global view
-    return billingData;
-  }, [isManager, selectedDepot, billingData, availableYards]);
+    return availableYards.map(depot => {
+      // Filter billing data by depotId for accurate depot-specific statistics
+      const depotBilling = billingData.filter(item => item.depotId === depot.id);
 
-  // Get global billing statistics
-  const getGlobalBillingStats = useCallback(() => {
-    if (!isManager) return null;
-
-    const depotStats = availableYards.map(depot => {
-      const depotBilling = getMultiDepotBillingData().filter(item => {
-        // Same distribution logic as above
-        if (depot.id === 'depot-tantarelli') {
-          return ['MAEU', 'MSCU', 'CMDU'].includes(item.clientCode);
-        } else if (depot.id === 'depot-vridi') {
-          return ['SHIP001', 'HLCU'].includes(item.clientCode);
-        } else if (depot.id === 'depot-san-pedro') {
-          return ['MAEU', 'CMDU'].includes(item.clientCode);
-        }
-        return false;
-      });
-
-      const revenue = depotBilling.reduce((sum, item) => sum + item.totalAmount, 0);
-      const activeContainers = depotBilling.filter(item => item.status === 'active').length;
-      const billableDays = depotBilling.reduce((sum, item) => sum + item.billableDays, 0);
+      // Use more efficient calculation methods
+      const totals = depotBilling.reduce(
+        (acc, item) => ({
+          revenue: acc.revenue + item.totalAmount,
+          activeContainers: acc.activeContainers + (item.status === 'active' ? 1 : 0),
+          billableDays: acc.billableDays + item.billableDays,
+          totalDays: acc.totalDays + item.totalDays,
+          completedContainers: acc.completedContainers + (item.status === 'completed' ? 1 : 0)
+        }),
+        { revenue: 0, activeContainers: 0, billableDays: 0, totalDays: 0, completedContainers: 0 }
+      );
 
       return {
         id: depot.id,
         name: depot.name,
         code: depot.code,
-        revenue,
-        activeContainers,
-        completedContainers: depotBilling.filter(item => item.status === 'completed').length,
-        billableDays,
-        averageDays: depotBilling.length > 0 
-          ? depotBilling.reduce((sum, item) => sum + item.totalDays, 0) / depotBilling.length 
-          : 0,
+        revenue: totals.revenue,
+        activeContainers: totals.activeContainers,
+        completedContainers: totals.completedContainers,
+        billableDays: totals.billableDays,
+        averageDays: depotBilling.length > 0 ? totals.totalDays / depotBilling.length : 0,
         utilizationRate: (depot.currentOccupancy / depot.totalCapacity) * 100
       };
     });
+  }, [isManager, availableYards, billingData]);
 
-    const globalTotals = {
-      totalRevenue: depotStats.reduce((sum, d) => sum + d.revenue, 0),
-      totalActiveContainers: depotStats.reduce((sum, d) => sum + d.activeContainers, 0),
-      totalCompletedContainers: depotStats.reduce((sum, d) => sum + d.completedContainers, 0),
-      totalBillableDays: depotStats.reduce((sum, d) => sum + d.billableDays, 0),
-      averageUtilization: depotStats.length > 0 
-        ? depotStats.reduce((sum, d) => sum + d.utilizationRate, 0) / depotStats.length 
-        : 0
+  // Memoized global statistics for better performance
+  const globalBillingStats = useMemo(() => {
+    if (!isManager || !depotStats.length) return null;
+
+    const globalTotals = depotStats.reduce(
+      (acc, depot) => ({
+        totalRevenue: acc.totalRevenue + depot.revenue,
+        totalActiveContainers: acc.totalActiveContainers + depot.activeContainers,
+        totalCompletedContainers: acc.totalCompletedContainers + depot.completedContainers,
+        totalBillableDays: acc.totalBillableDays + depot.billableDays,
+        utilizationSum: acc.utilizationSum + depot.utilizationRate
+      }),
+      { totalRevenue: 0, totalActiveContainers: 0, totalCompletedContainers: 0, totalBillableDays: 0, utilizationSum: 0 }
+    );
+
+    return {
+      depotStats,
+      globalTotals: {
+        ...globalTotals,
+        averageUtilization: globalTotals.utilizationSum / depotStats.length
+      }
     };
+  }, [isManager, depotStats]);
 
-    return { depotStats, globalTotals };
-  }, [isManager, availableYards, getMultiDepotBillingData]);
+  // Optimized filtering with better performance
+  const filteredData = useMemo(() => {
+    if (!billingData.length) return [];
 
-  // Filter data based on user permissions
-  const getFilteredBillingData = useCallback(() => {
-    let data = isManager && viewMode === 'global' ? getMultiDepotBillingData() : billingData;
-    
+    let data = billingData;
+
+    // Apply view mode filtering - combine conditions for better performance
+    if (isManager && viewMode === 'global' && selectedDepot) {
+      data = data.filter(item => item.depotId === selectedDepot);
+    } else if (!isManager || viewMode === 'current') {
+      if (currentYard?.id) {
+        data = data.filter(item => item.depotId === currentYard.id);
+      }
+    }
+
     // Apply client filter for client users
     const clientFilterValue = getClientFilter();
     if (clientFilterValue) {
       data = data.filter(item => item.clientCode === clientFilterValue);
     }
-    
-    // Apply search filter
+
+    // Apply search filter - use more efficient search
     if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       data = data.filter(item =>
-        item.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.clientCode.toLowerCase().includes(searchTerm.toLowerCase())
+        item.containerNumber.toLowerCase().includes(searchLower) ||
+        item.clientName.toLowerCase().includes(searchLower) ||
+        item.clientCode.toLowerCase().includes(searchLower)
       );
     }
-    
-    // Apply client filter
+
+    // Apply additional client filter
     if (clientFilter !== 'all') {
       data = data.filter(item => item.clientCode === clientFilter);
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       data = data.filter(item => item.status === statusFilter);
     }
-    
-    return data;
-  }, [isManager, viewMode, getMultiDepotBillingData, billingData, getClientFilter, searchTerm, clientFilter, statusFilter]);
 
-  const filteredData = getFilteredBillingData();
-  const globalBillingStats = getGlobalBillingStats();
+    return data;
+  }, [isManager, viewMode, selectedDepot, currentYard, billingData, getClientFilter, searchTerm, clientFilter, statusFilter]);
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -250,8 +455,8 @@ export const ReportsModule: React.FC = () => {
     const activeContainers = filteredData.filter(item => item.status === 'active').length;
     const completedContainers = filteredData.filter(item => item.status === 'completed').length;
     const totalBillableDays = filteredData.reduce((sum, item) => sum + item.billableDays, 0);
-    const averageDaysInDepot = filteredData.length > 0 
-      ? filteredData.reduce((sum, item) => sum + item.totalDays, 0) / filteredData.length 
+    const averageDaysInDepot = filteredData.length > 0
+      ? filteredData.reduce((sum, item) => sum + item.totalDays, 0) / filteredData.length
       : 0;
 
     return {
@@ -274,32 +479,6 @@ export const ReportsModule: React.FC = () => {
     return Array.from(uniqueMap.values());
   }, [billingData]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const getStatusBadge = (status: 'active' | 'completed') => {
-    return (
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-        status === 'active' 
-          ? 'bg-green-100 text-green-800' 
-          : 'bg-blue-100 text-blue-800'
-      }`}>
-        {status === 'active' ? 'Active' : 'Completed'}
-      </span>
-    );
-  };
 
   const handleViewDetails = (container: ContainerBilling) => {
     setSelectedContainer(container);
@@ -311,18 +490,14 @@ export const ReportsModule: React.FC = () => {
   const canAccessOperationsReports = hasModuleAccess('operationsReports');
   const canAccessAnalytics = hasModuleAccess('analytics');
 
+  // Check if user has access to reports
   if (!canAccessReports) {
-    return (
-      <div className="text-center py-12">
-        <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-        <p className="text-gray-600">You don't have permission to access reports.</p>
-      </div>
-    );
+    return null;
   }
 
-  const DesktopContent = () => (
-    <div className="space-y-6">
+  const DesktopContent = () => {
+    return (
+      <div className="space-y-6">
       {/* Multi-Depot View Toggle for Managers */}
       {isManager && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -352,7 +527,7 @@ export const ReportsModule: React.FC = () => {
                   <span>All Depots</span>
                 </button>
               </div>
-              
+
               {viewMode === 'global' && (
                 <select
                   value={selectedDepot || 'all'}
@@ -368,7 +543,7 @@ export const ReportsModule: React.FC = () => {
                 </select>
               )}
             </div>
-            
+
             <div className="text-sm text-gray-600">
               {viewMode === 'current' ? (
                 <span>Viewing: {currentYard?.name || 'No depot selected'}</span>
@@ -394,8 +569,8 @@ export const ReportsModule: React.FC = () => {
             )}
             {viewMode === 'global' && isManager && (
               <span className="ml-2 text-purple-600 font-medium">
-                • {selectedDepot 
-                  ? availableYards.find(d => d.id === selectedDepot)?.name 
+                • {selectedDepot
+                  ? availableYards.find(d => d.id === selectedDepot)?.name
                   : `Global View (${availableYards.length} depots)`
                 }
               </span>
@@ -420,24 +595,24 @@ export const ReportsModule: React.FC = () => {
 
       {/* Tab Navigation */}
       <div className="bg-white rounded-lg border border-gray-200 p-1">
-        <div className="flex space-x-1">
-          {[
-            { id: 'billing', label: 'Billing & Free Days', icon: DollarSign },
-            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-            { id: 'operations', label: 'Operations', icon: Package }
-          ].map(tab => {
+        <div className="flex space-x-1" role="tablist" aria-label="Reports navigation">
+          {REPORT_TABS.map(tab => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`${tab.id}-panel`}
+                id={`${tab.id}-tab`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4" aria-hidden="true" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -469,7 +644,7 @@ export const ReportsModule: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   <div className="flex items-center">
                     <div className="p-2 bg-blue-100 rounded-lg">
@@ -481,7 +656,7 @@ export const ReportsModule: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   <div className="flex items-center">
                     <div className="p-2 bg-orange-100 rounded-lg">
@@ -493,7 +668,7 @@ export const ReportsModule: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   <div className="flex items-center">
                     <div className="p-2 bg-purple-100 rounded-lg">
@@ -516,16 +691,16 @@ export const ReportsModule: React.FC = () => {
                   <p className="text-sm text-gray-600">Revenue and billing metrics by depot</p>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200" role="table" aria-label="Depot performance comparison">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depot</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Containers</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable Days</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Days</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilization</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depot</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Containers</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billable Days</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Days</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilization</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -557,20 +732,12 @@ export const ReportsModule: React.FC = () => {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-1">
-                                <div className={`text-sm font-medium ${
-                                  depot.utilizationRate >= 90 ? 'text-red-600' :
-                                  depot.utilizationRate >= 75 ? 'text-orange-600' :
-                                  depot.utilizationRate >= 25 ? 'text-green-600' : 'text-blue-600'
-                                }`}>
+                                <div className={`text-sm font-medium ${getUtilizationColor(depot.utilizationRate)}`}>
                                   {depot.utilizationRate.toFixed(1)}%
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                                   <div
-                                    className={`h-1.5 rounded-full ${
-                                      depot.utilizationRate >= 90 ? 'bg-red-500' :
-                                      depot.utilizationRate >= 75 ? 'bg-orange-500' :
-                                      depot.utilizationRate >= 25 ? 'bg-green-500' : 'bg-blue-500'
-                                    }`}
+                                    className={`h-1.5 rounded-full ${getUtilizationBgColor(depot.utilizationRate)}`}
                                     style={{ width: `${Math.min(depot.utilizationRate, 100)}%` }}
                                   ></div>
                                 </div>
@@ -633,7 +800,7 @@ export const ReportsModule: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -645,7 +812,7 @@ export const ReportsModule: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <div className="flex items-center">
                 <div className="p-2 bg-orange-100 rounded-lg">
@@ -657,7 +824,7 @@ export const ReportsModule: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-lg">
@@ -686,7 +853,7 @@ export const ReportsModule: React.FC = () => {
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                 />
               </div>
-              
+
               <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3">
                 <select
                   value={clientFilter}
@@ -700,7 +867,7 @@ export const ReportsModule: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                
+
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -754,7 +921,7 @@ export const ReportsModule: React.FC = () => {
                   {filteredData.map((item) => {
                     const clientConfig = mockClientFreeDays.find(c => c.clientCode === item.clientCode);
                     const isOverFreeLimit = item.billableDays > 0;
-                    
+
                     return (
                       <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -779,7 +946,9 @@ export const ReportsModule: React.FC = () => {
                               {item.freeDaysUsed}/{clientConfig?.freeDaysAllowed} days
                             </span>
                             {item.freeDaysUsed >= (clientConfig?.freeDaysAllowed || 0) && (
-                              <CheckCircle className="h-4 w-4 text-green-600" title="Free days fully used" />
+                              <div title="Free days fully used">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </div>
                             )}
                           </div>
                         </td>
@@ -836,7 +1005,7 @@ export const ReportsModule: React.FC = () => {
 
       {/* Analytics Tab */}
       {activeTab === 'analytics' && (
-        <AnalyticsTab 
+        <AnalyticsTab
           viewMode={isManager ? viewMode : 'current'}
           selectedDepot={selectedDepot}
           availableYards={availableYards}
@@ -846,7 +1015,7 @@ export const ReportsModule: React.FC = () => {
 
       {/* Operations Tab */}
       {activeTab === 'operations' && (
-        <OperationsTab 
+        <OperationsTab
           viewMode={isManager ? viewMode : 'current'}
           selectedDepot={selectedDepot}
           availableYards={availableYards}
@@ -868,6 +1037,12 @@ export const ReportsModule: React.FC = () => {
       )}
     </div>
   );
+
+  return (
+    <ReportsErrorBoundary>
+      <DesktopContent />
+    </ReportsErrorBoundary>
+  );
 };
 
 // Billing Detail Modal Component
@@ -877,36 +1052,11 @@ const BillingDetailModal: React.FC<{
   onClose: () => void;
   canViewAllData: boolean;
 }> = ({ container, clientConfig, onClose, canViewAllData }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const formatDateTime = (date: Date) => {
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         {/* Modal Header */}
         <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -931,7 +1081,7 @@ const BillingDetailModal: React.FC<{
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
           <div className="space-y-6">
-            
+
             {/* Container & Client Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
@@ -1027,7 +1177,7 @@ const BillingDetailModal: React.FC<{
                 <Calculator className="h-5 w-5 mr-2" />
                 Billing Calculation
               </h4>
-              
+
               <div className="space-y-4">
                 {/* Calculation Steps */}
                 <div className="bg-white p-4 rounded-lg border border-green-200">
@@ -1052,7 +1202,7 @@ const BillingDetailModal: React.FC<{
                     Billable Days = Max(0, Total Days - Free Days)<br/>
                     Total Amount = Billable Days × Daily Rate<br/>
                     <span className="text-green-600 font-semibold">
-                      {container.totalAmount > 0 
+                      {container.totalAmount > 0
                         ? `${container.billableDays} × ${formatCurrency(container.dailyRate)} = ${formatCurrency(container.totalAmount)}`
                         : 'No charges (within free days)'
                       }
@@ -1078,21 +1228,4 @@ const BillingDetailModal: React.FC<{
       </div>
     </div>
   );
-
-  return (
-    <>
-      {/* Desktop Only Message for Mobile */}
-      <div className="lg:hidden">
-        <DesktopOnlyMessage
-          moduleName="Reports"
-          reason="Viewing detailed analytics, charts, financial reports, and comprehensive data tables requires a larger screen for optimal visualization and analysis."
-        />
-      </div>
-
-      {/* Desktop View */}
-      <div className="hidden lg:block">
-        <DesktopContent />
-      </div>
-    </>
-  );
-};
+}};

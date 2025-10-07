@@ -24,14 +24,12 @@ interface MobileOperationsTableProps {
   operations: Operation[];
   searchTerm: string;
   selectedFilter: string;
-  onOperationClick: (operation: Operation) => void;
 }
 
 export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
   operations,
   searchTerm,
-  selectedFilter,
-  onOperationClick
+  selectedFilter
 }) => {
   // Filter operations based on selected filter
   const getFilteredOperations = () => {
@@ -135,8 +133,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
               {filteredOperations.map((operation) => (
                 <tr
                   key={operation.id}
-                  onClick={() => onOperationClick(operation)}
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -152,7 +149,12 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                       <div className="text-sm font-medium text-gray-900">{operation.secondContainerNumber}</div>
                     )}
                     <div className="text-sm text-gray-500">
-                      {operation.containerSize} • {operation.containerType?.charAt(0).toUpperCase() + operation.containerType?.slice(1).replace('_', ' ')}
+                      {operation.containerSize} • {
+                        // FIX: Ensure containerType is not null/undefined before processing string methods
+                        operation.containerType
+                          ? operation.containerType.charAt(0).toUpperCase() + operation.containerType.slice(1).replace('_', ' ')
+                          : '' // Render an empty string if containerType is missing
+                      }
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -202,8 +204,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
           {filteredOperations.map((operation) => (
             <div
               key={operation.id}
-              onClick={() => onOperationClick(operation)}
-              className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl active:shadow-md transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer overflow-hidden"
+              className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl active:shadow-md transition-all duration-300 overflow-hidden"
             >
               {/* Card Header with gradient */}
               <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-5 py-4 border-b border-gray-200">
@@ -242,6 +243,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                       {operation.containerSize}
                     </div>
                     <div className="text-xs text-gray-500 capitalize">
+                      {/* This version is safer as `undefined` renders as nothing in React */}
                       {operation.containerType?.replace('_', ' ')}
                     </div>
                   </div>

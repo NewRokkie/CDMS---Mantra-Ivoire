@@ -39,7 +39,9 @@ export const GateInHeader: React.FC<GateInHeaderProps> = ({
         </button>
         <button
           onClick={onShowForm}
-          className="btn-success flex items-center space-x-2"
+          // --- FIX APPLIED HERE ---
+          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          // --- END FIX ---
         >
           <Plus className="h-4 w-4" />
           <span>New Gate In</span>

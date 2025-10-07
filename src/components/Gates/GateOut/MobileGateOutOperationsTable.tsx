@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar, Package, User, Truck, MapPin, AlertTriangle, CheckCircle, Clock, FileText } from 'lucide-react';
-import { PendingGateOut } from './types';
+import { PendingGateOut } from '../types';
 
 interface MobileGateOutOperationsTableProps {
   operations: PendingGateOut[];
@@ -22,10 +22,10 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(op =>
-        (op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-        (op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-        (op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-        (op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+        op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -45,10 +45,10 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
       in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process', icon: AlertTriangle },
       completed: { color: 'bg-green-100 text-green-800', label: 'Completed', icon: CheckCircle }
     };
-    
-    const config = statusConfig[status];
+
+    const config = statusConfig[status as keyof typeof statusConfig];
     const Icon = config.icon;
-    
+
     return (
       <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${config.color}`}>
         <Icon className="h-3 w-3 mr-1" />
@@ -57,9 +57,10 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
     );
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -109,7 +110,7 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">Progress</span>
                 <span className="text-sm text-gray-500">
-                  {Math.round((operation.processedContainers / operation.totalContainers) * 100)}%
+                  {operation.totalContainers > 0 ? Math.round((operation.processedContainers / operation.totalContainers) * 100) : 0}%
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
@@ -121,11 +122,11 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                       ? 'bg-blue-500'
                       : 'bg-gray-300'
                   }`}
-                  style={{ width: `${(operation.processedContainers / operation.totalContainers) * 100}%` }}
+                  style={{ width: `${operation.totalContainers > 0 ? (operation.processedContainers / operation.totalContainers) * 100 : 0}%` }}
                 ></div>
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {operation.remainingContainers} containers remaining
+                {operation.totalContainers - operation.processedContainers} containers remaining
               </div>
             </div>
 
@@ -163,7 +164,7 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                 </div>
                 {operation.estimatedReleaseDate && (
                   <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                    Est: {operation.estimatedReleaseDate.toLocaleDateString()}
+                    Est: {formatDate(operation.estimatedReleaseDate)}
                   </div>
                 )}
               </div>
@@ -230,10 +231,10 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                 <tr key={operation.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {operation.date?.toLocaleDateString() || '-'}
+                      {operation.date ? formatDate(operation.date).split(',')[0] : '-'}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {operation.date?.toLocaleTimeString() || '-'}
+                      {operation.date ? formatDate(operation.date).split(',')[1]?.trim() : '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -263,7 +264,7 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                           {operation.processedContainers}/{operation.totalContainers}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {Math.round((operation.processedContainers / operation.totalContainers) * 100)}%
+                          {operation.totalContainers > 0 ? Math.round((operation.processedContainers / operation.totalContainers) * 100) : 0}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -275,11 +276,11 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                               ? 'bg-blue-500'
                               : 'bg-gray-300'
                           }`}
-                          style={{ width: `${(operation.processedContainers / operation.totalContainers) * 100}%` }}
+                          style={{ width: `${operation.totalContainers > 0 ? (operation.processedContainers / operation.totalContainers) * 100 : 0}%` }}
                         ></div>
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {operation.remainingContainers} remaining
+                        {operation.totalContainers - operation.processedContainers} remaining
                       </div>
                     </div>
                   </td>

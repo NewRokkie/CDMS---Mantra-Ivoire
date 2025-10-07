@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -15,12 +15,12 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Calendar, 
-  Package, 
-  DollarSign, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  Package,
+  DollarSign,
   Clock,
   Building,
   Activity,
@@ -158,16 +158,43 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
     if (viewMode !== 'global') return null;
 
     if (selectedDepot) {
-      // Return data for specific depot
+      // Return data for specific depot - scale down from global view
       const depot = availableYards.find(d => d.id === selectedDepot);
       if (!depot) return null;
-      
-      // Generate depot-specific analytics
-      return {
+
+      // Scale down from the "all depots" level to represent single depot
+      const scaleFactor = 1 / availableYards.length;
+      const scaledData = {
         ...analyticsData,
         depotName: depot.name,
-        depotCode: depot.code
+        depotCode: depot.code,
+        // Scale down data for single depot view
+        containerMovements: analyticsData.containerMovements.map(item => ({
+          ...item,
+          gateIn: Math.max(1, Math.floor(item.gateIn * scaleFactor)),
+          gateOut: Math.max(1, Math.floor(item.gateOut * scaleFactor)),
+          total: Math.max(1, Math.floor((item.gateIn + item.gateOut) * scaleFactor))
+        })),
+        revenueAnalytics: analyticsData.revenueAnalytics.map(item => ({
+          ...item,
+          revenue: Math.max(1000, Math.floor(item.revenue * scaleFactor)),
+          containers: Math.max(1, Math.floor(item.containers * scaleFactor))
+        })),
+        occupancyTrends: analyticsData.occupancyTrends.map(item => ({
+          ...item,
+          occupancy: Math.max(100, Math.floor(item.occupancy * scaleFactor)),
+          capacity: Math.max(100, Math.floor(item.capacity * scaleFactor)),
+          utilizationRate: 0 // Will be recalculated below
+        }))
       };
+
+      // Recalculate utilization rates after scaling
+      scaledData.occupancyTrends = scaledData.occupancyTrends.map(item => ({
+        ...item,
+        utilizationRate: (item.occupancy / item.capacity) * 100
+      }));
+
+      return scaledData;
     }
 
     // Return combined analytics for all depots
@@ -188,9 +215,16 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
       occupancyTrends: analyticsData.occupancyTrends.map(item => ({
         ...item,
         occupancy: item.occupancy * availableYards.length,
-        capacity: item.capacity * availableYards.length
+        capacity: item.capacity * availableYards.length,
+        utilizationRate: 0 // Will be recalculated below
       }))
     };
+
+    // Recalculate utilization rates after scaling for all depots view
+    combinedData.occupancyTrends = combinedData.occupancyTrends.map(item => ({
+      ...item,
+      utilizationRate: (item.occupancy / item.capacity) * 100
+    }));
 
     return combinedData;
   };
@@ -199,14 +233,14 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
   const getFilteredData = () => {
     // Use multi-depot data if available
     const sourceData = getMultiDepotAnalytics() || analyticsData;
-    
+
     const clientFilter = getClientFilter();
     if (clientFilter) {
       // Filter client distribution to show only user's data
       const filteredClientDistribution = sourceData.clientDistribution.filter(
         client => client.clientCode === clientFilter
       );
-      
+
       return {
         ...sourceData,
         clientDistribution: filteredClientDistribution
@@ -216,6 +250,62 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
   };
 
   const filteredData = getFilteredData();
+
+  // Filter data by date range
+  const dateFilteredData = useMemo(() => {
+    if (!dateRange.start && !dateRange.end) {
+      return filteredData;
+    }
+
+    const startDate = dateRange.start ? new Date(dateRange.start) : null;
+    const endDate = dateRange.end ? new Date(dateRange.end) : null;
+
+    // Filter container movements by date range
+    const filteredContainerMovements = filteredData.containerMovements.filter(item => {
+      const itemDate = new Date(item.date);
+      if (startDate && itemDate < startDate) return false;
+      if (endDate && itemDate > endDate) return false;
+      return true;
+    });
+
+    // Filter occupancy trends by date range
+    const filteredOccupancyTrends = filteredData.occupancyTrends.filter(item => {
+      const itemDate = new Date(item.date);
+      if (startDate && itemDate < startDate) return false;
+      if (endDate && itemDate > endDate) return false;
+      return true;
+    });
+
+    // For revenue analytics (monthly data), we'll filter by month range
+    // This is more complex as we need to parse month strings like "Jan 23"
+    let filteredRevenueAnalytics = filteredData.revenueAnalytics;
+
+    if (startDate || endDate) {
+      filteredRevenueAnalytics = filteredData.revenueAnalytics.filter(item => {
+        // Parse month string like "Jan 23" to get year and month
+        const [monthStr, yearStr] = item.month.split(' ');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthIndex = monthNames.indexOf(monthStr);
+        const year = 2000 + parseInt(yearStr); // Convert "23" to "2023"
+
+        if (monthIndex === -1) return true; // Keep if can't parse
+
+        const itemDate = new Date(year, monthIndex, 1);
+
+        if (startDate && itemDate < startDate) return false;
+        if (endDate && itemDate > endDate) return false;
+        return true;
+      });
+    }
+
+    return {
+      ...filteredData,
+      containerMovements: filteredContainerMovements,
+      occupancyTrends: filteredOccupancyTrends,
+      revenueAnalytics: filteredRevenueAnalytics
+    };
+  }, [filteredData, dateRange]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -227,19 +317,21 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
     });
   };
 
   // Calculate key metrics
   const keyMetrics = useMemo(() => {
-    const totalRevenue = filteredData.revenueAnalytics.reduce((sum, item) => sum + item.revenue, 0);
-    const totalContainers = filteredData.containerMovements.reduce((sum, item) => sum + item.total, 0);
-    const avgOccupancy = filteredData.occupancyTrends.reduce((sum, item) => sum + item.utilizationRate, 0) / filteredData.occupancyTrends.length;
-    const totalGateIn = filteredData.containerMovements.reduce((sum, item) => sum + item.gateIn, 0);
-    const totalGateOut = filteredData.containerMovements.reduce((sum, item) => sum + item.gateOut, 0);
+    const totalRevenue = dateFilteredData.revenueAnalytics.reduce((sum, item) => sum + item.revenue, 0);
+    const totalContainers = dateFilteredData.containerMovements.reduce((sum, item) => sum + item.total, 0);
+    const avgOccupancy = dateFilteredData.occupancyTrends.length > 0
+      ? dateFilteredData.occupancyTrends.reduce((sum, item) => sum + item.utilizationRate, 0) / dateFilteredData.occupancyTrends.length
+      : 0;
+    const totalGateIn = dateFilteredData.containerMovements.reduce((sum, item) => sum + item.gateIn, 0);
+    const totalGateOut = dateFilteredData.containerMovements.reduce((sum, item) => sum + item.gateOut, 0);
 
     return {
       totalRevenue,
@@ -249,7 +341,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
       totalGateOut,
       netMovement: totalGateIn - totalGateOut
     };
-  }, [filteredData]);
+  }, [dateFilteredData]);
 
   const showClientNotice = !canViewAllData() && user?.role === 'client';
 
@@ -264,13 +356,13 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
             </div>
             <div>
               <h3 className="font-medium text-purple-900">
-                {selectedDepot 
+                {selectedDepot
                   ? `${availableYards.find(d => d.id === selectedDepot)?.name} Analytics`
                   : 'Global Analytics Dashboard'
                 }
               </h3>
               <p className="text-sm text-purple-700">
-                {selectedDepot 
+                {selectedDepot
                   ? 'Individual depot performance metrics and trends'
                   : `Combined analytics across ${availableYards.length} depots`
                 }
@@ -381,7 +473,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
               />
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <select
               value={selectedMetric}
@@ -402,7 +494,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
 
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         {/* Container Movements Chart */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -412,18 +504,18 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
             </div>
             <BarChart3 className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={filteredData.containerMovements.slice(-14)}>
+            <BarChart data={dateFilteredData.containerMovements}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 tickFormatter={formatDate}
                 stroke="#64748b"
                 fontSize={12}
               />
               <YAxis stroke="#64748b" fontSize={12} />
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name) => [value, name === 'gateIn' ? 'Gate In' : 'Gate Out']}
                 labelFormatter={(label) => `Date: ${formatDate(label)}`}
                 contentStyle={{
@@ -450,7 +542,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
             </div>
             <PieChartIcon className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -467,10 +559,10 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name, props) => [
                   `${value} containers`,
-                  canViewAllData ? props.payload.clientName : 'Your Company'
+                  canViewAllData() ? props.payload.clientName : 'Your Company'
                 ]}
                 contentStyle={{
                   backgroundColor: '#ffffff',
@@ -492,7 +584,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
             </div>
             <TrendingUp className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={filteredData.revenueAnalytics}>
               <defs>
@@ -504,7 +596,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
               <YAxis stroke="#64748b" fontSize={12} tickFormatter={(value) => `$${value/1000}k`} />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [formatCurrency(value as number), 'Revenue']}
                 contentStyle={{
                   backgroundColor: '#ffffff',
@@ -513,13 +605,13 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
               />
-              <Area 
-                type="monotone" 
-                dataKey="revenue" 
-                stroke="#3b82f6" 
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#3b82f6"
                 strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#revenueGradient)" 
+                fillOpacity={1}
+                fill="url(#revenueGradient)"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -534,23 +626,23 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
             </div>
             <Activity className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={filteredData.occupancyTrends.slice(-14)}>
+            <LineChart data={dateFilteredData.occupancyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 tickFormatter={formatDate}
                 stroke="#64748b"
                 fontSize={12}
               />
-              <YAxis 
-                stroke="#64748b" 
+              <YAxis
+                stroke="#64748b"
                 fontSize={12}
                 domain={[60, 100]}
                 tickFormatter={(value) => `${value}%`}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`${(value as number).toFixed(1)}%`, 'Utilization Rate']}
                 labelFormatter={(label) => `Date: ${formatDate(label)}`}
                 contentStyle={{
@@ -560,10 +652,10 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="utilizationRate" 
-                stroke="#8b5cf6" 
+              <Line
+                type="monotone"
+                dataKey="utilizationRate"
+                stroke="#8b5cf6"
                 strokeWidth={3}
                 dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2 }}
@@ -582,7 +674,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
           </div>
           <Package className="h-5 w-5 text-gray-400" />
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -599,7 +691,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`${value} containers`, 'Count']}
                 contentStyle={{
                   backgroundColor: '#ffffff',
@@ -610,12 +702,12 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
               />
             </PieChart>
           </ResponsiveContainer>
-          
+
           <div className="space-y-3">
             {filteredData.containerTypes.map((type, index) => (
               <div key={type.type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
-                  <div 
+                  <div
                     className="w-4 h-4 rounded-full"
                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                   ></div>
@@ -664,7 +756,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
                   <tr key={client.clientCode} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full mr-3"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         ></div>
@@ -685,7 +777,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
                         <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
                           <div
                             className="h-2 rounded-full"
-                            style={{ 
+                            style={{
                               width: `${client.percentage}%`,
                               backgroundColor: COLORS[index % COLORS.length]
                             }}

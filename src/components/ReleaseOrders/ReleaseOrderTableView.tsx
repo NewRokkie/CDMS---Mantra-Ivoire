@@ -73,8 +73,8 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
       return matchesSearch && matchesStatus && matchesClient;
     });
 
-    // Sort orders
-    filtered.sort((a, b) => {
+    // Sort orders (create a new array to avoid mutating the filtered array)
+    const sorted = [...filtered].sort((a, b) => {
       let aValue: any;
       let bValue: any;
 
@@ -104,7 +104,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
       return 0;
     });
 
-    return filtered;
+    return sorted;
   }, [orders, searchTerm, statusFilter, clientFilter, sortConfig]);
 
   // Pagination
@@ -117,6 +117,8 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
       field,
       direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
   };
 
   const handleViewDetails = (order: ReleaseOrder) => {
@@ -181,7 +183,10 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 type="text"
                 placeholder="Search release orders, clients, containers..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page when search changes
+                }}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full lg:w-64"
               />
             </div>
@@ -189,19 +194,26 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
             <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3">
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1); // Reset to first page when filter changes
+                }}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-auto min-w-0 md:min-w-[120px]"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="in_process">In Process</option>
+                <option value="validated">Validated</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
 
               <select
                 value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
+                onChange={(e) => {
+                  setClientFilter(e.target.value);
+                  setCurrentPage(1); // Reset to first page when filter changes
+                }}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-auto min-w-0 md:min-w-[180px]"
               >
                 <option value="all">All Clients</option>

@@ -32,7 +32,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
-  
+
   const [formData, setFormData] = useState<BookingReferenceFormData>({
     bookingNumber: '',
     bookingType: 'EXPORT',
@@ -63,17 +63,61 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
 
   // Calculate total containers whenever quantities change
   useEffect(() => {
-    const total = formData.containerQuantities.size20ft + 
+    const total = formData.containerQuantities.size20ft +
                   formData.containerQuantities.size40ft;
-    
+
     const requiresBreakdown = total > formData.maxQuantityThreshold;
-    
+
     setFormData(prev => ({
       ...prev,
       totalContainers: total,
       requiresDetailedBreakdown: requiresBreakdown
     }));
   }, [formData.containerQuantities, formData.maxQuantityThreshold]);
+
+  // Auto-adjust container quantities when maxQuantityThreshold is lowered
+  useEffect(() => {
+    const currentTotal = formData.containerQuantities.size20ft + formData.containerQuantities.size40ft;
+
+    if (currentTotal > formData.maxQuantityThreshold && formData.maxQuantityThreshold > 0) {
+      // Calculate proportional reduction to fit within new threshold
+      const reductionRatio = formData.maxQuantityThreshold / currentTotal;
+
+      const newSize20ft = Math.floor(formData.containerQuantities.size20ft * reductionRatio);
+      const newSize40ft = Math.floor(formData.containerQuantities.size40ft * reductionRatio);
+
+      // Ensure at least one container if threshold > 0
+      const adjustedTotal = newSize20ft + newSize40ft;
+      if (adjustedTotal === 0 && formData.maxQuantityThreshold > 0) {
+        // Assign one container to the size that had more before
+        if (formData.containerQuantities.size20ft >= formData.containerQuantities.size40ft) {
+          setFormData(prev => ({
+            ...prev,
+            containerQuantities: {
+              size20ft: 1,
+              size40ft: 0
+            }
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            containerQuantities: {
+              size20ft: 0,
+              size40ft: 1
+            }
+          }));
+        }
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          containerQuantities: {
+            size20ft: newSize20ft,
+            size40ft: newSize40ft
+          }
+        }));
+      }
+    }
+  }, [formData.maxQuantityThreshold]);
 
   const handleInputChange = (field: keyof BookingReferenceFormData, value: any) => {
     setFormData(prev => ({
@@ -85,17 +129,17 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
 
   const handleQuantityChange = (size: keyof ContainerQuantityBySize, value: number) => {
     const newValue = Math.max(0, value);
-    
+
     // Calculate what the new total would be
     const otherSize = size === 'size20ft' ? 'size40ft' : 'size20ft';
     const otherValue = formData.containerQuantities[otherSize];
     const newTotal = newValue + otherValue;
-    
+
     // Don't allow exceeding the maximum threshold
     if (newTotal > formData.maxQuantityThreshold) {
       return;
     }
-    
+
     setFormData(prev => ({
       ...prev,
       containerQuantities: {
@@ -147,7 +191,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateStep(currentStep)) return;
 
     const bookingData = formData;
@@ -163,9 +207,9 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     if (formData.containerQuantities.size40ft > 0) {
       parts.push(`${formData.containerQuantities.size40ft} Container${formData.containerQuantities.size40ft !== 1 ? 's' : ''} of 40"`);
     }
-    
+
     if (parts.length === 0) return 'No containers specified';
-    
+
     const result = parts.join(' and ');
     return `${result} for a total of ${formData.totalContainers} container${formData.totalContainers !== 1 ? 's' : ''}`;
   };
@@ -177,7 +221,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in !mt-0">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong animate-slide-in-up max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -205,22 +249,22 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
               </button>
             </div>
           </div>
-          
+
           {/* Progress Bar */}
           <div className="mt-3">
             <div className="relative">
               <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
-              <div 
-                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300" 
+              <div
+                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300"
                 style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
               ></div>
-              
+
               <div className="flex justify-between relative z-20">
                 {[1, 2].map((step) => (
                   <div key={step} className="flex flex-col items-center">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
-                      step <= currentStep 
-                        ? 'bg-blue-600 text-white border border-blue-600' 
+                      step <= currentStep
+                        ? 'bg-blue-600 text-white border border-blue-600'
                         : 'bg-white text-gray-500 border border-gray-300'
                     }`}>
                       {step}
@@ -241,18 +285,18 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <form className="space-y-6">
-            
+
             {/* Step 1: Booking Number & Client Information */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Booking Number */}
                 <div className="bg-green-50 rounded-xl p-6 border border-green-200">
                   <h4 className="font-semibold text-green-900 mb-4 flex items-center">
                     <FileText className="h-5 w-5 mr-2" />
                     Booking Information
                   </h4>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-green-800 mb-2">
@@ -302,6 +346,22 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                       This will be used as the booking ID throughout the application
                     </p>
                   </div>
+
+                  {/* Estimated Release Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-green-800 mb-2">
+                      Estimated Release Date
+                    </label>
+                    <DatePicker
+                      value={formData.estimatedReleaseDate}
+                      onChange={(date) => handleInputChange('estimatedReleaseDate', date)}
+                      placeholder="Select estimated release date"
+                      required={false}
+                    />
+                    <p className="text-xs text-green-600 mt-1">
+                      Optional: Expected date for container release (for planning purposes)
+                    </p>
+                  </div>
                 </div>
 
                 {/* Client Selection */}
@@ -310,7 +370,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                     <User className="h-5 w-5 mr-2" />
                     Client Information
                   </h4>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-2">
                       Select Client *
@@ -330,14 +390,14 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
             {/* Step 2: Container Quantities */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Maximum Quantity Threshold */}
                 <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
                   <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
                     <Calculator className="h-5 w-5 mr-2" />
                     Quantity Control
                   </h4>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-purple-800 mb-2">
                       Maximum Quantity Threshold *
@@ -389,7 +449,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                         </div>
                         <span className="text-xs text-gray-500">Standard</span>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <button
                           type="button"
@@ -399,7 +459,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                         >
                           <Minus className="h-4 w-4" />
                         </button>
-                        
+
                         <input
                           type="number"
                           min="0"
@@ -408,7 +468,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                           onChange={(e) => handleQuantityChange('size20ft', parseInt(e.target.value) || 0)}
                           className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
                         />
-                        
+
                         <button
                           type="button"
                           onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft + 1)}
@@ -429,7 +489,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                         </div>
                         <span className="text-xs text-gray-500">High Capacity</span>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <button
                           type="button"
@@ -439,7 +499,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                         >
                           <Minus className="h-4 w-4" />
                         </button>
-                        
+
                         <input
                           type="number"
                           min="0"
@@ -448,7 +508,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                           onChange={(e) => handleQuantityChange('size40ft', parseInt(e.target.value) || 0)}
                           className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-medium"
                         />
-                        
+
                         <button
                           type="button"
                           onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft + 1)}
@@ -468,7 +528,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                       <div className="text-sm text-gray-700">
                         {getContainerBreakdownText()}
                       </div>
-                      
+
                       {formData.requiresDetailedBreakdown && (
                         <div className="mt-3 flex items-center p-3 bg-orange-100 border border-orange-200 rounded-lg">
                           <AlertTriangle className="h-4 w-4 text-orange-600 mr-2" />
@@ -486,54 +546,58 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
         </div>
 
         {/* Modal Footer - Fixed */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              {currentStep > 1 && (
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  className="btn-secondary"
-                >
-                  Previous
-                </button>
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-3">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: Previous Button */}
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
+              >
+                <span className="sm:hidden">← Prev</span>
+                <span className="hidden sm:inline">Previous</span>
+              </button>
+            )}
+
+            {/* Right: Cancel + Next/Submit */}
+            <div className="flex items-center gap-2 ml-auto">
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-secondary"
+                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
               >
-                Cancel
+                <span className="sm:hidden">✕</span>
+                <span className="hidden sm:inline">Cancel</span>
               </button>
-              
+
               {currentStep < 2 ? (
                 <button
                   type="button"
                   onClick={handleNextStep}
                   disabled={!validateStep(currentStep)}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 sm:px-6 sm:py-2 text-sm"
                 >
-                  Next Step
+                  <span className="sm:hidden">Next →</span>
+                  <span className="hidden sm:inline">Next Step</span>
                 </button>
               ) : (
                 <button
                   type="submit"
                   onClick={handleSubmit}
                   disabled={!isFormValid || isLoading}
-                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
                 >
                   {isLoading ? (
                     <>
                       <Loader className="h-4 w-4 animate-spin" />
-                      <span>Creating...</span>
+                      <span>...</span>
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      <span>Create Booking Reference</span>
+                      <span className="sm:hidden">Create</span>
+                      <span className="hidden sm:inline">Create Booking</span>
                     </>
                   )}
                 </button>
