@@ -1,10 +1,10 @@
 import React from 'react';
-import { List, AlertTriangle, CheckCircle, Package } from 'lucide-react';
+import { List, AlertTriangle, CheckCircle, Package, RefreshCcw } from 'lucide-react';
 
 interface ReleaseOrderStats {
   total: number;
   pending: number;
-  validated: number;
+  inProcess: number;
   completed: number;
   totalContainers: number;
   readyContainers: number;
@@ -20,9 +20,9 @@ export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = (
       icon: List,
       label: 'Total Bookings',
       value: stats.total,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700'
+      color: 'bg-purple-500',
+      bgColor: 'bg-purple-50',
+      textColor: 'text-purple-700'
     },
     {
       icon: AlertTriangle,
@@ -33,20 +33,20 @@ export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = (
       textColor: 'text-yellow-700'
     },
     {
-      icon: CheckCircle,
-      label: 'Validated',
-      value: stats.validated,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700'
+      icon: RefreshCcw,
+      label: 'In Process',
+      value: stats.inProcess,
+      color: 'bg-blue-500',
+      bgColor: 'bg-blue-50',
+      textColor: 'text-blue-700'
     },
     {
       icon: CheckCircle,
       label: 'Completed',
       value: stats.completed,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-700'
+      color: 'bg-green-500',
+      bgColor: 'bg-green-50',
+      textColor: 'text-green-700'
     }
   ];
 

@@ -179,13 +179,10 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
-                    <Package className="h-5 w-5 text-blue-600" />
+                    <Truck className="h-5 w-5 text-blue-600" />
                     <span className="font-bold text-gray-900 text-lg">
-                      {operation.containerNumber}
+                      {operation.truckNumber} • {operation.driverName}
                     </span>
-                    {operation.secondContainerNumber && (
-                      <span className="text-sm text-gray-500">+1</span>
-                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(operation.operationStatus)}
@@ -224,14 +221,16 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Transport Info */}
+                {/* Container Info */}
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-green-100 rounded-lg">
-                    <Truck className="h-4 w-4 text-green-600" />
+                    <Package className="h-4 w-4 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">{operation.driverName}</div>
-                    <div className="text-sm text-gray-500">{operation.truckNumber} • {operation.transportCompany}</div>
+                    <div className="font-medium text-gray-900">{operation.containerNumber}</div>
+                    {operation.secondContainerNumber && (
+                      <div className="font-medium text-gray-900">{operation.secondContainerNumber}</div>
+                    )}
                   </div>
                 </div>
 
@@ -287,13 +286,16 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Truck Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Container
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Transport
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -308,6 +310,12 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   <tr key={operation.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(operation.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -327,17 +335,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                       <div className="text-sm text-gray-500">{operation.clientCode}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
-                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(operation.operationStatus)}
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {operation.status}
-                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

@@ -130,7 +130,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
-      validated: { color: 'bg-green-100 text-green-800', label: 'Validated' },
       completed: { color: 'bg-blue-600 text-white', label: 'Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
     };
@@ -203,7 +202,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="in_process">In Process</option>
-                <option value="validated">Validated</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
@@ -474,17 +472,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
                         <span className="ml-2 font-medium">{selectedOrder.remainingContainers || selectedOrder.totalContainers}</span>
                       </div>
                     </div>
-                    {selectedOrder.estimatedReleaseDate && (
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="text-sm text-gray-600">Est. Release:</span>
-                          <span className="ml-2 font-medium">
-                            {selectedOrder.estimatedReleaseDate.toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 

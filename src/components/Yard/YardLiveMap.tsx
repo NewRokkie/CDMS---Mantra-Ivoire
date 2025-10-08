@@ -128,6 +128,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const [selectedStackViz, setSelectedStackViz] = useState<StackVisualization | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [highlightedContainer, setHighlightedContainer] = useState<string | null>(null);
+  const [highlightedStacks, setHighlightedStacks] = useState<number[]>([]);
   const [searchSuggestions, setSearchSuggestions] = useState<Container[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -329,6 +330,15 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     }
   }, [searchedContainer]);
 
+  useEffect(() => {
+    if (highlightedStacks.length > 0) {
+      const timer = setTimeout(() => {
+        setHighlightedStacks([]);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedStacks]);
+
   const scrollToContainer = () => {
     if (!searchedContainer) return;
 
@@ -336,6 +346,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     if (!match) return;
 
     const stackNumber = parseInt(match[1]);
+    const stacksToHighlight: number[] = [];
 
     // For 40ft containers, try to scroll to the virtual stack
     if (searchedContainer.size === '40ft') {
@@ -344,19 +355,25 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       if (config.pairedWith) {
         // Calculate virtual stack number
         const virtualStackNum = Math.min(stackNumber, config.pairedWith) + 1;
-        const virtualStackElement = stackRefs.current.get(virtualStackNum);
 
+        // Add both physical stacks and virtual stack to highlight
+        stacksToHighlight.push(stackNumber, config.pairedWith, virtualStackNum);
+
+        const virtualStackElement = stackRefs.current.get(virtualStackNum);
         if (virtualStackElement) {
           virtualStackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlightedStacks(stacksToHighlight);
           return;
         }
       }
     }
 
     // Default: scroll to the physical stack
+    stacksToHighlight.push(stackNumber);
     const stackElement = stackRefs.current.get(stackNumber);
     if (stackElement) {
       stackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedStacks(stacksToHighlight);
     }
   };
 
@@ -909,18 +926,38 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                   {/* Connection lines using pseudo-elements and borders */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     {/* Left line */}
-                    <div className="absolute left-0 top-1/2 w-1/3 h-0.5 bg-gradient-to-r from-orange-400 to-orange-500" style={{ transform: 'translateY(-50%)' }}>
-                      <div className="absolute inset-0 bg-orange-500 opacity-30 animate-pulse"></div>
+                    <div className={`absolute left-0 top-1/2 w-1/3 h-0.5 bg-gradient-to-r" style={{ transform: 'translateY(-50%)' }} ${
+                      highlightedStacks.includes(stackViz.stackNumber)
+                        ? 'from-yellow-400 to-orange-500'
+                        : 'from-orange-400 to-orange-500'
+                    }`}>
+                      <div className={`absolute inset-0 opacity-30 animate-pulse ${
+                        highlightedStacks.includes(stackViz.stackNumber)
+                          ? 'bg-yellow-400'
+                          : 'bg-orange-500'
+                      }`}></div>
                     </div>
                     {/* Right line */}
-                    <div className="absolute right-0 top-1/2 w-1/3 h-0.5 bg-gradient-to-l from-orange-400 to-orange-500" style={{ transform: 'translateY(-50%)' }}>
-                      <div className="absolute inset-0 bg-orange-500 opacity-30 animate-pulse"></div>
+                    <div className={`absolute right-0 top-1/2 w-1/3 h-0.5 bg-gradient-to-l" style={{ transform: 'translateY(-50%)' }} ${
+                      highlightedStacks.includes(stackViz.stackNumber)
+                        ? 'from-yellow-400 to-orange-500'
+                        : 'from-orange-400 to-orange-500'
+                    }`}>
+                      <div className={`absolute inset-0 opacity-30 animate-pulse ${
+                        highlightedStacks.includes(stackViz.stackNumber)
+                          ? 'bg-yellow-400'
+                          : 'bg-orange-500'
+                      }`}></div>
                     </div>
                   </div>
 
                   {/* Orange circle - reduced size */}
                   <div
-                    className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 border-4 border-orange-700 shadow-xl cursor-pointer hover:scale-110 transition-all flex flex-col items-center justify-center relative z-10"
+                    className={`w-20 h-20 rounded-full bg-gradient-to-br cursor-pointer hover:scale-110 transition-all flex flex-col items-center justify-center relative z-10 ${
+                      highlightedStacks.includes(stackViz.stackNumber)
+                        ? 'from-yellow-400 to-orange-500 border-4 border-yellow-500 shadow-2xl shadow-yellow-400/70 ring-4 ring-yellow-400/50 animate-pulse'
+                        : 'from-orange-400 to-orange-600 border-4 border-orange-700 shadow-xl'
+                    }`}
                     onClick={() => handleStackClick(stackViz)}
                     title={`Click to view ${stackViz.currentOccupancy} containers`}
                   >
@@ -938,7 +975,11 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 ref={(el) => {
                   if (el) stackRefs.current.set(stackViz.stackNumber, el);
                 }}
-                className="bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer border-gray-200 hover:border-blue-400"
+                className={`bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer hover:border-blue-400 ${
+                  highlightedStacks.includes(stackViz.stackNumber)
+                    ? 'border-yellow-400 shadow-lg shadow-yellow-400/50 ring-2 ring-yellow-400/50 animate-pulse'
+                    : 'border-gray-200'
+                }`}
                 onClick={() => handleStackClick(stackViz)}
               >
                 <div

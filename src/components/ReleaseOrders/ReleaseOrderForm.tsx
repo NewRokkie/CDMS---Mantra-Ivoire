@@ -14,7 +14,6 @@ interface BookingReferenceFormData {
   containerQuantities: ContainerQuantityBySize;
   totalContainers: number;
   requiresDetailedBreakdown: boolean;
-  estimatedReleaseDate: string;
 }
 
 interface BookingReferenceFormProps {
@@ -45,8 +44,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
       size40ft: 0
     },
     totalContainers: 0,
-    requiresDetailedBreakdown: false,
-    estimatedReleaseDate: ''
+    requiresDetailedBreakdown: false
   });
 
   // Mock client data
@@ -344,22 +342,6 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
                     />
                     <p className="text-xs text-green-600 mt-1">
                       This will be used as the booking ID throughout the application
-                    </p>
-                  </div>
-
-                  {/* Estimated Release Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-green-800 mb-2">
-                      Estimated Release Date
-                    </label>
-                    <DatePicker
-                      value={formData.estimatedReleaseDate}
-                      onChange={(date) => handleInputChange('estimatedReleaseDate', date)}
-                      placeholder="Select estimated release date"
-                      required={false}
-                    />
-                    <p className="text-xs text-green-600 mt-1">
-                      Optional: Expected date for container release (for planning purposes)
                     </p>
                   </div>
                 </div>

@@ -20,7 +20,6 @@ interface GateOutFormData {
     clientName?: string;
     bookingType?: string;
     totalContainers?: number;
-    estimatedReleaseDate?: Date | string;
   };
   transportCompany: string;
   driverName: string;
@@ -106,9 +105,6 @@ export const GateOut: React.FC = () => {
         status: 'pending',
         createdBy: user?.name || 'Unknown',
         createdAt: new Date(),
-        estimatedReleaseDate: typeof data.booking?.estimatedReleaseDate === 'string'
-          ? new Date(data.booking.estimatedReleaseDate)
-          : data.booking?.estimatedReleaseDate,
         notes: data.notes,
         updatedBy: user?.name || 'System'
       };

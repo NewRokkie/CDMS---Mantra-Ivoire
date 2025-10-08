@@ -99,8 +99,7 @@ export const getStatusBadgeConfig = (status: string) => {
   const statusConfig = {
     pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
     completed: { color: 'bg-green-100 text-green-800', label: 'Completed' },
-    in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process' },
-    validated: { color: 'bg-green-100 text-green-800', label: 'Validated' }
+    in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process' }
   };
 
   return statusConfig[status as keyof typeof statusConfig] || { color: 'bg-gray-100 text-gray-800', label: status };
@@ -111,7 +110,6 @@ export const getStatusBadgeConfig = (status: string) => {
  */
 export const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'validated':
     case 'completed':
       return 'bg-green-100 text-green-800';
     case 'pending':

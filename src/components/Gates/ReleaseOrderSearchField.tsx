@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, Check, FileText, X, Calendar, Package, User, AlertTriangle, Filter } from 'lucide-react';
-import { ReleaseOrder } from '../../types';
+import { BookingReference } from '../../types';
 
 interface ReleaseOrderSearchFieldProps {
-  bookings: ReleaseOrder[];
+  bookings: BookingReference[];
   selectedOrderId: string;
   onOrderSelect: (orderId: string) => void;
   placeholder?: string;
@@ -113,7 +113,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     }
   };
 
-  const handleOrderSelect = (order: ReleaseOrder) => {
+  const handleOrderSelect = (order: BookingReference ) => {
     onOrderSelect(order.id);
     setIsOpen(false);
     setSearchTerm('');
@@ -158,7 +158,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     ? `${selectedOrder.bookingNumber || selectedOrder.id} - ${selectedOrder.clientName}`
     : searchTerm;
 
-  const getStatusColor = (status: ReleaseOrder['status']) => {
+  const getStatusColor = (status: BookingReference['status']) => {
     switch (status) {
       case 'in_process': return 'bg-blue-100 text-blue-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -301,7 +301,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
                 <span className="text-xs text-yellow-800">
-                  Only showing validated/in-process bookings ready for gate out
+                  Only showing pending/in-process bookings ready for gate out
                 </span>
               </div>
             </div>
@@ -403,11 +403,6 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-3 w-3" />
                               <span>Created {formatDate(order.createdAt)}</span>
-                              {order.estimatedReleaseDate && (
-                                <span className="text-blue-600">
-                                  • Est. {formatDate(order.estimatedReleaseDate)}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center space-x-1">
                               <Package className="h-3 w-3" />
@@ -451,7 +446,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
               <p className="text-xs text-gray-500">
                 {searchTerm
                   ? `No results for "${searchTerm}". Try a different search term.`
-                  : 'No validated/in-process bookings are ready for gate out.'
+                  : 'No pending/in-process bookings are ready for gate out.'
                 }
               </p>
             </div>

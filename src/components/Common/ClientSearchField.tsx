@@ -14,6 +14,7 @@ interface ClientSearchFieldProps {
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
+  compact?: boolean;
 }
 
 export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
@@ -22,7 +23,8 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
   onClientSelect,
   placeholder = "Search client by name or code...",
   required = false,
-  disabled = false
+  disabled = false,
+  compact = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,13 +70,13 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightedIndex(prev => 
+        setHighlightedIndex(prev =>
           prev < filteredClients.length - 1 ? prev + 1 : 0
         );
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setHighlightedIndex(prev => 
+        setHighlightedIndex(prev =>
           prev > 0 ? prev - 1 : filteredClients.length - 1
         );
         break;
@@ -106,7 +108,7 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
     const value = e.target.value;
     setSearchTerm(value);
     setHighlightedIndex(-1);
-    
+
     if (!isOpen && value) {
       setIsOpen(true);
     }
@@ -134,7 +136,7 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
     inputRef.current?.focus();
   };
 
-  const displayValue = selectedClient 
+  const displayValue = selectedClient
     ? `${selectedClient.code} - ${selectedClient.name}`
     : searchTerm;
 
@@ -148,21 +150,21 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
         {/* Input Field */}
         <div className={`
           relative flex items-center bg-white border-2 rounded-xl transition-all duration-300
-          ${isFocused || isOpen 
-            ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10' 
-            : selectedClient 
-            ? 'border-green-400 shadow-md shadow-green-400/10' 
+          ${isFocused || isOpen
+            ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
+            : selectedClient
+            ? 'border-green-400 shadow-md shadow-green-400/10'
             : 'border-gray-200 hover:border-gray-300 shadow-sm'
           }
           ${disabled ? 'bg-gray-50 border-gray-200 cursor-not-allowed' : 'hover:shadow-md'}
         `}>
-          
+
           {/* Search Icon */}
           <div className={`
             absolute left-4 transition-all duration-300 z-10
             ${isFocused || isOpen ? 'text-blue-500 scale-110' : 'text-gray-400'}
           `}>
-            <Search className="h-5 w-5" />
+            <Search className={compact ? "h-4 w-4" : "h-5 w-5"} />
           </div>
 
           {/* Input */}
@@ -178,10 +180,10 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
             required={required}
             disabled={disabled}
             className={`
-            w-full pl-12 pr-20 py-4 bg-transparent text-gray-900 placeholder-gray-400
+            w-full ${compact ? 'pl-10 pr-16 py-2 text-sm' : 'pl-12 pr-20 py-4 text-sm md:text-base'} bg-transparent text-gray-900 placeholder-gray-400
               focus:outline-none transition-all duration-300
               ${disabled ? 'cursor-not-allowed text-gray-500' : ''}
-              text-sm md:text-base font-medium
+              font-medium
             `}
             autoComplete="off"
           />
@@ -202,20 +204,13 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
 
             {/* Dropdown Arrow */}
             <div className={`
-              transition-all duration-300 
+              transition-all duration-300
               ${isFocused || isOpen ? 'text-blue-500 rotate-180' : 'text-gray-400'}
               ${disabled ? 'text-gray-300' : ''}
             `}>
               <ChevronDown className="h-5 w-5" />
             </div>
           </div>
-
-          {/* Selected Client Indicator */}
-          {selectedClient && (
-            <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg animate-bounce-in">
-              <Check className="h-3 w-3" />
-            </div>
-          )}
         </div>
 
         {/* Focus Ring Animation */}
@@ -255,13 +250,13 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
                     type="button"
                     onClick={() => handleClientSelect(client)}
                     className={`
-                      w-full text-left px-4 py-4 transition-all duration-200 group
-                      ${index === highlightedIndex 
-                        ? 'bg-blue-50 border-l-4 border-blue-500' 
+                      w-full text-left ${compact ? 'px-3 py-2' : 'px-4 py-4'} transition-all duration-200 group
+                      ${index === highlightedIndex
+                        ? 'bg-blue-50 border-l-4 border-blue-500'
                         : 'hover:bg-gray-50 border-l-4 border-transparent'
                       }
-                      ${selectedClientId === client.id 
-                        ? 'bg-green-50 border-l-4 border-green-500' 
+                      ${selectedClientId === client.id
+                        ? 'bg-green-50 border-l-4 border-green-500'
                         : ''
                       }
                     `}
@@ -271,16 +266,16 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
                       <div className={`
                         p-2 rounded-lg transition-all duration-200
                         ${index === highlightedIndex || selectedClientId === client.id
-                          ? 'bg-white shadow-md' 
+                          ? 'bg-white shadow-md'
                           : 'bg-gray-100 group-hover:bg-white group-hover:shadow-sm'
                         }
                       `}>
                         <Building className={`
                           h-4 w-4 transition-colors duration-200
-                          ${index === highlightedIndex 
-                            ? 'text-blue-600' 
-                            : selectedClientId === client.id 
-                            ? 'text-green-600' 
+                          ${index === highlightedIndex
+                            ? 'text-blue-600'
+                            : selectedClientId === client.id
+                            ? 'text-green-600'
                             : 'text-gray-500 group-hover:text-gray-700'
                           }
                         `} />
@@ -291,10 +286,10 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
                         <div className="flex items-center space-x-2 mb-1">
                           <span className={`
                             font-bold text-sm transition-colors duration-200
-                            ${index === highlightedIndex 
-                              ? 'text-blue-900' 
-                              : selectedClientId === client.id 
-                              ? 'text-green-900' 
+                            ${index === highlightedIndex
+                              ? 'text-blue-900'
+                              : selectedClientId === client.id
+                              ? 'text-green-900'
                               : 'text-gray-900'
                             }
                           `}>
@@ -303,10 +298,10 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
                           <span className="text-gray-400">•</span>
                           <span className={`
                             text-sm truncate transition-colors duration-200
-                            ${index === highlightedIndex 
-                              ? 'text-blue-700' 
-                              : selectedClientId === client.id 
-                              ? 'text-green-700' 
+                            ${index === highlightedIndex
+                              ? 'text-blue-700'
+                              : selectedClientId === client.id
+                              ? 'text-green-700'
                               : 'text-gray-600'
                             }
                           `}>
@@ -336,7 +331,7 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
               </div>
               <h3 className="text-sm font-medium text-gray-900 mb-1">No clients found</h3>
               <p className="text-xs text-gray-500">
-                {searchTerm 
+                {searchTerm
                   ? `No results for "${searchTerm}". Try a different search term.`
                   : 'No clients available to select from.'
                 }

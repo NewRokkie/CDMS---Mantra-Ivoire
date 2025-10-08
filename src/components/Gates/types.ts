@@ -121,7 +121,6 @@ export interface PendingGateOut {
   createdAt: Date;
   updatedBy: string;
   updatedAt?: Date;
-  estimatedReleaseDate?: Date;
   notes?: string;
 }
 

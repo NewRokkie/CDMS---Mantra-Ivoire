@@ -10,6 +10,7 @@ interface TimePickerProps {
   label?: string;
   className?: string;
   includeSeconds?: boolean;
+  compact?: boolean;
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -20,17 +21,18 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   disabled = false,
   label,
   className = "",
-  includeSeconds = false
+  includeSeconds = true,
+  compact = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  
+
   // Check if this is an end date or departure field (allow future times)
-  const isEndOrDepartureField = placeholder?.toLowerCase().includes('end') || 
+  const isEndOrDepartureField = placeholder?.toLowerCase().includes('end') ||
                                  label?.toLowerCase().includes('end') ||
-                                 placeholder?.toLowerCase().includes('departure') || 
+                                 placeholder?.toLowerCase().includes('departure') ||
                                  label?.toLowerCase().includes('departure');
-  
+
   // Parse initial time values from the value prop
   const parseTimeValue = (timeString: string) => {
     if (!timeString) {
@@ -43,7 +45,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         return { hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds() };
       }
     }
-    
+
     const parts = timeString.split(':');
     return {
       hours: parseInt(parts[0]) || 0,
@@ -56,7 +58,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const [hours, setHours] = useState(initialTime.hours);
   const [minutes, setMinutes] = useState(initialTime.minutes);
   const [seconds, setSeconds] = useState(initialTime.seconds);
-  
+
   const inputRef = useRef<HTMLButtonElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -150,7 +152,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           setSeconds(now.getSeconds());
         }
       }
-      
+
       setIsFocused(true);
       setIsOpen(true);
     }
@@ -180,7 +182,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();
     const currentSeconds = now.getSeconds();
-    
+
     setHours(currentHours);
     setMinutes(currentMinutes);
     if (includeSeconds) {
@@ -285,7 +287,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      
+
       {/* Input Field - No wrapper divs to avoid modal deformation */}
       <div className="relative">
       <button
@@ -294,7 +296,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         onClick={handleInputClick}
         disabled={disabled}
         className={`
-          w-full flex items-center justify-between px-4 py-4 sm:py-3 bg-white border-2 rounded-xl
+          w-full flex items-center justify-between ${compact ? 'h-10 px-3' : 'h-12 px-4 sm:py-3'} bg-white border-2 rounded-xl
           transition-all duration-300 text-left
           ${isOpen || isFocused
             ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
@@ -307,34 +309,30 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         `}
       >
         <div className="flex items-center space-x-3">
-          <Clock className={`h-5 w-5 flex-shrink-0 transition-colors duration-300 ${
+          <Clock className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} flex-shrink-0 transition-colors duration-300 ${
             isOpen || isFocused ? 'text-blue-500' : value ? 'text-green-500' : 'text-gray-400'
           }`} />
-          <span className={`transition-colors duration-300 font-medium text-base sm:text-sm ${
+          <span className={`transition-colors duration-300 font-medium ${compact ? 'text-sm' : 'text-base sm:text-sm'} ${
             value ? 'text-gray-900' : 'text-gray-500'
           }`}>
             {displayValue || placeholder}
           </span>
         </div>
-        
-        {/* Clear button - Fixed to not open picker */}
-        <div className="flex items-center space-x-2">
-          {value && !disabled && (
+
+        {/* Clear placeholder removed from inline flow */}
+      </button>
+
+      {/* Clear button (absolute, independent of layout) */}
+      {value && !disabled && (
+        <div className={`absolute ${compact ? 'right-2' : 'right-3'} top-1/2 transform -translate-y-1/2 z-10`}>
           <button
             type="button"
-            onClick={handleClear}
-            className="p-2 sm:p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200 group z-10 touch-target"
+            onClick={(e) => { e.stopPropagation(); handleClear(e); }}
+            className={`${compact ? 'p-1' : 'p-2'} text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200`}
             title="Clear time"
           >
-            <X className="h-5 w-5 sm:h-4 sm:w-4 group-hover:scale-110 transition-transform" />
+            <X className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
           </button>
-        )}
-        </div>
-      </button>
-            {/* Selected Time Indicator */}
-      {value && (
-        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1.5 sm:p-1 shadow-lg animate-bounce-in">
-          <Clock className="h-4 w-4 sm:h-3 sm:w-3" />
         </div>
       )}
       </div>
@@ -343,17 +341,17 @@ export const TimePicker: React.FC<TimePickerProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-[9998] animate-fade-in"
             onClick={handleBackdropClick}
           />
-          
+
           {/* Centered Time Picker Overlay */}
           <div
             ref={overlayRef}
             className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fade-scale-in mx-4"
-            style={{ 
-              maxWidth: '320px', 
+            style={{
+              maxWidth: '320px',
               maxHeight: '400px',
               minWidth: '280px',
               width: '90vw'
@@ -374,7 +372,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
 
               {/* Time Selection Interface */}
               <div className={`flex justify-center items-center ${includeSeconds ? 'space-x-3 sm:space-x-4' : 'space-x-4 sm:space-x-6'} mb-6`}>
-                
+
                 {/* Hours Column */}
                 <div className="flex flex-col items-center space-y-2">
                   <span className="text-sm sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</span>
@@ -386,13 +384,13 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                     >
                       <ChevronUp className="h-5 w-5 sm:h-4 sm:w-4" />
                     </button>
-                    
+
                     <div className="bg-gray-100 rounded-xl px-5 py-4 sm:px-4 sm:py-3 min-w-[70px] sm:min-w-[60px] text-center">
                       <span className="text-3xl sm:text-2xl font-bold text-gray-900">
                         {hours.toString().padStart(2, '0')}
                       </span>
                     </div>
-                    
+
                     <button
                       type="button"
                       onClick={() => adjustHours('down')}
@@ -419,13 +417,13 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                     >
                       <ChevronUp className="h-5 w-5 sm:h-4 sm:w-4" />
                     </button>
-                    
+
                     <div className="bg-gray-100 rounded-xl px-5 py-4 sm:px-4 sm:py-3 min-w-[70px] sm:min-w-[60px] text-center">
                       <span className="text-3xl sm:text-2xl font-bold text-gray-900">
                         {minutes.toString().padStart(2, '0')}
                       </span>
                     </div>
-                    
+
                     <button
                       type="button"
                       onClick={() => adjustMinutes('down')}
@@ -442,7 +440,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                     <div className="flex items-center pt-6">
                       <span className="text-3xl sm:text-2xl font-bold text-gray-400">:</span>
                     </div>
-                    
+
                     <div className="flex flex-col items-center space-y-2">
                       <span className="text-sm sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Seconds</span>
                       <div className="flex flex-col items-center space-y-3 sm:space-y-2">
@@ -453,13 +451,13 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                         >
                           <ChevronUp className="h-5 w-5 sm:h-4 sm:w-4" />
                         </button>
-                        
+
                         <div className="bg-gray-100 rounded-xl px-5 py-4 sm:px-4 sm:py-3 min-w-[70px] sm:min-w-[60px] text-center">
                           <span className="text-3xl sm:text-2xl font-bold text-gray-900">
                             {seconds.toString().padStart(2, '0')}
                           </span>
                         </div>
-                        
+
                         <button
                           type="button"
                           onClick={() => adjustSeconds('down')}
@@ -482,7 +480,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 >
                   Cancel
                 </button>
-                
+
                 <button
                   type="button"
                   onClick={handleSave}

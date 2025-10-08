@@ -173,10 +173,7 @@ export const mockAvailableBookings: ReleaseOrder[] = [
     status: 'pending',
     createdBy: 'System',
     updatedBy: 'System',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
-    validatedAt: new Date('2025-01-11T10:30:00'),
-    estimatedReleaseDate: new Date('2025-01-12T14:00:00'),
     notes: 'Priority booking - handle with care'
   },
   {
@@ -192,10 +189,7 @@ export const mockAvailableBookings: ReleaseOrder[] = [
     status: 'pending',
     createdBy: 'System',
     updatedBy: 'System',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T11:00:00'),
-    validatedAt: new Date('2025-01-11T12:30:00'),
-    estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
     notes: 'Single container booking - urgent processing required'
   }
 ];
@@ -218,7 +212,6 @@ export const mockPendingGateOutOperations: PendingGateOut[] = [
     createdBy: 'Jane Operator',
     createdAt: new Date('2025-01-11T14:30:00'),
     updatedBy: 'System',
-    estimatedReleaseDate: new Date('2025-01-12T14:00:00'),
     notes: 'Priority booking - handle with care'
   },
   {
@@ -238,7 +231,6 @@ export const mockPendingGateOutOperations: PendingGateOut[] = [
     createdBy: 'Sarah Client',
     createdAt: new Date('2025-01-11T15:45:00'),
     updatedBy: 'System',
-    estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
     notes: 'Single container booking - urgent processing required'
   }
 ];
@@ -261,7 +253,6 @@ export const mockCompletedGateOutOperations: PendingGateOut[] = [
     createdBy: 'Jane Operator',
     createdAt: new Date('2025-01-11T11:30:00'),
     updatedBy: 'System',
-    estimatedReleaseDate: new Date('2025-01-13T09:00:00'),
     notes: 'Client requested release - completed successfully'
   }
 ];
@@ -310,7 +301,6 @@ export const OPERATION_STATUS = {
   PENDING: 'pending',
   IN_PROCESS: 'in_process',
   COMPLETED: 'completed',
-  VALIDATED: 'validated'
 } as const;
 
 // ========== VALIDATION CONSTANTS ==========

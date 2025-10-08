@@ -1,13 +1,13 @@
 import React from 'react';
 import { Calendar, Package, User, FileText, Clock, CheckCircle, AlertTriangle, ChevronRight, Eye } from 'lucide-react';
-import { ReleaseOrder } from '../../types';
+import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 
 interface MobileReleaseOrderTableProps {
-  orders: ReleaseOrder[];
+  orders: BookingReference[];
   searchTerm: string;
   selectedFilter: string;
-  onViewDetails: (order: ReleaseOrder) => void;
+  onViewDetails: (order: BookingReference) => void;
 }
 
 export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = ({
@@ -43,12 +43,11 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
 
   const filteredOrders = getFilteredOrders();
 
-  const getStatusBadge = (status: ReleaseOrder['status']) => {
+  const getStatusBadge = (status: BookingReference['status']) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'Pending', icon: Clock },
       in_process: { color: 'bg-orange-100 text-orange-800 border-orange-300', label: 'In Process', icon: AlertTriangle },
-      validated: { color: 'bg-green-100 text-green-800 border-green-300', label: 'Validated', icon: CheckCircle },
-      completed: { color: 'bg-blue-600 text-white border-blue-700', label: 'Completed', icon: CheckCircle },
+      completed: { color: 'bg-green-100 text-green-800 border-green-300', label: 'Completed', icon: CheckCircle },
       cancelled: { color: 'bg-red-100 text-red-800 border-red-300', label: 'Cancelled', icon: AlertTriangle }
     };
 

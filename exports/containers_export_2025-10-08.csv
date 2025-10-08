@@ -1,0 +1,6 @@
+"Container Number","Size","Type","Full/Empty","In/Out","Gate In","Gate Out","Client","Client Code"
+"MSKU1234567","40ft","standard","FULL","In Depot","2025-01-10T08:30:00","","Maersk Line","MAEU"
+"TCLU9876543","20ft","reefer","EMPTY","Out Depot","2025-01-09T14:15:00","2025-01-11T10:00:00","MSC","MSCU"
+"GESU4567891","40ft","standard","UNKNOWN","in service","2025-01-08T16:45:00","","CMA CGM","CMDU"
+"SHIP1112228","20ft","standard","FULL","In Depot","2025-01-11T09:15:00","","Shipping Solutions Inc","SHIP001"
+"SHIP3334449","40ft","reefer","UNKNOWN","maintenance","2025-01-07T13:20:00","","Shipping Solutions Inc","SHIP001"

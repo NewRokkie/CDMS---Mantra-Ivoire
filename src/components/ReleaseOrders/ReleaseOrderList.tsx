@@ -67,10 +67,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     requiresDetailedBreakdown: false,
     status: 'pending',
     createdBy: 'Jane Operator',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
-    validatedAt: new Date('2025-01-11T10:30:00'),
-    estimatedReleaseDate: new Date('2025-01-12T14:00:00'),
     notes: 'Priority booking - handle with care'
   },
   {
@@ -106,9 +103,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     vehicleNumber: 'XYZ-456',
     status: 'completed',
     createdBy: 'Jane Operator',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-10T14:30:00'),
-    validatedAt: new Date('2025-01-10T15:45:00'),
     completedAt: new Date('2025-01-11T10:00:00'),
     notes: 'Standard release - completed successfully'
   },
@@ -156,7 +151,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     status: 'in_process',
     createdBy: 'Sarah Client',
     createdAt: new Date('2025-01-11T11:30:00'),
-    estimatedReleaseDate: new Date('2025-01-13T09:00:00'),
     notes: 'Client requested release - pending validation'
   },
   {
@@ -176,10 +170,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     requiresDetailedBreakdown: false,
     status: 'pending',
     createdBy: 'Sarah Client',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T11:00:00'),
-    validatedAt: new Date('2025-01-11T12:30:00'),
-    estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
     notes: 'Single container booking - urgent processing required'
   },
   {
@@ -199,10 +190,7 @@ const mockBookingReferences: ReleaseOrder[] = [
     requiresDetailedBreakdown: true,
     status: 'pending',
     createdBy: 'Sarah Client',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-10T16:00:00'),
-    validatedAt: new Date('2025-01-11T08:15:00'),
-    estimatedReleaseDate: new Date('2025-01-12T10:00:00'),
     notes: 'Large booking - requires detailed breakdown processing'
   },
   {
@@ -238,7 +226,6 @@ const mockBookingReferences: ReleaseOrder[] = [
     status: 'pending',
     createdBy: 'Alex Operator',
     createdAt: new Date('2025-01-12T10:00:00'),
-    estimatedReleaseDate: new Date('2025-01-14T15:00:00'),
     notes: 'Draft order - needs review'
   }
 ];
@@ -305,7 +292,7 @@ export const ReleaseOrderList: React.FC = () => {
     return {
       total: filteredOrders.length,
       pending: filteredOrders.filter(o => o.status === 'pending').length,
-      validated: filteredOrders.filter(o => o.status === 'in_process').length,
+      inProcess: filteredOrders.filter(o => o.status === 'in_process').length,
       completed: filteredOrders.filter(o => o.status === 'completed').length,
       totalContainers: filteredOrders.reduce((sum, o) => sum + o.totalContainers, 0),
       readyContainers: filteredOrders.reduce((sum, o) => sum + o.totalContainers, 0)
@@ -317,9 +304,8 @@ export const ReleaseOrderList: React.FC = () => {
   const getStatusBadge = (status: ReleaseOrder['status']) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-      in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
-      validated: { color: 'bg-green-100 text-green-800', label: 'Validated' },
-      completed: { color: 'bg-blue-600 text-white', label: 'Completed' },
+      inProcess: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
+      completed: { color: 'bg-green-600 text-white', label: 'Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
     };
 
@@ -394,7 +380,7 @@ export const ReleaseOrderList: React.FC = () => {
 
             {/* Filter Chips (Mobile) / Dropdown (Desktop) */}
             <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4">
-              {['all', 'pending', 'in_process', 'validated', 'completed'].map((filter) => (
+              {['all', 'pending', 'in_process', 'completed'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
@@ -418,7 +404,6 @@ export const ReleaseOrderList: React.FC = () => {
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="in_process">In Process</option>
-                <option value="validated">Validated</option>
                 <option value="completed">Completed</option>
               </select>
               {searchTerm && (
@@ -536,11 +521,25 @@ export const ReleaseOrderList: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
+                        <User className="h-4 w-4 text-gray-400" />
+                        <div>
+                            <span className="text-sm text-gray-600">Created by:</span>
+                            <span className="ml-2 font-medium">{selectedOrder.createdBy}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
                       <Package className="h-4 w-4 text-gray-400" />
                       <div>
                         <span className="text-sm text-gray-600">Total Containers:</span>
                         <span className="ml-2 font-medium">{selectedOrder.totalContainers}</span>
                       </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Package className="h-4 w-4 text-gray-400" />
+                        <div>
+                            <span className="text-sm text-gray-600">Processed:</span>
+                            <span className="ml-2 font-medium">{selectedOrder.totalContainers - (selectedOrder.remainingContainers || selectedOrder.totalContainers)}</span>
+                        </div>
                     </div>
                     <div className="flex items-center space-x-3">
                       <Package className="h-4 w-4 text-gray-400" />
@@ -549,17 +548,6 @@ export const ReleaseOrderList: React.FC = () => {
                         <span className="ml-2 font-medium">{selectedOrder.remainingContainers ?? selectedOrder.totalContainers}</span>
                       </div>
                     </div>
-                    {selectedOrder.estimatedReleaseDate && (
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="text-sm text-gray-600">Est. Release:</span>
-                          <span className="ml-2 font-medium">
-                            {selectedOrder.estimatedReleaseDate.toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 

@@ -162,11 +162,6 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                     {formatDate(operation.date)}
                   </span>
                 </div>
-                {operation.estimatedReleaseDate && (
-                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                    Est: {formatDate(operation.estimatedReleaseDate)}
-                  </div>
-                )}
               </div>
 
               {/* Notes */}
