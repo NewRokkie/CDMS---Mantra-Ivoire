@@ -154,25 +154,37 @@ export const useAuthProvider = () => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
+      console.log('🔄 [AUTH_CHANGE] Event:', event, 'Session:', session?.user?.email);
 
       if (event === 'SIGNED_IN' && session?.user && mounted) {
+        console.log('🔄 [AUTH_CHANGE] SIGNED_IN - Loading profile...');
         const profile = await loadUserProfile(session.user);
         if (profile && mounted) {
+          console.log('🔄 [AUTH_CHANGE] Profile loaded, updating state');
           setUser(profile);
           setIsAuthenticated(true);
           setIsLoading(false);
+        } else {
+          console.log('🔄 [AUTH_CHANGE] Profile not found');
+          setUser(null);
+          setIsAuthenticated(false);
+          setIsLoading(false);
         }
       } else if (event === 'SIGNED_OUT' && mounted) {
+        console.log('🔄 [AUTH_CHANGE] SIGNED_OUT');
         setUser(null);
         setIsAuthenticated(false);
         setIsLoading(false);
       } else if (event === 'TOKEN_REFRESHED' && session?.user && mounted) {
-        // Session refreshed, update user data
+        console.log('🔄 [AUTH_CHANGE] TOKEN_REFRESHED');
         const profile = await loadUserProfile(session.user);
         if (profile && mounted) {
           setUser(profile);
         }
+      } else if (event === 'INITIAL_SESSION') {
+        console.log('🔄 [AUTH_CHANGE] INITIAL_SESSION - ignoring (handled by checkSession)');
+      } else {
+        console.log('🔄 [AUTH_CHANGE] Unhandled event:', event);
       }
     });
 
