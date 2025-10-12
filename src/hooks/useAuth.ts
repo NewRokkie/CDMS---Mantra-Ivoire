@@ -35,10 +35,6 @@ export const useAuthProvider = () => {
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
     console.log('📋 [LOAD_PROFILE] Loading profile for:', authUser.email, 'auth_uid:', authUser.id);
 
-    // Check current session before querying
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('📋 [LOAD_PROFILE] Current session:', session ? 'EXISTS' : 'NONE', session?.access_token ? 'Has token' : 'No token');
-
     try {
       // Get user from our users table using auth_user_id (not email)
       // This is critical for RLS to work correctly
@@ -184,7 +180,12 @@ export const useAuthProvider = () => {
       console.log('🔄 [AUTH_CHANGE] Event:', event, 'Session:', session?.user?.email);
 
       if (event === 'SIGNED_IN' && session?.user && mounted) {
-        console.log('🔄 [AUTH_CHANGE] SIGNED_IN - Loading profile...');
+        console.log('🔄 [AUTH_CHANGE] SIGNED_IN - Waiting 100ms before loading profile...');
+
+        // Add a small delay to ensure session is fully established
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        console.log('🔄 [AUTH_CHANGE] Now loading profile...');
         const profile = await loadUserProfile(session.user);
         if (profile && mounted) {
           console.log('🔄 [AUTH_CHANGE] Profile loaded, updating state');
