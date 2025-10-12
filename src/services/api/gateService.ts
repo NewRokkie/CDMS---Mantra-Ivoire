@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 import { containerService } from './containerService';
 import { releaseService } from './releaseService';
 import { auditService } from './auditService';
+import { eventBus } from '../eventBus';
 import { Container } from '../../types';
 import { GateInOperation, GateOutOperation } from '../../types/operations';
 
@@ -114,9 +115,25 @@ export class GateService {
         userName: data.operatorName
       });
 
+      // Map operation data to GateInOperation type
+      const mappedOperation = this.mapToGateInOperation(operation);
+
+      // Emit GATE_IN_COMPLETED event
+      await eventBus.emit('GATE_IN_COMPLETED', {
+        container: newContainer,
+        operation: mappedOperation
+      });
+
       return { success: true, containerId: newContainer.id };
     } catch (error: any) {
       console.error('Gate in error:', error);
+
+      // Emit GATE_IN_FAILED event
+      eventBus.emitSync('GATE_IN_FAILED', {
+        containerNumber: data.containerNumber,
+        error: error.message || 'Failed to process gate in'
+      });
+
       return { success: false, error: error.message || 'Failed to process gate in' };
     }
   }
@@ -169,7 +186,7 @@ export class GateService {
       });
 
       // Create gate out operation
-      const { error: opError } = await supabase
+      const { data: operation, error: opError } = await supabase
         .from('gate_out_operations')
         .insert({
           release_order_id: data.releaseOrderId,
@@ -190,13 +207,36 @@ export class GateService {
           yard_id: data.yardId,
           edi_transmitted: false,
           completed_at: new Date().toISOString()
-        });
+        })
+        .select()
+        .single();
 
       if (opError) throw opError;
+
+      // Get updated release order
+      const updatedReleaseOrder = await releaseService.getById(data.releaseOrderId);
+      if (!updatedReleaseOrder) throw new Error('Failed to fetch updated release order');
+
+      // Map operation data
+      const mappedOperation = this.mapToGateOutOperation(operation);
+
+      // Emit GATE_OUT_COMPLETED event
+      await eventBus.emit('GATE_OUT_COMPLETED', {
+        containers: validContainers,
+        operation: mappedOperation,
+        releaseOrder: updatedReleaseOrder
+      });
 
       return { success: true };
     } catch (error: any) {
       console.error('Gate out error:', error);
+
+      // Emit GATE_OUT_FAILED event
+      eventBus.emitSync('GATE_OUT_FAILED', {
+        releaseOrderId: data.releaseOrderId,
+        error: error.message || 'Failed to process gate out'
+      });
+
       return { success: false, error: error.message || 'Failed to process gate out' };
     }
   }

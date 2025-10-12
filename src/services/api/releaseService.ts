@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { eventBus } from '../eventBus';
 import { ReleaseOrder } from '../../types';
 
 export class ReleaseService {
@@ -66,7 +67,12 @@ export class ReleaseService {
       .single();
 
     if (error) throw error;
-    return this.mapToReleaseOrder(data);
+    const releaseOrder = this.mapToReleaseOrder(data);
+
+    // Emit RELEASE_ORDER_CREATED event
+    eventBus.emitSync('RELEASE_ORDER_CREATED', { releaseOrder });
+
+    return releaseOrder;
   }
 
   async update(id: string, updates: Partial<ReleaseOrder>): Promise<ReleaseOrder> {
