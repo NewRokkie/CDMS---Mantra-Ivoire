@@ -120,9 +120,11 @@ export const useAuthProvider = () => {
             setUser(profile);
             setIsAuthenticated(true);
 
-            // Update last login
-            await userService.update(profile.id, {
+            // Update last login (non-blocking)
+            userService.update(profile.id, {
               last_login: new Date().toISOString()
+            }).catch(err => {
+              console.warn('Could not update last login:', err);
             });
           } else {
             console.warn('Could not load user profile');
@@ -218,9 +220,11 @@ export const useAuthProvider = () => {
       setUser(profile);
       setIsAuthenticated(true);
 
-      // Update last login
-      await userService.update(profile.id, {
+      // Update last login (non-blocking)
+      userService.update(profile.id, {
         last_login: new Date().toISOString()
+      }).catch(err => {
+        console.warn('Could not update last login:', err);
       });
 
       console.log('User state updated, authentication complete');

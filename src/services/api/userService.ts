@@ -52,7 +52,7 @@ export class UserService {
     return this.mapToUser(data);
   }
 
-  async update(id: string, updates: Partial<User>): Promise<User> {
+  async update(id: string, updates: Partial<User> & { last_login?: string }): Promise<User> {
     const updateData: any = {
       updated_at: new Date().toISOString()
     };
@@ -64,6 +64,7 @@ export class UserService {
     if (updates.moduleAccess !== undefined) updateData.module_access = updates.moduleAccess;
     if (updates.active !== undefined) updateData.active = updates.active;
     if (updates.lastLogin !== undefined) updateData.last_login = updates.lastLogin?.toISOString();
+    if ((updates as any).last_login !== undefined) updateData.last_login = (updates as any).last_login;
 
     const { data, error } = await supabase
       .from('users')
