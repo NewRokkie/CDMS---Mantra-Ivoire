@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Eye, Edit, CreditCard, AlertTriangle, Package } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { containerService, reportService } from '../../services/api';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ContainerViewModal } from './ContainerViewModal';
 import { ContainerEditModal } from './ContainerEditModal';
@@ -27,15 +27,25 @@ const formatContainerNumberForDisplay = (containerNumber?: string | null): strin
 // REMOVED: Mock data now managed by global store
 
 export const ContainerList: React.FC = () => {
-  const allContainers = useGlobalStore(state => state.containers);
-  const updateContainer = useGlobalStore(state => state.updateContainer);
-  const getAuditLogs = useGlobalStore(state => state.getAuditLogs);
+  const [allContainers, setAllContainers] = useState<Container[]>([]);
+  const [containers, setContainers] = useState<Container[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [containers, setContainers] = useState<Container[]>(allContainers);
-
-  React.useEffect(() => {
-    setContainers(allContainers);
-  }, [allContainers]);
+  useEffect(() => {
+    async function loadContainers() {
+      try {
+        setLoading(true);
+        const data = await containerService.getAll();
+        setAllContainers(data);
+        setContainers(data);
+      } catch (error) {
+        console.error('Error loading containers:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadContainers();
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState<string>(''); // ISO date yyyy-mm-dd
@@ -710,6 +720,17 @@ function filterTable(){
     </div>
   );
 
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading containers...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

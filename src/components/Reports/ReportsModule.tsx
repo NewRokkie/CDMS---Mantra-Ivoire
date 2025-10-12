@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   BarChart3,
   Calendar,
@@ -21,7 +21,7 @@ import {
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { reportService, containerService, clientService } from '../../services/api';
 import { yardService } from '../../services/yardService';
 import { DatePicker } from '../Common/DatePicker';
 import { AnalyticsTab } from './AnalyticsTab';
@@ -374,8 +374,34 @@ export const ReportsModule: React.FC = () => {
 
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
-  const containers = useGlobalStore(state => state.containers);
-  const clients = useGlobalStore(state => state.clients);
+  const [containers, setContainers] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [containerStats, setContainerStats] = useState<any>(null);
+  const [revenueReport, setRevenueReport] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadReportsData() {
+      try {
+        setLoading(true);
+        const [containersData, clientsData, stats, revenue] = await Promise.all([
+          containerService.getAll(),
+          clientService.getAll(),
+          reportService.getContainerStats(),
+          reportService.getRevenueReport('month')
+        ]);
+        setContainers(containersData);
+        setClients(clientsData);
+        setContainerStats(stats);
+        setRevenueReport(revenue);
+      } catch (error) {
+        console.error('Error loading reports data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadReportsData();
+  }, []);
 
   const billingData = useMemo(() => {
     try {

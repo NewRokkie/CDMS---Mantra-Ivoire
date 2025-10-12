@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Container, FileCheck, TrendingUp, Building, DollarSign, Activity, BarChart3, AlertTriangle, Package, Wrench, CheckCircle, XCircle, Eye, MapPin, Calendar, User, X, Filter, Globe, Layers } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -6,7 +6,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { yardService } from '../../services/yardService';
 import { DashboardStats } from '../../types';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { reportService, containerService } from '../../services/api';
+import type { ContainerStats, GateStats } from '../../services/api/reportService';
 
 // REMOVED: Mock data now managed by global store
 
@@ -28,9 +29,31 @@ export const DashboardOverview: React.FC = () => {
   const [viewMode, setViewMode] = useState<'current' | 'global'>('current');
   const [selectedDepot, setSelectedDepot] = useState<string | null>(null);
 
-  const allContainers = useGlobalStore(state => state.containers);
-  const gateInOperations = useGlobalStore(state => state.gateInOperations);
-  const gateOutOperations = useGlobalStore(state => state.gateOutOperations);
+  const [allContainers, setAllContainers] = useState<any[]>([]);
+  const [containerStats, setContainerStats] = useState<ContainerStats | null>(null);
+  const [gateStats, setGateStats] = useState<GateStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        setLoading(true);
+        const [containers, stats, gates] = await Promise.all([
+          containerService.getAll(),
+          reportService.getContainerStats(currentYard?.id),
+          reportService.getGateStats(currentYard?.id)
+        ]);
+        setAllContainers(containers);
+        setContainerStats(stats);
+        setGateStats(gates);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDashboardData();
+  }, [currentYard?.id]);
 
   const clientFilter = getClientFilter();
   const showClientNotice = !canViewAllData() && user?.role === 'client';
@@ -248,6 +271,17 @@ export const DashboardOverview: React.FC = () => {
   };
 
   const filteredData = getFilteredData();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

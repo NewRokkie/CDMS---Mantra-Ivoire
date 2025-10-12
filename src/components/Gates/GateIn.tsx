@@ -3,7 +3,7 @@ import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Contain
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { gateService, clientService, containerService } from '../../services/api';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
@@ -20,10 +20,30 @@ export const GateIn: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
-  const clients = useGlobalStore(state => state.clients);
-  const processGateIn = useGlobalStore(state => state.processGateIn);
-  const gateInOperations = useGlobalStore(state => state.gateInOperations);
-  const containers = useGlobalStore(state => state.containers);
+  const [clients, setClients] = useState<any[]>([]);
+  const [gateInOperations, setGateInOperations] = useState<any[]>([]);
+  const [containers, setContainers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [clientsData, operationsData, containersData] = await Promise.all([
+          clientService.getAll(),
+          gateService.getGateInOperations(),
+          containerService.getAll()
+        ]);
+        setClients(clientsData);
+        setGateInOperations(operationsData);
+        setContainers(containersData);
+      } catch (error) {
+        console.error('Error loading gate in data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const [pendingOperations, setPendingOperations] = useState<GateInOperation[]>(mockPendingGateInOperations);
   const [completedOperations, setCompletedOperations] = useState<GateInOperation[]>(mockCompletedGateInOperations);
@@ -247,8 +267,8 @@ export const GateIn: React.FC = () => {
         truckDepartureTime: ''
       };
 
-      // Process Gate In through global store
-      const result = processGateIn({
+      // Process Gate In through API service
+      const result = await gateService.processGateIn({
         containerNumber: formData.containerNumber,
         clientCode: formData.clientCode,
         containerType: formData.containerType,
