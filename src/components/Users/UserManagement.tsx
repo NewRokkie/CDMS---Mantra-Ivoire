@@ -3,7 +3,7 @@ import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, User as UserIcon
 import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { userService } from '../../services/api';
 import { UserFormModal } from './UserFormModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { toDate } from '../../utils/dateHelpers';
@@ -99,12 +99,37 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
 
 
 export const UserManagement: React.FC = () => {
-  const users = useGlobalStore(state => state.users);
-  const addUser = useGlobalStore(state => state.addUser);
-  const updateUser = useGlobalStore(state => state.updateUser);
-  const deleteUser = useGlobalStore(state => state.deleteUser);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // const [users, setUsers] = useState<User[]>(mockUsers);
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const data = await userService.getAll();
+        setUsers(data);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadUsers();
+  }, []);
+
+  const addUser = async (user: any) => {
+    const newUser = await userService.create(user);
+    setUsers(prev => [...prev, newUser]);
+  };
+
+  const updateUser = async (id: string, updates: any) => {
+    await userService.update(id, updates);
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+  };
+
+  const deleteUser = async (id: string) => {
+    await userService.delete(id);
+    setUsers(prev => prev.filter(u => u.id !== id));
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');

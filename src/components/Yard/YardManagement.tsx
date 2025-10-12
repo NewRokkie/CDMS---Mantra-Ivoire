@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useYard } from '../../hooks/useYard';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { containerService } from '../../services/api';
 import { YardLiveMap } from './YardLiveMap';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
@@ -71,8 +71,22 @@ const generateMockContainers = (): Container[] => {
 
 export const YardManagement: React.FC = () => {
   const { currentYard } = useYard();
-  const allContainers = useGlobalStore(state => state.containers);
-  const getContainersByYard = useGlobalStore(state => state.getContainersByYard);
+  const [allContainers, setAllContainers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadContainers() {
+      try {
+        const data = await containerService.getAll();
+        setAllContainers(data);
+      } catch (error) {
+        console.error('Error loading containers:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadContainers();
+  }, []);
 
   // Filter containers for current yard
   const containers = currentYard ? getContainersByYard(currentYard.id) : allContainers;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { clientService } from '../../services/api';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
@@ -10,12 +10,37 @@ import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 // REMOVED: Mock data now managed by global store
 
 export const ClientMasterData: React.FC = () => {
-  const clients = useGlobalStore(state => state.clients);
-  const addClient = useGlobalStore(state => state.addClient);
-  const updateClient = useGlobalStore(state => state.updateClient);
-  const deleteClient = useGlobalStore(state => state.deleteClient);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // const [clients, setClients] = useState<Client[]>(mockClients);
+  useEffect(() => {
+    async function loadClients() {
+      try {
+        const data = await clientService.getAll();
+        setClients(data);
+      } catch (error) {
+        console.error('Error loading clients:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadClients();
+  }, []);
+
+  const addClient = async (client: any) => {
+    const newClient = await clientService.create(client);
+    setClients(prev => [...prev, newClient]);
+  };
+
+  const updateClient = async (id: string, updates: any) => {
+    await clientService.update(id, updates);
+    setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const deleteClient = async (id: string) => {
+    await clientService.delete(id);
+    setClients(prev => prev.filter(c => c.id !== id));
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);

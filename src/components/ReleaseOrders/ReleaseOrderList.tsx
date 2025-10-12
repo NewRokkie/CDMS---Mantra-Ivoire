@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ReleaseOrder, Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { useGlobalStore } from '../../store/useGlobalStore';
+import { releaseService, containerService } from '../../services/api';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
 import { MobileReleaseOrderHeader } from './MobileReleaseOrderHeader';
 import { MobileReleaseOrderStats } from './MobileReleaseOrderStats';
@@ -12,11 +12,41 @@ import { Search, X, Eye, Package, Calendar, User, FileText, Clock, AlertTriangle
 // REMOVED: Mock data now managed by global store
 
 export const ReleaseOrderList: React.FC = () => {
-  const releaseOrders = useGlobalStore(state => state.releaseOrders);
-  const containers = useGlobalStore(state => state.containers);
-  const addReleaseOrder = useGlobalStore(state => state.addReleaseOrder);
-  const updateReleaseOrder = useGlobalStore(state => state.updateReleaseOrder);
-  const getReleaseOrdersByStatus = useGlobalStore(state => state.getReleaseOrdersByStatus);
+  const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
+  const [containers, setContainers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [ordersData, containersData] = await Promise.all([
+          releaseService.getAll(),
+          containerService.getAll()
+        ]);
+        setReleaseOrders(ordersData);
+        setContainers(containersData);
+      } catch (error) {
+        console.error('Error loading release orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const addReleaseOrder = async (order: any) => {
+    const newOrder = await releaseService.create(order);
+    setReleaseOrders(prev => [...prev, newOrder]);
+  };
+
+  const updateReleaseOrder = async (id: string, updates: any) => {
+    await releaseService.update(id, updates);
+    setReleaseOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+  };
+
+  const getReleaseOrdersByStatus = (status: string) => {
+    return releaseOrders.filter(o => o.status === status);
+  };
 
   const [showForm, setShowForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ReleaseOrder | null>(null);
