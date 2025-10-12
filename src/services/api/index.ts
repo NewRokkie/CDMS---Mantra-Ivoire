@@ -5,3 +5,4 @@ export * from './releaseService';
 export * from './clientService';
 export * from './userService';
 export * from './auditService';
+export * from './reportService';
