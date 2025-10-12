@@ -6,30 +6,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { yardService } from '../../services/yardService';
 import { DashboardStats } from '../../types';
+import { useGlobalStore } from '../../store/useGlobalStore';
 
-// Enhanced mock container data for dashboard analytics
-const mockContainerData = [
-  { id: '1', number: 'MSKU-123456-7', type: 'standard', size: '40ft', status: 'in_depot', location: 'S01-R1-H1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-10T08:30:00'), isDamaged: false },
-  { id: '2', number: 'TCLU-987654-3', type: 'reefer', size: '20ft', status: 'out_depot', location: 'Gate 2', client: 'MSC Mediterranean Shipping', clientCode: 'MSCU', gateInDate: new Date('2025-01-09T14:15:00'), isDamaged: false },
-  { id: '3', number: 'GESU-456789-1', type: 'standard', size: '40ft', status: 'in_service', location: 'Workshop 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-08T16:45:00'), isDamaged: true },
-  { id: '4', number: 'SHIP-111222-8', type: 'standard', size: '20ft', status: 'in_depot', location: 'S33-R3-H1', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2025-01-11T09:15:00'), isDamaged: false },
-  { id: '5', number: 'SHIP-333444-9', type: 'reefer', size: '40ft', status: 'maintenance', location: 'Workshop 2', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2025-01-07T13:20:00'), isDamaged: true },
-  { id: '6', number: 'MAEU-555666-4', type: 'reefer', size: '40ft', status: 'in_depot', location: 'S61-R2-H3', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-07T11:20:00'), isDamaged: false },
-  { id: '7', number: 'CMDU-789012-5', type: 'standard', size: '40ft', status: 'out_depot', location: 'Gate 1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-06T13:30:00'), isDamaged: false },
-  { id: '8', number: 'HLCU-345678-9', type: 'standard', size: '20ft', status: 'in_depot', location: 'S101-R1-H1', client: 'Hapag-Lloyd', clientCode: 'HLCU', gateInDate: new Date('2025-01-05T15:45:00'), isDamaged: false },
-  { id: '9', number: 'SNFW-294074-0', type: 'reefer', size: '40ft', status: 'in_depot', location: 'S67-R3-H2', client: 'Shipping Network', clientCode: 'SNFW', gateInDate: new Date('2025-01-04T10:15:00'), isDamaged: false },
-  { id: '10', number: 'MAEU-777888-1', type: 'tank', size: '20ft', status: 'cleaning', location: 'Cleaning Bay 1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2025-01-03T09:00:00'), isDamaged: true },
-  { id: '11', number: 'MSCU-999000-2', type: 'flat_rack', size: '40ft', status: 'in_depot', location: 'S65-R1-H1', client: 'MSC Mediterranean Shipping', clientCode: 'MSCU', gateInDate: new Date('2025-01-02T14:30:00'), isDamaged: false },
-  { id: '12', number: 'CMDU-111333-5', type: 'open_top', size: '20ft', status: 'in_depot', location: 'S35-R2-H1', client: 'CMA CGM', clientCode: 'CMDU', gateInDate: new Date('2025-01-01T16:00:00'), isDamaged: false },
-  { id: '13', number: 'SHIP-444555-6', type: 'standard', size: '20ft', status: 'in_depot', location: 'S17-R1-H2', client: 'Shipping Solutions Inc', clientCode: 'SHIP001', gateInDate: new Date('2024-12-30T11:45:00'), isDamaged: false },
-  { id: '14', number: 'HLCU-666777-8', type: 'reefer', size: '40ft', status: 'maintenance', location: 'Workshop 3', client: 'Hapag-Lloyd', clientCode: 'HLCU', gateInDate: new Date('2024-12-29T08:20:00'), isDamaged: true },
-  { id: '15', number: 'MAEU-888999-0', type: 'standard', size: '20ft', status: 'in_depot', location: 'S03-R4-H1', client: 'Maersk Line', clientCode: 'MAEU', gateInDate: new Date('2024-12-28T13:15:00'), isDamaged: false }
-];
+// REMOVED: Mock data now managed by global store
 
 type FilterType = 'customer' | 'yard' | 'type' | 'damage' | null;
 
 interface FilteredData {
-  containers: typeof mockContainerData;
+  containers: any[];
   title: string;
   description: string;
 }
@@ -44,13 +28,17 @@ export const DashboardOverview: React.FC = () => {
   const [viewMode, setViewMode] = useState<'current' | 'global'>('current');
   const [selectedDepot, setSelectedDepot] = useState<string | null>(null);
 
+  const allContainers = useGlobalStore(state => state.containers);
+  const gateInOperations = useGlobalStore(state => state.gateInOperations);
+  const gateOutOperations = useGlobalStore(state => state.gateOutOperations);
+
   const clientFilter = getClientFilter();
   const showClientNotice = !canViewAllData() && user?.role === 'client';
   const isManager = user?.role === 'admin' || user?.role === 'supervisor';
 
   // Filter containers based on user permissions
   const getFilteredContainers = () => {
-    let containers = mockContainerData;
+    let containers = allContainers;
     
     if (clientFilter) {
       containers = containers.filter(container => 

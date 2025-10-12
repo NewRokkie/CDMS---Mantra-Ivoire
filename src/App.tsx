@@ -1,8 +1,9 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthProvider, AuthContext } from './hooks/useAuth';
-import { useAuth } from './hooks/useAuth'; // Ensure useAuth is imported if not already
+import { useAuth } from './hooks/useAuth';
 import { useLanguageProvider, LanguageContext } from './hooks/useLanguage';
+import { useGlobalStore } from './store/useGlobalStore';
 
 import { useYardProvider, YardContext } from './hooks/useYard';
 import { LoginForm } from './components/Auth/LoginForm';
@@ -49,10 +50,15 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 function AppContent() {
-  const { user, hasModuleAccess } = useAuth(); // Changed from useAuthProvider()
+  const { user, hasModuleAccess } = useAuth();
   const yardProvider = useYardProvider();
   const [activeModule, setActiveModule] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const initializeStore = useGlobalStore(state => state.initializeStore);
+
+  useEffect(() => {
+    initializeStore();
+  }, [initializeStore]);
 
   console.log('App render - user:', user?.name, 'activeModule:', activeModule);
 
