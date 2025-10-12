@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:services": "tsx src/services/api/__tests__/testServices.ts",
-    "test:reports": "tsx src/services/api/__tests__/testReportService.ts"
+    "test:reports": "tsx src/services/api/__tests__/testReportService.ts",
+    "create-auth-users": "tsx scripts/create-auth-users.ts"
   },
   "dependencies": {
     "@react-three/drei": "^9.92.0",

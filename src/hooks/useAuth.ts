@@ -1,8 +1,11 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import type { User, ModuleAccess } from '../types';
+import type { User as AppUser, ModuleAccess } from '../types';
+import { supabase } from '../services/api/supabaseClient';
+import { userService } from '../services/api';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -22,252 +25,237 @@ export const useAuth = () => {
   return context;
 };
 
-// Mock authentication for demo purposes
+// Supabase Authentication
 export const useAuthProvider = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Load user profile from database
+  const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
+    try {
+      // Get user from our users table
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', authUser.email)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return null;
+      }
+
+      if (!users) {
+        console.warn('User not found in database:', authUser.email);
+        return null;
+      }
+
+      // Map database user to app user
+      const appUser: AppUser = {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        company: users.company,
+        phone: users.phone,
+        department: users.department,
+        isActive: users.is_active,
+        lastLogin: users.last_login ? new Date(users.last_login) : undefined,
+        createdAt: new Date(users.created_at),
+        createdBy: users.created_by,
+        updatedBy: users.updated_by,
+        clientCode: users.client_code,
+        yardAssignments: users.yard_assignments || [],
+        moduleAccess: users.module_access || {
+          dashboard: true,
+          containers: false,
+          gateIn: false,
+          gateOut: false,
+          releases: false,
+          edi: false,
+          yard: false,
+          clients: false,
+          users: false,
+          moduleAccess: false,
+          reports: false,
+          depotManagement: false,
+          timeTracking: false,
+          analytics: false,
+          clientPools: false,
+          stackManagement: false,
+          auditLogs: false,
+          billingReports: false,
+          operationsReports: false
+        }
+      };
+
+      return appUser;
+    } catch (error) {
+      console.error('Error in loadUserProfile:', error);
+      return null;
+    }
+  };
+
+  // Check session on mount
   useEffect(() => {
-    // Check for stored user session
-    const checkStoredSession = async () => {
+    let mounted = true;
+
+    const checkSession = async () => {
       try {
-        const storedUser = localStorage.getItem('depot_user');
-        const storedToken = localStorage.getItem('depot_token');
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (storedUser && storedToken) {
-          const userData = JSON.parse(storedUser);
-          // Validate token expiry (in production, this would be more sophisticated)
-          const tokenData = JSON.parse(atob(storedToken.split('.')[1] || '{}'));
-          const isExpired = tokenData.exp && Date.now() >= tokenData.exp * 1000;
+        if (error) {
+          console.error('Session error:', error);
+          setUser(null);
+          setIsAuthenticated(false);
+          return;
+        }
 
-          if (!isExpired) {
-            console.log('Restoring user session for:', userData.name);
-            setUser(userData);
+        if (session?.user && mounted) {
+          console.log('Session found for:', session.user.email);
+          const profile = await loadUserProfile(session.user);
+
+          if (profile && mounted) {
+            setUser(profile);
             setIsAuthenticated(true);
+
+            // Update last login
+            await userService.update(profile.id, {
+              last_login: new Date().toISOString()
+            });
           } else {
-            // Token expired, clear storage
-            console.log('Token expired, clearing session');
-            localStorage.removeItem('depot_user');
-            localStorage.removeItem('depot_token');
+            console.warn('Could not load user profile');
             setUser(null);
             setIsAuthenticated(false);
           }
         } else {
-          console.log('No stored session found');
+          console.log('No active session');
           setUser(null);
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Error loading user session:', error);
-        // Clear corrupted data
-        localStorage.removeItem('depot_user');
-        localStorage.removeItem('depot_token');
+        console.error('Error checking session:', error);
         setUser(null);
         setIsAuthenticated(false);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    checkStoredSession();
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+
+      if (event === 'SIGNED_IN' && session?.user && mounted) {
+        const profile = await loadUserProfile(session.user);
+        if (profile && mounted) {
+          setUser(profile);
+          setIsAuthenticated(true);
+          setIsLoading(false);
+        }
+      } else if (event === 'SIGNED_OUT' && mounted) {
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoading(false);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user && mounted) {
+        // Session refreshed, update user data
+        const profile = await loadUserProfile(session.user);
+        if (profile && mounted) {
+          setUser(profile);
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     console.log('Login attempt for:', email);
 
     try {
-      // Simulate network delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsLoading(true);
 
-      const mockUsers: { [key: string]: User } = {
-        'admin@depot.com': {
-          id: '1',
-          name: 'John Administrator',
-          email: 'admin@depot.com',
-          role: 'admin',
-          company: 'Container Depot Ltd',
-          phone: '+1-555-1001',
-          department: 'Administration',
-          isActive: true,
-          lastLogin: new Date('2025-01-11T08:30:00'),
-          createdAt: new Date('2024-01-01'),
-          yardAssignments: ['depot-tantarelli', 'depot-vridi', 'depot-san-pedro'], // Admin has access to all yards
-          moduleAccess: {
-            dashboard: true,
-            containers: true,
-            gateIn: true,
-            gateOut: true,
-            releases: true,
-            edi: true,
-            yard: true,
-            clients: true,
-            users: true,
-            moduleAccess: true,
-            reports: true,
-            depotManagement: true
-          },
-          createdBy: "system"
-        },
-        'operator@depot.com': {
-          id: '2',
-          name: 'Jane Operator',
-          email: 'operator@depot.com',
-          role: 'operator',
-          company: 'Container Depot Ltd',
-          phone: '+1-555-1002',
-          department: 'Operations',
-          isActive: true,
-          lastLogin: new Date('2025-01-11T07:15:00'),
-          createdAt: new Date('2024-02-15'),
-          yardAssignments: ['depot-tantarelli'], // Operator assigned to main depot
-          moduleAccess: {
-            dashboard: true,
-            containers: true,
-            gateIn: true,
-            gateOut: true,
-            releases: true,
-            edi: false,
-            yard: true,
-            clients: false,
-            users: false,
-            moduleAccess: false,
-            reports: false,
-            depotManagement: true
-          },
-          createdBy: "system"
-        },
-        'supervisor@depot.com': {
-          id: '3',
-          name: 'Mike Supervisor',
-          email: 'supervisor@depot.com',
-          role: 'supervisor',
-          company: 'Container Depot Ltd',
-          phone: '+1-555-1003',
-          department: 'Operations',
-          isActive: true,
-          lastLogin: new Date('2025-01-10T16:45:00'),
-          createdAt: new Date('2024-01-20'),
-          yardAssignments: ['depot-tantarelli', 'depot-vridi'], // Supervisor manages two depots
-          moduleAccess: {
-            dashboard: true,
-            containers: true,
-            gateIn: true,
-            gateOut: true,
-            releases: true,
-            edi: true,
-            yard: true,
-            clients: true,
-            users: false,
-            moduleAccess: false,
-            reports: true,
-            depotManagement: true
-          },
-          createdBy: "system"
-        },
-        'client@shipping.com': {
-          id: '4',
-          name: 'Sarah Client',
-          email: 'client@shipping.com',
-          role: 'client',
-          company: 'Shipping Solutions Inc',
-          phone: '+1-555-2001',
-          department: 'Logistics',
-          isActive: true,
-          lastLogin: new Date('2025-01-09T14:20:00'),
-          createdAt: new Date('2024-03-10'),
-          clientCode: 'SHIP001',
-          yardAssignments: ['depot-tantarelli'], // Client has access to main depot only
-          moduleAccess: {
-            dashboard: true,
-            containers: true,
-            gateIn: false,
-            gateOut: false,
-            releases: true,
-            edi: false,
-            yard: true,
-            clients: false,
-            users: false,
-            moduleAccess: false,
-            reports: false,
-            depotManagement: true
-          },
-          createdBy: "system"
-        },
-        'client2@maersk.com': {
-          id: '5',
-          name: 'John Maersk Client',
-          email: 'client2@maersk.com',
-          role: 'client',
-          company: 'Maersk Line',
-          phone: '+1-555-2002',
-          department: 'Logistics',
-          isActive: true,
-          lastLogin: new Date('2025-01-08T11:30:00'),
-          createdAt: new Date('2024-04-15'),
-          clientCode: 'MAER001',
-          yardAssignments: ['depot-tantarelli', 'depot-san-pedro'], // Maersk client has access to multiple yards
-          moduleAccess: {
-            dashboard: true,
-            containers: true,
-            gateIn: false,
-            gateOut: false,
-            releases: true,
-            edi: false,
-            yard: true,
-            clients: false,
-            users: false,
-            moduleAccess: false,
-            reports: false,
-            depotManagement: true
-          },
-          createdBy: "system"
-        }
-      };
+      // Sign in with Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      const mockUser = mockUsers[email];
-      if (mockUser && password === 'demo123') {
-        console.log('Authentication successful for:', mockUser.name);
-
-        // Generate mock JWT token
-        const tokenPayload = {
-          userId: mockUser.id,
-          email: mockUser.email,
-          role: mockUser.role,
-          iat: Math.floor(Date.now() / 1000),
-          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-        };
-
-        const mockToken = `header.${btoa(JSON.stringify(tokenPayload))}.signature`;
-
-        // Store user data and token
-        localStorage.setItem('depot_user', JSON.stringify(mockUser));
-        localStorage.setItem('depot_token', mockToken);
-
-        setUser(mockUser);
-        setIsAuthenticated(true);
-        console.log('User state updated, authentication complete');
-      } else {
-        console.log('Authentication failed: Invalid credentials');
-        throw new Error('Invalid credentials. Please check your email and password.');
+      if (error) {
+        console.error('Supabase auth error:', error);
+        throw new Error(error.message || 'Invalid credentials');
       }
-    } catch (error) {
+
+      if (!data.user) {
+        throw new Error('No user returned from authentication');
+      }
+
+      console.log('Authentication successful for:', data.user.email);
+
+      // Load user profile
+      const profile = await loadUserProfile(data.user);
+
+      if (!profile) {
+        // Sign out if profile not found
+        await supabase.auth.signOut();
+        throw new Error('User profile not found. Please contact administrator.');
+      }
+
+      // Check if user is active
+      if (!profile.isActive) {
+        await supabase.auth.signOut();
+        throw new Error('Your account has been deactivated. Please contact administrator.');
+      }
+
+      setUser(profile);
+      setIsAuthenticated(true);
+
+      // Update last login
+      await userService.update(profile.id, {
+        last_login: new Date().toISOString()
+      });
+
+      console.log('User state updated, authentication complete');
+    } catch (error: any) {
       console.error('Login error:', error);
       setUser(null);
       setIsAuthenticated(false);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
+  const logout = async () => {
+    try {
+      console.log('Logging out...');
 
-    // Clear authentication data
-    localStorage.removeItem('depot_user');
-    localStorage.removeItem('depot_token');
-    localStorage.removeItem('depot_preferences');
-    localStorage.removeItem('language');
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Logout error:', error);
+      }
+
+      setUser(null);
+      setIsAuthenticated(false);
+
+      // Clear local storage
+      localStorage.removeItem('depot_preferences');
+      localStorage.removeItem('language');
+
+      console.log('Logout complete');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   const hasModuleAccess = (module: keyof ModuleAccess): boolean => {
