@@ -34,15 +34,35 @@ export const useAuthProvider = () => {
   // Load user profile from database
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
     console.log('📋 [LOAD_PROFILE] Loading profile for:', authUser.email, 'auth_uid:', authUser.id);
+
+    // Check current session before querying
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('📋 [LOAD_PROFILE] Current session:', session ? 'EXISTS' : 'NONE', session?.access_token ? 'Has token' : 'No token');
+
     try {
       // Get user from our users table using auth_user_id (not email)
       // This is critical for RLS to work correctly
       console.log('📋 [LOAD_PROFILE] Querying users table by auth_user_id...');
-      const { data: users, error } = await supabase
+
+      // Add timeout to detect hanging queries
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          console.error('📋 [LOAD_PROFILE] ❌ Query timeout after 5 seconds!');
+          reject(new Error('Query timeout'));
+        }, 5000);
+      });
+
+      const queryPromise = supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
-        .maybeSingle();
+        .maybeSingle()
+        .then(result => {
+          console.log('📋 [LOAD_PROFILE] Query completed:', result);
+          return result;
+        });
+
+      const { data: users, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       console.log('📋 [LOAD_PROFILE] Query result - data:', users, 'error:', error);
 
