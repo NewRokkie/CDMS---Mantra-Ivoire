@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, Package, User, FileText, Clock, CheckCircle, AlertTriangle, ChevronRight, Eye } from 'lucide-react';
 import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { safeToLocaleDateString } from '../../utils/dateHelpers';
 
 interface MobileReleaseOrderTableProps {
   orders: BookingReference[];
@@ -124,7 +125,7 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{order.bookingNumber || order.id}</div>
                     <div className="text-sm text-gray-500">
-                      Created {order.createdAt.toLocaleDateString()}
+                      Created {safeToLocaleDateString(order.createdAt)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

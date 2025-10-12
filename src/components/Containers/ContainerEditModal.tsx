@@ -15,6 +15,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   onSave,
 }) => {
   const { user } = useAuth();
+  const canEditContainers = user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'operator';
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     number: container.number,

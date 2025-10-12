@@ -3,6 +3,7 @@ import { X, Package, MapPin, Calendar, User, Truck, FileText, AlertTriangle, Che
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { AuditLogModal } from './AuditLogModal';
+import { getDaysBetween } from '../../utils/dateHelpers';
 
 interface ContainerViewModalProps {
   container: Container;
@@ -237,10 +238,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
                   <div>
                     <span className="text-gray-600">Days in Depot:</span>
                     <div className="font-medium text-gray-900">
-                      {container.gateInDate
-                        ? Math.floor((new Date().getTime() - container.gateInDate.getTime()) / (1000 * 60 * 60 * 24))
-                        : 'N/A'
-                      } days
+                      {container.gateInDate ? getDaysBetween(container.gateInDate) : 'N/A'} days
                     </div>
                   </div>
                 </div>

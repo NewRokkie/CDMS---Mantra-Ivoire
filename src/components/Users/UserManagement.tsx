@@ -6,6 +6,7 @@ import { useYard } from '../../hooks/useYard';
 import { useGlobalStore } from '../../store/useGlobalStore';
 import { UserFormModal } from './UserFormModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
+import { toDate } from '../../utils/dateHelpers';
 
 // Helper function to get module access based on role
 const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
@@ -302,9 +303,9 @@ export const UserManagement: React.FC = () => {
               <p className="text-lg font-semibold text-gray-900">
                 {users.filter(u => {
                   const today = new Date();
-                  const lastLogin = u.lastLogin;
-                  return lastLogin &&
-                    lastLogin.toDateString() === today.toDateString();
+                  const loginDate = toDate(u.lastLogin);
+                  if (!loginDate) return false;
+                  return loginDate.toDateString() === today.toDateString();
                 }).length}
               </p>
             </div>
