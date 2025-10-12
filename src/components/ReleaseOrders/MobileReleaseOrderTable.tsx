@@ -71,8 +71,10 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
     );
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (!dateObj || isNaN(dateObj.getTime())) return 'N/A';
+    return dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',

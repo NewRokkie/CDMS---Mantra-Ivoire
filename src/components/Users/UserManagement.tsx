@@ -217,14 +217,18 @@ export const UserManagement: React.FC = () => {
     );
   };
 
-  const formatLastLogin = (date: Date) => {
+  const formatLastLogin = (date: Date | string | undefined) => {
+    if (!date) return 'Never';
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (!dateObj || isNaN(dateObj.getTime())) return 'Never';
+
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    const diffInHours = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60 * 60));
 
     if (diffInHours < 1) return 'Just now';
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
-    return date.toLocaleDateString();
+    return dateObj.toLocaleDateString();
   };
 
   const DesktopContent = () => (
