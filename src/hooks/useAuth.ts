@@ -40,25 +40,11 @@ export const useAuthProvider = () => {
       // This is critical for RLS to work correctly
       console.log('📋 [LOAD_PROFILE] Querying users table by auth_user_id...');
 
-      // Add timeout to detect hanging queries
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          console.error('📋 [LOAD_PROFILE] ❌ Query timeout after 5 seconds!');
-          reject(new Error('Query timeout'));
-        }, 5000);
-      });
-
-      const queryPromise = supabase
+      const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
-        .maybeSingle()
-        .then(result => {
-          console.log('📋 [LOAD_PROFILE] Query completed:', result);
-          return result;
-        });
-
-      const { data: users, error } = await Promise.race([queryPromise, timeoutPromise]);
+        .maybeSingle();
 
       console.log('📋 [LOAD_PROFILE] Query result - data:', users, 'error:', error);
 
@@ -176,39 +162,31 @@ export const useAuthProvider = () => {
     checkSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // IMPORTANT: We cannot call loadUserProfile inside this callback because it creates a deadlock
+    // The callback runs synchronously during auth state processing, and await on Supabase calls will hang
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔄 [AUTH_CHANGE] Event:', event, 'Session:', session?.user?.email);
 
       if (event === 'SIGNED_IN' && session?.user && mounted) {
-        console.log('🔄 [AUTH_CHANGE] SIGNED_IN - Waiting 100ms before loading profile...');
-
-        // Add a small delay to ensure session is fully established
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        console.log('🔄 [AUTH_CHANGE] Now loading profile...');
-        const profile = await loadUserProfile(session.user);
-        if (profile && mounted) {
-          console.log('🔄 [AUTH_CHANGE] Profile loaded, updating state');
-          setUser(profile);
-          setIsAuthenticated(true);
-          setIsLoading(false);
-        } else {
-          console.log('🔄 [AUTH_CHANGE] Profile not found');
-          setUser(null);
-          setIsAuthenticated(false);
-          setIsLoading(false);
-        }
+        console.log('🔄 [AUTH_CHANGE] SIGNED_IN - Triggering checkSession in background');
+        // Don't block here - schedule checkSession to run after callback completes
+        setTimeout(() => {
+          if (mounted) {
+            checkSession();
+          }
+        }, 0);
       } else if (event === 'SIGNED_OUT' && mounted) {
         console.log('🔄 [AUTH_CHANGE] SIGNED_OUT');
         setUser(null);
         setIsAuthenticated(false);
         setIsLoading(false);
       } else if (event === 'TOKEN_REFRESHED' && session?.user && mounted) {
-        console.log('🔄 [AUTH_CHANGE] TOKEN_REFRESHED');
-        const profile = await loadUserProfile(session.user);
-        if (profile && mounted) {
-          setUser(profile);
-        }
+        console.log('🔄 [AUTH_CHANGE] TOKEN_REFRESHED - Triggering checkSession in background');
+        setTimeout(() => {
+          if (mounted) {
+            checkSession();
+          }
+        }, 0);
       } else if (event === 'INITIAL_SESSION') {
         console.log('🔄 [AUTH_CHANGE] INITIAL_SESSION - ignoring (handled by checkSession)');
       } else {
