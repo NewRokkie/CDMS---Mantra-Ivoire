@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useYard } from '../../hooks/useYard';
+import { useGlobalStore } from '../../store/useGlobalStore';
 import { YardLiveMap } from './YardLiveMap';
-import { Container } from '../../types';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
+// REMOVED: Mock containers now from global store
+/*
 const generateMockContainers = (): Container[] => {
   const containers: Container[] = [];
   const containerNumbers = [
@@ -65,10 +67,15 @@ const generateMockContainers = (): Container[] => {
 
   return containers;
 };
+*/
 
 export const YardManagement: React.FC = () => {
   const { currentYard } = useYard();
-  const [containers] = useState<Container[]>(generateMockContainers());
+  const allContainers = useGlobalStore(state => state.containers);
+  const getContainersByYard = useGlobalStore(state => state.getContainersByYard);
+
+  // Filter containers for current yard
+  const containers = currentYard ? getContainersByYard(currentYard.id) : allContainers;
 
   return (
     <>

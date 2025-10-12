@@ -21,6 +21,7 @@ import {
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { useGlobalStore } from '../../store/useGlobalStore';
 import { yardService } from '../../services/yardService';
 import { DatePicker } from '../Common/DatePicker';
 import { AnalyticsTab } from './AnalyticsTab';
@@ -156,8 +157,8 @@ interface DepotData {
   name: string;
 }
 
-// Mock container billing data with improved error handling
-const generateMockBillingData = (): ContainerBilling[] => {
+// Generate billing data from actual containers in global store
+const generateBillingDataFromStore = (storeContainers: any[], storeClients: any[]): ContainerBilling[] => {
   try {
     const availableDepots: DepotData[] = [
       { id: 'depot-tantarelli', name: 'Tantarelli Depot' },
@@ -165,7 +166,55 @@ const generateMockBillingData = (): ContainerBilling[] => {
       { id: 'depot-san-pedro', name: 'San Pedro Port' }
     ];
 
-    const containers: RawContainerData[] = [
+    // Use actual containers from store
+    return storeContainers.map((container, index) => {
+      const client = storeClients.find(c => c.code === container.clientCode);
+      if (!client) {
+        console.warn(`No client found for code: ${container.clientCode}`);
+        return null;
+      }
+
+      const clientConfig = mockClientFreeDays.find(c => c.clientCode === container.clientCode) || {
+        clientCode: container.clientCode,
+        freeDaysAllowed: client.freeDaysAllowed || 3,
+        dailyRate: client.dailyStorageRate || 45.00
+      };
+
+      const now = new Date();
+      const placedDate = container.gateInDate ? new Date(container.gateInDate) : new Date();
+      const outDate = container.gateOutDate ? new Date(container.gateOutDate) : undefined;
+
+      const totalDays = outDate
+        ? Math.ceil((outDate.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24))
+        : Math.ceil((now.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      const freeDaysUsed = Math.min(totalDays, clientConfig.freeDaysAllowed);
+      const billableDays = Math.max(0, totalDays - clientConfig.freeDaysAllowed);
+      const totalAmount = billableDays * clientConfig.dailyRate;
+
+      return {
+        id: `billing-${container.id}`,
+        containerNumber: container.number,
+        clientCode: container.clientCode,
+        clientName: client.name,
+        depotId: container.yardId || 'depot-tantarelli',
+        depotName: 'Current Depot',
+        location: container.location || 'Unknown',
+        placedDate,
+        outDate,
+        totalDays,
+        freeDaysAllowed: clientConfig.freeDaysAllowed,
+        freeDaysUsed,
+        billableDays,
+        dailyRate: clientConfig.dailyRate,
+        totalAmount,
+        status: outDate ? 'billed' : (billableDays > 0 ? 'accruing' : 'free_days'),
+        currency: client.currency || 'USD'
+      };
+    }).filter(Boolean) as ContainerBilling[];
+
+    // Legacy mock data for fallback
+    const mockContainers: RawContainerData[] = [
       { number: 'MSKU-123456-7', clientCode: 'MAEU', depotId: 'depot-tantarelli', placedDaysAgo: 5, outDaysAgo: null, location: 'Block A-12' },
       { number: 'TCLU-987654-3', clientCode: 'MSCU', depotId: 'depot-tantarelli', placedDaysAgo: 8, outDaysAgo: 1, location: 'Gate 2' },
       { number: 'GESU-456789-1', clientCode: 'CMDU', depotId: 'depot-tantarelli', placedDaysAgo: 12, outDaysAgo: null, location: 'Workshop 1' },
@@ -325,16 +374,18 @@ export const ReportsModule: React.FC = () => {
 
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
+  const containers = useGlobalStore(state => state.containers);
+  const clients = useGlobalStore(state => state.clients);
 
   const billingData = useMemo(() => {
     try {
-      return generateMockBillingData();
+      return generateBillingDataFromStore(containers, clients);
     } catch (err) {
       console.error('Error generating billing data:', err);
       setError('Failed to load billing data');
       return [];
     }
-  }, []);
+  }, [containers, clients]);
 
   const isManager = user?.role === 'admin' || user?.role === 'supervisor';
   const showClientNotice = !canViewAllData();
