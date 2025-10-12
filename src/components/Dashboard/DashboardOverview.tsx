@@ -70,7 +70,7 @@ export const DashboardOverview: React.FC = () => {
 
     const depotPerformance = allDepots.map(depot => {
       const utilizationRate = (depot.currentOccupancy / depot.totalCapacity) * 100;
-      const depotContainers = mockContainerData.filter(c => 
+      const depotContainers = allContainers.filter(c =>
         yardService.isContainerInYard ? yardService.isContainerInYard(c, depot.id) : false
       );
       
@@ -84,7 +84,7 @@ export const DashboardOverview: React.FC = () => {
         utilizationRate,
         containers: depotContainers.length,
         inDepot: depotContainers.filter(c => c.status === 'in_depot').length,
-        damaged: depotContainers.filter(c => c.isDamaged).length,
+        damaged: depotContainers.filter(c => c.damage && c.damage.length > 0).length,
         revenue: Math.floor(Math.random() * 50000) + 80000, // Mock revenue
         efficiency: Math.floor(Math.random() * 20) + 80,
         status: depot.isActive ? 'active' : 'inactive'
@@ -123,8 +123,8 @@ export const DashboardOverview: React.FC = () => {
 
     // Total by damaged or not
     const damagedStats = {
-      damaged: filteredContainers.filter(c => c.isDamaged).length,
-      undamaged: filteredContainers.filter(c => !c.isDamaged).length
+      damaged: filteredContainers.filter(c => c.damage && c.damage.length > 0).length,
+      undamaged: filteredContainers.filter(c => !c.damage || c.damage.length === 0).length
     };
 
     return {
@@ -806,7 +806,7 @@ export const DashboardOverview: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        {container.isDamaged ? (
+                        {(container.damage && container.damage.length > 0) ? (
                           <>
                             <XCircle className="h-4 w-4 text-red-500" />
                             <span className="text-sm text-red-600 font-medium">Damaged</span>
@@ -867,8 +867,8 @@ export const DashboardOverview: React.FC = () => {
               const customerContainers = filteredContainers.filter(c => 
                 (c.clientCode || c.client) === customerKey
               );
-              const damaged = customerContainers.filter(c => c.isDamaged).length;
-              const undamaged = customerContainers.filter(c => !c.isDamaged).length;
+              const damaged = customerContainers.filter(c => c.damage && c.damage.length > 0).length;
+              const undamaged = customerContainers.filter(c => !c.damage || c.damage.length === 0).length;
               const damageRate = customerContainers.length > 0 ? (damaged / customerContainers.length) * 100 : 0;
 
               return (

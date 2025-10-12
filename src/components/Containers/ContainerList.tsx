@@ -23,121 +23,18 @@ const formatContainerNumberForDisplay = (containerNumber?: string | null): strin
   return num;
 };
 
-// Mock data with client codes, extended audit logs, Tantarelli-compatible locations, and valid 11-char container numbers without hyphens
-const initialContainers: Container[] = [
-  {
-    id: '1',
-    number: 'MSKU1234567',
-    type: 'standard',
-    size: '40ft',
-    status: 'in_depot',
-    location: 'S01-R1-H1',
-    gateInDate: new Date('2025-01-10T08:30:00'),
-    client: 'Maersk Line',
-    clientId: '1',
-    clientCode: 'MAEU',
-    createdBy: 'System',
-    updatedBy: 'System',
-    auditLogs: [
-      { timestamp: new Date('2025-01-10T08:30:00'), user: 'System', action: 'created', details: 'Container created in depot' },
-      { timestamp: new Date('2025-01-11T10:00:00'), user: 'John Doe', action: 'viewed', details: 'Container details viewed' },
-      { timestamp: new Date('2025-01-12T14:20:00'), user: 'Admin User', action: 'edited', details: 'Location updated to Stack S1' },
-      { timestamp: new Date('2025-01-13T09:15:00'), user: 'Jane Smith', action: 'viewed', details: 'Quick status check' },
-      { timestamp: new Date('2025-01-13T16:45:00'), user: 'Operator', action: 'moved', details: 'Moved from temporary storage to final position' }
-    ]
-  },
-  {
-    id: '2',
-    number: 'TCLU9876543',
-    type: 'reefer',
-    size: '20ft',
-    status: 'out_depot',
-    location: 'S03-R2-H1',
-    gateInDate: new Date('2025-01-09T14:15:00'),
-    gateOutDate: new Date('2025-01-11T10:00:00'),
-    client: 'MSC',
-    clientId: '2',
-    clientCode: 'MSCU',
-    releaseOrderId: 'RO-2025-001',
-    createdBy: 'System',
-    updatedBy: 'System',
-    auditLogs: [
-      { timestamp: new Date('2025-01-09T14:15:00'), user: 'System', action: 'created', details: 'Reefer container registered' },
-      { timestamp: new Date('2025-01-10T11:30:00'), user: 'Tech Support', action: 'edited', details: 'Temperature settings adjusted to 4°C' },
-      { timestamp: new Date('2025-01-11T08:00:00'), user: 'Gate Operator', action: 'viewed', details: 'Pre-gate out inspection completed' },
-      { timestamp: new Date('2025-01-11T10:00:00'), user: 'Jane Smith', action: 'edited', details: 'Status updated to out_depot' },
-      { timestamp: new Date('2025-01-11T10:05:00'), user: 'Gate Operator', action: 'moved', details: 'Released through Gate 2 with RO-2025-001' }
-    ]
-  },
-  {
-    id: '3',
-    number: 'GESU4567891',
-    type: 'standard',
-    size: '40ft',
-    status: 'in_service',
-    location: 'S05-R1-H3',
-    gateInDate: new Date('2025-01-08T16:45:00'),
-    client: 'CMA CGM',
-    clientId: '3',
-    clientCode: 'CMDU',
-    damage: ['Corner post damage', 'Door seal replacement needed'],
-    createdBy: 'System',
-    updatedBy: 'System',
-    auditLogs: [
-      { timestamp: new Date('2025-01-08T16:45:00'), user: 'System', action: 'created', details: 'Container with initial damage report' },
-      { timestamp: new Date('2025-01-09T09:30:00'), user: 'Maintenance Team', action: 'viewed', details: 'Damage assessment initiated' },
-      { timestamp: new Date('2025-01-09T12:00:00'), user: 'Repair Tech', action: 'edited', details: 'Added door seal damage to report' },
-      { timestamp: new Date('2025-01-10T15:20:00'), user: 'Supervisor', action: 'viewed', details: 'Reviewed repair progress' },
-      { timestamp: new Date('2025-01-10T17:00:00'), user: 'Maintenance Team', action: 'moved', details: 'Transferred to Stack S5 for repairs' }
-    ]
-  },
-  {
-    id: '4',
-    number: 'SHIP1112228',
-    type: 'standard',
-    size: '20ft',
-    status: 'in_depot',
-    location: 'S07-R3-H2',
-    gateInDate: new Date('2025-01-11T09:15:00'),
-    client: 'Shipping Solutions Inc',
-    clientId: '4',
-    clientCode: 'SHIP001',
-    createdBy: 'System',
-    updatedBy: 'System',
-    auditLogs: [
-      { timestamp: new Date('2025-01-11T09:15:00'), user: 'System', action: 'created', details: 'Standard standard container added' },
-      { timestamp: new Date('2025-01-11T11:00:00'), user: 'Yard Operator', action: 'moved', details: 'Placed in Stack S7 stack' },
-      { timestamp: new Date('2025-01-12T10:30:00'), user: 'Client Rep', action: 'viewed', details: 'Verified container position' },
-      { timestamp: new Date('2025-01-12T14:00:00'), user: 'Admin', action: 'edited', details: 'Updated client code to SHIP001' },
-      { timestamp: new Date('2025-01-13T08:45:00'), user: 'Operator', action: 'viewed', details: 'Routine depot check' }
-    ]
-  },
-  {
-    id: '5',
-    number: 'SHIP3334449',
-    type: 'reefer',
-    size: '40ft',
-    status: 'maintenance',
-    location: 'S09-R2-H4',
-    gateInDate: new Date('2025-01-07T13:20:00'),
-    client: 'Shipping Solutions Inc',
-    clientId: '4',
-    clientCode: 'SHIP001',
-    damage: ['Refrigeration unit malfunction'],
-    createdBy: 'System',
-    updatedBy: 'System',
-    auditLogs: [
-      { timestamp: new Date('2025-01-07T13:20:00'), user: 'System', action: 'created', details: 'Reefer with refrigeration issue registered' },
-      { timestamp: new Date('2025-01-07T15:00:00'), user: 'Tech Support', action: 'viewed', details: 'Initial diagnostics performed' },
-      { timestamp: new Date('2025-01-08T10:00:00'), user: 'Repair Team', action: 'edited', details: 'Status changed to maintenance' },
-      { timestamp: new Date('2025-01-08T14:30:00'), user: 'Supervisor', action: 'moved', details: 'Relocated to Stack S9' },
-      { timestamp: new Date('2025-01-09T11:15:00'), user: 'Maintenance Lead', action: 'viewed', details: 'Progress update and approval' }
-    ]
-  }
-];
+// REMOVED: Mock data now managed by global store
 
 export const ContainerList: React.FC = () => {
-  const [containers, setContainers] = useState<Container[]>(initialContainers);
+  const allContainers = useGlobalStore(state => state.containers);
+  const updateContainer = useGlobalStore(state => state.updateContainer);
+  const getAuditLogs = useGlobalStore(state => state.getAuditLogs);
+
+  const [containers, setContainers] = useState<Container[]>(allContainers);
+
+  React.useEffect(() => {
+    setContainers(allContainers);
+  }, [allContainers]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState<string>(''); // ISO date yyyy-mm-dd
