@@ -2,105 +2,20 @@ import React, { useState } from 'react';
 import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useGlobalStore } from '../../store/useGlobalStore';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
-// Mock data
-const mockClients: Client[] = [
-  {
-    id: '1',
-    name: 'Maersk Line',
-    code: 'MAEU',
-    email: 'operations@maersk.com',
-    phone: '+1-555-0101',
-    address: {
-      street: '123 Harbor Drive',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10001',
-      country: 'USA'
-    },
-    contactPerson: {
-      name: 'John Smith',
-      email: 'john.smith@maersk.com',
-      phone: '+1-555-0102',
-      position: 'Operations Manager'
-    },
-    taxId: 'US123456789',
-    creditLimit: 500000,
-    paymentTerms: 30,
-    freeDaysAllowed: 3,
-    dailyStorageRate: 45.00,
-    currency: 'USD',
-    isActive: true,
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2025-01-10'),
-    notes: 'Premium client with excellent payment history'
-  },
-  {
-    id: '2',
-    name: 'MSC Mediterranean Shipping',
-    code: 'MSCU',
-    email: 'depot@msc.com',
-    phone: '+1-555-0201',
-    address: {
-      street: '456 Port Avenue',
-      city: 'Los Angeles',
-      state: 'CA',
-      zipCode: '90001',
-      country: 'USA'
-    },
-    contactPerson: {
-      name: 'Maria Garcia',
-      email: 'maria.garcia@msc.com',
-      phone: '+1-555-0202',
-      position: 'Depot Coordinator'
-    },
-    taxId: 'US987654321',
-    creditLimit: 750000,
-    paymentTerms: 45,
-    freeDaysAllowed: 2,
-    dailyStorageRate: 42.00,
-    currency: 'USD',
-    isActive: true,
-    createdAt: new Date('2024-02-20'),
-    updatedAt: new Date('2025-01-08'),
-    notes: 'High volume client, requires special handling procedures'
-  },
-  {
-    id: '3',
-    name: 'CMA CGM',
-    code: 'CMDU',
-    email: 'usa@cma-cgm.com',
-    phone: '+1-555-0301',
-    address: {
-      street: '789 Shipping Boulevard',
-      city: 'Miami',
-      state: 'FL',
-      zipCode: '33101',
-      country: 'USA'
-    },
-    contactPerson: {
-      name: 'Pierre Dubois',
-      email: 'pierre.dubois@cma-cgm.com',
-      phone: '+1-555-0302',
-      position: 'Regional Manager'
-    },
-    taxId: 'US456789123',
-    creditLimit: 600000,
-    paymentTerms: 30,
-    freeDaysAllowed: 4,
-    dailyStorageRate: 48.00,
-    currency: 'USD',
-    isActive: true,
-    createdAt: new Date('2024-03-10'),
-    updatedAt: new Date('2025-01-05')
-  }
-];
+// REMOVED: Mock data now managed by global store
 
 export const ClientMasterData: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const clients = useGlobalStore(state => state.clients);
+  const addClient = useGlobalStore(state => state.addClient);
+  const updateClient = useGlobalStore(state => state.updateClient);
+  const deleteClient = useGlobalStore(state => state.deleteClient);
+
+  // const [clients, setClients] = useState<Client[]>(mockClients);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
@@ -132,7 +47,7 @@ export const ClientMasterData: React.FC = () => {
 
   const handleDelete = (clientId: string) => {
     if (confirm('Are you sure you want to delete this client?')) {
-      setClients(prev => prev.filter(c => c.id !== clientId));
+      deleteClient(clientId);
     }
   };
 

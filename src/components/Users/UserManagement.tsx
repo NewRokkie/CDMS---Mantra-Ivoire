@@ -3,6 +3,7 @@ import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, User as UserIcon
 import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { useGlobalStore } from '../../store/useGlobalStore';
 import { UserFormModal } from './UserFormModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
@@ -93,83 +94,16 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
   }
 };
 
-// Mock data
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'John Administrator',
-    email: 'admin@depot.com',
-    role: 'admin',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1001',
-    department: 'Administration',
-    isActive: true,
-    lastLogin: new Date('2025-01-11T08:30:00'),
-    createdAt: new Date('2024-01-01'),
-    moduleAccess: getModuleAccessForRole('admin'),
-    yardAssignments: []
-  },
-  {
-    id: '2',
-    name: 'Jane Operator',
-    email: 'operator@depot.com',
-    role: 'operator',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1002',
-    department: 'Operations',
-    isActive: true,
-    lastLogin: new Date('2025-01-11T07:15:00'),
-    createdAt: new Date('2024-02-15'),
-    moduleAccess: getModuleAccessForRole('operator'),
-    yardAssignments: []
-  },
-  {
-    id: '3',
-    name: 'Mike Supervisor',
-    email: 'supervisor@depot.com',
-    role: 'supervisor',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1003',
-    department: 'Operations',
-    isActive: true,
-    lastLogin: new Date('2025-01-10T16:45:00'),
-    createdAt: new Date('2024-01-20'),
-    moduleAccess: getModuleAccessForRole('supervisor'),
-    yardAssignments: []
-  },
-  {
-    id: '4',
-    name: 'Sarah Client',
-    email: 'client@shipping.com',
-    role: 'client',
-    company: 'Shipping Solutions Inc',
-    phone: '+1-555-2001',
-    department: 'Logistics',
-    isActive: true,
-    lastLogin: new Date('2025-01-09T14:20:00'),
-    createdAt: new Date('2024-03-10'),
-    moduleAccess: getModuleAccessForRole('client'),
-    yardAssignments: []
-  },
-  {
-    id: '5',
-    name: 'Bob Operator',
-    email: 'bob.operator@depot.com',
-    role: 'operator',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1004',
-    department: 'Operations',
-    isActive: false,
-    lastLogin: new Date('2024-12-15T10:30:00'),
-    createdAt: new Date('2024-06-01'),
-    moduleAccess: getModuleAccessForRole('operator'),
-    yardAssignments: []
-  }
-];
+// REMOVED: Mock data now managed by global store
 
 
 export const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const users = useGlobalStore(state => state.users);
+  const addUser = useGlobalStore(state => state.addUser);
+  const updateUser = useGlobalStore(state => state.updateUser);
+  const deleteUser = useGlobalStore(state => state.deleteUser);
+
+  // const [users, setUsers] = useState<User[]>(mockUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -194,8 +128,7 @@ export const UserManagement: React.FC = () => {
   const handleSubmit = (userData: any) => {
     if (selectedUser) {
       // Edit existing user
-      setUsers(prev => prev.map(u => u.id === selectedUser.id ? {
-        ...u,
+      updateUser(selectedUser.id, {
         name: userData.name,
         email: userData.email,
         phone: userData.phone,
@@ -205,11 +138,11 @@ export const UserManagement: React.FC = () => {
         yardAssignments: userData.yardAssignments,
         isActive: userData.isActive,
         moduleAccess: getModuleAccessForRole(userData.role)
-      } : u));
+      });
     } else {
       // Create new user
       const newUser: User = {
-        id: Date.now().toString(), // Simple ID generation
+        id: Date.now().toString(),
         name: userData.name,
         email: userData.email,
         phone: userData.phone,
@@ -221,7 +154,7 @@ export const UserManagement: React.FC = () => {
         createdAt: new Date(),
         moduleAccess: getModuleAccessForRole(userData.role)
       };
-      setUsers(prev => [...prev, newUser]);
+      addUser(newUser);
     }
     setShowForm(false);
     setSelectedUser(null);
@@ -240,14 +173,15 @@ export const UserManagement: React.FC = () => {
 
   const handleDelete = (userId: string) => {
     if (confirm('Are you sure you want to delete this user?')) {
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      deleteUser(userId);
     }
   };
 
   const handleToggleStatus = (userId: string) => {
-    setUsers(prev => prev.map(u =>
-      u.id === userId ? { ...u, isActive: !u.isActive } : u
-    ));
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      updateUser(userId, { isActive: !user.isActive });
+    }
   };
 
   const getRoleIcon = (role: User['role']) => {
