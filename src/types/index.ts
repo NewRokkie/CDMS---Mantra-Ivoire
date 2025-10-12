@@ -237,6 +237,8 @@ export interface ContainerQuantityBySize {
 }
 
 export interface BookingReference {
+  containers: any;
+  remainingContainers: number;
   id: string;
   bookingNumber: string;
   clientId: string;
@@ -247,41 +249,11 @@ export interface BookingReference {
   totalContainers: number;
   maxQuantityThreshold: number;
   requiresDetailedBreakdown: boolean;
-  status: 'draft' | 'pending' | 'validated' | 'partial' | 'completed' | 'cancelled';
-  createdBy: string;
-  validatedBy?: string;
-  createdAt: Date;
-  validatedAt?: Date;
-  completedAt?: Date;
-  notes?: string;
-  estimatedReleaseDate?: Date;
-}
-
-export interface ReleaseOrder {
-  id: string;
-  bookingNumber?: string;
-  clientId: string;
-  clientCode?: string;
-  clientName: string;
-  bookingType?: 'IMPORT' | 'EXPORT';
-  containerQuantities?: ContainerQuantityBySize | { size20ft: 0; size40ft: 0 };
-  totalContainers: number;
-  remainingContainers?: number; // Track remaining containers for status calculation
-  maxQuantityThreshold?: number;
-  requiresDetailedBreakdown?: boolean;
-  containers?: ReleaseOrderContainer[];
-  transportCompany?: string;
-  driverName?: string;
-  vehicleNumber?: string;
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   createdBy: string;
-  validatedBy?: string;
-  updatedBy?: string;
   createdAt: Date;
-  validatedAt?: Date;
   completedAt?: Date;
   notes?: string;
-  estimatedReleaseDate?: Date;
 }
 
 export interface CODECOMessage {

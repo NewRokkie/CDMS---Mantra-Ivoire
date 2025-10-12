@@ -11,6 +11,7 @@ interface DatePickerProps {
   className?: string;
   minDate?: string;
   maxDate?: string;
+  compact?: boolean;
 }
 
 const MONTHS = [
@@ -29,7 +30,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   label,
   className = "",
   minDate,
-  maxDate
+  maxDate,
+  compact = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -39,9 +41,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   );
   const [showYearSelector, setShowYearSelector] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLButtonElement>(null);
 
   // Get current date for restrictions
   const today = new Date();
@@ -92,9 +94,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const isDateDisabled = (date: Date): boolean => {
     // Check if this is an end date or departure field (allow future dates)
-    const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+    const isEndDateField = placeholder?.toLowerCase().includes('end date') ||
                            label?.toLowerCase().includes('end date') ||
-                           placeholder?.toLowerCase().includes('departure') || 
+                           placeholder?.toLowerCase().includes('departure') ||
                            label?.toLowerCase().includes('departure');
     if (maxDate && date > new Date(maxDate)) return true;
     return false;
@@ -102,16 +104,16 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const isMonthNavigationDisabled = (direction: 'prev' | 'next'): boolean => {
     // Check if this is an end date or departure field
-    const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+    const isEndDateField = placeholder?.toLowerCase().includes('end date') ||
                            label?.toLowerCase().includes('end date') ||
-                           placeholder?.toLowerCase().includes('departure') || 
+                           placeholder?.toLowerCase().includes('departure') ||
                            label?.toLowerCase().includes('departure');
-    
+
     // For end date fields, allow unlimited future navigation
     if (isEndDateField) {
       return false;
     }
-    
+
     // For regular fields, only restrict future navigation
     if (direction === 'next') {
       const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
@@ -119,10 +121,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       const nextMonthDate = new Date(nextYear, nextMonth, 1);
       return nextMonthDate > currentDateOnly;
     }
-    
+
     return false;
   };
-  
+
   const isToday = (date: Date): boolean => {
     return date.toDateString() === today.toDateString();
   };
@@ -133,9 +135,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const handleDateSelect = (day: number) => {
     const newDate = new Date(currentYear, currentMonth, day);
-    
+
     if (isDateDisabled(newDate)) return;
-    
+
     setSelectedDate(newDate);
     onChange(formatDateValue(newDate));
     setIsOpen(false);
@@ -189,7 +191,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       setCurrentMonth(today.getMonth());
       setCurrentYear(today.getFullYear());
       setShowYearSelector(false);
-      
+
       // Set selected date based on current value
       if (value) {
         const existingDate = new Date(value);
@@ -199,7 +201,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       } else {
         setSelectedDate(null);
       }
-      
+
       setIsFocused(true);
       setIsOpen(true);
     }
@@ -207,7 +209,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     if (direction === 'next' && isMonthNavigationDisabled('next')) return;
-    
+
     if (direction === 'prev') {
       if (currentMonth === 0) {
         setCurrentMonth(11);
@@ -292,7 +294,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      
+
       {/* Input Field */}
       <div className="relative">
         <button
@@ -301,7 +303,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           onClick={handleInputClick}
           disabled={disabled}
           className={`
-            w-full flex items-center justify-between px-4 py-4 sm:py-3 bg-white border-2 rounded-xl
+            w-full flex items-center justify-between ${compact ? 'h-10 px-3' : 'h-12 px-4 sm:py-3'} bg-white border-2 rounded-xl
             transition-all duration-300 text-left
             ${isOpen
               ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
@@ -314,34 +316,29 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           `}
         >
           <div className="flex items-center space-x-3">
-            <Calendar className={`h-5 w-5 transition-colors duration-300 ${
+            <Calendar className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} transition-colors duration-300 ${
               isOpen ? 'text-blue-500' : selectedDate ? 'text-green-500' : 'text-gray-400'
             }`} />
-            <span className={`transition-colors duration-300 text-base sm:text-sm ${
+            <span className={`transition-colors duration-300 ${compact ? 'text-sm' : 'text-base sm:text-sm'} ${
               selectedDate ? 'text-gray-900 font-medium' : 'text-gray-500'
             }`}>
               {displayValue || placeholder}
             </span>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            {selectedDate && !disabled && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="p-2 sm:p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200 touch-target"
-                title="Clear date"
-              >
-                <X className="h-5 w-5 sm:h-4 sm:w-4" />
-              </button>
-            )}
-          </div>
+
         </button>
 
-        {/* Selected Date Indicator */}
-        {selectedDate && (
-          <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1.5 sm:p-1 shadow-lg animate-bounce-in">
-            <Calendar className="h-4 w-4 sm:h-3 sm:w-3" />
+        {/* Clear button (absolute, outside main button) */}
+        {selectedDate && !disabled && (
+          <div className={`absolute ${compact ? 'right-2' : 'right-3'} top-1/2 transform -translate-y-1/2 z-10`}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleClear(e); }}
+              className={`${compact ? 'p-1 m-2' : 'p-2'}  text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200`}
+              title="Clear date"
+            >
+              <X className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
+            </button>
           </div>
         )}
       </div>
@@ -350,11 +347,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm z-[9998] animate-fade-in"
             onClick={handleBackdropClick}
           />
-          
+
           {/* Centered Calendar Overlay */}
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fade-scale-in">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-80 overflow-hidden">
@@ -368,7 +365,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                   >
                     <ChevronLeft className="h-4 w-4 text-gray-600" />
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={() => setShowYearSelector(!showYearSelector)}
@@ -378,7 +375,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                       {MONTHS[currentMonth]} {currentYear}
                     </span>
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={() => navigateMonth('next')}
@@ -392,7 +389,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                     <ChevronRight className="h-4 w-4 text-gray-600" />
                   </button>
                 </div>
-                
+
                 <button
                   type="button"
                   onClick={handleCurrentDate}
@@ -410,20 +407,20 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                     <h3 className="text-sm font-medium text-gray-700 text-center">Select Year</h3>
                     <div className="grid grid-cols-4 gap-2">
                       {(() => {
-                        const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+                        const isEndDateField = placeholder?.toLowerCase().includes('end date') ||
                                                label?.toLowerCase().includes('end date');
                         const startYear = today.getFullYear() - 20;
                         const endYear = isEndDateField ? today.getFullYear() + 10 : today.getFullYear();
                         const yearRange = endYear - startYear + 1;
-                        
+
                         return Array.from({ length: yearRange }, (_, i) => startYear + i);
                       })().map(year => {
                         const isCurrentYear = year === today.getFullYear();
                         const isSelectedYear = year === currentYear;
-                        const isEndDateField = placeholder?.toLowerCase().includes('end date') || 
+                        const isEndDateField = placeholder?.toLowerCase().includes('end date') ||
                                                label?.toLowerCase().includes('end date');
                         const isFutureYear = !isEndDateField && year > today.getFullYear();
-                        
+
                         return (
                           <button
                             key={year}
@@ -461,7 +458,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Calendar Days Grid */}
                     <div className="grid grid-cols-7 gap-1">
                       {renderCalendarDays()}
@@ -482,7 +479,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                   >
                     Cancel
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={handleSave}

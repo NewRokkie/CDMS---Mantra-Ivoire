@@ -1,140 +1,13 @@
-import React, { useState } from 'react';
-import { X, Loader, Package, User, Truck, MapPin, Calendar, CheckCircle, AlertTriangle, ChevronDown } from 'lucide-react';
-import { useLanguage } from '../../hooks/useLanguage';
+import React from 'react';
+import { X, Loader, Package, User, Truck, MapPin, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { GateInFormData } from './GateIn';
+import { GateInFormData, GateInModalProps } from './types';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TimePicker } from '../Common/TimePicker';
 import { DatePicker } from '../Common/DatePicker';
-
-// Container type options with codes
-const containerTypeOptions = [
-  { value: 'standard', label: 'Standard', code20: '22G1', code40: '42G1' },
-  { value: 'hi_cube', label: 'Hi-Cube', code20: '25G1', code40: '45G1' },
-  { value: 'hard_top', label: 'Hard Top', code20: '22H1', code40: '42H1' },
-  { value: 'ventilated', label: 'Ventilated', code20: '22V1', code40: '42V1' },
-  { value: 'reefer', label: 'Reefer', code20: '22R1', code40: '42R1' },
-  { value: 'tank', label: 'Tank', code20: '22T1', code40: '42T1' },
-  { value: 'flat_rack', label: 'Flat Rack', code20: '22P1', code40: '42P1' },
-  { value: 'open_top', label: 'Open Top', code20: '22U1', code40: '42U1' },
-];
-
-interface GateInModalProps {
-  showForm: boolean;
-  setShowForm: (show: boolean) => void;
-  formData: GateInFormData;
-  setFormData: (data: GateInFormData) => void;
-  currentStep: number;
-  setCurrentStep: (step: number) => void;
-  isProcessing: boolean;
-  autoSaving: boolean;
-  validateStep: (step: number) => boolean;
-  handleSubmit: () => void;
-  handleNextStep: () => void;
-  handlePrevStep: () => void;
-  handleInputChange: (field: keyof GateInFormData, value: any) => void;
-  handleContainerSizeChange: (size: '20ft' | '40ft') => void;
-  handleQuantityChange: (quantity: 1 | 2) => void;
-  handleStatusChange: (isFullStatus: boolean) => void;
-  handleDamageChange: (isDamaged: boolean) => void;
-  handleClientChange: (clientId: string) => void;
-  mockClients: Array<{ id: string; code: string; name: string }>;
-}
-
-// Custom Select Component
-const ContainerTypeSelect = ({ value, onChange, containerSize }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectedOption = containerTypeOptions.find(option => option.value === value);
-
-  return (
-    <div className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Container Type *
-      </label>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="form-input w-full flex items-center justify-between text-left cursor-pointer"
-      >
-        <div>
-          <span className="truncate">
-            {selectedOption ? selectedOption.label : 'Select container type'} -
-          </span>
-          {selectedOption && (
-            <span className="text-blue-600 font-medium">
-              <span></span> {containerSize === '20ft' ? selectedOption.code20 : selectedOption.code40}
-            </span>
-          )}
-        </div>
-        <ChevronDown 
-          className={`h-5 w-5 text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
-        />
-      </button>
-      
-      {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
-          <ul className="py-1">
-            {containerTypeOptions.map((option) => (
-              <li
-                key={option.value}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                className={`px-4 py-2 cursor-pointer hover:bg-blue-50 transition-colors ${
-                  value === option.value ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="block font-medium">{option.label}</span>
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    {containerSize === '20ft' ? option.code20 : option.code40}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Helper function to get container number validation status
-const getContainerValidationStatus = (containerNumber: string) => {
-  if (!containerNumber) return { isValid: false, message: '' };
-  
-  if (containerNumber.length !== 11) {
-    return { 
-      isValid: false, 
-      message: `${containerNumber.length}/11 characters` 
-    };
-  }
-  
-  const letters = containerNumber.substring(0, 4);
-  const numbers = containerNumber.substring(4, 11);
-  
-  if (!/^[A-Z]{4}$/.test(letters)) {
-    return { isValid: false, message: 'First 4 must be letters' };
-  }
-  
-  if (!/^[0-9]{7}$/.test(numbers)) {
-    return { isValid: false, message: 'Last 7 must be numbers' };
-  }
-  
-  return { isValid: true, message: 'Valid format' };
-};
-
-// Helper function to format container number for display
-const formatContainerForDisplay = (containerNumber: string): string => {
-  if (containerNumber.length === 11) {
-    const letters = containerNumber.substring(0, 4);
-    const numbers1 = containerNumber.substring(4, 10);
-    const numbers2 = containerNumber.substring(10, 11);
-    return `${letters}-${numbers1}-${numbers2}`;
-  }
-  return containerNumber;
-};
+import { ContainerTypeSelect, containerTypeOptions } from './GateInModal/ContainerTypeSelect';
+import { Switch } from './GateInModal/Switch';
+import { getContainerValidationStatus, formatContainerNumberForDisplay } from './utils';
 
 export const GateInModal: React.FC<GateInModalProps> = ({
   showForm,
@@ -157,9 +30,9 @@ export const GateInModal: React.FC<GateInModalProps> = ({
 }) => {
   const { user } = useAuth();
   const canManageTimeTracking = user?.role === 'admin' || user?.role === 'supervisor';
-  
+
   if (!showForm) return null;
-  
+
   // Get the current container type option
   const currentContainerType = containerTypeOptions.find(
     option => option.value === formData.containerType
@@ -168,7 +41,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-fade-in !mt-0">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong animate-slide-in-up max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         {/* Modal Header - Fixed */}
         <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -191,22 +64,22 @@ export const GateInModal: React.FC<GateInModalProps> = ({
               </button>
             </div>
           </div>
-          
+
           {/* Progress Bar */}
           <div className="mt-3 sm:mt-4">
             <div className="relative">
               <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
-              <div 
-                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300" 
+              <div
+                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300"
                 style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
               ></div>
-              
+
               <div className="flex justify-between relative z-20">
                 {[1, 2].map((step) => (
                   <div key={step} className="flex flex-col items-center">
                     <div className={`w-8 h-8 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
-                      step <= currentStep 
-                        ? 'bg-blue-600 text-white border border-blue-600' 
+                      step <= currentStep
+                        ? 'bg-blue-600 text-white border border-blue-600'
                         : 'bg-white text-gray-500 border border-gray-300'
                     }`}>
                       {step}
@@ -236,19 +109,26 @@ export const GateInModal: React.FC<GateInModalProps> = ({
 
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
-          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
-            
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (currentStep < 2) {
+              handleNextStep();
+            } else {
+              handleSubmit();
+            }
+          }} className="space-y-6">
+
             {/* Step 1: Container Information */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Container Details */}
                 <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
                   <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                     <Package className="h-5 w-5 mr-2" />
                     Container Information
                   </h4>
-                  
+
                   <div className="space-y-6">
                     {/* Container Size and Quantity */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -258,7 +138,14 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         </label>
                         <Switch
                           checked={formData.containerSize === '40ft'}
-                          onChange={(is40ft) => handleContainerSizeChange(is40ft ? '40ft' : '20ft')}
+                          onChange={(is40ft) => {
+                            const newSize = is40ft ? '40ft' : '20ft';
+                            handleContainerSizeChange(newSize);
+                            // Reset quantity to 1 if switching to 40ft and current quantity is 2
+                            if (newSize === '40ft' && formData.containerQuantity === 2) {
+                              handleQuantityChange(1);
+                            }
+                          }}
                           label=""
                           leftLabel="20ft"
                           rightLabel="40ft"
@@ -268,11 +155,11 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <div>
                         <ContainerTypeSelect
                           value={formData.containerType}
-                          onChange={(value) => handleInputChange('containerType', value)}
+                          onChange={(value: string) => handleInputChange('containerType', value)}
                           containerSize={formData.containerSize}
                         />
                       </div>
-                    
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Quantity *
@@ -305,7 +192,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           rightLabel="FULL"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Damage Status
@@ -384,8 +271,8 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                                 <AlertTriangle className="h-5 w-5 text-red-500" />
                               )}
                               <span className={`hidden sm:inline text-xs font-medium ${
-                                getContainerValidationStatus(formData.containerNumber).isValid 
-                                  ? 'text-green-600' 
+                                getContainerValidationStatus(formData.containerNumber).isValid
+                                  ? 'text-green-600'
                                   : 'text-red-600'
                               }`}>
                                 {getContainerValidationStatus(formData.containerNumber).message}
@@ -395,7 +282,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          Format: 4 letters + 7 numbers (e.g., ONEU1234567) • Display: {formData.containerNumber ? formatContainerForDisplay(formData.containerNumber) : 'ONEU-123456-7'}
+                          Format: 4 letters + 7 numbers (e.g., ONEU1234567) • Display: {formData.containerNumber ? formatContainerNumberForDisplay(formData.containerNumber) : 'ONEU-123456-7'}
                         </p>
                       </div>
 
@@ -431,8 +318,8 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                                   <AlertTriangle className="h-5 w-5 text-red-500" />
                                 )}
                                 <span className={`hidden sm:inline text-xs font-medium ${
-                                  getContainerValidationStatus(formData.secondContainerNumber).isValid 
-                                    ? 'text-green-600' 
+                                  getContainerValidationStatus(formData.secondContainerNumber).isValid
+                                    ? 'text-green-600'
                                     : 'text-red-600'
                                 }`}>
                                   {getContainerValidationStatus(formData.secondContainerNumber).message}
@@ -442,7 +329,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                           </div>
                           </div>
                           <p className="text-xs text-gray-500 mt-2">
-                            Format: 4 letters + 7 numbers (e.g., ONEU1234568) • Display: {formData.secondContainerNumber ? formatContainerForDisplay(formData.secondContainerNumber) : 'ONEU-123456-8'}
+                            Format: 4 letters + 7 numbers (e.g., ONEU1234568) • Display: {formData.secondContainerNumber ? formatContainerNumberForDisplay(formData.secondContainerNumber) : 'ONEU-123456-8'}
                           </p>
                         </div>
                       )}
@@ -466,14 +353,14 @@ export const GateInModal: React.FC<GateInModalProps> = ({
             {/* Step 2: Transport Details & Summary */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Transport Information */}
                 <div className="bg-green-50 rounded-xl p-6 border border-green-200">
                   <h4 className="font-semibold text-green-900 mb-4 flex items-center">
                     <Truck className="h-5 w-5 mr-2" />
                     Transport Information
                   </h4>
-                  
+
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       <div>
@@ -533,7 +420,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         <p className="text-sm text-orange-700">Manual time tracking (Admin only) - Defaults to current system time</p>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-orange-800 mb-2">
@@ -585,11 +472,11 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                       <span className="text-gray-600">Type:</span>
                       <div className="font-medium">
                         {formData.containerType.charAt(0).toUpperCase() + formData.containerType.slice(1).replace('_', ' ')}
-                        {formData.containerType && (
+                        {formData.containerType && currentContainerType && (
                           <span className="text-blue-600 ml-1">
-                            ({formData.containerSize === '20ft' 
-                              ? containerTypeOptions.find(opt => opt.value === formData.containerType)?.code20
-                              : containerTypeOptions.find(opt => opt.value === formData.containerType)?.code40})
+                            ({formData.containerSize === '20ft'
+                              ? currentContainerType.code20
+                              : currentContainerType.code40})
                           </span>
                         )}
                       </div>
@@ -668,58 +555,57 @@ export const GateInModal: React.FC<GateInModalProps> = ({
         </div>
 
         {/* Modal Footer - Fixed */}
-        <div className="px-4 sm:px-8 py-4 sm:py-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              {currentStep > 1 && (
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  className="btn-secondary px-4 py-3 sm:px-6 sm:py-2"
-                >
-                  <span className="sm:hidden">Prev</span>
-                  <span className="hidden sm:inline">Previous</span>
-                </button>
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-2 sm:space-x-3">
+        <div className="px-4 sm:px-8 py-3 sm:py-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: Previous Button */}
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
+              >
+                <span className="sm:hidden">← Prev</span>
+                <span className="hidden sm:inline">Previous</span>
+              </button>
+            )}
+
+            {/* Right: Cancel + Next/Submit */}
+            <div className="flex items-center gap-2 ml-auto">
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="btn-secondary px-4 py-3 sm:px-6 sm:py-2"
+                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
               >
-                Cancel
+                <span className="sm:hidden">✕</span>
+                <span className="hidden sm:inline">Cancel</span>
               </button>
-              
+
               {currentStep < 2 ? (
                 <button
                   type="button"
                   onClick={handleNextStep}
                   disabled={!validateStep(currentStep)}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-4 py-3 sm:px-6 sm:py-2"
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 sm:px-6 sm:py-2 text-sm flex items-center gap-1.5"
                 >
-                  <span className="sm:hidden">Next</span>
+                  <span className="sm:hidden">Next →</span>
                   <span className="hidden sm:inline">Next Step</span>
                 </button>
               ) : (
                 <button
                   type="submit"
-                  onClick={() => handleSubmit()}
                   disabled={isProcessing || !validateStep(currentStep)}
-                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 px-4 py-3 sm:px-6 sm:py-2"
+                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
                 >
                   {isProcessing ? (
                     <>
                       <Loader className="h-4 w-4 animate-spin" />
-                      <span className="hidden sm:inline">Processing...</span>
-                      <span className="sm:hidden">...</span>
+                      <span>...</span>
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="hidden sm:inline">Submit Operation</span>
+                      <CheckCircle className="h-4 w-4 sm:h-4 sm:w-4" />
                       <span className="sm:hidden">Submit</span>
+                      <span className="hidden sm:inline">Submit Operation</span>
                     </>
                   )}
                 </button>
@@ -727,46 +613,6 @@ export const GateInModal: React.FC<GateInModalProps> = ({
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
-
-// Switch component for toggle controls
-interface SwitchProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-  leftLabel: string;
-  rightLabel: string;
-  disabled?: boolean;
-}
-
-const Switch: React.FC<SwitchProps> = ({ checked, onChange, label, leftLabel, rightLabel, disabled = false }) => {
-  return (
-    <div className="space-y-4">
-      {label && <label className="block text-sm font-medium text-gray-700">{label}</label>}
-      <div className="flex items-center justify-center space-x-4 py-2">
-        <span className={`text-base font-medium ${!checked ? 'text-blue-600' : 'text-gray-500'}`}>
-          {leftLabel}
-        </span>
-        <button
-          type="button"
-          onClick={() => !disabled && onChange(!checked)}
-          disabled={disabled}
-          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            checked ? 'bg-blue-600' : 'bg-gray-200'
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
-          <span
-            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-lg ${
-              checked ? 'translate-x-7' : 'translate-x-1'
-            }`}
-          />
-        </button>
-        <span className={`text-base font-medium ${checked ? 'text-blue-600' : 'text-gray-500'}`}>
-          {rightLabel}
-        </span>
       </div>
     </div>
   );

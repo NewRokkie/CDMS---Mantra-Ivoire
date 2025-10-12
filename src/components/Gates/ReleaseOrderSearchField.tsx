@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, Check, FileText, X, Calendar, Package, User, AlertTriangle, Filter } from 'lucide-react';
-import { ReleaseOrder } from '../../types';
+import { BookingReference } from '../../types';
 
 interface ReleaseOrderSearchFieldProps {
-  bookings: ReleaseOrder[];
+  bookings: BookingReference[];
   selectedOrderId: string;
   onOrderSelect: (orderId: string) => void;
   placeholder?: string;
@@ -34,13 +34,13 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
   // Filter and validate release orders
   const getValidReleaseOrders = () => {
     return bookings.filter(order => {
-      // Show bookings that are validated or in_process (ready for gate out)
-      const isValidStatus = order.status === 'validated' || order.status === 'in_process';
+      // Show bookings that are pending or in_process (ready for gate out)
+      const isValidStatus = order.status === 'pending' || order.status === 'in_process';
       // Check if booking has remaining containers to process
       const hasValidContainers = order.totalContainers > 0;
       // Apply type filter
       const matchesType = typeFilter === 'all' || order.bookingType === typeFilter;
-      
+
       return isValidStatus && hasValidContainers && matchesType;
     });
   };
@@ -59,6 +59,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        // Always clear search term when closing dropdown
         setSearchTerm('');
         setHighlightedIndex(-1);
         setIsFocused(false);
@@ -83,13 +84,13 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightedIndex(prev => 
+        setHighlightedIndex(prev =>
           prev < filteredOrders.length - 1 ? prev + 1 : 0
         );
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setHighlightedIndex(prev => 
+        setHighlightedIndex(prev =>
           prev > 0 ? prev - 1 : filteredOrders.length - 1
         );
         break;
@@ -97,6 +98,9 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
         e.preventDefault();
         if (highlightedIndex >= 0 && filteredOrders[highlightedIndex]) {
           handleOrderSelect(filteredOrders[highlightedIndex]);
+        } else if (filteredOrders.length > 0) {
+          // If no explicit highlighting, select the first item
+          handleOrderSelect(filteredOrders[0]);
         }
         break;
       case 'Escape':
@@ -109,7 +113,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     }
   };
 
-  const handleOrderSelect = (order: ReleaseOrder) => {
+  const handleOrderSelect = (order: BookingReference ) => {
     onOrderSelect(order.id);
     setIsOpen(false);
     setSearchTerm('');
@@ -121,7 +125,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     const value = e.target.value;
     setSearchTerm(value);
     setHighlightedIndex(-1);
-    
+
     if (!isOpen && value) {
       setIsOpen(true);
     }
@@ -136,6 +140,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     setTimeout(() => {
       if (!dropdownRef.current?.contains(document.activeElement)) {
         setIsFocused(false);
+        setIsOpen(false);
       }
     }, 150);
   };
@@ -149,22 +154,24 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     inputRef.current?.focus();
   };
 
-  const displayValue = selectedOrder 
+  const displayValue = selectedOrder
     ? `${selectedOrder.bookingNumber || selectedOrder.id} - ${selectedOrder.clientName}`
     : searchTerm;
 
-  const getStatusColor = (status: ReleaseOrder['status']) => {
+  const getStatusColor = (status: BookingReference['status']) => {
     switch (status) {
-      case 'validated': return 'bg-green-100 text-green-800';
+      case 'in_process': return 'bg-blue-100 text-blue-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -181,15 +188,15 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
         {/* Input Field */}
         <div className={`
           relative flex items-center bg-white border-2 rounded-xl transition-all duration-300
-          ${isFocused || isOpen 
-            ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10' 
-            : selectedOrder 
-            ? 'border-green-400 shadow-md shadow-green-400/10' 
+          ${isFocused || isOpen
+            ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
+            : selectedOrder
+            ? 'border-green-400 shadow-md shadow-green-400/10'
             : 'border-gray-200 hover:border-gray-300 shadow-sm'
           }
           ${disabled ? 'bg-gray-50 border-gray-200 cursor-not-allowed' : 'hover:shadow-md'}
         `}>
-          
+
           {/* Search Icon */}
           <div className={`
             absolute left-4 transition-all duration-300 z-10
@@ -235,7 +242,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
 
             {/* Dropdown Arrow */}
             <div className={`
-              transition-all duration-300 
+              transition-all duration-300
               ${isFocused || isOpen ? 'text-blue-500 rotate-180' : 'text-gray-400'}
               ${disabled ? 'text-gray-300' : ''}
             `}>
@@ -294,7 +301,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
                 <span className="text-xs text-yellow-800">
-                  Only showing validated/in-process bookings ready for gate out
+                  Only showing pending/in-process bookings ready for gate out
                 </span>
               </div>
             </div>
@@ -319,8 +326,8 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
               {/* Release Orders List */}
               <div className="max-h-64 overflow-y-auto scrollbar-thin">
                 {filteredOrders.map((order, index) => {
-                  const processedContainers = order.totalContainers - (order.remainingContainers || order.totalContainers);
-                  
+                  const processedContainers = order.totalContainers - (order.remainingContainers ?? 0);
+
                   return (
                     <button
                       key={order.id}
@@ -328,10 +335,10 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                       onClick={() => handleOrderSelect(order)}
                       className={`
                         w-full text-left p-4 transition-all duration-200 group border-l-4
-                        ${index === highlightedIndex 
-                          ? 'bg-blue-50 border-blue-500' 
-                          : selectedOrderId === order.id 
-                          ? 'bg-green-50 border-green-500' 
+                        ${index === highlightedIndex
+                          ? 'bg-blue-50 border-blue-500'
+                          : selectedOrderId === order.id
+                          ? 'bg-green-50 border-green-500'
                           : 'hover:bg-gray-50 border-transparent hover:border-gray-200'
                         }
                       `}
@@ -342,19 +349,19 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                           <div className="flex items-center space-x-2 mb-2">
                             <FileText className={`
                               h-4 w-4 transition-colors duration-200
-                              ${index === highlightedIndex 
-                                ? 'text-blue-600' 
-                                : selectedOrderId === order.id 
-                                ? 'text-green-600' 
+                              ${index === highlightedIndex
+                                ? 'text-blue-600'
+                                : selectedOrderId === order.id
+                                ? 'text-green-600'
                                 : 'text-gray-500 group-hover:text-gray-700'
                               }
                             `} />
                             <span className={`
                               font-bold text-sm transition-colors duration-200
-                              ${index === highlightedIndex 
-                                ? 'text-blue-900' 
-                                : selectedOrderId === order.id 
-                                ? 'text-green-900' 
+                              ${index === highlightedIndex
+                                ? 'text-blue-900'
+                                : selectedOrderId === order.id
+                                ? 'text-green-900'
                                 : 'text-gray-900'
                               }
                             `}>
@@ -396,24 +403,18 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-3 w-3" />
                               <span>Created {formatDate(order.createdAt)}</span>
-                              {order.estimatedReleaseDate && (
-                                <span className="text-blue-600">
-                                  • Est. {formatDate(order.estimatedReleaseDate)}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center space-x-1">
                               <Package className="h-3 w-3" />
                               <span className="font-medium text-gray-700">
-                                Progress: {processedContainers}/{order.totalContainers} 
+                                Progress: {processedContainers}/{order.totalContainers}
                                 ({Math.round((processedContainers / order.totalContainers) * 100)}%)
                               </span>
                             </div>
-                            {order.remainingContainers !== undefined && (
-                              <div className="flex items-center space-x-1">
-                                <span className="text-orange-600 font-medium">
-                                <span className="text-gray-600 truncate">{order.notes}</span>
-                                </span>
+                            {order.notes && (
+                              <div className="text-xs text-gray-600 truncate mt-1">
+                                <span className="font-medium">Notes: </span>
+                                {order.notes}
                               </div>
                             )}
                           </div>
@@ -443,9 +444,9 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                 {searchTerm ? 'No matching bookings' : 'No bookings available'}
               </h3>
               <p className="text-xs text-gray-500">
-                {searchTerm 
+                {searchTerm
                   ? `No results for "${searchTerm}". Try a different search term.`
-                  : 'No validated/in-process bookings are ready for gate out.'
+                  : 'No pending/in-process bookings are ready for gate out.'
                 }
               </p>
             </div>

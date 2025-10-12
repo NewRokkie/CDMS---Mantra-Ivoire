@@ -8,6 +8,7 @@ interface PendingOperation {
   containerNumber: string;
   secondContainerNumber?: string;
   containerSize: string;
+  containerQuantity: number;
   containerType?: string;
   clientCode: string;
   clientName: string;
@@ -26,7 +27,6 @@ interface PendingOperationsViewProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onBack: () => void;
-  onOperationClick: (operation: PendingOperation) => void;
   onComplete: (operation: PendingOperation, locationData: any) => void;
   isProcessing: boolean;
   mockLocations: any;
@@ -37,12 +37,10 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   searchTerm,
   onSearchChange,
   onBack,
-  onOperationClick,
   onComplete,
   isProcessing,
   mockLocations
 }) => {
-  const [typeFilter, setTypeFilter] = useState<'all'>('all');
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
 
@@ -51,8 +49,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                          operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all';
-    return matchesSearch && matchesType;
+    return matchesSearch;
   });
 
   const handleOperationClick = (operation: PendingOperation) => {
@@ -74,7 +71,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
 
     const config = statusConfig[status as keyof typeof statusConfig];
     const Icon = config.icon;
-    
+
     return (
       <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${config.color}`}>
         <Icon className="h-3 w-3 mr-1" />
@@ -84,8 +81,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -161,24 +158,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                {['all'].map(type => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setTypeFilter(type as any)}
-                    className={`px-3 py-2 text-xs font-medium rounded-md transition-colors ${
-                      typeFilter === type
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {type === 'all' ? 'All Types' : type}
-                  </button>
-                ))}
-              </div>
+
+            <div className="flex items-center justify-end">
               <span className="text-sm text-gray-500">
                 {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
               </span>
@@ -198,13 +179,10 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
-                    <Package className="h-5 w-5 text-blue-600" />
+                    <Truck className="h-5 w-5 text-blue-600" />
                     <span className="font-bold text-gray-900 text-lg">
-                      {operation.containerNumber}
+                      {operation.truckNumber} • {operation.driverName}
                     </span>
-                    {operation.secondContainerNumber && (
-                      <span className="text-sm text-gray-500">+1</span>
-                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(operation.operationStatus)}
@@ -243,14 +221,16 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Transport Info */}
+                {/* Container Info */}
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-green-100 rounded-lg">
-                    <Truck className="h-4 w-4 text-green-600" />
+                    <Package className="h-4 w-4 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">{operation.driverName}</div>
-                    <div className="text-sm text-gray-500">{operation.truckNumber} • {operation.transportCompany}</div>
+                    <div className="font-medium text-gray-900">{operation.containerNumber}</div>
+                    {operation.secondContainerNumber && (
+                      <div className="font-medium text-gray-900">{operation.secondContainerNumber}</div>
+                    )}
                   </div>
                 </div>
 
@@ -287,7 +267,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
               <p className="text-gray-600 text-sm px-4">
-                {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been created yet."}
               </p>
             </div>
           )}
@@ -306,13 +286,16 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Truck Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Container
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Transport
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -327,6 +310,12 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   <tr key={operation.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(operation.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -346,17 +335,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                       <div className="text-sm text-gray-500">{operation.clientCode}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operation.driverName}</div>
-                      <div className="text-sm text-gray-500">{operation.truckNumber}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(operation.operationStatus)}
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {operation.status}
-                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -373,13 +353,13 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               </tbody>
             </table>
           </div>
-          
+
           {filteredOperations.length === 0 && (
             <div className="text-center py-12">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
               <p className="text-gray-600">
-                {searchTerm || typeFilter !== 'all' ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
+                {searchTerm ? "Try adjusting your search criteria." : "No gate in operations have been created yet."}
               </p>
             </div>
           )}

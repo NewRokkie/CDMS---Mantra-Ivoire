@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -13,12 +13,12 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-import { 
-  Clock, 
-  Truck, 
-  Package, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Clock,
+  Truck,
+  Package,
+  AlertTriangle,
+  CheckCircle,
   TrendingUp,
   Activity,
   Timer,
@@ -117,7 +117,7 @@ const generateOperationsData = (): OperationsData => {
     const isBusinessHour = hour >= 6 && hour <= 18;
     const baseActivity = isBusinessHour ? 15 : 3;
     const variance = Math.floor(Math.random() * 10);
-    
+
     return {
       hour: `${hour.toString().padStart(2, '0')}:00`,
       gateIn: baseActivity + variance,
@@ -175,7 +175,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
       // Return data for specific depot
       const depot = availableYards.find(d => d.id === selectedDepot);
       if (!depot) return operationsData;
-      
+
       // Generate depot-specific operations data
       return {
         ...operationsData,
@@ -185,6 +185,11 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
     }
 
     // Return combined operations data for all depots
+    if (availableYards.length === 0) {
+      // If no yards are available, return base data without scaling
+      return operationsData;
+    }
+
     const combinedData = {
       ...operationsData,
       // Scale data by number of depots for global view
@@ -220,9 +225,9 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -245,15 +250,19 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
     const totalOperations = displayData.dailyOperations.reduce(
       (sum, day) => sum + day.gateInOperations + day.gateOutOperations, 0
     );
-    const avgProcessingTime = displayData.dailyOperations.reduce(
-      (sum, day) => sum + day.avgProcessingTime, 0
-    ) / displayData.dailyOperations.length;
-    const avgEfficiency = displayData.dailyOperations.reduce(
-      (sum, day) => sum + day.efficiency, 0
-    ) / displayData.dailyOperations.length;
-    const peakHour = displayData.hourlyDistribution.reduce(
-      (max, hour) => hour.total > max.total ? hour : max
-    );
+
+    // Prevent division by zero
+    const dailyOperationsCount = displayData.dailyOperations.length;
+    const avgProcessingTime = dailyOperationsCount > 0
+      ? displayData.dailyOperations.reduce((sum, day) => sum + day.avgProcessingTime, 0) / dailyOperationsCount
+      : 0;
+    const avgEfficiency = dailyOperationsCount > 0
+      ? displayData.dailyOperations.reduce((sum, day) => sum + day.efficiency, 0) / dailyOperationsCount
+      : 0;
+
+    const peakHour = displayData.hourlyDistribution.length > 0
+      ? displayData.hourlyDistribution.reduce((max, hour) => hour.total > max.total ? hour : max)
+      : { hour: '00:00', total: 0 };
 
     return {
       totalOperations,
@@ -268,6 +277,21 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Client Notice for Limited Data Access */}
+      {showClientNotice && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <div>
+              <h3 className="font-medium text-yellow-900">Limited Data Access</h3>
+              <p className="text-sm text-yellow-700">
+                You are viewing operations data for <strong>{user?.company}</strong> only.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Depot Context Header for Global View */}
       {viewMode === 'global' && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -277,13 +301,13 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
             </div>
             <div>
               <h3 className="font-medium text-orange-900">
-                {selectedDepot 
+                {selectedDepot
                   ? `${availableYards.find(d => d.id === selectedDepot)?.name} Operations`
                   : 'Global Operations Dashboard'
                 }
               </h3>
               <p className="text-sm text-orange-700">
-                {selectedDepot 
+                {selectedDepot
                   ? 'Individual depot operational metrics and efficiency'
                   : `Combined operations data across ${availableYards.length} depots`
                 }
@@ -380,11 +404,11 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
                 onChange={(date) => setDateRange(prev => ({ ...prev, end: date }))}
                 placeholder="End date"
                 className="w-40"
-                minDate={dateRange.start}
+                minDate={dateRange.start || undefined}
               />
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <div className="flex bg-gray-100 rounded-lg p-1">
               {[
@@ -419,7 +443,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
 
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         {/* Daily Operations Performance */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -429,19 +453,19 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
             </div>
             <BarChart3 className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={displayData.dailyOperations.slice(-14)}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 tickFormatter={formatDate}
                 stroke="#64748b"
                 fontSize={12}
               />
               <YAxis yAxisId="left" stroke="#64748b" fontSize={12} />
               <YAxis yAxisId="right" orientation="right" stroke="#64748b" fontSize={12} />
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name) => {
                   if (name === 'efficiency') return [`${value}%`, 'Efficiency'];
                   return [value, name === 'gateInOperations' ? 'Gate In' : 'Gate Out'];
@@ -470,19 +494,19 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
             </div>
             <Timer className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={displayData.processingTimes} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis type="number" stroke="#64748b" fontSize={12} />
-              <YAxis 
-                type="category" 
-                dataKey="operation" 
-                stroke="#64748b" 
+              <YAxis
+                type="category"
+                dataKey="operation"
+                stroke="#64748b"
                 fontSize={11}
                 width={120}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name) => [
                   name === 'avgTime' ? `${value} min (Actual)` : `${value} min (Target)`,
                   name === 'avgTime' ? 'Actual Time' : 'Target Time'
@@ -509,7 +533,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
             </div>
             <Clock className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={displayData.hourlyDistribution}>
               <defs>
@@ -521,7 +545,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="hour" stroke="#64748b" fontSize={12} />
               <YAxis stroke="#64748b" fontSize={12} />
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name) => [value, name === 'total' ? 'Total Operations' : name]}
                 labelFormatter={(label) => `Time: ${label}`}
                 contentStyle={{
@@ -531,13 +555,13 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
               />
-              <Area 
-                type="monotone" 
-                dataKey="total" 
-                stroke="#8b5cf6" 
+              <Area
+                type="monotone"
+                dataKey="total"
+                stroke="#8b5cf6"
                 strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#operationsGradient)" 
+                fillOpacity={1}
+                fill="url(#operationsGradient)"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -552,12 +576,12 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
             </div>
             <Target className="h-5 w-5 text-gray-400" />
           </div>
-          
+
           <div className="space-y-4">
             {displayData.qualityMetrics.map((metric, index) => {
               const isOnTarget = metric.current >= metric.target;
               const isErrorMetric = metric.metric.toLowerCase().includes('error') || metric.metric.toLowerCase().includes('rework');
-              
+
               return (
                 <div key={metric.metric} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
@@ -569,7 +593,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
                   </div>
                   <div className="text-right">
                     <div className={`text-lg font-bold ${
-                      isErrorMetric 
+                      isErrorMetric
                         ? (metric.current <= metric.target ? 'text-green-600' : 'text-red-600')
                         : (isOnTarget ? 'text-green-600' : 'text-red-600')
                     }`}>
@@ -688,7 +712,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
           </div>
           <Truck className="h-5 w-5 text-gray-400" />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayData.equipmentUtilization.map((equipment, index) => (
             <div key={equipment.equipment} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
@@ -703,7 +727,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
                   {equipment.utilizationRate}% utilized
                 </span>
               </div>
-              
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Efficiency:</span>
@@ -714,7 +738,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
                   <span className="font-medium">{equipment.maintenanceHours}h</span>
                 </div>
               </div>
-              
+
               <div className="mt-3">
                 <div className="flex justify-between text-xs text-gray-600 mb-1">
                   <span>Utilization Rate</span>

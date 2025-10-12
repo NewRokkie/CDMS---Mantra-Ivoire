@@ -29,7 +29,7 @@ const translations = {
     'nav.userManagement': 'User Management',
     'nav.moduleAccess': 'Module Access',
     'nav.logout': 'Sign Out',
-    
+
     // Dashboard
     'dashboard.title': 'Container Depot Management',
     'dashboard.welcome': 'Welcome back',
@@ -47,7 +47,7 @@ const translations = {
     'dashboard.multiDepot.current': 'Current Depot',
     'dashboard.multiDepot.allDepots': 'All Depots',
     'dashboard.clientNotice': 'You are viewing data for your company only',
-    
+
     // Containers
     'containers.title': 'Container Management',
     'containers.gate_in': 'Gate In',
@@ -73,7 +73,7 @@ const translations = {
     'containers.damage.none': 'No damage reports recorded',
     'containers.damage.add': 'Add Damage Report',
     'containers.damage.describe': 'Describe damage...',
-    
+
     // Gate Operations
     'gate.in.title': 'Gate In Management',
     'gate.in.new': 'New Gate In',
@@ -103,7 +103,7 @@ const translations = {
     'gate.in.validation.required': 'This field is required',
     'gate.in.validation.containerFormat': 'Invalid container number format',
     'gate.in.validation.validFormat': 'Valid format',
-    
+
     'gate.out.title': 'Gate Out Management',
     'gate.out.new': 'New Gate Out',
     'gate.out.pending': 'Pending Operations',
@@ -122,7 +122,7 @@ const translations = {
     'gate.out.completion.containers': 'Container Numbers',
     'gate.out.completion.confirm': 'Confirm Container Number',
     'gate.out.completion.gateOutTime': 'Gate Out Date & Time',
-    
+
     // Release Orders
     'releases.title': 'Release Orders',
     'releases.booking.title': 'Booking Management',
@@ -147,11 +147,10 @@ const translations = {
     'releases.form.threshold': 'Maximum Quantity Threshold',
     'releases.form.containers20': '20" Containers',
     'releases.form.containers40': '40" Containers',
-    'releases.form.estimatedDate': 'Estimated Release Date',
     'releases.form.notes': 'Notes',
     'releases.breakdown.required': 'Detailed breakdown required',
     'releases.breakdown.summary': 'Container Summary',
-    
+
     // Yard Management
     'yard.title': 'Yard Management',
     'yard.search': 'Container Search',
@@ -164,7 +163,7 @@ const translations = {
     'yard.sections': 'Sections',
     'yard.stacks': 'Total Stacks',
     'yard.stackCapacity': 'Total Stack Capacity',
-    
+
     // Depot Management
     'depot.title': 'Depot Management',
     'depot.create': 'Create Depot',
@@ -197,7 +196,7 @@ const translations = {
     'depot.form.status': 'Status',
     'depot.layout.standard': 'Standard Grid',
     'depot.layout.tantarelli': 'Tantarelli Layout',
-    
+
     // Stack Management
     'stack.title': 'Stack Management',
     'stack.configuration': 'Stack Configuration',
@@ -218,7 +217,7 @@ const translations = {
     'stack.rules.regular': 'Regular Stacks: Can be set to either 20feet or 40feet containers.',
     'stack.rules.pairing': '40feet Assignment: Only available for regular stacks that have an adjacent regular stack to form valid pairs.',
     'stack.rules.updates': 'Paired Updates: When changing a regular stack to 40feet, its adjacent pair will automatically be updated to match.',
-    
+
     // Client Pools
     'clientPools.title': 'Client Pool Management',
     'clientPools.create': 'Create Client Pool',
@@ -241,7 +240,7 @@ const translations = {
     'clientPools.priority.high': 'High',
     'clientPools.priority.medium': 'Medium',
     'clientPools.priority.low': 'Low',
-    
+
     // Client Master Data
     'clients.title': 'Client Master Data',
     'clients.add': 'Add Client',
@@ -273,7 +272,7 @@ const translations = {
     'clients.form.sameAddress': 'Same address as company',
     'clients.form.notes': 'Notes and Special Instructions',
     'clients.form.active': 'Active Client',
-    
+
     // User Management
     'users.title': 'User Management',
     'users.add': 'Add User',
@@ -303,7 +302,7 @@ const translations = {
     'users.role.supervisorDesc': 'Operations oversight and management',
     'users.role.operatorDesc': 'Daily operations and container handling',
     'users.role.clientDesc': 'View containers and create release orders',
-    
+
     // Module Access
     'moduleAccess.title': 'Module Access Management',
     'moduleAccess.bulkActions': 'Bulk Actions',
@@ -323,7 +322,7 @@ const translations = {
     'moduleAccess.roleRestricted': 'Role Restricted',
     'moduleAccess.protected': 'Protected',
     'moduleAccess.system': 'System',
-    
+
     // Reports & Analytics
     'reports.title': 'Reports & Analytics',
     'reports.billing': 'Billing & Free Days',
@@ -352,7 +351,7 @@ const translations = {
     'reports.operations.hourly': 'Hourly Operations Distribution',
     'reports.operations.quality': 'Quality Metrics',
     'reports.operations.equipment': 'Equipment Utilization',
-    
+
     // EDI Management
     'edi.title': 'EDI Management',
     'edi.configuration': 'Configuration',
@@ -373,7 +372,7 @@ const translations = {
     'edi.status.acknowledged': 'Acknowledged',
     'edi.retry': 'Retry',
     'edi.view': 'View',
-    
+
     // Common
     'common.status': 'Status',
     'common.actions': 'Actions',
@@ -480,7 +479,7 @@ const translations = {
     'nav.userManagement': 'Gestion des Utilisateurs',
     'nav.moduleAccess': 'Accès aux Modules',
     'nav.logout': 'Se déconnecter',
-    
+
     // Dashboard
     'dashboard.title': 'Gestion de Dépôt de Conteneurs',
     'dashboard.welcome': 'Bon retour',
@@ -498,7 +497,7 @@ const translations = {
     'dashboard.multiDepot.current': 'Dépôt Actuel',
     'dashboard.multiDepot.allDepots': 'Tous les Dépôts',
     'dashboard.clientNotice': 'Vous consultez les données de votre entreprise uniquement',
-    
+
     // Containers
     'containers.title': 'Gestion des Conteneurs',
     'containers.gate_in': 'Entrée',
@@ -524,7 +523,7 @@ const translations = {
     'containers.damage.none': 'Aucun rapport de dommage enregistré',
     'containers.damage.add': 'Ajouter Rapport de Dommage',
     'containers.damage.describe': 'Décrire les dommages...',
-    
+
     // Gate Operations
     'gate.in.title': 'Gestion des Entrées',
     'gate.in.new': 'Nouvelle Entrée',
@@ -554,7 +553,7 @@ const translations = {
     'gate.in.validation.required': 'Ce champ est obligatoire',
     'gate.in.validation.containerFormat': 'Format de numéro de conteneur invalide',
     'gate.in.validation.validFormat': 'Format valide',
-    
+
     'gate.out.title': 'Gestion des Sorties',
     'gate.out.new': 'Nouvelle Sortie',
     'gate.out.pending': 'Opérations en Attente',
@@ -573,7 +572,7 @@ const translations = {
     'gate.out.completion.containers': 'Numéros de Conteneurs',
     'gate.out.completion.confirm': 'Confirmer le Numéro de Conteneur',
     'gate.out.completion.gateOutTime': 'Date et Heure de Sortie',
-    
+
     // Release Orders
     'releases.title': 'Ordres de Sortie',
     'releases.booking.title': 'Gestion des Réservations',
@@ -598,11 +597,10 @@ const translations = {
     'releases.form.threshold': 'Seuil de Quantité Maximum',
     'releases.form.containers20': 'Conteneurs 20"',
     'releases.form.containers40': 'Conteneurs 40"',
-    'releases.form.estimatedDate': 'Date de Libération Estimée',
     'releases.form.notes': 'Notes',
     'releases.breakdown.required': 'Répartition détaillée requise',
     'releases.breakdown.summary': 'Résumé des Conteneurs',
-    
+
     // Yard Management
     'yard.title': 'Gestion de Cour',
     'yard.search': 'Recherche de Conteneurs',
@@ -615,7 +613,7 @@ const translations = {
     'yard.sections': 'Sections',
     'yard.stacks': 'Total des Piles',
     'yard.stackCapacity': 'Capacité Totale des Piles',
-    
+
     // Depot Management
     'depot.title': 'Gestion des Dépôts',
     'depot.create': 'Créer un Dépôt',
@@ -648,7 +646,7 @@ const translations = {
     'depot.form.status': 'Statut',
     'depot.layout.standard': 'Grille Standard',
     'depot.layout.tantarelli': 'Disposition Tantarelli',
-    
+
     // Stack Management
     'stack.title': 'Gestion des Piles',
     'stack.configuration': 'Configuration des Piles',
@@ -669,7 +667,7 @@ const translations = {
     'stack.rules.regular': 'Piles Régulières : Peuvent être configurées pour des conteneurs de 20 ou 40 pieds.',
     'stack.rules.pairing': 'Attribution 40 pieds : Disponible uniquement pour les piles régulières qui ont une pile régulière adjacente pour former des paires valides.',
     'stack.rules.updates': 'Mises à jour Appariées : Lors du changement d\'une pile régulière vers 40 pieds, sa paire adjacente sera automatiquement mise à jour pour correspondre.',
-    
+
     // Client Pools
     'clientPools.title': 'Gestion des Pools Clients',
     'clientPools.create': 'Créer un Pool Client',
@@ -692,7 +690,7 @@ const translations = {
     'clientPools.priority.high': 'Élevée',
     'clientPools.priority.medium': 'Moyenne',
     'clientPools.priority.low': 'Faible',
-    
+
     // Client Master Data
     'clients.title': 'Données Maîtres Clients',
     'clients.add': 'Ajouter un Client',
@@ -724,7 +722,7 @@ const translations = {
     'clients.form.sameAddress': 'Même adresse que l\'entreprise',
     'clients.form.notes': 'Notes et Instructions Spéciales',
     'clients.form.active': 'Client Actif',
-    
+
     // User Management
     'users.title': 'Gestion des Utilisateurs',
     'users.add': 'Ajouter un Utilisateur',
@@ -754,7 +752,7 @@ const translations = {
     'users.role.supervisorDesc': 'Supervision des opérations et gestion',
     'users.role.operatorDesc': 'Opérations quotidiennes et manipulation des conteneurs',
     'users.role.clientDesc': 'Voir les conteneurs et créer des ordres de libération',
-    
+
     // Module Access
     'moduleAccess.title': 'Gestion des Accès aux Modules',
     'moduleAccess.bulkActions': 'Actions en Lot',
@@ -774,7 +772,7 @@ const translations = {
     'moduleAccess.roleRestricted': 'Restreint par Rôle',
     'moduleAccess.protected': 'Protégé',
     'moduleAccess.system': 'Système',
-    
+
     // Reports & Analytics
     'reports.title': 'Rapports et Analyses',
     'reports.billing': 'Facturation et Jours Gratuits',
@@ -803,7 +801,7 @@ const translations = {
     'reports.operations.hourly': 'Distribution des Opérations par Heure',
     'reports.operations.quality': 'Métriques de Qualité',
     'reports.operations.equipment': 'Utilisation de l\'Équipement',
-    
+
     // EDI Management
     'edi.title': 'Gestion EDI',
     'edi.configuration': 'Configuration',
@@ -824,7 +822,7 @@ const translations = {
     'edi.status.acknowledged': 'Accusé de Réception',
     'edi.retry': 'Réessayer',
     'edi.view': 'Voir',
-    
+
     // Common
     'common.status': 'Statut',
     'common.actions': 'Actions',

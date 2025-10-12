@@ -97,7 +97,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
 
   const handleComplete = () => {
     setError('');
-    
+
     if (!selectedLocation) {
       setError('Please select a location for the container.');
       return;
@@ -117,7 +117,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-slide-in-up mx-2 sm:mx-0">
-        
+
         {/* Modal Header */}
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -144,7 +144,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="space-y-6">
-            
+
             {/* Operation Summary */}
             <div className="bg-blue-50 rounded-xl p-4 sm:p-6 border border-blue-200">
               <div className="flex items-center space-x-3 mb-4">
@@ -153,7 +153,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                 </div>
                 <h4 className="text-base sm:text-lg font-semibold text-blue-900">Operation Details</h4>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="space-y-1">
                   <span className="text-xs sm:text-sm text-blue-700 font-medium">Container:</span>
@@ -221,7 +221,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                     {operation.isDamaged ? 'Auto-Assigned to Damage Stack' : 'Stack Selection'}
                   </h4>
                   <p className="text-xs sm:text-sm text-green-700">
-                    {operation.isDamaged 
+                    {operation.isDamaged
                       ? 'Container automatically assigned for inspection'
                       : 'Choose the best available stack location'
                     }
@@ -269,14 +269,14 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                         <div className="text-xs text-gray-500">Available</div>
                       </div>
                     </div>
-                    
+
                     {selectedLocation === location.id && (
                       <div className="mt-2 flex items-center text-green-600">
                         <CheckCircle className="h-4 w-4 mr-1" />
                         <span className="text-xs sm:text-sm font-medium">Selected</span>
                       </div>
                     )}
-                    
+
                     {operation.isDamaged && location.id === 'DMG-VIRTUAL' && (
                       <div className="mt-2 text-xs sm:text-sm text-red-600 font-medium">
                         Auto-assigned for damaged container inspection
@@ -307,7 +307,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                     <p className="text-sm text-orange-700">Optional: Record truck departure time (Admin only) - Defaults to current system time</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-orange-800 mb-2">
@@ -376,38 +376,38 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
         </div>
 
         {/* Modal Footer */}
-        <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="text-xs sm:text-sm text-gray-600">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs sm:text-sm text-gray-600 hidden sm:block">
               {isFormValid ? (
-                <span className="text-green-600 font-medium">✓ Ready to complete operation</span>
+                <span className="text-green-600 font-medium">✓ Ready</span>
               ) : (
-                <span>Please select a location to proceed</span>
+                <span>Select location</span>
               )}
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 ml-auto">
               <button
                 onClick={onClose}
-                className="btn-secondary px-4 py-3 sm:px-6 sm:py-2"
+                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
               >
-                Cancel
+                <span className="sm:hidden">✕</span>
+                <span className="hidden sm:inline">Cancel</span>
               </button>
               <button
                 onClick={handleComplete}
                 disabled={isProcessing || !isFormValid}
-                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 px-4 py-3 sm:px-6 sm:py-2"
+                className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
               >
                 {isProcessing ? (
                   <>
                     <Loader className="h-4 w-4 animate-spin" />
-                    <span className="hidden sm:inline">Processing...</span>
-                    <span className="sm:hidden">...</span>
+                    <span>...</span>
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    <span className="hidden sm:inline">Complete Operation</span>
                     <span className="sm:hidden">Complete</span>
+                    <span className="hidden sm:inline">Complete Operation</span>
                   </>
                 )}
               </button>

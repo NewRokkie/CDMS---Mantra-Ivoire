@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, X, FileText, Package, User, Truck, Calendar, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
-import { PendingGateOut } from './types';
-import { getStatusBadge, formatContainerForDisplay } from './utils';
+import { PendingGateOut } from '../types';
+import { getStatusBadgeConfig, formatContainerNumberForDisplay } from '../utils';
 import { GateOutCompletionModal } from './GateOutCompletionModal';
 
 interface PendingOperationsViewProps {
@@ -26,10 +26,11 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
 
   const filteredOperations = operations.filter(operation => {
-    const matchesSearch = (operation.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-                         (operation.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-                         (operation.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-                         (operation.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+    const searchTermLower = searchTerm.toLowerCase();
+    const matchesSearch = (operation.bookingNumber?.toLowerCase().includes(searchTermLower) || false) ||
+                         (operation.driverName?.toLowerCase().includes(searchTermLower) || false) ||
+                         (operation.vehicleNumber?.toLowerCase().includes(searchTermLower) || false) ||
+                         (operation.clientName?.toLowerCase().includes(searchTermLower) || false);
     const matchesType = typeFilter === 'all' || operation.bookingType === typeFilter;
     return matchesSearch && matchesType;
   });
@@ -47,9 +48,16 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
     setSelectedOperation(null);
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return '-';
+
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) return 'Invalid Date';
+
+    return dateObj.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -118,7 +126,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
             {['all', 'IMPORT', 'EXPORT'].map((filter) => (
               <button
                 key={filter}
-                onClick={() => setTypeFilter(filter as any)}
+                onClick={() => setTypeFilter(filter as 'all' | 'IMPORT' | 'EXPORT')}
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   typeFilter === filter
                     ? 'bg-blue-600 text-white shadow-lg'
@@ -152,14 +160,14 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                 </button>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <div className="flex bg-gray-100 rounded-lg p-1">
                 {['all', 'IMPORT', 'EXPORT'].map(type => (
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setTypeFilter(type as any)}
+                    onClick={() => setTypeFilter(type as 'all' | 'IMPORT' | 'EXPORT')}
                     className={`px-3 py-2 text-xs font-medium rounded-md transition-colors ${
                       typeFilter === type
                         ? 'bg-white text-gray-900 shadow-sm'
@@ -183,6 +191,14 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
             <div
               key={operation.id}
               onClick={() => handleOperationClick(operation)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleOperationClick(operation);
+                }
+              }}
               className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer"
             >
               {/* Card Header */}
@@ -202,7 +218,9 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
-                    {getStatusBadge(operation.status)}
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeConfig(operation.status).color}`}>
+                      {getStatusBadgeConfig(operation.status).label}
+                    </span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -270,11 +288,6 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                       {formatDate(operation.date)}
                     </span>
                   </div>
-                  {operation.estimatedReleaseDate && (
-                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                      Est: {operation.estimatedReleaseDate.toLocaleDateString()}
-                    </div>
-                  )}
                 </div>
 
                 {/* Notes */}
@@ -346,6 +359,14 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     key={operation.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => handleOperationClick(operation)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleOperationClick(operation);
+                      }
+                    }}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {operation.date?.toLocaleDateString() || '-'}
@@ -406,7 +427,9 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(operation.status)}
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeConfig(operation.status).color}`}>
+                        {getStatusBadgeConfig(operation.status).label}
+                      </span>
                     </td>
                   </tr>
                 ))}

@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Containers Export - 2025-10-08</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  body{font-family:Inter, ui-sans-serif, system-ui; padding:20px; color:#111827}
+  .card{display:inline-block;padding:12px;border-radius:8px;background:#f8fafc;border:1px solid #e6edf3;margin-right:10px}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th,td{padding:8px;border:1px solid #e5e7eb;text-align:left}
+  th{background:#f3f4f6;position:sticky;top:0}
+  input.filter{width:100%;box-sizing:border-box;padding:6px;border:1px solid #d1d5db;border-radius:4px}
+  .stats{margin-bottom:12px}
+</style>
+</head>
+<body>
+  <h1>Containers Export</h1>
+  <div class="stats">
+    <div class="card"><strong>Total</strong><div>5</div></div>
+    <div class="card"><strong>In Depot</strong><div>2</div></div>
+  </div>
+
+  <table id="exportTable">
+    <thead>
+      <tr>
+        <th>Container Number<br/><input class="filter" oninput="filterTable()" placeholder="Filter number" data-col="0" /></th>
+        <th>Size<br/><input class="filter" oninput="filterTable()" placeholder="Filter size" data-col="1" /></th>
+        <th>Type<br/><input class="filter" oninput="filterTable()" placeholder="Filter type" data-col="2" /></th>
+        <th>Full/Empty<br/><input class="filter" oninput="filterTable()" placeholder="Filter" data-col="3" /></th>
+        <th>In/Out<br/><input class="filter" oninput="filterTable()" placeholder="Filter" data-col="4" /></th>
+        <th>Gate In<br/><input class="filter" oninput="filterTable()" placeholder="Filter" data-col="5" /></th>
+        <th>Gate Out<br/><input class="filter" oninput="filterTable()" placeholder="Filter" data-col="6" /></th>
+        <th>Client<br/><input class="filter" oninput="filterTable()" placeholder="Filter" data-col="7" /></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>MSKU1234567</td>
+        <td>40ft</td>
+        <td>standard</td>
+        <td>FULL</td>
+        <td>In Depot</td>
+        <td>2025-01-10 08:30:00</td>
+        <td></td>
+        <td>Maersk Line (MAEU)</td>
+      </tr>
+      <tr>
+        <td>TCLU9876543</td>
+        <td>20ft</td>
+        <td>reefer</td>
+        <td>EMPTY</td>
+        <td>Out Depot</td>
+        <td>2025-01-09 14:15:00</td>
+        <td>2025-01-11 10:00:00</td>
+        <td>MSC (MSCU)</td>
+      </tr>
+      <tr>
+        <td>GESU4567891</td>
+        <td>40ft</td>
+        <td>standard</td>
+        <td>UNKNOWN</td>
+        <td>in service</td>
+        <td>2025-01-08 16:45:00</td>
+        <td></td>
+        <td>CMA CGM (CMDU)</td>
+      </tr>
+      <tr>
+        <td>SHIP1112228</td>
+        <td>20ft</td>
+        <td>standard</td>
+        <td>FULL</td>
+        <td>In Depot</td>
+        <td>2025-01-11 09:15:00</td>
+        <td></td>
+        <td>Shipping Solutions Inc (SHIP001)</td>
+      </tr>
+      <tr>
+        <td>SHIP3334449</td>
+        <td>40ft</td>
+        <td>reefer</td>
+        <td>UNKNOWN</td>
+        <td>maintenance</td>
+        <td>2025-01-07 13:20:00</td>
+        <td></td>
+        <td>Shipping Solutions Inc (SHIP001)</td>
+      </tr>
+    </tbody>
+  </table>
+
+<script>
+function filterTable(){
+  const inputs = Array.from(document.querySelectorAll('input.filter'));
+  const table = document.getElementById('exportTable');
+  const trs = Array.from(table.tBodies[0].rows);
+  trs.forEach(tr => {
+    let show = true;
+    inputs.forEach(inp => {
+      const col = parseInt(inp.getAttribute('data-col'));
+      if (inp.value.trim() !== '') {
+        const cell = tr.cells[col];
+        if(!cell || cell.innerText.toLowerCase().indexOf(inp.value.toLowerCase()) === -1) show = false;
+      }
+    });
+    tr.style.display = show ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

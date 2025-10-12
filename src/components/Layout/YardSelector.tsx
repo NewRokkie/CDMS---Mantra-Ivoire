@@ -7,7 +7,7 @@ export const YardSelector: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   const { currentYard, availableYards, setCurrentYard, error } = useYard();
   const { user } = useAuth();
 
@@ -87,7 +87,6 @@ export const YardSelector: React.FC = () => {
             {currentYard ? (
               <>
                 <div className="font-semibold text-gray-900 text-xs lg:text-sm truncate">{currentYard.name}</div>
-                <div className="text-[10px] lg:text-xs text-gray-500 truncate hidden lg:block">{currentYard.code}</div>
               </>
             ) : (
               <div className="text-gray-500 text-xs lg:text-sm truncate">Select...</div>
@@ -128,7 +127,7 @@ export const YardSelector: React.FC = () => {
             {availableYards.map((yard) => {
               const isSelected = currentYard?.id === yard.id;
               const occupancyRate = (yard.currentOccupancy / yard.totalCapacity) * 100;
-              
+
               return (
                 <button
                   key={yard.id}
@@ -136,8 +135,8 @@ export const YardSelector: React.FC = () => {
                   disabled={isChanging}
                   className={`
                     w-full text-left p-3 lg:p-4 transition-all duration-200 group
-                    ${isSelected 
-                      ? 'bg-green-50 border-l-4 border-green-500' 
+                    ${isSelected
+                      ? 'bg-green-50 border-l-4 border-green-500'
                       : 'hover:bg-gray-50 border-l-4 border-transparent'
                     }
                     ${isChanging ? 'opacity-50 cursor-not-allowed' : ''}
@@ -147,8 +146,8 @@ export const YardSelector: React.FC = () => {
                     <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
                       <div className={`
                         p-1.5 lg:p-2 rounded-lg transition-all duration-200 flex-shrink-0
-                        ${isSelected 
-                          ? 'bg-green-100 text-green-600' 
+                        ${isSelected
+                          ? 'bg-green-100 text-green-600'
                           : 'bg-gray-100 text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600'
                         }
                       `}>

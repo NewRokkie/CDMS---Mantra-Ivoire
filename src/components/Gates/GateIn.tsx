@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, CreditCard as Edit, ArrowLeft, X, Menu, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, ArrowLeft, X, Menu, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -8,209 +8,22 @@ import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
 import { MobileGateInStats } from './GateIn/MobileGateInStats';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
-import { GateInFormData } from './GateIn/types';
-
-// Mock client data with code - name format
-const mockClients = [
-  { id: '1', code: '1088663', name: 'MAERSK LINE' },
-  { id: '2', code: '2045789', name: 'MSC MEDITERRANEAN SHIPPING' },
-  { id: '3', code: '3067234', name: 'CMA CGM' },
-  { id: '4', code: '4012567', name: 'SHIPPING SOLUTIONS INC' },
-  { id: '5', code: '5098432', name: 'HAPAG-LLOYD' }
-];
-
-// Mock location data
-const mockLocations = {
-  '20ft': [
-    { id: 'S1', name: 'Stack S1', capacity: 20, available: 15, section: 'Top Section' },
-    { id: 'S31', name: 'Stack S31', capacity: 35, available: 28, section: 'Top Section' },
-    { id: 'S101', name: 'Stack S101', capacity: 5, available: 3, section: 'Bottom Section' },
-    { id: 'S103', name: 'Stack S103', capacity: 10, available: 7, section: 'Bottom Section' }
-  ],
-  '40ft': [
-    { id: 'S3-S5', name: 'Stack S3+S5', capacity: 25, available: 20, section: 'Top Section' },
-    { id: 'S7-S9', name: 'Stack S7+S9', capacity: 25, available: 22, section: 'Top Section' },
-    { id: 'S61-S63', name: 'Stack S61+S63', capacity: 30, available: 25, section: 'Bottom Section' },
-    { id: 'S65-S67', name: 'Stack S65+S67', capacity: 30, available: 28, section: 'Bottom Section' }
-  ],
-  damage: [
-    { id: 'DMG-VIRTUAL', name: 'Damage Stack (Virtual)', capacity: 999, available: 999, section: 'Virtual' }
-  ]
-};
-
-// Mock pending operations
-const mockPendingOperations = [
-  {
-    id: 'PO-001',
-    date: new Date('2025-01-11T14:30:00'),
-    containerNumber: 'MSKU-123456-7',
-    secondContainerNumber: '',
-    containerSize: '40ft',
-    containerType: 'standard',
-    containerQuantity: 1,
-    status: 'FULL',
-    isDamaged: false,
-    bookingReference: 'BK-MAE-2025-001',
-    bookingType: 'EXPORT' as const,
-    clientCode: '1088663',
-    clientName: 'MAERSK LINE',
-    truckNumber: 'ABC-123',
-    driverName: 'John Smith',
-    transportCompany: 'Swift Transport',
-    operationStatus: 'pending' as const,
-    assignedLocation: '',
-    truckArrivalDate: '',
-    truckArrivalTime: '',
-    truckDepartureDate: '',
-    truckDepartureTime: ''
-  },
-  {
-    id: 'PO-002',
-    date: new Date('2025-01-11T15:45:00'),
-    containerNumber: 'TCLU-987654-3',
-    secondContainerNumber: 'TCLU-987654-4',
-    containerSize: '20ft',
-    containerType: 'reefer',
-    containerQuantity: 2,
-    status: 'EMPTY',
-    isDamaged: true,
-    bookingReference: '',
-    clientCode: '2045789',
-    clientName: 'MSC MEDITERRANEAN SHIPPING',
-    truckNumber: 'XYZ-456',
-    driverName: 'Maria Garcia',
-    transportCompany: 'Express Logistics',
-    operationStatus: 'pending' as const,
-    assignedLocation: '',
-    truckArrivalDate: '',
-    truckArrivalTime: '',
-    truckDepartureDate: '',
-    truckDepartureTime: ''
-  },
-  {
-    id: 'PO-003',
-    date: new Date('2025-01-11T16:20:00'),
-    containerNumber: 'GESU-456789-1',
-    secondContainerNumber: '',
-    containerSize: '40ft',
-    containerType: 'standard',
-    containerQuantity: 1,
-    status: 'FULL',
-    isDamaged: false,
-    bookingReference: 'BK-CMA-2025-003',
-    clientCode: '3067234',
-    clientName: 'CMA CGM',
-    truckNumber: 'DEF-789',
-    driverName: 'Robert Chen',
-    transportCompany: 'Ocean Transport',
-    operationStatus: 'pending' as const,
-    assignedLocation: '',
-    truckArrivalDate: '',
-    truckArrivalTime: '',
-    truckDepartureDate: '',
-    truckDepartureTime: ''
-  }
-];
-
-// Mock completed operations
-const mockCompletedOperations = [
-  {
-    id: 'CO-001',
-    date: new Date('2025-01-11T13:15:00'),
-    containerNumber: 'SHIP-111222-8',
-    secondContainerNumber: '',
-    containerSize: '20ft',
-    containerType: 'standard',
-    containerQuantity: 1,
-    status: 'FULL',
-    isDamaged: false,
-    bookingReference: 'BK-SHIP-2025-001',
-    clientCode: '4012567',
-    clientName: 'SHIPPING SOLUTIONS INC',
-    truckNumber: 'GHI-012',
-    driverName: 'Lisa Green',
-    transportCompany: 'Local Transport',
-    operationStatus: 'completed' as const,
-    assignedLocation: 'S01-R1-H1',
-    truckArrivalDate: '2025-01-11',
-    truckArrivalTime: '13:15',
-    truckDepartureDate: '2025-01-11',
-    truckDepartureTime: '13:45',
-    completedAt: new Date('2025-01-11T13:45:00')
-  },
-  {
-    id: 'CO-002',
-    date: new Date('2025-01-11T12:30:00'),
-    containerNumber: 'MAEU-777888-9',
-    secondContainerNumber: 'MAEU-777889-0',
-    containerSize: '20ft',
-    containerType: 'standard',
-    containerQuantity: 2,
-    status: 'EMPTY',
-    isDamaged: false,
-    bookingReference: '',
-    clientCode: '1088663',
-    clientName: 'MAERSK LINE',
-    truckNumber: 'JKL-345',
-    driverName: 'Tom Wilson',
-    transportCompany: 'Global Logistics',
-    operationStatus: 'completed' as const,
-    assignedLocation: 'S31-R1-H1',
-    truckArrivalDate: '2025-01-11',
-    truckArrivalTime: '12:30',
-    truckDepartureDate: '2025-01-11',
-    truckDepartureTime: '13:00',
-    completedAt: new Date('2025-01-11T13:00:00')
-  }
-];
-
-// Helper function to format container number for display (adds hyphens)
-const formatContainerNumberForDisplay = (containerNumber: string): string => {
-  if (containerNumber.length === 11) {
-    const letters = containerNumber.substring(0, 4);
-    const numbers1 = containerNumber.substring(4, 10);
-    const numbers2 = containerNumber.substring(10, 11);
-    return `${letters}-${numbers1}-${numbers2}`;
-  }
-  return containerNumber;
-};
-
-// Helper function to validate container number format
-const validateContainerNumber = (containerNumber: string): { isValid: boolean; message?: string } => {
-  if (!containerNumber) {
-    return { isValid: false, message: 'Container number is required' };
-  }
-  
-  if (containerNumber.length !== 11) {
-    return { isValid: false, message: 'Container number must be exactly 11 characters' };
-  }
-  
-  const letters = containerNumber.substring(0, 4);
-  const numbers = containerNumber.substring(4, 11);
-  
-  if (!/^[A-Z]{4}$/.test(letters)) {
-    return { isValid: false, message: 'First 4 characters must be letters (A-Z)' };
-  }
-  
-  if (!/^[0-9]{7}$/.test(numbers)) {
-    return { isValid: false, message: 'Last 7 characters must be numbers (0-9)' };
-  }
-  
-  return { isValid: true };
-};
+import { GateInFormData, GateInOperation } from './types';
+import { validateContainerNumber, formatContainerNumberForDisplay, validateGateInStep, getStatusBadgeConfig } from './utils';
+import { mockClients, mockLocations, mockPendingGateInOperations, mockCompletedGateInOperations } from './constants';
 
 export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'overview' | 'pending' | 'location'>('overview');
   const [showForm, setShowForm] = useState(false);
-  const [selectedOperation, setSelectedOperation] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
-  const [pendingOperations, setPendingOperations] = useState(mockPendingOperations);
-  const [completedOperations, setCompletedOperations] = useState(mockCompletedOperations);
+  const [pendingOperations, setPendingOperations] = useState<GateInOperation[]>(mockPendingGateInOperations);
+  const [completedOperations, setCompletedOperations] = useState<GateInOperation[]>(mockCompletedGateInOperations);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState<GateInFormData>({
     containerSize: '20ft',
@@ -243,6 +56,15 @@ export const GateIn: React.FC = () => {
 
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Combine all operations for unified display
   const allOperations = [...pendingOperations, ...completedOperations].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -253,40 +75,36 @@ export const GateIn: React.FC = () => {
     if (field === 'containerNumber' || field === 'secondContainerNumber') {
       // Remove any non-alphanumeric characters and convert to uppercase
       const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
-      
+
       // Limit to 11 characters maximum
       if (cleanValue.length <= 11) {
-        const letters = cleanValue.substring(0, 4);
-        const numbers = cleanValue.substring(4, 11);
-        
-        // Only allow letters in first 4 positions
-        const validLetters = letters.replace(/[^A-Z]/g, '');
-        // Only allow numbers in positions 5-11
-        const validNumbers = numbers.replace(/[^0-9]/g, '');
-        
-        const validValue = validLetters + validNumbers;
-        
         setFormData(prev => ({
           ...prev,
-          [field]: validValue
+          [field]: cleanValue
         }));
-        
-        // Trigger auto-save
+
+        // Trigger auto-save with cleanup
         setAutoSaving(true);
-        setTimeout(() => setAutoSaving(false), 1000);
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+        }
+        autoSaveTimeoutRef.current = setTimeout(() => setAutoSaving(false), 1000);
         return;
       }
       return; // Don't allow more than 11 characters
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
 
-    // Trigger auto-save
+    // Trigger auto-save with cleanup
     setAutoSaving(true);
-    setTimeout(() => setAutoSaving(false), 1000);
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    autoSaveTimeoutRef.current = setTimeout(() => setAutoSaving(false), 1000);
   };
 
   const handleContainerSizeChange = (size: '20ft' | '40ft') => {
@@ -319,7 +137,7 @@ export const GateIn: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       isDamaged,
-      assignedLocation: isDamaged ? 'DMG-VIRTUAL' : ''
+      assignedLocation: isDamaged ? 'DMG-VIRTUAL' : prev.assignedLocation && prev.assignedLocation !== 'DMG-VIRTUAL' ? prev.assignedLocation : ''
     }));
   };
 
@@ -341,7 +159,7 @@ export const GateIn: React.FC = () => {
         const hasContainerNumber = formData.containerNumber.trim() !== '';
         const isValidFirstContainer = hasContainerNumber && validateContainerNumber(formData.containerNumber).isValid;
         const hasSecondContainer = formData.containerQuantity === 1 || formData.secondContainerNumber.trim() !== '';
-        const isValidSecondContainer = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumber).isValid;
+        const isValidSecondContainer = formData.containerQuantity === 1 || (formData.secondContainerNumber ? validateContainerNumber(formData.secondContainerNumber).isValid : true);
         const hasClient = formData.clientId !== '';
         const hasBookingRef = formData.status === 'EMPTY' || formData.bookingReference.trim() !== '';
         return isValidFirstContainer && hasSecondContainer && isValidSecondContainer && hasClient && hasBookingRef;
@@ -376,7 +194,7 @@ export const GateIn: React.FC = () => {
     try {
       // Use client pool service to find optimal stack assignment
       const { clientPoolService } = await import('../../services/clientPoolService');
-      
+
       // Create container assignment request
       const assignmentRequest = {
         containerId: `temp-${Date.now()}`,
@@ -425,7 +243,7 @@ export const GateIn: React.FC = () => {
 
       // Add to pending operations
       setPendingOperations(prev => [newOperation, ...prev]);
-      
+
       // Update client pool occupancy if stack was assigned
       if (optimalStack && !formData.isDamaged) {
         try {
@@ -475,9 +293,6 @@ export const GateIn: React.FC = () => {
     }
   };
 
-  const handlePendingOperationClick = (operation: any) => {
-    setSelectedOperation(operation);
-  };
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
     setIsProcessing(true);
@@ -500,7 +315,6 @@ export const GateIn: React.FC = () => {
 
       alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
       setActiveView('overview');
-      setSelectedOperation(null);
     } catch (error) {
       alert(`Error completing operation: ${error}`);
     } finally {
@@ -508,27 +322,22 @@ export const GateIn: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-      completed: { color: 'bg-green-100 text-green-800', label: 'Completed' }
-    };
+  // Import centralized getStatusBadgeConfig function
 
-    const config = statusConfig[status as keyof typeof statusConfig];
-    return (
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
+  const filteredOperations = allOperations.filter(op => {
+    const matchesSearch = !searchTerm ||
+      op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const filteredOperations = allOperations.filter(op =>
-    op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+    const matchesFilter = selectedFilter === 'all' ||
+                         op.operationStatus === selectedFilter ||
+                         (selectedFilter === 'damaged' && op.isDamaged);
+
+    return matchesSearch && matchesFilter;
+  });
 
   if (!canPerformGateIn) {
     return (
@@ -544,16 +353,10 @@ export const GateIn: React.FC = () => {
   if (activeView === 'pending') {
     return (
       <PendingOperationsView
-        operations={pendingOperations.filter(op =>
-          op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          op.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-        )}
+        operations={pendingOperations}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onBack={() => setActiveView('overview')}
-        onOperationClick={() => {}} // Not used anymore, handled internally
         onComplete={handleLocationValidation}
         isProcessing={isProcessing}
         mockLocations={mockLocations}
@@ -718,7 +521,6 @@ export const GateIn: React.FC = () => {
           operations={filteredOperations}
           searchTerm={searchTerm}
           selectedFilter={selectedFilter}
-          onOperationClick={handlePendingOperationClick}
         />
       </div>
 
@@ -728,7 +530,6 @@ export const GateIn: React.FC = () => {
           showForm={showForm}
           setShowForm={setShowForm}
           formData={formData}
-          setFormData={setFormData}
           currentStep={currentStep}
           setCurrentStep={setCurrentStep}
           isProcessing={isProcessing}
