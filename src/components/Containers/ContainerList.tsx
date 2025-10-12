@@ -4,6 +4,7 @@ import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { useGlobalStore } from '../../store/useGlobalStore';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ContainerViewModal } from './ContainerViewModal';
 import { ContainerEditModal } from './ContainerEditModal';
