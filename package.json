@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-three/drei": "^9.92.0",
     "@react-three/fiber": "^8.15.0",
+    "@supabase/supabase-js": "^2.75.0",
     "date-fns": "^3.6.0",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.344.0",
