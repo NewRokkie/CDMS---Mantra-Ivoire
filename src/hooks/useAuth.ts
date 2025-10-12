@@ -33,25 +33,31 @@ export const useAuthProvider = () => {
 
   // Load user profile from database
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
+    console.log('📋 [LOAD_PROFILE] Loading profile for:', authUser.email, 'auth_uid:', authUser.id);
     try {
-      // Get user from our users table
+      // Get user from our users table using auth_user_id (not email)
+      // This is critical for RLS to work correctly
+      console.log('📋 [LOAD_PROFILE] Querying users table by auth_user_id...');
       const { data: users, error } = await supabase
         .from('users')
         .select('*')
-        .eq('email', authUser.email)
+        .eq('auth_user_id', authUser.id)
         .maybeSingle();
 
+      console.log('📋 [LOAD_PROFILE] Query result - data:', users, 'error:', error);
+
       if (error) {
-        console.error('Error loading user profile:', error);
+        console.error('📋 [LOAD_PROFILE] Error loading user profile:', error);
         return null;
       }
 
       if (!users) {
-        console.warn('User not found in database:', authUser.email);
+        console.warn('📋 [LOAD_PROFILE] User not found in database for auth_user_id:', authUser.id);
         return null;
       }
 
       // Map database user to app user
+      console.log('📋 [LOAD_PROFILE] Mapping user data to AppUser...');
       const appUser: AppUser = {
         id: users.id,
         name: users.name,
@@ -90,6 +96,7 @@ export const useAuthProvider = () => {
         }
       };
 
+      console.log('📋 [LOAD_PROFILE] ✅ Profile mapped successfully:', appUser.email);
       return appUser;
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
