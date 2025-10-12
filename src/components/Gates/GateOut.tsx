@@ -3,6 +3,7 @@ import { AlertTriangle, Menu, X, Clock, Plus, Truck, Package, Search, Filter, Ch
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { useGlobalStore } from '../../store/useGlobalStore';
 import { GateOutModal } from './GateOutModal';
 import { MobileGateOutOperationsTable } from './GateOut/MobileGateOutOperationsTable';
 import { PendingOperationsView } from './GateOut/PendingOperationsView';
@@ -34,6 +35,11 @@ export const GateOut: React.FC = () => {
   const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const releaseOrders = useGlobalStore(state => state.releaseOrders);
+  const containers = useGlobalStore(state => state.containers);
+  const processGateOut = useGlobalStore(state => state.processGateOut);
+  const getReleaseOrdersByStatus = useGlobalStore(state => state.getReleaseOrdersByStatus);
+
   const [pendingOperations, setPendingOperations] = useState<PendingGateOut[]>(mockPendingGateOutOperations);
   const [completedOperations, setCompletedOperations] = useState<PendingGateOut[]>(mockCompletedGateOutOperations);
   const [error, setError] = useState<string>('');

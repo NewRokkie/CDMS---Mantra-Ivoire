@@ -3,6 +3,7 @@ import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Contain
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
+import { useGlobalStore } from '../../store/useGlobalStore';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
@@ -19,6 +20,11 @@ export const GateIn: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
+  const clients = useGlobalStore(state => state.clients);
+  const processGateIn = useGlobalStore(state => state.processGateIn);
+  const gateInOperations = useGlobalStore(state => state.gateInOperations);
+  const containers = useGlobalStore(state => state.containers);
+
   const [pendingOperations, setPendingOperations] = useState<GateInOperation[]>(mockPendingGateInOperations);
   const [completedOperations, setCompletedOperations] = useState<GateInOperation[]>(mockCompletedGateInOperations);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -142,7 +148,7 @@ export const GateIn: React.FC = () => {
   };
 
   const handleClientChange = (clientId: string) => {
-    const selectedClient = mockClients.find(c => c.id === clientId);
+    const selectedClient = clients.find(c => c.id === clientId) || mockClients.find(c => c.id === clientId);
     if (selectedClient) {
       setFormData(prev => ({
         ...prev,
@@ -241,7 +247,31 @@ export const GateIn: React.FC = () => {
         truckDepartureTime: ''
       };
 
-      // Add to pending operations
+      // Process Gate In through global store
+      const result = processGateIn({
+        containerNumber: formData.containerNumber,
+        clientCode: formData.clientCode,
+        containerType: formData.containerType,
+        containerSize: formData.containerSize,
+        transportCompany: formData.transportCompany,
+        driverName: formData.driverName,
+        vehicleNumber: formData.truckNumber,
+        location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
+        weight: undefined,
+        operatorId: user?.id || 'unknown',
+        operatorName: user?.name || 'Unknown Operator',
+        yardId: currentYard?.id || 'unknown',
+        damageReported: formData.isDamaged,
+        damageDescription: formData.isDamaged ? 'Container flagged as damaged during gate in' : undefined
+      });
+
+      if (!result.success) {
+        alert(result.error || 'Failed to process gate in');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Add to pending operations (for UI tracking)
       setPendingOperations(prev => [newOperation, ...prev]);
 
       // Update client pool occupancy if stack was assigned
