@@ -29,8 +29,11 @@ import { YardManagement } from './components/Yard/YardManagement';
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoading, isAuthenticated, user } = useAuth(); // Changed from useAuthProvider()
 
+  console.log('🛡️ [PROTECTED] isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user?.email);
+
   // Show loading spinner while checking authentication
   if (isLoading) {
+    console.log('🛡️ [PROTECTED] Showing loading spinner');
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -43,9 +46,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   // Redirect to login if not authenticated
   if (!isAuthenticated || !user) {
+    console.log('🛡️ [PROTECTED] Not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
+  console.log('🛡️ [PROTECTED] ✅ Authenticated, rendering children');
   return <>{children}</>;
 };
 

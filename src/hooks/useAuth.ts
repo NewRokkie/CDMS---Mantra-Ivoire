@@ -102,21 +102,23 @@ export const useAuthProvider = () => {
     let mounted = true;
 
     const checkSession = async () => {
+      console.log('🔐 [SESSION] Checking session on mount...');
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('Session error:', error);
+          console.error('🔐 [SESSION] Session error:', error);
           setUser(null);
           setIsAuthenticated(false);
           return;
         }
 
         if (session?.user && mounted) {
-          console.log('Session found for:', session.user.email);
+          console.log('🔐 [SESSION] Session found for:', session.user.email);
           const profile = await loadUserProfile(session.user);
 
           if (profile && mounted) {
+            console.log('🔐 [SESSION] Profile loaded, setting user state');
             setUser(profile);
             setIsAuthenticated(true);
 
@@ -124,24 +126,25 @@ export const useAuthProvider = () => {
             userService.update(profile.id, {
               last_login: new Date().toISOString()
             }).catch(err => {
-              console.warn('Could not update last login:', err);
+              console.warn('🔐 [SESSION] Could not update last login:', err);
             });
           } else {
-            console.warn('Could not load user profile');
+            console.warn('🔐 [SESSION] Could not load user profile');
             setUser(null);
             setIsAuthenticated(false);
           }
         } else {
-          console.log('No active session');
+          console.log('🔐 [SESSION] No active session');
           setUser(null);
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Error checking session:', error);
+        console.error('🔐 [SESSION] Error checking session:', error);
         setUser(null);
         setIsAuthenticated(false);
       } finally {
         if (mounted) {
+          console.log('🔐 [SESSION] Setting isLoading to false');
           setIsLoading(false);
         }
       }
@@ -180,60 +183,69 @@ export const useAuthProvider = () => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('Login attempt for:', email);
+    console.log('🔑 [LOGIN] Starting login attempt for:', email);
 
     try {
+      console.log('🔑 [LOGIN] Setting isLoading to true');
       setIsLoading(true);
 
       // Sign in with Supabase Auth
+      console.log('🔑 [LOGIN] Calling Supabase signInWithPassword...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
-        console.error('Supabase auth error:', error);
+        console.error('🔑 [LOGIN] Supabase auth error:', error);
         throw new Error(error.message || 'Invalid credentials');
       }
 
       if (!data.user) {
+        console.error('🔑 [LOGIN] No user returned from authentication');
         throw new Error('No user returned from authentication');
       }
 
-      console.log('Authentication successful for:', data.user.email);
+      console.log('🔑 [LOGIN] Authentication successful for:', data.user.email);
 
       // Load user profile
+      console.log('🔑 [LOGIN] Loading user profile...');
       const profile = await loadUserProfile(data.user);
+      console.log('🔑 [LOGIN] Profile loaded:', profile);
 
       if (!profile) {
-        // Sign out if profile not found
+        console.error('🔑 [LOGIN] Profile not found, signing out');
         await supabase.auth.signOut();
         throw new Error('User profile not found. Please contact administrator.');
       }
 
       // Check if user is active
       if (!profile.isActive) {
+        console.error('🔑 [LOGIN] User account is inactive');
         await supabase.auth.signOut();
         throw new Error('Your account has been deactivated. Please contact administrator.');
       }
 
+      console.log('🔑 [LOGIN] Setting user state...');
       setUser(profile);
       setIsAuthenticated(true);
 
       // Update last login (non-blocking)
+      console.log('🔑 [LOGIN] Updating last login timestamp...');
       userService.update(profile.id, {
         last_login: new Date().toISOString()
       }).catch(err => {
-        console.warn('Could not update last login:', err);
+        console.warn('🔑 [LOGIN] Could not update last login:', err);
       });
 
-      console.log('User state updated, authentication complete');
+      console.log('🔑 [LOGIN] ✅ Login complete! Setting isLoading to false');
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('🔑 [LOGIN] ❌ Login error:', error);
       setUser(null);
       setIsAuthenticated(false);
       throw error;
     } finally {
+      console.log('🔑 [LOGIN] Finally block - setting isLoading to false');
       setIsLoading(false);
     }
   };
