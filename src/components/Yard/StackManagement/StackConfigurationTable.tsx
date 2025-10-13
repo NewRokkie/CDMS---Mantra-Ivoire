@@ -11,7 +11,7 @@ interface StackConfigurationTableProps {
 }
 
 export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = ({
-  stacks,
+  stacks = [],
   onEditStack,
   onDeleteStack,
   onContainerSizeChange
@@ -23,6 +23,20 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
   const canAssign40Feet = (stackNumber: number, isSpecialStack: boolean): boolean => {
     return stackService.canAssign40Feet(stackNumber, isSpecialStack);
   };
+
+  if (!stacks || stacks.length === 0) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Stack Configuration</h3>
+          <p className="text-sm text-gray-600">Configure container size assignments for each stack</p>
+        </div>
+        <div className="text-center py-12 text-gray-500">
+          No stacks found. Create your first stack to get started.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -185,11 +199,6 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
             })}
           </tbody>
         </table>
-        {stacks.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            No stacks found. Create your first stack to get started.
-          </div>
-        )}
       </div>
     </div>
   );
