@@ -1,174 +1,76 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Package, Info } from 'lucide-react';
-
-interface StackConfiguration {
-  stackId: string;
-  stackNumber: number;
-  sectionId: string;
-  sectionName: string;
-  containerSize: '20feet' | '40feet';
-  isSpecialStack: boolean;
-  lastModified: Date;
-  modifiedBy: string;
-}
+import { YardStack } from '../../../types/yard';
 
 interface StackPairingInfoProps {
-  configurations: StackConfiguration[];
-  canAssign40Feet: (stackNumber: number) => boolean;
-  getAdjacentStackNumber: (stackNumber: number) => number | null;
+  stacks: YardStack[];
 }
 
-// Simple Tooltip Component
-const Tooltip = ({ content, children }: { content: string; children: React.ReactNode }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
+export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) => {
+  const twentyFootCount = stacks.filter(s => s.containerSize === '20feet').length;
+  const fortyFootCount = stacks.filter(s => s.containerSize === '40feet').length;
+  const activeCount = stacks.filter(s => s.isActive).length;
+
+  const sections = Array.from(new Set(stacks.map(s => s.sectionName || 'Main Section')));
 
   return (
-    <div className="relative inline-block">
-      <div
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        className="inline-flex"
-      >
-        {children}
+    <div className="bg-white rounded-lg border border-gray-200">
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center space-x-2">
+          <Package className="h-5 w-5 text-blue-600" />
+          <h3 className="font-semibold text-gray-900">Stack Configuration Summary</h3>
+        </div>
       </div>
-      {showTooltip && (
-        <div className="absolute z-10 w-48 p-2 mt-1 text-xs text-gray-600 bg-white border border-gray-200 rounded shadow-lg">
-          {content}
-        </div>
-      )}
-    </div>
-  );
-};
 
-export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({
-  configurations,
-  canAssign40Feet,
-  getAdjacentStackNumber
-}) => {
-  const formatPair = (stack1: number, stack2: number) => {
-    if (stack1 % 2 !== 0 && stack2 % 2 !== 0) {
-      const evenNumber = Math.min(stack1, stack2) + 1;
-      return `S${evenNumber.toString().padStart(2, '0')}`;
-    }
-    return `${Math.min(stack1, stack2).toString().padStart(2, '0')}+${Math.max(stack1, stack2).toString().padStart(2, '0')}`;
-  };
-
-  // Group pairs by section
-  const groupedPairs: Record<string, {display: string; stack1: number; stack2: number}[]> = {};
-
-  configurations
-    .filter(config => !config.isSpecialStack && canAssign40Feet(config.stackNumber))
-    .forEach(config => {
-      const adjacent = getAdjacentStackNumber(config.stackNumber);
-      if (adjacent) {
-        const display = formatPair(config.stackNumber, adjacent);
-        const stack1 = Math.min(config.stackNumber, adjacent);
-        const stack2 = Math.max(config.stackNumber, adjacent);
-        const section = config.sectionName;
-
-        if (!groupedPairs[section]) {
-          groupedPairs[section] = [];
-        }
-
-        if (!groupedPairs[section].some(p => p.display === display)) {
-          groupedPairs[section].push({display, stack1, stack2});
-        }
-      }
-    });
-
-  // Sort sections and pairs within sections
-  Object.keys(groupedPairs).forEach(section => {
-    groupedPairs[section].sort((a, b) => a.display.localeCompare(b.display));
-  });
-
-  const sortedSections = Object.keys(groupedPairs).sort();
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-      <div className="p-4">
-        <div className="flex items-start space-x-3 mb-4">
-          <div className="bg-green-100 p-2 rounded-lg">
-            <Package className="h-5 w-5 text-green-600" />
+      <div className="p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <div className="text-2xl font-bold text-blue-900">{twentyFootCount}</div>
+            <div className="text-sm text-blue-700">20ft Stacks</div>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-gray-900 text-lg">Valid Stack Pairs for 40ft Containers</h4>
-              <Tooltip content="Pairs of stacks that can accommodate 40ft containers. S-prefixed numbers represent the midpoint between two odd-numbered stacks.">
-                <Info className="h-4 w-4 text-gray-400 hover:text-gray-500 cursor-pointer" />
-              </Tooltip>
-            </div>
+          <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+            <div className="text-2xl font-bold text-orange-900">{fortyFootCount}</div>
+            <div className="text-sm text-orange-700">40ft Stacks</div>
           </div>
         </div>
 
-        {sortedSections.length > 0 ? (
-          <div className="space-y-4">
-            {sortedSections.map(section => (
-              <div key={section} className="space-y-2">
-                <h5 className="font-medium text-gray-700 text-sm">{section}</h5>
-                <div className="grid grid-cols-4 gap-2 pl-2">
-                  {groupedPairs[section].map(({display, stack1, stack2}) => {
-                    const config1 = configurations.find(c => c.stackNumber === stack1);
-                    const config2 = configurations.find(c => c.stackNumber === stack2);
-                    const bothSame = config1?.containerSize === config2?.containerSize;
-                    const both40feet = config1?.containerSize === '40feet' && config2?.containerSize === '40feet';
-                    const isSpecialFormat = display.startsWith('S');
-                    
-                    return (
-                      <div 
-                        key={display} 
-                        className={`
-                          px-2 py-1 rounded text-center font-mono text-xs 
-                          border transition-all cursor-default
-                          ${
-                            both40feet 
-                              ? 'bg-orange-50 border-orange-200 text-orange-800 font-semibold' 
-                              : bothSame 
-                              ? 'bg-green-50 border-green-200 text-green-800' 
-                              : 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                          }
-                          ${isSpecialFormat ? 'ring-1 ring-blue-200 bg-blue-50' : ''}
-                        `}
-                        title={
-                          isSpecialFormat 
-                            ? `Midpoint between stacks ${stack1} and ${stack2}`
-                            : both40feet 
-                            ? 'Both stacks configured for 40ft' 
-                            : bothSame 
-                            ? 'Both stacks have matching configuration' 
-                            : 'Stacks have different configurations'
-                        }
-                      >
-                        <div className="flex items-center justify-center">
-                          {display}
-                          {!bothSame && <span className="ml-1 text-yellow-600">⚠</span>}
-                          {both40feet && <span className="ml-1 text-orange-500">🔶</span>}
-                          {isSpecialFormat && <span className="ml-1 text-blue-500">✨</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+        <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+          <div className="text-2xl font-bold text-green-900">{activeCount}</div>
+          <div className="text-sm text-green-700">Active Stacks</div>
+        </div>
 
-            <div className="pt-3 border-t border-gray-100 mt-3">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600">
-                <div className="flex items-center space-x-1">
-                  <div className="w-2.5 h-2.5 bg-green-100 border border-green-300 rounded"></div>
-                  <span>Matching 20ft</span>
+        <div className="pt-3 border-t border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Sections</h4>
+          <div className="space-y-2">
+            {sections.map((section, index) => {
+              const sectionStacks = stacks.filter(s => (s.sectionName || 'Main Section') === section);
+              const section20ft = sectionStacks.filter(s => s.containerSize === '20feet').length;
+              const section40ft = sectionStacks.filter(s => s.containerSize === '40feet').length;
+
+              return (
+                <div key={`section-${index}`} className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-2">
+                  <span className="font-medium text-gray-700">{section}</span>
+                  <div className="flex items-center space-x-3 text-xs">
+                    <span className="text-blue-600">{section20ft} × 20ft</span>
+                    <span className="text-orange-600">{section40ft} × 40ft</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-2.5 h-2.5 bg-orange-100 border border-orange-300 rounded"></div>
-                  <span>Matching 40ft</span>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
-        ) : (
-          <div className="py-4 text-center text-gray-500 bg-gray-50 rounded-md">
-            No valid stack pairs available for 40ft containers
+        </div>
+
+        <div className="flex items-start space-x-2 bg-blue-50 rounded-lg p-3 border border-blue-200">
+          <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-blue-700">
+            <p className="font-medium mb-1">Stack Pairing Rules:</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>20ft containers can be stored in any stack</li>
+              <li>40ft containers require adjacent paired stacks</li>
+              <li>Changing one stack to 40ft automatically pairs it with an adjacent stack</li>
+            </ul>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

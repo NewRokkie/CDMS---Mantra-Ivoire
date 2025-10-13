@@ -1,21 +1,24 @@
 import React from 'react';
 import { Search, Filter } from 'lucide-react';
-import { YardSection } from '../../../types';
 
 interface StackManagementFiltersProps {
   searchTerm: string;
   sectionFilter: string;
-  sections: YardSection[];
+  statusFilter: 'all' | 'active' | 'inactive';
+  sections: string[];
   onSearchChange: (value: string) => void;
   onSectionFilterChange: (value: string) => void;
+  onStatusFilterChange: (value: 'all' | 'active' | 'inactive') => void;
 }
 
 export const StackManagementFilters: React.FC<StackManagementFiltersProps> = ({
   searchTerm,
   sectionFilter,
+  statusFilter,
   sections,
   onSearchChange,
-  onSectionFilterChange
+  onSectionFilterChange,
+  onStatusFilterChange
 }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -33,13 +36,23 @@ export const StackManagementFilters: React.FC<StackManagementFiltersProps> = ({
           </div>
 
           <select
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value as 'all' | 'active' | 'inactive')}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Stacks</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          <select
             value={sectionFilter}
             onChange={(e) => onSectionFilterChange(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Sections</option>
-            {sections.map(section => (
-              <option key={section.id} value={section.id}>{section.name}</option>
+            {sections.map((section, index) => (
+              <option key={`section-${index}`} value={section.toLowerCase()}>{section}</option>
             ))}
           </select>
         </div>
