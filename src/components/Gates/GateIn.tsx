@@ -440,7 +440,7 @@ export const GateIn: React.FC = () => {
           : op
       ));
 
-      alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
+      alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocationName || locationData.assignedLocation}`);
       setActiveView('overview');
     } catch (error) {
       alert(`Error completing operation: ${error}`);
