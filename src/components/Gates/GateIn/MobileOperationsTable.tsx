@@ -66,13 +66,15 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
 
   const filteredOperations = getFilteredOperations();
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status?: string) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'Pending', icon: Clock },
-      completed: { color: 'bg-green-100 text-green-800 border-green-300', label: 'Completed', icon: CheckCircle }
+      in_process: { color: 'bg-blue-100 text-blue-800 border-blue-300', label: 'In Process', icon: Clock },
+      completed: { color: 'bg-green-100 text-green-800 border-green-300', label: 'Completed', icon: CheckCircle },
+      cancelled: { color: 'bg-red-100 text-red-800 border-red-300', label: 'Cancelled', icon: AlertTriangle }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     const Icon = config.icon;
 
     return (

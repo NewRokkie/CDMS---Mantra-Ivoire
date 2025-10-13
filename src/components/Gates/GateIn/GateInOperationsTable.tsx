@@ -40,14 +40,15 @@ export const GateInOperationsTable: React.FC<GateInOperationsTableProps> = ({
     (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getStatusBadge = (status: 'pending' | 'completed') => { // Added specific type for clarity
+  const getStatusBadge = (status?: string) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-      completed: { color: 'bg-green-100 text-green-800', label: 'Completed' }
+      in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process' },
+      completed: { color: 'bg-green-100 text-green-800', label: 'Completed' },
+      cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
     };
 
-    // This type assertion is safe because operationStatus is typed as 'pending' | 'completed'
-    const config = statusConfig[status];
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
         {config.label}
