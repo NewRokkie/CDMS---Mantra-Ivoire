@@ -7,7 +7,7 @@ export class UserService {
       .from('users')
       .select(`
         *,
-        user_module_access (
+        user_module_access!fk_user_module_access_user (
           module_permissions
         )
       `)
@@ -22,7 +22,7 @@ export class UserService {
       .from('users')
       .select(`
         *,
-        user_module_access (
+        user_module_access!fk_user_module_access_user (
           module_permissions
         )
       `)
@@ -38,7 +38,7 @@ export class UserService {
       .from('users')
       .select(`
         *,
-        user_module_access (
+        user_module_access!fk_user_module_access_user (
           module_permissions
         )
       `)
