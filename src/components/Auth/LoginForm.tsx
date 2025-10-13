@@ -207,7 +207,7 @@ export const LoginForm: React.FC = React.memo(() => {
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d3748 50%, #1a1a1a 100%)',
+            background: 'url(' + IMAGE_PATHS.DEPOT_BACKGROUND + ') center/cover no-repeat',
           }}
         >
           {/* Overlays de lisibilité neutres */}
