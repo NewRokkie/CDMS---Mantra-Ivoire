@@ -4,6 +4,7 @@ import { useAuthProvider, AuthContext } from './hooks/useAuth';
 import { useAuth } from './hooks/useAuth';
 import { useLanguageProvider, LanguageContext } from './hooks/useLanguage';
 import { useGlobalStore } from './store/useGlobalStore';
+import { useModuleAccessSync } from './hooks/useModuleAccessSync';
 
 import { useYardProvider, YardContext } from './hooks/useYard';
 import { LoginForm } from './components/Auth/LoginForm';
@@ -57,6 +58,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 function AppContent() {
   const { user, hasModuleAccess } = useAuth();
   const yardProvider = useYardProvider();
+  const { hasPermissionUpdate } = useModuleAccessSync();
   const [activeModule, setActiveModule] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const initializeStore = useGlobalStore(state => state.initializeStore);
@@ -122,6 +124,15 @@ function AppContent() {
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}
           </main>
         </div>
+
+        {hasPermissionUpdate && (
+          <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-pulse z-50">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Your permissions have been updated!</span>
+          </div>
+        )}
       </div>
     </YardContext.Provider>
   );

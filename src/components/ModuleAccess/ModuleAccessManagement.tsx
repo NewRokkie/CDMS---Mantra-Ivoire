@@ -305,7 +305,7 @@ export const ModuleAccessManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
 
   const canManageModuleAccess = currentUser?.role === 'admin';
 
@@ -457,6 +457,10 @@ export const ModuleAccessManagement: React.FC = () => {
           await moduleAccessService.setUserModuleAccess(userId, updatedAccess, currentUser.id);
         }
       }
+
+      if (targetUserIds.includes(currentUser.id)) {
+        await refreshUser();
+      }
     } catch (error) {
       console.error('Error saving module access:', error);
       alert('Error saving module access changes');
@@ -570,6 +574,11 @@ export const ModuleAccessManagement: React.FC = () => {
       }
 
       await moduleAccessService.batchUpdateModuleAccess(updates, currentUser.id);
+
+      if (bulkSelectedUserIds.includes(currentUser.id)) {
+        await refreshUser();
+      }
+
       alert(`Applied ${action} to ${bulkSelectedUserIds.length} users`);
     } catch (error) {
       console.error('Error applying bulk action:', error);

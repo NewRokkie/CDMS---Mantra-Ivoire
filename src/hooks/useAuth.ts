@@ -13,6 +13,7 @@ interface AuthContextType {
   hasModuleAccess: (module: keyof ModuleAccess) => boolean;
   canViewAllData: () => boolean;
   getClientFilter: () => string | null;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -312,6 +313,19 @@ export const useAuthProvider = () => {
     }
   };
 
+  const refreshUser = async () => {
+    console.log('🔄 [REFRESH_USER] Refreshing user profile...');
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      const profile = await loadUserProfile(session.user);
+      if (profile) {
+        setUser(profile);
+        console.log('🔄 [REFRESH_USER] ✅ User profile refreshed');
+      }
+    }
+  };
+
   const hasModuleAccess = (module: keyof ModuleAccess): boolean => {
     if (!user || !user.moduleAccess) return false;
 
@@ -349,7 +363,8 @@ export const useAuthProvider = () => {
     isAuthenticated,
     hasModuleAccess,
     canViewAllData,
-    getClientFilter
+    getClientFilter,
+    refreshUser
   };
 };
 
