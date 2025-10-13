@@ -44,7 +44,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
   // Initialize form data
   useEffect(() => {
-    if (selectedStack) {
+    if (selectedStack && yard?.sections) {
       // Find the actual stack from yard data
       const section = yard.sections.find(s => s.id === selectedStack.sectionId);
       const stack = section?.stacks.find(s => s.id === selectedStack.stackId);
@@ -59,10 +59,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
           maxTiers: stack.maxTiers,
         });
       }
-    } else {
+    } else if (yard?.sections && yard.sections.length > 0) {
       // Reset for new stack
       const firstSection = yard.sections[0];
-      const suggestedNumber = firstSection ? yardService.getNextStackNumber(yard.id, firstSection.id) : 1;
+      const suggestedNumber = firstSection && yard.id ? yardService.getNextStackNumber(yard.id, firstSection.id) : 1;
       
       setFormData({
         stackNumber: suggestedNumber,
@@ -262,7 +262,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
                 <Grid3X3 className="h-5 w-5 mr-2" />
-                {yard.layout === 'tantarelli' ? 'Tantarelli' : 'Standard'} Layout Guidelines
+                {yard?.layout === 'tantarelli' ? 'Tantarelli' : 'Standard'} Layout Guidelines
               </h4>
               <div className="text-sm text-blue-800 space-y-1">
                 <div><strong>Stack Numbers:</strong> {suggestions.stackNumbers}</div>
@@ -295,9 +295,9 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     disabled={!!selectedStack} // Don't allow changing stack number when editing
                   />
                   {errors.stackNumber && <p className="mt-1 text-sm text-red-600">{errors.stackNumber}</p>}
-                  {yard.layout === 'tantarelli' && !selectedStack && (
+                  {yard?.layout === 'tantarelli' && !selectedStack && (
                     <p className="mt-1 text-xs text-blue-600">
-                      Suggested: {yardService.getNextStackNumber(yard.id, formData.sectionId)}
+                      Suggested: {yard?.id ? yardService.getNextStackNumber(yard.id, formData.sectionId) : 'N/A'}
                     </p>
                   )}
                 </div>
@@ -313,7 +313,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       handleInputChange('sectionId', e.target.value);
                       // Update suggested stack number when section changes
                       if (!selectedStack && e.target.value) {
-                        const suggested = yardService.getNextStackNumber(yard.id, e.target.value);
+                        const suggested = yard?.id ? yardService.getNextStackNumber(yard.id, e.target.value) : 1;
                         handleInputChange('stackNumber', suggested);
                       }
                     }}
@@ -321,7 +321,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     disabled={!!selectedStack} // Don't allow changing section when editing
                   >
                     <option value="">Select section</option>
-                    {yard.sections.map(section => (
+                    {yard?.sections?.map(section => (
                       <option key={section.id} value={section.id}>
                         {section.name} ({section.stacks.length} stacks)
                       </option>
@@ -549,7 +549,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 <div>
                   <span className="text-gray-600">Section:</span>
                   <div className="font-medium text-gray-900">
-                    {yard.sections.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
+                    {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
                   </div>
                 </div>
                 <div>
