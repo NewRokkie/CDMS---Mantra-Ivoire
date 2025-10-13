@@ -9,4 +9,5 @@ export * from './reportService';
 export * from './clientPoolService';
 export * from './moduleAccessService';
 export * from './stackService';
+export * from './stackPairingService';
 export * from './realtimeService';

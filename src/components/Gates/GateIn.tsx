@@ -6,6 +6,7 @@ import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, stackService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
 import { formatLocationId, generateStackLocations } from '../../utils/locationHelpers';
+import { stackPairingService } from '../../services/api/stackPairingService';
 import moment from 'moment';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
@@ -31,21 +32,24 @@ export const GateIn: React.FC = () => {
   const [gateInOperations, setGateInOperations] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
   const [stacks, setStacks] = useState<any[]>([]);
+  const [pairingMap, setPairingMap] = useState<Map<number, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [clientsData, operationsData, containersData, stacksData] = await Promise.all([
+        const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
           clientService.getAll(),
           gateService.getGateInOperations(),
           containerService.getAll(),
-          stackService.getAll(currentYard?.id)
+          stackService.getAll(currentYard?.id),
+          stackPairingService.getPairingMap(currentYard?.id || '')
         ]);
         setClients(clientsData);
         setGateInOperations(operationsData);
         setContainers(containersData);
         setStacks(stacksData);
+        setPairingMap(pairingMapData);
       } catch (error) {
         console.error('Error loading gate in data:', error);
       } finally {
@@ -98,17 +102,31 @@ export const GateIn: React.FC = () => {
         .map(c => c.location)
     );
 
+    // Track which virtual stacks we've already processed to avoid duplicates
+    const processedVirtualStacks = new Set<number>();
+
     stacks.forEach((stack) => {
       const rows = stack.rows || 6;
       const maxTiers = stack.maxTiers || 4;
-      const isOddStack = stack.isOddStack || false;
 
-      // For 40ft stacks, generate locations with paired stack number (S03+S05 → S04, S06)
+      // Check if this stack is part of a pairing (for 40ft)
+      const virtualStackNumber = pairingMap.get(stack.stackNumber);
+
+      // For 40ft containers with pairing: S03→4, S05→4, S07→8, S09→8, etc.
+      // Only process each virtual stack once
+      if (virtualStackNumber && stack.containerSize === '40feet') {
+        if (processedVirtualStacks.has(virtualStackNumber)) {
+          return; // Skip, already processed this virtual stack
+        }
+        processedVirtualStacks.add(virtualStackNumber);
+      }
+
+      // Generate locations with virtual stack number if paired
       const allPositions = generateStackLocations(
         stack.stackNumber,
         rows,
         maxTiers,
-        isOddStack && stack.containerSize === '40feet'
+        virtualStackNumber
       );
 
       // Filter out occupied positions
@@ -120,6 +138,7 @@ export const GateIn: React.FC = () => {
           name: locationId,
           stackId: stack.id,
           stackNumber: stack.stackNumber,
+          virtualStackNumber: virtualStackNumber,
           capacity: 1,
           available: 1,
           section: stack.sectionName || 'Main Section'
@@ -140,7 +159,7 @@ export const GateIn: React.FC = () => {
       '40ft': locations40ft,
       damage: locationsDamage
     };
-  }, [stacks, containers]);
+  }, [stacks, containers, pairingMap]);
 
   const pendingOperations = gateInOperations.filter(op =>
     !op.completedAt || !op.assignedLocation
