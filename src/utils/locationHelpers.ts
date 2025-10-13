@@ -54,18 +54,24 @@ export const isValidLocationId = (locationId: string): boolean => {
  * @param stackNumber Stack number
  * @param rows Number of rows (default 6)
  * @param maxTiers Maximum height (default 4)
+ * @param isOddStack For 40ft stacks, indicates if this is the odd stack (S03, S05, etc.)
  * @returns Array of all location IDs
  */
 export const generateStackLocations = (
   stackNumber: number,
   rows: number = 6,
-  maxTiers: number = 4
+  maxTiers: number = 4,
+  isOddStack: boolean = false
 ): string[] => {
   const locations: string[] = [];
 
+  // For 40ft containers in odd stacks (S03, S05, S07, etc.)
+  // Display as the even stack number (S04, S06, S08, etc.)
+  const displayStackNumber = isOddStack ? stackNumber + 1 : stackNumber;
+
   for (let row = 1; row <= rows; row++) {
     for (let height = 1; height <= maxTiers; height++) {
-      locations.push(formatLocationId(stackNumber, row, height));
+      locations.push(formatLocationId(displayStackNumber, row, height));
     }
   }
 

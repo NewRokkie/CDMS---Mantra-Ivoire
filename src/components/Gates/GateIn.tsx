@@ -101,7 +101,15 @@ export const GateIn: React.FC = () => {
     stacks.forEach((stack) => {
       const rows = stack.rows || 6;
       const maxTiers = stack.maxTiers || 4;
-      const allPositions = generateStackLocations(stack.stackNumber, rows, maxTiers);
+      const isOddStack = stack.isOddStack || false;
+
+      // For 40ft stacks, generate locations with paired stack number (S03+S05 → S04, S06)
+      const allPositions = generateStackLocations(
+        stack.stackNumber,
+        rows,
+        maxTiers,
+        isOddStack && stack.containerSize === '40feet'
+      );
 
       // Filter out occupied positions
       const availablePositions = allPositions.filter(locationId => !occupiedLocations.has(locationId));
