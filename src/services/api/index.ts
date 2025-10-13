@@ -8,3 +8,4 @@ export * from './auditService';
 export * from './reportService';
 export * from './clientPoolService';
 export * from './moduleAccessService';
+export * from './stackService';

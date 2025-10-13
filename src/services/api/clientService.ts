@@ -62,17 +62,22 @@ export class ClientService {
       updated_at: new Date().toISOString()
     };
 
-    if (updates.code) updateData.code = updates.code;
-    if (updates.name) updateData.name = updates.name;
+    if (updates.code !== undefined) updateData.code = updates.code;
+    if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.contactPerson !== undefined) updateData.contact_person = updates.contactPerson;
     if (updates.email !== undefined) updateData.email = updates.email;
     if (updates.phone !== undefined) updateData.phone = updates.phone;
     if (updates.address !== undefined) updateData.address = updates.address;
+    if (updates.billingAddress !== undefined) updateData.billing_address = updates.billingAddress;
+    if (updates.taxId !== undefined) updateData.tax_id = updates.taxId;
+    if (updates.creditLimit !== undefined) updateData.credit_limit = updates.creditLimit;
+    if (updates.paymentTerms !== undefined) updateData.payment_terms = updates.paymentTerms;
     if (updates.freeDaysAllowed !== undefined) updateData.free_days_allowed = updates.freeDaysAllowed;
     if (updates.dailyStorageRate !== undefined) updateData.daily_storage_rate = updates.dailyStorageRate;
-    if (updates.currency) updateData.currency = updates.currency;
+    if (updates.currency !== undefined) updateData.currency = updates.currency;
     if (updates.autoEDI !== undefined) updateData.auto_edi = updates.autoEDI;
     if (updates.isActive !== undefined) updateData.active = updates.isActive;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
 
     const { data, error } = await supabase
       .from('clients')

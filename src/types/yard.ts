@@ -48,8 +48,10 @@ export interface YardSection {
 
 export interface YardStack {
   id: string;
+  yardId?: string;
   stackNumber: number;
   sectionId: string;
+  sectionName?: string;
   rows: number;
   maxTiers: number;
   currentOccupancy: number;
@@ -65,6 +67,13 @@ export interface YardStack {
   };
   containerPositions: YardPosition[];
   isOddStack?: boolean;
+  isActive?: boolean;
+  assignedClientCode?: string;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface YardPosition {

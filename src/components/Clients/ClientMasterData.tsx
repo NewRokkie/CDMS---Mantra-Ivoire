@@ -315,11 +315,20 @@ export const ClientMasterData: React.FC = () => {
             setSelectedClient(null);
           }}
           selectedClient={selectedClient}
-          onSubmit={(clientData) => {
-            console.log('Saving client:', clientData);
-            setShowForm(false);
-            setSelectedClient(null);
-            alert('Client saved successfully!');
+          onSubmit={async (clientData) => {
+            try {
+              if (selectedClient) {
+                await updateClient(selectedClient.id, clientData);
+                alert('Client updated successfully!');
+              } else {
+                await addClient(clientData);
+                alert('Client created successfully!');
+              }
+              setShowForm(false);
+              setSelectedClient(null);
+            } catch (error) {
+              alert('Error saving client: ' + (error as Error).message);
+            }
           }}
         />
       )}
