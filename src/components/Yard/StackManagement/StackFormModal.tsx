@@ -233,7 +233,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   {selectedStack ? 'Edit Stack' : 'Create New Stack'}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {yard.name} ({yard.code}) - {yard.layout} layout
+                  {yard?.name || 'Yard'} {yard?.code ? `(${yard.code})` : ''} {yard?.layout ? `- ${yard.layout} layout` : ''}
                 </p>
               </div>
             </div>

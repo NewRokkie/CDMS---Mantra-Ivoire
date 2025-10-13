@@ -145,7 +145,7 @@ export class StackService {
 
     const currentStack = await this.getById(stackId);
     if (!currentStack) {
-      throw new Error('Stack not found');
+      throw new Error(`Stack not found with ID: ${stackId}`);
     }
 
     if (currentStack.isSpecialStack && newSize === '40feet') {
@@ -157,9 +157,14 @@ export class StackService {
       .update(updateData)
       .eq('id', stackId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+
+    if (!data) {
+      throw new Error(`Failed to update stack ${stackNumber}. Stack may have been deleted.`);
+    }
+
     updatedStacks.push(this.mapToStack(data));
 
     if (newSize === '40feet') {
