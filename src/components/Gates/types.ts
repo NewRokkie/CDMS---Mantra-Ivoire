@@ -77,22 +77,24 @@ export interface GateOutModalProps {
 
 export interface GateInOperation {
   id: string;
-  date: Date;
+  date?: Date; // Deprecated: use createdAt instead
+  createdAt: Date;
   containerNumber: string;
   secondContainerNumber?: string;
   containerSize: string;
   containerType?: string;
-  containerQuantity: number;
-  status: 'FULL' | 'EMPTY';
-  isDamaged: boolean;
+  containerQuantity?: number;
+  status?: 'FULL' | 'EMPTY' | 'pending' | 'in_process' | 'completed' | 'cancelled';
+  isDamaged?: boolean;
   bookingReference?: string;
   bookingType?: 'EXPORT' | 'IMPORT';
   clientCode: string;
   clientName: string;
-  truckNumber: string;
-  driverName: string;
-  transportCompany: string;
-  operationStatus: 'pending' | 'completed';
+  truckNumber?: string;
+  driverName?: string;
+  vehicleNumber?: string;
+  transportCompany?: string;
+  operationStatus?: 'pending' | 'completed';
   assignedLocation?: string;
   truckArrivalDate?: string;
   truckArrivalTime?: string;
@@ -101,6 +103,14 @@ export interface GateInOperation {
   completedAt?: Date;
   yardId?: string;
   yardCode?: string;
+  operatorId?: string;
+  operatorName?: string;
+  damageReported?: boolean;
+  damageDescription?: string;
+  weight?: number;
+  ediTransmitted?: boolean;
+  ediTransmissionDate?: Date;
+  containerId?: string;
 }
 
 export interface PendingGateOut {

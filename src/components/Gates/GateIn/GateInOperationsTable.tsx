@@ -96,10 +96,10 @@ export const GateInOperationsTable: React.FC<GateInOperationsTableProps> = ({
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {operation.date.toLocaleDateString()}
+                    {operation.completedAt?.toLocaleDateString() || operation.createdAt.toLocaleDateString()}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {operation.date.toLocaleTimeString()}
+                    {operation.completedAt?.toLocaleTimeString() || operation.createdAt.toLocaleTimeString()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
