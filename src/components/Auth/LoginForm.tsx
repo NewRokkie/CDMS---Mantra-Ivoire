@@ -9,8 +9,8 @@ import { useAuth } from '../../hooks/useAuth';
 // Constants for image paths
 const IMAGE_PATHS = {
   DEPOT_BACKGROUND: '/assets/depot_background.jpg',
-  LOGO_WHITE: '/assets/logo_white.svg',
-  LOGO_MANTRA: '/assets/logo_mantra.svg'
+  LOGO_WHITE: '/assets/logo_white.png',
+  LOGO_MANTRA: '/assets/logo_mantra.png'
 } as const;
 
 // Demo accounts configuration
