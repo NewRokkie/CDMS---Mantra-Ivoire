@@ -4,12 +4,12 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, releaseService, containerService } from '../../services/api';
+import { realtimeService } from '../../services/api/realtimeService';
 import { GateOutModal } from './GateOutModal';
 import { MobileGateOutOperationsTable } from './GateOut/MobileGateOutOperationsTable';
 import { PendingOperationsView } from './GateOut/PendingOperationsView';
 import { GateOutCompletionModal } from './GateOut/GateOutCompletionModal';
 import { PendingGateOut } from './types';
-import { mockAvailableBookings, mockPendingGateOutOperations, mockCompletedGateOutOperations } from './constants';
 
 // Import centralized mock data
 
@@ -37,17 +37,20 @@ export const GateOut: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
+  const [gateOutOperations, setGateOutOperations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [ordersData, containersData] = await Promise.all([
+        const [ordersData, containersData, operationsData] = await Promise.all([
           releaseService.getAll(),
-          containerService.getAll()
+          containerService.getAll(),
+          gateService.getGateOutOperations()
         ]);
         setReleaseOrders(ordersData);
         setContainers(containersData);
+        setGateOutOperations(operationsData);
       } catch (error) {
         console.error('Error loading gate out data:', error);
       } finally {
@@ -57,8 +60,46 @@ export const GateOut: React.FC = () => {
     loadData();
   }, []);
 
-  const [pendingOperations, setPendingOperations] = useState<PendingGateOut[]>(mockPendingGateOutOperations);
-  const [completedOperations, setCompletedOperations] = useState<PendingGateOut[]>(mockCompletedGateOutOperations);
+  useEffect(() => {
+    if (!currentYard) return;
+
+    console.log(`🔌 Setting up Gate Out real-time subscriptions for yard: ${currentYard.id}`);
+
+    const unsubscribeGateOut = realtimeService.subscribeToGateOutOperations(
+      currentYard.id,
+      async (payload) => {
+        console.log(`📡 Gate Out ${payload.eventType}:`, payload.new);
+        const operations = await gateService.getGateOutOperations();
+        setGateOutOperations(operations);
+      }
+    );
+
+    const unsubscribeReleaseOrders = realtimeService.subscribeToReleaseOrders(
+      async (payload) => {
+        console.log(`📡 Release Order ${payload.eventType}:`, payload.new);
+        const orders = await releaseService.getAll();
+        setReleaseOrders(orders);
+      }
+    );
+
+    const unsubscribeContainers = realtimeService.subscribeToContainers(
+      async (payload) => {
+        console.log(`📡 Container ${payload.eventType}:`, payload.new);
+        const containers = await containerService.getAll();
+        setContainers(containers);
+      }
+    );
+
+    return () => {
+      unsubscribeGateOut();
+      unsubscribeReleaseOrders();
+      unsubscribeContainers();
+      console.log(`🔌 Cleaned up Gate Out real-time subscriptions`);
+    };
+  }, [currentYard?.id]);
+
+  const pendingOperations = gateOutOperations.filter(op => op.status === 'pending');
+  const completedOperations = gateOutOperations.filter(op => op.status === 'completed');
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState('all');

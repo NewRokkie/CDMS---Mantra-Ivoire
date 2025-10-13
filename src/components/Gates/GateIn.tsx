@@ -11,7 +11,7 @@ import { MobileGateInStats } from './GateIn/MobileGateInStats';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
 import { GateInFormData, GateInOperation } from './types';
 import { validateContainerNumber, formatContainerNumberForDisplay, validateGateInStep, getStatusBadgeConfig } from './utils';
-import { mockClients, mockLocations, mockPendingGateInOperations, mockCompletedGateInOperations } from './constants';
+import { realtimeService } from '../../services/api/realtimeService';
 
 export const GateIn: React.FC = () => {
   const [activeView, setActiveView] = useState<'overview' | 'pending' | 'location'>('overview');
@@ -45,8 +45,37 @@ export const GateIn: React.FC = () => {
     loadData();
   }, []);
 
-  const [pendingOperations, setPendingOperations] = useState<GateInOperation[]>(mockPendingGateInOperations);
-  const [completedOperations, setCompletedOperations] = useState<GateInOperation[]>(mockCompletedGateInOperations);
+  useEffect(() => {
+    if (!currentYard) return;
+
+    console.log(`🔌 Setting up Gate In real-time subscriptions for yard: ${currentYard.id}`);
+
+    const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
+      currentYard.id,
+      async (payload) => {
+        console.log(`📡 Gate In ${payload.eventType}:`, payload.new);
+        const operations = await gateService.getGateInOperations();
+        setGateInOperations(operations);
+      }
+    );
+
+    const unsubscribeContainers = realtimeService.subscribeToContainers(
+      async (payload) => {
+        console.log(`📡 Container ${payload.eventType}:`, payload.new);
+        const containers = await containerService.getAll();
+        setContainers(containers);
+      }
+    );
+
+    return () => {
+      unsubscribeGateIn();
+      unsubscribeContainers();
+      console.log(`🔌 Cleaned up Gate In real-time subscriptions`);
+    };
+  }, [currentYard?.id]);
+
+  const pendingOperations = gateInOperations.filter(op => op.status === 'pending');
+  const completedOperations = gateInOperations.filter(op => op.status === 'completed');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);

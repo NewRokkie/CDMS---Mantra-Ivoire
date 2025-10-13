@@ -804,7 +804,39 @@ export class YardService {
     // For other yards, use different patterns or explicit yard references
     return container.location.includes(yard.code) || container.location.includes(yard.name);
   }
+
+  /**
+   * Sync stacks from database for a yard
+   */
+  async syncStacksFromDatabase(yardId: string, dbStacks: YardStack[]): Promise<void> {
+    const yard = this.yards.get(yardId);
+    if (!yard) return;
+
+    const stacksBySection = new Map<string, YardStack[]>();
+
+    for (const dbStack of dbStacks) {
+      const sectionId = dbStack.sectionId || 'section-main';
+      if (!stacksBySection.has(sectionId)) {
+        stacksBySection.set(sectionId, []);
+      }
+      stacksBySection.get(sectionId)!.push(dbStack);
+    }
+
+    for (const section of yard.sections) {
+      const sectionStacks = stacksBySection.get(section.id) || [];
+      section.stacks = sectionStacks;
+    }
+
+    const totalCapacity = dbStacks.reduce((sum, s) => sum + s.capacity, 0);
+    const currentOccupancy = dbStacks.reduce((sum, s) => sum + s.currentOccupancy, 0);
+
+    yard.totalCapacity = totalCapacity;
+    yard.currentOccupancy = currentOccupancy;
+    yard.updatedAt = new Date();
+
+    this.yards.set(yardId, yard);
+    console.log(`✅ Synced ${dbStacks.length} stacks for yard ${yardId}`);
+  }
 }
 
-// Singleton instance
 export const yardService = new YardService();

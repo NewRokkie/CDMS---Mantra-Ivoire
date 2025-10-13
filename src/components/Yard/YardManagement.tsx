@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useYard } from '../../hooks/useYard';
-import { containerService } from '../../services/api';
+import { containerService, stackService } from '../../services/api';
+import { realtimeService } from '../../services/api/realtimeService';
+import { yardService } from '../../services/yardService';
 import { YardLiveMap } from './YardLiveMap';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
@@ -75,18 +77,62 @@ export const YardManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadContainers() {
+    async function loadData() {
+      if (!currentYard) return;
+
       try {
-        const data = await containerService.getAll();
-        setAllContainers(data);
+        setLoading(true);
+
+        const [containers, stacks] = await Promise.all([
+          containerService.getAll(),
+          stackService.getByYardId(currentYard.id)
+        ]);
+
+        setAllContainers(containers);
+
+        await yardService.syncStacksFromDatabase(currentYard.id, stacks);
+
+        console.log(`✅ Loaded ${stacks.length} stacks and ${containers.length} containers`);
       } catch (error) {
-        console.error('Error loading containers:', error);
+        console.error('Error loading yard data:', error);
       } finally {
         setLoading(false);
       }
     }
-    loadContainers();
-  }, []);
+
+    loadData();
+  }, [currentYard?.id]);
+
+  useEffect(() => {
+    if (!currentYard) return;
+
+    console.log(`🔌 Setting up real-time subscriptions for yard: ${currentYard.id}`);
+
+    const unsubscribeStacks = realtimeService.subscribeToStacks(
+      currentYard.id,
+      async (payload) => {
+        console.log(`📡 Stack ${payload.eventType}:`, payload.new);
+
+        const stacks = await stackService.getByYardId(currentYard.id);
+        await yardService.syncStacksFromDatabase(currentYard.id, stacks);
+      }
+    );
+
+    const unsubscribeContainers = realtimeService.subscribeToContainers(
+      async (payload) => {
+        console.log(`📡 Container ${payload.eventType}:`, payload.new);
+
+        const containers = await containerService.getAll();
+        setAllContainers(containers);
+      }
+    );
+
+    return () => {
+      unsubscribeStacks();
+      unsubscribeContainers();
+      console.log(`🔌 Cleaned up real-time subscriptions for yard: ${currentYard.id}`);
+    };
+  }, [currentYard?.id]);
 
   // Filter containers for current yard
   const containers = currentYard
