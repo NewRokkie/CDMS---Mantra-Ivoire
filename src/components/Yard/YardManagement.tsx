@@ -89,7 +89,9 @@ export const YardManagement: React.FC = () => {
   }, []);
 
   // Filter containers for current yard
-  const containers = currentYard ? getContainersByYard(currentYard.id) : allContainers;
+  const containers = currentYard
+    ? allContainers.filter(c => c.yard_id === currentYard.id)
+    : allContainers;
 
   return (
     <>
