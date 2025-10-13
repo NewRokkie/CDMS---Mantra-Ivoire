@@ -220,20 +220,23 @@ export const UserManagement: React.FC = () => {
         return <UserIcon className="h-4 w-4 text-blue-600" />;
       case 'client':
         return <UserIcon className="h-4 w-4 text-green-600" />;
+      case 'viewer':
+        return <Eye className="h-4 w-4 text-gray-600" />;
       default:
         return <UserIcon className="h-4 w-4 text-gray-600" />;
     }
   };
 
   const getRoleBadge = (role: User['role']) => {
-    const roleConfig = {
+    const roleConfig: Record<string, { color: string; label: string }> = {
       admin: { color: 'bg-red-100 text-red-800', label: 'Administrator' },
       supervisor: { color: 'bg-orange-100 text-orange-800', label: 'Supervisor' },
       operator: { color: 'bg-blue-100 text-blue-800', label: 'Operator' },
-      client: { color: 'bg-green-100 text-green-800', label: 'Client' }
+      client: { color: 'bg-green-100 text-green-800', label: 'Client' },
+      viewer: { color: 'bg-gray-100 text-gray-800', label: 'Viewer' }
     };
 
-    const config = roleConfig[role];
+    const config = roleConfig[role] || roleConfig.viewer;
     return (
       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
         {getRoleIcon(role)}
