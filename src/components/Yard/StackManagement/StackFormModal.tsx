@@ -199,7 +199,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   };
 
   const getLayoutSuggestions = () => {
-    if (yard.layout === 'tantarelli') {
+    if (yard?.layout === 'tantarelli') {
       return {
         stackNumbers: 'Odd numbers only (1, 3, 5, 7, etc.)',
         dimensions: '20ft: 12m × 6m, 40ft: 24m × 6m',

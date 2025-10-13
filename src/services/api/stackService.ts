@@ -187,12 +187,58 @@ export class StackService {
   }
 
   getAdjacentStackNumber(stackNumber: number): number | null {
-    if (stackNumber % 2 === 1) {
-      return stackNumber + 1;
-    } else if (stackNumber % 2 === 0) {
-      return stackNumber - 1;
+    const SPECIAL_STACKS = [1, 31, 101, 103];
+    if (SPECIAL_STACKS.includes(stackNumber)) return null;
+
+    const isValidPairStack = (num: number): boolean => {
+      if (num >= 3 && num <= 29) {
+        const validFirstNumbers = [3, 7, 11, 15, 19, 23, 27];
+        return validFirstNumbers.includes(num) || validFirstNumbers.includes(num - 2);
+      } else if (num >= 33 && num <= 55) {
+        const validFirstNumbers = [33, 37, 41, 45, 49, 53];
+        return validFirstNumbers.includes(num) || validFirstNumbers.includes(num - 2);
+      } else if (num >= 61 && num <= 99) {
+        const validFirstNumbers = [61, 65, 69, 73, 77, 81, 85, 89, 93, 97];
+        return validFirstNumbers.includes(num) || validFirstNumbers.includes(num - 2);
+      }
+      return false;
+    };
+
+    if (!isValidPairStack(stackNumber)) return null;
+
+    let partnerNumber: number;
+
+    if (stackNumber >= 3 && stackNumber <= 29) {
+      const validFirstNumbers = [3, 7, 11, 15, 19, 23, 27];
+      if (validFirstNumbers.includes(stackNumber)) {
+        partnerNumber = stackNumber + 2;
+      } else {
+        partnerNumber = stackNumber - 2;
+      }
+    } else if (stackNumber >= 33 && stackNumber <= 55) {
+      const validFirstNumbers = [33, 37, 41, 45, 49, 53];
+      if (validFirstNumbers.includes(stackNumber)) {
+        partnerNumber = stackNumber + 2;
+      } else {
+        partnerNumber = stackNumber - 2;
+      }
+    } else if (stackNumber >= 61 && stackNumber <= 99) {
+      const validFirstNumbers = [61, 65, 69, 73, 77, 81, 85, 89, 93, 97];
+      if (validFirstNumbers.includes(stackNumber)) {
+        partnerNumber = stackNumber + 2;
+      } else {
+        partnerNumber = stackNumber - 2;
+      }
+    } else {
+      return null;
     }
-    return null;
+
+    return partnerNumber;
+  }
+
+  getVirtualStackNumber(stack1: number, stack2: number): number {
+    const lower = Math.min(stack1, stack2);
+    return lower + 1;
   }
 
   canAssign40Feet(stack: YardStack): boolean {

@@ -19,6 +19,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
     const pairs: Array<{
       stack1: number;
       stack2: number;
+      virtualStack: number;
       section: string;
       bothMatch: boolean;
       both40ft: boolean;
@@ -40,6 +41,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
 
         const stack1 = Math.min(stack.stackNumber, adjacentNumber);
         const stack2 = Math.max(stack.stackNumber, adjacentNumber);
+        const virtualStack = stackService.getVirtualStackNumber(stack1, stack2);
 
         const bothMatch = stack.containerSize === adjacentStack.containerSize;
         const both40ft = stack.containerSize === '40feet' && adjacentStack.containerSize === '40feet';
@@ -47,6 +49,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
         pairs.push({
           stack1,
           stack2,
+          virtualStack,
           section: stack.sectionName || 'Main Section',
           bothMatch,
           both40ft
@@ -124,18 +127,24 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
                         }`}
                         title={
                           pair.both40ft
-                            ? 'Both stacks configured for 40ft'
+                            ? `Virtual Stack S${pair.virtualStack.toString().padStart(2, '0')} - Both configured for 40ft`
                             : pair.bothMatch
                             ? 'Both stacks have matching configuration'
                             : 'Stacks have different configurations'
                         }
                       >
-                        <div className="flex items-center justify-center space-x-1">
-                          <span>{pair.stack1.toString().padStart(2, '0')}</span>
-                          <span>+</span>
-                          <span>{pair.stack2.toString().padStart(2, '0')}</span>
-                          {!pair.bothMatch && <span className="ml-1 text-yellow-600">⚠</span>}
-                          {pair.both40ft && <span className="ml-1">✓</span>}
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center space-x-1">
+                            <span>{pair.stack1.toString().padStart(2, '0')}</span>
+                            <span>+</span>
+                            <span>{pair.stack2.toString().padStart(2, '0')}</span>
+                            {!pair.bothMatch && <span className="ml-1 text-yellow-600">⚠</span>}
+                          </div>
+                          {pair.both40ft && (
+                            <div className="text-[10px] text-orange-600 font-semibold mt-0.5">
+                              ↓ S{pair.virtualStack.toString().padStart(2, '0')}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -177,12 +186,13 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
         <div className="flex items-start space-x-2 bg-blue-50 rounded-lg p-3 border border-blue-200">
           <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="text-xs text-blue-700">
-            <p className="font-medium mb-1">Stack Pairing Rules:</p>
+            <p className="font-medium mb-1">Tantarelli Pairing Rules:</p>
             <ul className="space-y-1 list-disc list-inside">
-              <li>20ft containers can be stored in any stack</li>
-              <li>40ft containers require adjacent paired stacks (odd + even)</li>
-              <li>Special stacks <Shield className="inline h-3 w-3" /> cannot be paired</li>
-              <li>Changing one stack to 40ft automatically updates its pair</li>
+              <li>Only odd-numbered stacks exist physically (S03, S05, S07, etc.)</li>
+              <li>Pairs skip one number: 03+05 (not 03+04), 07+09, etc.</li>
+              <li>Virtual even stacks (S04, S08, etc.) exist when pairs are configured for 40ft</li>
+              <li>Special stacks <Shield className="inline h-3 w-3" /> (1, 31, 101, 103) cannot be paired</li>
+              <li>If 03+05 are paired, 05 cannot pair with 07 (next valid pair: 07+09)</li>
             </ul>
           </div>
         </div>
