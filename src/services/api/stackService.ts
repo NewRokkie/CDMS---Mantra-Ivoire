@@ -62,6 +62,7 @@ export class StackService {
         length: stack.dimensions?.length || 12,
         is_active: stack.isActive !== false,
         is_odd_stack: stack.isOddStack || false,
+        container_size: stack.containerSize || '20feet',
         assigned_client_code: stack.assignedClientCode,
         notes: stack.notes,
         created_by: userId
@@ -93,6 +94,7 @@ export class StackService {
     if (updates.dimensions?.length !== undefined) updateData.length = updates.dimensions.length;
     if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
     if (updates.isOddStack !== undefined) updateData.is_odd_stack = updates.isOddStack;
+    if (updates.containerSize !== undefined) updateData.container_size = updates.containerSize;
     if (updates.assignedClientCode !== undefined) updateData.assigned_client_code = updates.assignedClientCode;
     if (updates.notes !== undefined) updateData.notes = updates.notes;
 
@@ -125,6 +127,74 @@ export class StackService {
     if (error) throw error;
   }
 
+  async updateContainerSize(
+    stackId: string,
+    yardId: string,
+    stackNumber: number,
+    newSize: '20feet' | '40feet',
+    userId: string
+  ): Promise<YardStack[]> {
+    const updatedStacks: YardStack[] = [];
+    const updateData = {
+      container_size: newSize,
+      updated_at: new Date().toISOString(),
+      updated_by: userId
+    };
+
+    const { data, error } = await supabase
+      .from('stacks')
+      .update(updateData)
+      .eq('id', stackId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    updatedStacks.push(this.mapToStack(data));
+
+    if (newSize === '40feet' && stackNumber % 2 === 1) {
+      const adjacentStackNumber = stackNumber + 1;
+      const { data: adjacentData, error: adjacentError } = await supabase
+        .from('stacks')
+        .update(updateData)
+        .eq('yard_id', yardId)
+        .eq('stack_number', adjacentStackNumber)
+        .select()
+        .maybeSingle();
+
+      if (!adjacentError && adjacentData) {
+        updatedStacks.push(this.mapToStack(adjacentData));
+      }
+    } else if (newSize === '40feet' && stackNumber % 2 === 0) {
+      const adjacentStackNumber = stackNumber - 1;
+      const { data: adjacentData, error: adjacentError } = await supabase
+        .from('stacks')
+        .update(updateData)
+        .eq('yard_id', yardId)
+        .eq('stack_number', adjacentStackNumber)
+        .select()
+        .maybeSingle();
+
+      if (!adjacentError && adjacentData) {
+        updatedStacks.push(this.mapToStack(adjacentData));
+      }
+    }
+
+    return updatedStacks;
+  }
+
+  getAdjacentStackNumber(stackNumber: number): number | null {
+    if (stackNumber % 2 === 1) {
+      return stackNumber + 1;
+    } else if (stackNumber % 2 === 0) {
+      return stackNumber - 1;
+    }
+    return null;
+  }
+
+  canAssign40Feet(stackNumber: number, isSpecialStack: boolean): boolean {
+    return !isSpecialStack;
+  }
+
   private mapToStack(data: any): YardStack {
     return {
       id: data.id,
@@ -148,6 +218,7 @@ export class StackService {
       containerPositions: [],
       isOddStack: data.is_odd_stack,
       isActive: data.is_active,
+      containerSize: data.container_size || '20feet',
       assignedClientCode: data.assigned_client_code,
       notes: data.notes,
       createdAt: toDate(data.created_at),

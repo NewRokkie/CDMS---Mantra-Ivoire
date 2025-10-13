@@ -88,6 +88,37 @@ export const StackManagement: React.FC = () => {
     }
   };
 
+  const handleContainerSizeChange = async (
+    stackId: string,
+    yardId: string,
+    stackNumber: number,
+    newSize: '20feet' | '40feet'
+  ) => {
+    try {
+      const updatedStacks = await stackService.updateContainerSize(
+        stackId,
+        yardId,
+        stackNumber,
+        newSize,
+        user?.id || ''
+      );
+
+      setStacks(prev => prev.map(stack => {
+        const updated = updatedStacks.find(u => u.id === stack.id);
+        return updated || stack;
+      }));
+
+      if (updatedStacks.length > 1) {
+        alert(`Successfully updated ${updatedStacks.length} stacks to ${newSize}!`);
+      } else {
+        alert(`Stack updated to ${newSize} successfully!`);
+      }
+    } catch (error) {
+      console.error('Error updating container size:', error);
+      alert('Error updating container size: ' + (error as Error).message);
+    }
+  };
+
   const filteredStacks = stacks.filter(stack => {
     const matchesSearch = stack.stackNumber.toString().includes(searchTerm) ||
                          (stack.sectionName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -137,6 +168,7 @@ export const StackManagement: React.FC = () => {
             stacks={filteredStacks}
             onEditStack={handleEditStack}
             onDeleteStack={handleDeleteStack}
+            onContainerSizeChange={handleContainerSizeChange}
           />
         </div>
 

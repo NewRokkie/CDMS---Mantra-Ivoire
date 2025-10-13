@@ -56,6 +56,7 @@ export interface YardStack {
   maxTiers: number;
   currentOccupancy: number;
   capacity: number;
+  containerSize?: '20feet' | '40feet';
   position: {
     x: number;
     y: number;
