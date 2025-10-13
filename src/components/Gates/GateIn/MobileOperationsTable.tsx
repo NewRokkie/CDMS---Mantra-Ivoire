@@ -50,10 +50,10 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
     if (selectedFilter !== 'all') {
       switch (selectedFilter) {
         case 'pending':
-          filtered = filtered.filter(op => op.operationStatus === 'pending');
+          filtered = filtered.filter(op => !op.completedAt);
           break;
         case 'completed':
-          filtered = filtered.filter(op => op.operationStatus === 'completed');
+          filtered = filtered.filter(op => op.completedAt);
           break;
         case 'damaged':
           filtered = filtered.filter(op => op.isDamaged);
@@ -173,7 +173,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-wrap items-center gap-2">
-                      {getStatusBadge(operation.operationStatus)}
+                      {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                         operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                       }`}>
@@ -227,7 +227,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {getStatusBadge(operation.operationStatus)}
+                      {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
                       <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
                         operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                       }`}>

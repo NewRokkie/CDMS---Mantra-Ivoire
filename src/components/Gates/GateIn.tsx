@@ -114,10 +114,10 @@ export const GateIn: React.FC = () => {
   }, [stacks]);
 
   const pendingOperations = gateInOperations.filter(op =>
-    op.status === 'pending' || op.operationStatus === 'pending' || !op.assignedLocation
+    !op.completedAt || !op.assignedLocation
   );
   const completedOperations = gateInOperations.filter(op =>
-    (op.status === 'completed' || op.operationStatus === 'completed') && op.assignedLocation
+    op.completedAt && op.assignedLocation
   );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');

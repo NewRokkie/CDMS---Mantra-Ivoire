@@ -188,7 +188,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {getStatusBadge(operation.operationStatus)}
+                    {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                       operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                     }`}>
@@ -339,7 +339,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        {getStatusBadge(operation.operationStatus)}
+                        {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
