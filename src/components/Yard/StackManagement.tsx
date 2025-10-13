@@ -1,278 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, Plus, CreditCard as Edit, Trash2 } from 'lucide-react';
-import { Yard } from '../../types';
+import { YardStack } from '../../types/yard';
+import { stackService } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { StackManagementHeader } from './StackManagement/StackManagementHeader';
 import { StackManagementFilters } from './StackManagement/StackManagementFilters';
 import { StackConfigurationTable } from './StackManagement/StackConfigurationTable';
+import { StackFormModal } from './StackManagement/StackFormModal';
 import { StackConfigurationRules } from './StackManagement/StackConfigurationRules';
 import { StackPairingInfo } from './StackManagement/StackPairingInfo';
-import { StackFormModal } from './StackManagement/StackFormModal';
-import { yardService } from '../../services/yardService';
 
-interface StackConfiguration {
-  stackId: string;
-  stackNumber: number;
-  sectionId: string;
-  sectionName: string;
-  containerSize: '20feet' | '40feet';
-  isSpecialStack: boolean;
-  lastModified: Date;
-  modifiedBy: string;
-}
-
-interface StackManagementProps {
-  yard?: Yard;
-  onConfigurationChange: (configurations: StackConfiguration[]) => void;
-}
-
-export const StackManagement: React.FC<StackManagementProps> = ({
-  yard: propYard,
-  onConfigurationChange
-}) => {
-  const { user } = useAuth();
-  const { currentYard, availableYards } = useYard();
-  const [configurations, setConfigurations] = useState<StackConfiguration[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sectionFilter, setSectionFilter] = useState('all');
-  const [hasChanges, setHasChanges] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+export const StackManagement: React.FC = () => {
+  const [stacks, setStacks] = useState<YardStack[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedStack, setSelectedStack] = useState<YardStack | null>(null);
   const [showStackForm, setShowStackForm] = useState(false);
-  const [selectedStack, setSelectedStack] = useState<StackConfiguration | null>(null);
-  const [isFormLoading, setIsFormLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sectionFilter, setSectionFilter] = useState('all');
 
-  const canManageStacks = user?.role === 'admin' || user?.role === 'supervisor';
-  
-  // Use current yard from context, fallback to prop yard
-  const activeYard = currentYard || propYard;
-
-  // Special stacks that are locked to 20feet only
-  const SPECIAL_STACKS = [1, 31, 101, 103];
+  const { user } = useAuth();
+  const { currentYard } = useYard();
 
   useEffect(() => {
-    if (activeYard) {
-      initializeConfigurations();
-    } else {
-      setError('No yard selected for stack management');
-      setIsLoading(false);
+    if (currentYard?.id) {
+      loadStacks();
     }
-  }, [activeYard, user]);
+  }, [currentYard]);
 
-  const initializeConfigurations = () => {
-    if (!activeYard) {
-      setError('No active yard available');
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
+  const loadStacks = async () => {
     try {
-      const allStacks = activeYard.sections.flatMap(section => section.stacks);
-      
-      if (allStacks.length === 0) {
-        setError(`No stacks found in ${activeYard.name}`);
-        setIsLoading(false);
-        return;
-      }
-
-      const stackConfigs: StackConfiguration[] = [];
-
-      // Initialize stack configurations
-      allStacks.forEach(stack => {
-        const isSpecial = SPECIAL_STACKS.includes(stack.stackNumber);
-        
-        stackConfigs.push({
-          stackId: stack.id,
-          stackNumber: stack.stackNumber,
-          sectionId: stack.sectionId,
-          sectionName: activeYard.sections.find(s => s.id === stack.sectionId)?.name || 'Unknown',
-          containerSize: '20feet', // Default to 20feet
-          isSpecialStack: isSpecial,
-          lastModified: new Date(),
-          modifiedBy: user?.name || 'System'
-        });
-      });
-
-      setConfigurations(stackConfigs.sort((a, b) => a.stackNumber - b.stackNumber));
-      console.log(`Loaded ${stackConfigs.length} stack configurations for ${activeYard.name}`);
+      setLoading(true);
+      const data = await stackService.getAll(currentYard?.id);
+      setStacks(data);
     } catch (error) {
-      console.error('Error initializing stack configurations:', error);
-      setError(`Failed to load stack configurations: ${error}`);
+      console.error('Error loading stacks:', error);
+      alert('Error loading stacks: ' + (error as Error).message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  const getFilteredConfigurations = () => {
-    let filtered = configurations;
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(config =>
-        config.stackNumber.toString().includes(searchTerm) ||
-        config.sectionName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Apply section filter
-    if (sectionFilter !== 'all') {
-      filtered = filtered.filter(config => config.sectionId === sectionFilter);
-    }
-
-    return filtered.sort((a, b) => a.stackNumber - b.stackNumber);
-  };
-
-  // Get the correct adjacent stack number based on the new pairing logic
-  const getAdjacentStackNumber = (stackNumber: number): number | null => {
-    if (SPECIAL_STACKS.includes(stackNumber)) return null;
-
-    // For odd-numbered stacks, find the correct pair:
-    // 03+05, 07+09, 11+13, 15+17, 19+21, 23+25, 27+29, etc.
-    
-    // Check if this stack is part of a valid pair
-    const isValidPairStack = (num: number): boolean => {
-      // Starting from 3, every pair is (n, n+2) where n is odd and n >= 3
-      // Valid first numbers: 3, 7, 11, 15, 19, 23, 27, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99
-      // Pattern: starts at 3, then increments by 4 (3, 7, 11, 15, ...) until we reach section boundaries
-      
-      // For each section, determine the valid pairs
-      if (num >= 3 && num <= 29) {
-        // Top section: 03+05, 07+09, 11+13, 15+17, 19+21, 23+25, 27+29
-        const validFirstNumbers = [3, 7, 11, 15, 19, 23, 27];
-        return validFirstNumbers.includes(num) || validFirstNumbers.includes(num - 2);
-      } else if (num >= 33 && num <= 55) {
-        // Center section: 33+35, 37+39, 41+43, 45+47, 49+51, 53+55
-        const validFirstNumbers = [33, 37, 41, 45, 49, 53];
-        return validFirstNumbers.includes(num) || validFirstNumbers.includes(num - 2);
-      } else if (num >= 61 && num <= 99) {
-        // Bottom section: 61+63, 65+67, 69+71, 73+75, 77+79, 81+83, 85+87, 89+91, 93+95, 97+99
-        const validFirstNumbers = [61, 65, 69, 73, 77, 81, 85, 89, 93, 97];
-        return validFirstNumbers.includes(num) || validFirstNumbers.includes(num - 2);
-      }
-      
-      return false;
-    };
-
-    if (!isValidPairStack(stackNumber)) return null;
-
-    // Find the partner stack
-    let partnerNumber: number;
-    
-    // Check if this is the first or second number in the pair
-    if (stackNumber >= 3 && stackNumber <= 29) {
-      // Top section pairs
-      const validFirstNumbers = [3, 7, 11, 15, 19, 23, 27];
-      if (validFirstNumbers.includes(stackNumber)) {
-        partnerNumber = stackNumber + 2; // First number, partner is +2
-      } else {
-        partnerNumber = stackNumber - 2; // Second number, partner is -2
-      }
-    } else if (stackNumber >= 33 && stackNumber <= 55) {
-      // Center section pairs
-      const validFirstNumbers = [33, 37, 41, 45, 49, 53];
-      if (validFirstNumbers.includes(stackNumber)) {
-        partnerNumber = stackNumber + 2;
-      } else {
-        partnerNumber = stackNumber - 2;
-      }
-    } else if (stackNumber >= 61 && stackNumber <= 99) {
-      // Bottom section pairs
-      const validFirstNumbers = [61, 65, 69, 73, 77, 81, 85, 89, 93, 97];
-      if (validFirstNumbers.includes(stackNumber)) {
-        partnerNumber = stackNumber + 2;
-      } else {
-        partnerNumber = stackNumber - 2;
-      }
-    } else {
-      return null;
-    }
-
-    // Verify the partner exists in our configurations
-    const partnerConfig = configurations.find(c => c.stackNumber === partnerNumber);
-    return partnerConfig && !partnerConfig.isSpecialStack ? partnerNumber : null;
-  };
-
-  // Check if a stack can be assigned 40feet containers
-  const canAssign40Feet = (stackNumber: number): boolean => {
-    const config = configurations.find(c => c.stackNumber === stackNumber);
-    if (!config || config.isSpecialStack) return false;
-
-    // Check if there's a valid adjacent stack to form a pair
-    return getAdjacentStackNumber(stackNumber) !== null;
-  };
-
-  const handleContainerSizeChange = (stackId: string, newSize: '20feet' | '40feet') => {
-    if (!canManageStacks) return;
-
-    const config = configurations.find(c => c.stackId === stackId);
-    if (!config) return;
-
-    // Prevent modification of special stacks to 40feet
-    if (config.isSpecialStack && newSize === '40feet') {
-      alert('Special stacks can only be set to 20feet containers.');
-      return;
-    }
-
-    // Validate 40feet assignment for regular stacks
-    if (newSize === '40feet' && !config.isSpecialStack) {
-      if (!canAssign40Feet(config.stackNumber)) {
-        alert(`Stack ${config.stackNumber.toString().padStart(2, '0')} cannot be assigned 40feet containers. No valid adjacent regular stack found for slot formation.`);
-        return;
-      }
-    }
-
-    // Get the adjacent stack for pairing
-    const adjacentStackNumber = getAdjacentStackNumber(config.stackNumber);
-    
-    setConfigurations(prev => prev.map(c => {
-      // Update the selected stack
-      if (c.stackId === stackId) {
-        return {
-          ...c,
-          containerSize: newSize,
-          lastModified: new Date(),
-          modifiedBy: user?.name || 'System'
-        };
-      }
-      
-      // Update the adjacent stack if it exists and this is a regular stack
-      if (!config.isSpecialStack && adjacentStackNumber && c.stackNumber === adjacentStackNumber) {
-        return {
-          ...c,
-          containerSize: newSize, // Set the same size for the pair
-          lastModified: new Date(),
-          modifiedBy: user?.name || 'System'
-        };
-      }
-      
-      return c;
-    }));
-
-    setHasChanges(true);
-
-    // Show confirmation message for paired updates
-    if (!config.isSpecialStack && adjacentStackNumber) {
-      const pairMessage = `Stacks ${Math.min(config.stackNumber, adjacentStackNumber).toString().padStart(2, '0')}+${Math.max(config.stackNumber, adjacentStackNumber).toString().padStart(2, '0')} have been configured for ${newSize} containers.`;
-      setTimeout(() => alert(pairMessage), 100);
-    }
-  };
-
-  const handleSaveChanges = () => {
-    if (!canManageStacks) return;
-
-    onConfigurationChange(configurations);
-    setHasChanges(false);
-    alert('Stack configurations saved successfully!');
-  };
-
-  const handleResetChanges = () => {
-    initializeConfigurations();
-    setHasChanges(false);
   };
 
   const handleCreateStack = () => {
@@ -280,187 +46,149 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     setShowStackForm(true);
   };
 
-  const handleEditStack = (config: StackConfiguration) => {
-    setSelectedStack(config);
+  const handleEditStack = (stack: YardStack) => {
+    setSelectedStack(stack);
     setShowStackForm(true);
   };
 
-  const handleDeleteStack = async (config: StackConfiguration) => {
-    if (!canManageStacks || !activeYard) return;
-
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete Stack ${config.stackNumber.toString().padStart(2, '0')}? This action cannot be undone.`
-    );
-
-    if (!confirmDelete) return;
+  const handleDeleteStack = async (stackId: string) => {
+    if (!confirm('Are you sure you want to delete this stack?')) {
+      return;
+    }
 
     try {
-      setIsFormLoading(true);
-      await yardService.deleteStack(activeYard.id, config.stackId);
-      
-      // Remove from configurations
-      setConfigurations(prev => prev.filter(c => c.stackId !== config.stackId));
-      setHasChanges(true);
-      
-      alert(`Stack ${config.stackNumber.toString().padStart(2, '0')} has been deleted successfully.`);
+      await stackService.delete(stackId);
+      setStacks(prev => prev.filter(s => s.id !== stackId));
+      alert('Stack deleted successfully!');
     } catch (error) {
       console.error('Error deleting stack:', error);
-      alert(`Failed to delete stack: ${error}`);
-    } finally {
-      setIsFormLoading(false);
+      alert('Error deleting stack: ' + (error as Error).message);
     }
   };
 
-  const handleStackFormSubmit = async (data: any) => {
-    if (!canManageStacks || !activeYard) return;
-
+  const handleSaveStack = async (stackData: Partial<YardStack>) => {
     try {
-      setIsFormLoading(true);
-      
-      // Calculate dimensions based on container size
-      const dimensions = {
-        width: data.containerSize === '40ft' ? 24 : 12, // 40ft = 24m, 20ft = 12m
-        length: 6 // Standard length
-      };
-      
-      // Calculate position (simplified - in production this would be more sophisticated)
-      const position = {
-        x: data.stackNumber * 15, // Simple spacing
-        y: 20, // Default Y position
-        z: 0 // Ground level
-      };
-      
       if (selectedStack) {
-        // Update existing stack
-        await yardService.updateStack(activeYard.id, selectedStack.stackId, {
-          rows: data.rows,
-          maxTiers: data.maxTiers,
-          position: position,
-          dimensions: dimensions
-        }, user?.name);
-        
-        alert(`Stack ${selectedStack.stackNumber.toString().padStart(2, '0')} updated successfully!`);
+        const updated = await stackService.update(selectedStack.id, stackData, user?.id || '');
+        setStacks(prev => prev.map(s => s.id === updated.id ? updated : s));
+        alert('Stack updated successfully!');
       } else {
-        // Create new stack
-        const newStack = await yardService.addStackToSection(
-          activeYard.id,
-          data.sectionId,
-          {
-            stackNumber: data.stackNumber,
-            rows: data.rows,
-            maxTiers: data.maxTiers,
-            position: position,
-            dimensions: dimensions
-          },
-          user?.name
-        );
-        
-        if (newStack) {
-          // Add to configurations
-          const newConfig: StackConfiguration = {
-            stackId: newStack.id,
-            stackNumber: newStack.stackNumber,
-            sectionId: newStack.sectionId,
-            sectionName: activeYard.sections.find(s => s.id === newStack.sectionId)?.name || 'Unknown',
-            containerSize: data.containerSize === '40ft' ? '40feet' : '20feet',
-            isSpecialStack: data.stackType === 'special',
-            lastModified: new Date(),
-            modifiedBy: user?.name || 'System'
-          };
-          
-          setConfigurations(prev => [...prev, newConfig].sort((a, b) => a.stackNumber - b.stackNumber));
-          setHasChanges(true);
-          
-          alert(`Stack ${newStack.stackNumber.toString().padStart(2, '0')} created successfully!`);
-        }
+        const newStack = await stackService.create({
+          ...stackData,
+          yardId: currentYard?.id
+        }, user?.id || '');
+        setStacks(prev => [...prev, newStack]);
+        alert('Stack created successfully!');
       }
-      
       setShowStackForm(false);
       setSelectedStack(null);
     } catch (error) {
       console.error('Error saving stack:', error);
-      alert(`Failed to save stack: ${error}`);
-    } finally {
-      setIsFormLoading(false);
+      alert('Error saving stack: ' + (error as Error).message);
     }
   };
-  if (!canManageStacks) {
+
+  const handleContainerSizeChange = async (
+    stackId: string,
+    yardId: string,
+    stackNumber: number,
+    newSize: '20feet' | '40feet'
+  ) => {
+    try {
+      const updatedStacks = await stackService.updateContainerSize(
+        stackId,
+        yardId,
+        stackNumber,
+        newSize,
+        user?.id || ''
+      );
+
+      setStacks(prev => prev.map(stack => {
+        const updated = updatedStacks.find(u => u.id === stack.id);
+        return updated || stack;
+      }));
+
+      if (updatedStacks.length > 1) {
+        alert(`Successfully updated ${updatedStacks.length} stacks to ${newSize}!`);
+      } else {
+        alert(`Stack updated to ${newSize} successfully!`);
+      }
+    } catch (error) {
+      console.error('Error updating container size:', error);
+      alert('Error updating container size: ' + (error as Error).message);
+    }
+  };
+
+  const filteredStacks = stacks.filter(stack => {
+    const matchesSearch = stack.stackNumber.toString().includes(searchTerm) ||
+                         (stack.sectionName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (stack.assignedClientCode || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'all' ||
+                         (statusFilter === 'active' && stack.isActive) ||
+                         (statusFilter === 'inactive' && !stack.isActive);
+
+    const matchesSection = sectionFilter === 'all' ||
+                          (stack.sectionName || '').toLowerCase() === sectionFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus && matchesSection;
+  });
+
+  const sections = Array.from(new Set(stacks.map(s => s.sectionName || 'Main Section')));
+
+  if (loading) {
     return (
-      <div className="text-center py-12">
-        <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-        <p className="text-gray-600">You don't have permission to manage stack configurations.</p>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-600">Loading stacks...</div>
       </div>
     );
   }
 
-  const DesktopContent = () => (
-    <>
-      <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       <StackManagementHeader
-        hasChanges={hasChanges}
         onCreateStack={handleCreateStack}
-        onSave={handleSaveChanges}
-        onReset={handleResetChanges}
+        totalStacks={stacks.length}
+        activeStacks={stacks.filter(s => s.isActive).length}
       />
 
       <StackManagementFilters
         searchTerm={searchTerm}
-        sectionFilter={sectionFilter}
-        sections={activeYard.sections}
         onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        sectionFilter={sectionFilter}
         onSectionFilterChange={setSectionFilter}
+        sections={sections}
       />
 
-      <StackConfigurationTable
-        configurations={getFilteredConfigurations()}
-        canAssign40Feet={canAssign40Feet}
-        getAdjacentStackNumber={getAdjacentStackNumber}
-        onContainerSizeChange={handleContainerSizeChange}
-        onEditStack={handleEditStack}
-        onDeleteStack={handleDeleteStack}
-      />
-
-      <StackConfigurationRules />
-
-      <StackPairingInfo
-        configurations={getFilteredConfigurations()}
-        canAssign40Feet={canAssign40Feet}
-        getAdjacentStackNumber={getAdjacentStackNumber}
-      />
-    </div>
-
-        {/* Stack Form Modal */}
-        {showStackForm && (
-          <StackFormModal
-            isOpen={showStackForm}
-            onClose={() => {
-              setShowStackForm(false);
-              setSelectedStack(null);
-            }}
-            onSubmit={handleStackFormSubmit}
-            selectedStack={selectedStack}
-            yard={activeYard}
-            isLoading={isFormLoading}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <StackConfigurationTable
+            stacks={filteredStacks}
+            onEditStack={handleEditStack}
+            onDeleteStack={handleDeleteStack}
+            onContainerSizeChange={handleContainerSizeChange}
           />
-        )}
-      </>
-  );
+        </div>
 
-  return (
-    <>
-      {/* Desktop Only Message for Mobile */}
-      <div className="lg:hidden">
-        <DesktopOnlyMessage
-          moduleName="Stack Management"
-          reason="Configuring stack layouts, pairing rules, and container size assignments requires detailed management tools optimized for desktop."
+        <div className="space-y-6">
+          <StackConfigurationRules />
+          <StackPairingInfo stacks={stacks} />
+        </div>
+      </div>
+
+      {showStackForm && (
+        <StackFormModal
+          isOpen={showStackForm}
+          onClose={() => {
+            setShowStackForm(false);
+            setSelectedStack(null);
+          }}
+          selectedStack={selectedStack}
+          onSubmit={handleSaveStack}
         />
-      </div>
-
-      {/* Desktop View */}
-      <div className="hidden lg:block">
-        <DesktopContent />
-      </div>
-    </>
+      )}
+    </div>
   );
 };

@@ -17,7 +17,7 @@ export class StackService {
 
     if (error) throw error;
 
-    return (data || []).map(this.mapToStack);
+    return (data || []).map((item) => this.mapToStack(item));
   }
 
   async getById(id: string): Promise<YardStack | null> {

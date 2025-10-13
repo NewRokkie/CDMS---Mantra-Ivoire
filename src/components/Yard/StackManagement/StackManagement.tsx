@@ -31,7 +31,9 @@ export const StackManagement: React.FC = () => {
   const loadStacks = async () => {
     try {
       setLoading(true);
+      console.log('Loading stacks for yard:', currentYard?.id);
       const data = await stackService.getAll(currentYard?.id);
+      console.log('Loaded stacks:', data.length, 'stacks');
       setStacks(data);
     } catch (error) {
       console.error('Error loading stacks:', error);
