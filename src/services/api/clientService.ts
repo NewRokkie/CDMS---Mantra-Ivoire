@@ -48,7 +48,7 @@ export class ClientService {
         daily_storage_rate: client.dailyStorageRate || 45.00,
         currency: client.currency || 'USD',
         auto_edi: client.autoEDI || false,
-        active: client.active !== false
+        active: client.isActive !== false
       })
       .select()
       .single();
@@ -72,7 +72,7 @@ export class ClientService {
     if (updates.dailyStorageRate !== undefined) updateData.daily_storage_rate = updates.dailyStorageRate;
     if (updates.currency) updateData.currency = updates.currency;
     if (updates.autoEDI !== undefined) updateData.auto_edi = updates.autoEDI;
-    if (updates.active !== undefined) updateData.active = updates.active;
+    if (updates.isActive !== undefined) updateData.active = updates.isActive;
 
     const { data, error } = await supabase
       .from('clients')
@@ -107,9 +107,12 @@ export class ClientService {
       dailyStorageRate: data.daily_storage_rate,
       currency: data.currency,
       autoEDI: data.auto_edi,
-      active: data.active,
+      isActive: data.active,
       createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      updatedAt: new Date(data.updated_at),
+      createdBy: 'System',
+      creditLimit: 0,
+      paymentTerms: 30
     };
   }
 }

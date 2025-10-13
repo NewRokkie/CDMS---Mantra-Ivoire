@@ -80,6 +80,7 @@ export interface Client {
   freeDaysAllowed: number; // Free storage days
   dailyStorageRate: number; // USD per day after free days
   currency: string; // Currency for billing
+  autoEDI: boolean; // Automatic EDI transmission
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
