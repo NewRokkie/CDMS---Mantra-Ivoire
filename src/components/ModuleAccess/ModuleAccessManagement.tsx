@@ -668,7 +668,9 @@ export const ModuleAccessManagement: React.FC = () => {
 
   const calculateAccessPercentage = (user: User): number => {
     const totalModules = Object.keys(moduleConfig).length;
-    const accessibleModules = Object.values(user.moduleAccess).filter(Boolean).length;
+    const accessibleModules = Object.keys(moduleConfig).filter(
+      key => user.moduleAccess[key as keyof ModuleAccess] === true
+    ).length;
     return Math.round((accessibleModules / totalModules) * 100);
   };
 
@@ -967,7 +969,7 @@ export const ModuleAccessManagement: React.FC = () => {
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-500">Module Access</span>
                             <span className="text-xs font-medium text-gray-700">
-                              {Object.values(user.moduleAccess).filter(Boolean).length}/{Object.keys(moduleConfig).length}
+                              {Object.keys(moduleConfig).filter(key => user.moduleAccess[key as keyof ModuleAccess] === true).length}/{Object.keys(moduleConfig).length}
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-1.5 lg:h-2">
