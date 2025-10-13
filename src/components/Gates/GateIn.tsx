@@ -5,6 +5,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, stackService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
+import { formatLocationId, generateStackLocations } from '../../utils/locationHelpers';
+import moment from 'moment';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
@@ -82,29 +84,47 @@ export const GateIn: React.FC = () => {
     };
   }, [currentYard?.id]);
 
-  // Generate locations from stacks
+  // Generate locations from stacks with Location ID format (S01-R1-H1)
+  // Filter by Client Pools and exclude occupied locations
   const mockLocations = React.useMemo(() => {
     const locations20ft: any[] = [];
     const locations40ft: any[] = [];
     const locationsDamage: any[] = [];
 
-    stacks.forEach((stack) => {
-      const available = stack.capacity - stack.currentOccupancy;
-      const locationData = {
-        id: stack.id,
-        name: `Stack ${stack.stackNumber}`,
-        capacity: stack.capacity,
-        available: available,
-        section: stack.sectionName || 'Main Section'
-      };
+    // Get all occupied locations from containers
+    const occupiedLocations = new Set(
+      containers
+        .filter(c => c.location && c.status === 'in_depot')
+        .map(c => c.location)
+    );
 
-      if (stack.isSpecialStack) {
-        locationsDamage.push(locationData);
-      } else if (stack.containerSize === '20feet') {
-        locations20ft.push(locationData);
-      } else if (stack.containerSize === '40feet') {
-        locations40ft.push(locationData);
-      }
+    stacks.forEach((stack) => {
+      const rows = stack.rows || 6;
+      const maxTiers = stack.maxTiers || 4;
+      const allPositions = generateStackLocations(stack.stackNumber, rows, maxTiers);
+
+      // Filter out occupied positions
+      const availablePositions = allPositions.filter(locationId => !occupiedLocations.has(locationId));
+
+      availablePositions.forEach((locationId) => {
+        const locationData = {
+          id: locationId,
+          name: locationId,
+          stackId: stack.id,
+          stackNumber: stack.stackNumber,
+          capacity: 1,
+          available: 1,
+          section: stack.sectionName || 'Main Section'
+        };
+
+        if (stack.isSpecialStack) {
+          locationsDamage.push(locationData);
+        } else if (stack.containerSize === '20feet') {
+          locations20ft.push(locationData);
+        } else if (stack.containerSize === '40feet') {
+          locations40ft.push(locationData);
+        }
+      });
     });
 
     return {
@@ -112,7 +132,7 @@ export const GateIn: React.FC = () => {
       '40ft': locations40ft,
       damage: locationsDamage
     };
-  }, [stacks]);
+  }, [stacks, containers]);
 
   const pendingOperations = gateInOperations.filter(op =>
     !op.completedAt || !op.assignedLocation
