@@ -1,24 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader, Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings } from 'lucide-react';
-import { Yard } from '../../../types';
+import { Yard, YardStack } from '../../../types';
 import { yardService } from '../../../services/yardService';
-
-interface StackConfiguration {
-  stackId: string;
-  stackNumber: number;
-  sectionId: string;
-  sectionName: string;
-  containerSize: '20feet' | '40feet';
-  isSpecialStack: boolean;
-  lastModified: Date;
-  modifiedBy: string;
-}
 
 interface StackFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
-  selectedStack?: StackConfiguration | null;
+  selectedStack?: YardStack | null;
   yard: Yard;
   isLoading?: boolean;
 }
@@ -44,21 +33,16 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
   // Initialize form data
   useEffect(() => {
-    if (selectedStack && yard?.sections) {
-      // Find the actual stack from yard data
-      const section = yard.sections.find(s => s.id === selectedStack.sectionId);
-      const stack = section?.stacks.find(s => s.id === selectedStack.stackId);
-      
-      if (stack) {
-        setFormData({
-          stackNumber: stack.stackNumber,
-          sectionId: stack.sectionId,
-          containerSize: '20ft', // Default, could be determined from existing config
-          stackType: [1, 31, 101, 103].includes(stack.stackNumber) ? 'special' : 'regular',
-          rows: stack.rows,
-          maxTiers: stack.maxTiers,
-        });
-      }
+    if (selectedStack) {
+      // Load existing stack data
+      setFormData({
+        stackNumber: selectedStack.stackNumber,
+        sectionId: selectedStack.sectionId || '',
+        containerSize: selectedStack.containerSize === '40feet' ? '40ft' : '20ft',
+        stackType: selectedStack.isSpecialStack ? 'special' : 'regular',
+        rows: selectedStack.rows,
+        maxTiers: selectedStack.maxTiers,
+      });
     } else if (yard?.sections && yard.sections.length > 0) {
       // Reset for new stack
       const firstSection = yard.sections[0];
