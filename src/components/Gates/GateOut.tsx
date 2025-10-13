@@ -29,6 +29,10 @@ interface GateOutFormData {
 }
 
 export const GateOut: React.FC = () => {
+  const { t } = useLanguage();
+  const { user } = useAuth();
+  const { currentYard, validateYardOperation } = useYard();
+
   const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
   const [showForm, setShowForm] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -39,6 +43,9 @@ export const GateOut: React.FC = () => {
   const [containers, setContainers] = useState<any[]>([]);
   const [gateOutOperations, setGateOutOperations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [selectedFilter, setSelectedFilter] = useState('all');
 
   useEffect(() => {
     async function loadData() {
@@ -100,12 +107,6 @@ export const GateOut: React.FC = () => {
 
   const pendingOperations = gateOutOperations.filter(op => op.status === 'pending');
   const completedOperations = gateOutOperations.filter(op => op.status === 'completed');
-  const [error, setError] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState<string>('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const { t } = useLanguage();
-  const { user } = useAuth();
-  const { currentYard, validateYardOperation } = useYard();
 
   const canPerformGateOut = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 

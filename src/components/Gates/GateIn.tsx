@@ -14,6 +14,10 @@ import { validateContainerNumber, formatContainerNumberForDisplay, validateGateI
 import { realtimeService } from '../../services/api/realtimeService';
 
 export const GateIn: React.FC = () => {
+  const { t } = useLanguage();
+  const { user } = useAuth();
+  const { currentYard, validateYardOperation } = useYard();
+
   const [activeView, setActiveView] = useState<'overview' | 'pending' | 'location'>('overview');
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,10 +108,6 @@ export const GateIn: React.FC = () => {
     notes: '',
     operationStatus: 'pending'
   });
-
-  const { t } = useLanguage();
-  const { user } = useAuth();
-  const { currentYard, validateYardOperation } = useYard();
 
   const canPerformGateIn = user?.role === 'admin' || user?.role === 'operator' || user?.role === 'supervisor';
 
