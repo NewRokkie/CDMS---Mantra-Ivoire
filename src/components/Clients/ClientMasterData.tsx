@@ -241,12 +241,14 @@ export const ClientMasterData: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{client.contactPerson.name}</div>
-                    <div className="text-sm text-gray-500">{client.email}</div>
+                    <div className="text-sm text-gray-900">{client.contactPerson?.name || '-'}</div>
+                    <div className="text-sm text-gray-500">{client.email || '-'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{client.address.city}, {client.address.state}</div>
-                    <div className="text-sm text-gray-500">{client.address.country}</div>
+                    <div className="text-sm text-gray-900">
+                      {client.address ? `${client.address.city}, ${client.address.state}` : '-'}
+                    </div>
+                    <div className="text-sm text-gray-500">{client.address?.country || '-'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatCurrency(client.creditLimit)}
