@@ -3,7 +3,7 @@ import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Contain
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { gateService, clientService, containerService } from '../../services/api';
+import { gateService, clientService, containerService, stackService } from '../../services/api';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
@@ -27,19 +27,22 @@ export const GateIn: React.FC = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [gateInOperations, setGateInOperations] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
+  const [stacks, setStacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [clientsData, operationsData, containersData] = await Promise.all([
+        const [clientsData, operationsData, containersData, stacksData] = await Promise.all([
           clientService.getAll(),
           gateService.getGateInOperations(),
-          containerService.getAll()
+          containerService.getAll(),
+          stackService.getAll(currentYard?.id)
         ]);
         setClients(clientsData);
         setGateInOperations(operationsData);
         setContainers(containersData);
+        setStacks(stacksData);
       } catch (error) {
         console.error('Error loading gate in data:', error);
       } finally {
@@ -47,7 +50,7 @@ export const GateIn: React.FC = () => {
       }
     }
     loadData();
-  }, []);
+  }, [currentYard?.id]);
 
   useEffect(() => {
     if (!currentYard) return;
@@ -78,8 +81,44 @@ export const GateIn: React.FC = () => {
     };
   }, [currentYard?.id]);
 
-  const pendingOperations = gateInOperations.filter(op => op.status === 'pending');
-  const completedOperations = gateInOperations.filter(op => op.status === 'completed');
+  // Generate locations from stacks
+  const mockLocations = React.useMemo(() => {
+    const locations20ft: any[] = [];
+    const locations40ft: any[] = [];
+    const locationsDamage: any[] = [];
+
+    stacks.forEach((stack) => {
+      const available = stack.capacity - stack.currentOccupancy;
+      const locationData = {
+        id: stack.id,
+        name: `Stack ${stack.stackNumber}`,
+        capacity: stack.capacity,
+        available: available,
+        section: stack.sectionName || 'Main Section'
+      };
+
+      if (stack.isSpecialStack) {
+        locationsDamage.push(locationData);
+      } else if (stack.containerSize === '20feet') {
+        locations20ft.push(locationData);
+      } else if (stack.containerSize === '40feet') {
+        locations40ft.push(locationData);
+      }
+    });
+
+    return {
+      '20ft': locations20ft,
+      '40ft': locations40ft,
+      damage: locationsDamage
+    };
+  }, [stacks]);
+
+  const pendingOperations = gateInOperations.filter(op =>
+    op.status === 'pending' || op.operationStatus === 'pending' || !op.assignedLocation
+  );
+  const completedOperations = gateInOperations.filter(op =>
+    (op.status === 'completed' || op.operationStatus === 'completed') && op.assignedLocation
+  );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
