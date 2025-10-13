@@ -1,5 +1,6 @@
 export interface ClientPool {
   id: string;
+  yardId?: string;
   clientId: string;
   clientCode: string;
   clientName: string;
@@ -19,6 +20,7 @@ export interface ClientPool {
 
 export interface StackAssignment {
   id: string;
+  yardId?: string;
   stackId: string;
   stackNumber: number;
   clientPoolId: string;

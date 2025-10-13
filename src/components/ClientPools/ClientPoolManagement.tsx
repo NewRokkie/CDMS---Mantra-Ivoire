@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Building, X, Loader, Calendar } from 'lucide-react';
 import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { useAuth } from '../../hooks/useAuth';
-import { clientPoolService } from '../../services/clientPoolService';
+import { clientPoolService } from '../../services/api';
 import { ClientPoolForm } from './ClientPoolForm';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
@@ -107,13 +107,9 @@ export const ClientPoolManagement: React.FC = () => {
   const loadClientPools = async () => {
     try {
       setIsLoading(true);
-      
-      // Get pools for current yard only
-      const pools = currentYard 
-        ? clientPoolService.getClientPoolsForYard(currentYard.id)
-        : clientPoolService.getClientPools();
-        
-      const poolStats = clientPoolService.getClientPoolStats();
+
+      const pools = await clientPoolService.getAll(currentYard?.id);
+      const poolStats = await clientPoolService.getStats(currentYard?.id);
 
       setClientPools(pools);
       setStats(poolStats);
@@ -159,52 +155,66 @@ export const ClientPoolManagement: React.FC = () => {
     );
   };
 
-  const handleCreatePool = (data: any) => {
+  const handleCreatePool = async (data: any) => {
+    if (!user || !currentYard) return;
+
     try {
-      const newPool = clientPoolService.createClientPool(
-        data.clientId,
-        data.clientCode,
-        data.clientName,
-        data.assignedStacks,
-        data.maxCapacity,
-        new Date(data.contractStartDate),
-        data.contractEndDate ? new Date(data.contractEndDate) : undefined,
-        data.notes
-      );
+      const newPool = await clientPoolService.create({
+        yardId: currentYard.id,
+        clientId: data.clientId,
+        clientCode: data.clientCode,
+        clientName: data.clientName,
+        assignedStacks: data.assignedStacks || [],
+        maxCapacity: data.maxCapacity,
+        priority: data.priority || 'medium',
+        contractStartDate: new Date(data.contractStartDate),
+        contractEndDate: data.contractEndDate ? new Date(data.contractEndDate) : undefined,
+        notes: data.notes
+      }, user.id);
 
-      // Assign stacks to the client
-      clientPoolService.bulkAssignStacksToClient(
-        data.assignedStacks,
-        data.clientCode,
-        user?.name || 'System'
-      );
+      if (data.assignedStacks && data.assignedStacks.length > 0) {
+        for (const stackId of data.assignedStacks) {
+          await clientPoolService.assignStack({
+            yardId: currentYard.id,
+            stackId,
+            stackNumber: parseInt(stackId.split('-').pop() || '0'),
+            clientPoolId: newPool.id,
+            clientCode: data.clientCode,
+            isExclusive: false,
+            priority: 1
+          }, user.id);
+        }
+      }
 
-      loadClientPools();
+      await loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
       alert(`Client pool created successfully for ${data.clientName}!`);
     } catch (error) {
+      console.error('Error creating client pool:', error);
       alert(`Error creating client pool: ${error}`);
     }
   };
 
-  const handleUpdatePool = (data: any) => {
-    if (!selectedPool) return;
+  const handleUpdatePool = async (data: any) => {
+    if (!selectedPool || !user) return;
 
     try {
-      clientPoolService.updateClientPool(selectedPool.clientCode, {
-        assignedStacks: data.assignedStacks,
+      await clientPoolService.update(selectedPool.id, {
+        assignedStacks: data.assignedStacks || [],
         maxCapacity: data.maxCapacity,
+        priority: data.priority,
         contractStartDate: new Date(data.contractStartDate),
         contractEndDate: data.contractEndDate ? new Date(data.contractEndDate) : undefined,
         notes: data.notes
-      });
+      }, user.id);
 
-      loadClientPools();
+      await loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
       alert(`Client pool updated successfully for ${data.clientName}!`);
     } catch (error) {
+      console.error('Error updating client pool:', error);
       alert(`Error updating client pool: ${error}`);
     }
   };

@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, XCircle, Plus, CreditCard as Edit, Trash2, UserPlus, Sparkles, Zap, Lock, Unlock, Eye, EyeOff, Star, Award, Crown, Gem, User as UserIcon } from 'lucide-react';
 import type { ModuleAccess, ModulePermission, User } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { userService, moduleAccessService } from '../../services/api';
 
 // Enhanced module configuration with beautiful icons and colors
 const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
@@ -296,7 +297,8 @@ const mockUsers: User[] = [
 ];
 
 export const ModuleAccessManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string>(''); // Single selection (radio behavior)
   const [bulkSelectedUserIds, setBulkSelectedUserIds] = useState<string[]>([]); // Bulk selection
   const [selectionMode, setSelectionMode] = useState<'single' | 'bulk'>('single'); // Selection mode toggle
@@ -306,6 +308,22 @@ export const ModuleAccessManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
 
   const canManageModuleAccess = currentUser?.role === 'admin';
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      const allUsers = await userService.getAll();
+      setUsers(allUsers);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Filter users based on search and role
   const filteredUsers = useMemo(() => {
@@ -405,15 +423,17 @@ export const ModuleAccessManagement: React.FC = () => {
     }
   };
 
-  const handleModuleToggle = (moduleKey: keyof ModuleAccess) => {
-    const targetUserIds = selectionMode === 'single' 
+  const handleModuleToggle = async (moduleKey: keyof ModuleAccess) => {
+    if (!currentUser) return;
+
+    const targetUserIds = selectionMode === 'single'
       ? (selectedUserId ? [selectedUserId] : [])
       : bulkSelectedUserIds;
-    
+
     if (targetUserIds.length === 0) return;
 
-    setUsers(prevUsers => 
-      prevUsers.map(user => 
+    setUsers(prevUsers =>
+      prevUsers.map(user =>
         targetUserIds.includes(user.id)
           ? {
               ...user,
@@ -425,6 +445,22 @@ export const ModuleAccessManagement: React.FC = () => {
           : user
       )
     );
+
+    try {
+      for (const userId of targetUserIds) {
+        const user = users.find(u => u.id === userId);
+        if (user) {
+          const updatedAccess = {
+            ...user.moduleAccess,
+            [moduleKey]: !user.moduleAccess[moduleKey]
+          };
+          await moduleAccessService.setUserModuleAccess(userId, updatedAccess, currentUser.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving module access:', error);
+      alert('Error saving module access changes');
+    }
   };
 
   // Bulk actions handler
@@ -452,55 +488,92 @@ export const ModuleAccessManagement: React.FC = () => {
   };
 
   // Handle specific bulk actions
-  const handleBulkAction = (action: string) => {
-    switch (action) {
-      case 'Apply Role-Based Access':
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            bulkSelectedUserIds.includes(user.id)
-              ? { ...user, moduleAccess: getModuleAccessForRole(user.role) }
-              : user
-          )
-        );
-        alert(`Applied role-based access to ${bulkSelectedUserIds.length} users`);
-        break;
-        
-      case 'Enable All Modules':
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            bulkSelectedUserIds.includes(user.id)
-              ? { 
-                  ...user, 
-                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
-                    ...acc,
-                    [key]: true
-                  }), {} as ModuleAccess)
-                }
-              : user
-          )
-        );
-        alert(`Enabled all modules for ${bulkSelectedUserIds.length} users`);
-        break;
-        
-      case 'Disable All Modules':
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            bulkSelectedUserIds.includes(user.id)
-              ? { 
-                  ...user, 
-                  moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
-                    ...acc,
-                    [key]: key === 'dashboard' // Keep dashboard always enabled
-                  }), {} as ModuleAccess)
-                }
-              : user
-          )
-        );
-        alert(`Disabled all modules (except dashboard) for ${bulkSelectedUserIds.length} users`);
-        break;
-        
-      default:
-        alert('Action not implemented yet');
+  const handleBulkAction = async (action: string) => {
+    if (!currentUser) return;
+
+    try {
+      const updates: Array<{ userId: string; permissions: ModuleAccess }> = [];
+
+      switch (action) {
+        case 'Apply Role-Based Access':
+          setUsers(prevUsers =>
+            prevUsers.map(user =>
+              bulkSelectedUserIds.includes(user.id)
+                ? { ...user, moduleAccess: getModuleAccessForRole(user.role) }
+                : user
+            )
+          );
+          bulkSelectedUserIds.forEach(userId => {
+            const user = users.find(u => u.id === userId);
+            if (user) {
+              updates.push({
+                userId,
+                permissions: getModuleAccessForRole(user.role)
+              });
+            }
+          });
+          break;
+
+        case 'Enable All Modules':
+          setUsers(prevUsers =>
+            prevUsers.map(user =>
+              bulkSelectedUserIds.includes(user.id)
+                ? {
+                    ...user,
+                    moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
+                      ...acc,
+                      [key]: true
+                    }), {} as ModuleAccess)
+                  }
+                : user
+            )
+          );
+          bulkSelectedUserIds.forEach(userId => {
+            updates.push({
+              userId,
+              permissions: Object.keys(moduleConfig).reduce((acc, key) => ({
+                ...acc,
+                [key]: true
+              }), {} as ModuleAccess)
+            });
+          });
+          break;
+
+        case 'Disable All Modules':
+          setUsers(prevUsers =>
+            prevUsers.map(user =>
+              bulkSelectedUserIds.includes(user.id)
+                ? {
+                    ...user,
+                    moduleAccess: Object.keys(moduleConfig).reduce((acc, key) => ({
+                      ...acc,
+                      [key]: key === 'dashboard'
+                    }), {} as ModuleAccess)
+                  }
+                : user
+            )
+          );
+          bulkSelectedUserIds.forEach(userId => {
+            updates.push({
+              userId,
+              permissions: Object.keys(moduleConfig).reduce((acc, key) => ({
+                ...acc,
+                [key]: key === 'dashboard'
+              }), {} as ModuleAccess)
+            });
+          });
+          break;
+
+        default:
+          alert('Action not implemented yet');
+          return;
+      }
+
+      await moduleAccessService.batchUpdateModuleAccess(updates, currentUser.id);
+      alert(`Applied ${action} to ${bulkSelectedUserIds.length} users`);
+    } catch (error) {
+      console.error('Error applying bulk action:', error);
+      alert('Error applying bulk action');
     }
   };
 

@@ -6,3 +6,5 @@ export * from './clientService';
 export * from './userService';
 export * from './auditService';
 export * from './reportService';
+export * from './clientPoolService';
+export * from './moduleAccessService';

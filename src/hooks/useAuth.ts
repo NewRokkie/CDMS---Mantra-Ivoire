@@ -60,22 +60,24 @@ export const useAuthProvider = () => {
 
       // Map database user to app user
       console.log('📋 [LOAD_PROFILE] Mapping user data to AppUser...');
-      const appUser: AppUser = {
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        role: users.role,
-        company: users.company || '',
-        phone: users.phone || '',
-        department: users.department || '',
-        isActive: users.active,
-        lastLogin: users.last_login ? new Date(users.last_login) : undefined,
-        createdAt: new Date(users.created_at),
-        createdBy: 'system',
-        updatedBy: users.updated_at ? 'system' : undefined,
-        clientCode: users.client_code,
-        yardAssignments: users.yard_ids ? (Array.isArray(users.yard_ids) ? users.yard_ids : []) : [],
-        moduleAccess: users.module_access || {
+
+      let modulePermissions = users.module_access;
+
+      if (!modulePermissions) {
+        try {
+          const { moduleAccessService } = await import('../services/api');
+          const customPermissions = await moduleAccessService.getUserModuleAccess(users.id);
+
+          if (customPermissions) {
+            modulePermissions = customPermissions;
+          }
+        } catch (error) {
+          console.error('Error loading custom module access:', error);
+        }
+      }
+
+      if (!modulePermissions) {
+        modulePermissions = {
           dashboard: true,
           containers: false,
           gateIn: false,
@@ -95,7 +97,25 @@ export const useAuthProvider = () => {
           auditLogs: false,
           billingReports: false,
           operationsReports: false
-        }
+        };
+      }
+
+      const appUser: AppUser = {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        company: users.company || '',
+        phone: users.phone || '',
+        department: users.department || '',
+        isActive: users.active,
+        lastLogin: users.last_login ? new Date(users.last_login) : undefined,
+        createdAt: new Date(users.created_at),
+        createdBy: 'system',
+        updatedBy: users.updated_at ? 'system' : undefined,
+        clientCode: users.client_code,
+        yardAssignments: users.yard_ids ? (Array.isArray(users.yard_ids) ? users.yard_ids : []) : [],
+        moduleAccess: modulePermissions
       };
 
       console.log('📋 [LOAD_PROFILE] ✅ Profile mapped successfully:', appUser.email);
