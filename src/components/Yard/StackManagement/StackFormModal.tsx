@@ -163,7 +163,21 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       return;
     }
 
-    onSubmit(formData);
+    // Transform form data to match YardStack type
+    const stackData: Partial<YardStack> = {
+      stackNumber: formData.stackNumber,
+      sectionId: formData.sectionId,
+      containerSize: formData.containerSize === '40ft' ? '40feet' : '20feet',
+      isSpecialStack: formData.stackType === 'special',
+      rows: formData.rows,
+      maxTiers: formData.maxTiers,
+      capacity: calculateCapacity(),
+      dimensions: formData.dimensions,
+      position: formData.position,
+      isActive: true,
+    };
+
+    onSubmit(stackData);
   };
 
   const calculateCapacity = () => {
@@ -290,28 +304,38 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   <label className="block text-sm font-medium text-blue-800 mb-2">
                     Section *
                   </label>
-                  <select
-                    required
-                    value={formData.sectionId}
-                    onChange={(e) => {
-                      handleInputChange('sectionId', e.target.value);
-                      // Update suggested stack number when section changes
-                      if (!selectedStack && e.target.value) {
-                        const suggested = yard?.id ? yardService.getNextStackNumber(yard.id, e.target.value) : 1;
-                        handleInputChange('stackNumber', suggested);
-                      }
-                    }}
-                    className={`form-input w-full ${errors.sectionId ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                    disabled={!!selectedStack} // Don't allow changing section when editing
-                  >
-                    <option value="">Select section</option>
-                    {yard?.sections?.map(section => (
-                      <option key={section.id} value={section.id}>
-                        {section.name} ({section.stacks.length} stacks)
-                      </option>
-                    ))}
-                  </select>
+                  {selectedStack ? (
+                    <div className="form-input w-full bg-gray-100 text-gray-700 cursor-not-allowed">
+                      {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={formData.sectionId}
+                      onChange={(e) => {
+                        handleInputChange('sectionId', e.target.value);
+                        // Update suggested stack number when section changes
+                        if (e.target.value) {
+                          const suggested = yard?.id ? yardService.getNextStackNumber(yard.id, e.target.value) : 1;
+                          handleInputChange('stackNumber', suggested);
+                        }
+                      }}
+                      className={`form-input w-full ${errors.sectionId ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
+                    >
+                      <option value="">Select section</option>
+                      {yard?.sections?.map(section => (
+                        <option key={section.id} value={section.id}>
+                          {section.name} ({section.stacks.length} stacks)
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   {errors.sectionId && <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>}
+                  {selectedStack && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Section cannot be changed when editing an existing stack
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
