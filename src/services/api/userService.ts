@@ -58,7 +58,7 @@ export class UserService {
         role: user.role,
         yard_ids: user.yardIds || [],
         module_access: user.moduleAccess || {},
-        active: user.active !== false
+        active: user.isActive !== false
       })
       .select()
       .single();
@@ -77,7 +77,7 @@ export class UserService {
     if (updates.role) updateData.role = updates.role;
     if (updates.yardIds !== undefined) updateData.yard_ids = updates.yardIds;
     if (updates.moduleAccess !== undefined) updateData.module_access = updates.moduleAccess;
-    if (updates.active !== undefined) updateData.active = updates.active;
+    if (updates.isActive !== undefined) updateData.active = updates.isActive;
     if (updates.lastLogin !== undefined) updateData.last_login = updates.lastLogin?.toISOString();
     if ((updates as any).last_login !== undefined) updateData.last_login = (updates as any).last_login;
 
@@ -117,10 +117,11 @@ export class UserService {
       role: data.role,
       yardIds: data.yard_ids || [],
       moduleAccess: moduleAccess,
-      active: data.active,
+      isActive: data.active,
       lastLogin: data.last_login ? new Date(data.last_login) : undefined,
       createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      updatedAt: new Date(data.updated_at),
+      createdBy: 'System'
     };
   }
 }
