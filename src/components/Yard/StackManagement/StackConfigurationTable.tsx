@@ -20,8 +20,8 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
     return stackService.getAdjacentStackNumber(stackNumber);
   };
 
-  const canAssign40Feet = (stackNumber: number, isSpecialStack: boolean): boolean => {
-    return stackService.canAssign40Feet(stackNumber, isSpecialStack);
+  const canAssign40Feet = (stack: YardStack): boolean => {
+    return stackService.canAssign40Feet(stack);
   };
 
   if (!stacks || stacks.length === 0) {
@@ -73,10 +73,11 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {stacks.map((stack) => {
-              const isSpecialStack = stack.isOddStack || false;
-              const can40Feet = canAssign40Feet(stack.stackNumber, isSpecialStack);
-              const adjacentStack = getAdjacentStackNumber(stack.stackNumber);
+              const isSpecialStack = stack.isSpecialStack || false;
+              const can40Feet = canAssign40Feet(stack);
+              const adjacentStack = !isSpecialStack ? getAdjacentStackNumber(stack.stackNumber) : null;
               const adjacentConfig = adjacentStack ? stacks.find(s => s.stackNumber === adjacentStack) : null;
+              const adjacentIsSpecial = adjacentConfig?.isSpecialStack || false;
 
               return (
                 <tr key={stack.id} className="hover:bg-gray-50 transition-colors">
@@ -87,9 +88,9 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                           Stack {stack.stackNumber.toString().padStart(2, '0')}
                         </span>
                         {isSpecialStack && (
-                          <Shield className="h-4 w-4 text-purple-600" title="Special Stack" />
+                          <Shield className="h-4 w-4 text-purple-600" title="Special Stack - Cannot be paired" />
                         )}
-                        {!isSpecialStack && adjacentStack && (
+                        {!isSpecialStack && adjacentStack && !adjacentIsSpecial && (
                           <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
                             Pair: {adjacentStack.toString().padStart(2, '0')}
                             {adjacentConfig && (
@@ -97,6 +98,11 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                                 ({adjacentConfig.containerSize === stack.containerSize ? '✓' : '⚠'})
                               </span>
                             )}
+                          </span>
+                        )}
+                        {!isSpecialStack && adjacentStack && adjacentIsSpecial && (
+                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded" title="Adjacent stack is special - no pairing">
+                            No pair
                           </span>
                         )}
                       </div>

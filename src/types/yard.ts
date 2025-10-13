@@ -68,6 +68,7 @@ export interface YardStack {
   };
   containerPositions: YardPosition[];
   isOddStack?: boolean;
+  isSpecialStack?: boolean;
   isActive?: boolean;
   assignedClientCode?: string;
   notes?: string;

@@ -62,6 +62,7 @@ export class StackService {
         length: stack.dimensions?.length || 12,
         is_active: stack.isActive !== false,
         is_odd_stack: stack.isOddStack || false,
+        is_special_stack: stack.isSpecialStack || false,
         container_size: stack.containerSize || '20feet',
         assigned_client_code: stack.assignedClientCode,
         notes: stack.notes,
@@ -94,6 +95,7 @@ export class StackService {
     if (updates.dimensions?.length !== undefined) updateData.length = updates.dimensions.length;
     if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
     if (updates.isOddStack !== undefined) updateData.is_odd_stack = updates.isOddStack;
+    if (updates.isSpecialStack !== undefined) updateData.is_special_stack = updates.isSpecialStack;
     if (updates.containerSize !== undefined) updateData.container_size = updates.containerSize;
     if (updates.assignedClientCode !== undefined) updateData.assigned_client_code = updates.assignedClientCode;
     if (updates.notes !== undefined) updateData.notes = updates.notes;
@@ -141,6 +143,15 @@ export class StackService {
       updated_by: userId
     };
 
+    const currentStack = await this.getById(stackId);
+    if (!currentStack) {
+      throw new Error('Stack not found');
+    }
+
+    if (currentStack.isSpecialStack && newSize === '40feet') {
+      throw new Error('Special stacks cannot be configured for 40ft containers');
+    }
+
     const { data, error } = await supabase
       .from('stacks')
       .update(updateData)
@@ -151,31 +162,24 @@ export class StackService {
     if (error) throw error;
     updatedStacks.push(this.mapToStack(data));
 
-    if (newSize === '40feet' && stackNumber % 2 === 1) {
-      const adjacentStackNumber = stackNumber + 1;
-      const { data: adjacentData, error: adjacentError } = await supabase
-        .from('stacks')
-        .update(updateData)
-        .eq('yard_id', yardId)
-        .eq('stack_number', adjacentStackNumber)
-        .select()
-        .maybeSingle();
+    if (newSize === '40feet') {
+      const adjacentStackNumber = this.getAdjacentStackNumber(stackNumber);
+      if (adjacentStackNumber) {
+        const adjacentStack = await this.getByStackNumber(yardId, adjacentStackNumber);
 
-      if (!adjacentError && adjacentData) {
-        updatedStacks.push(this.mapToStack(adjacentData));
-      }
-    } else if (newSize === '40feet' && stackNumber % 2 === 0) {
-      const adjacentStackNumber = stackNumber - 1;
-      const { data: adjacentData, error: adjacentError } = await supabase
-        .from('stacks')
-        .update(updateData)
-        .eq('yard_id', yardId)
-        .eq('stack_number', adjacentStackNumber)
-        .select()
-        .maybeSingle();
+        if (adjacentStack && !adjacentStack.isSpecialStack) {
+          const { data: adjacentData, error: adjacentError } = await supabase
+            .from('stacks')
+            .update(updateData)
+            .eq('yard_id', yardId)
+            .eq('stack_number', adjacentStackNumber)
+            .select()
+            .maybeSingle();
 
-      if (!adjacentError && adjacentData) {
-        updatedStacks.push(this.mapToStack(adjacentData));
+          if (!adjacentError && adjacentData) {
+            updatedStacks.push(this.mapToStack(adjacentData));
+          }
+        }
       }
     }
 
@@ -191,8 +195,13 @@ export class StackService {
     return null;
   }
 
-  canAssign40Feet(stackNumber: number, isSpecialStack: boolean): boolean {
-    return !isSpecialStack;
+  canAssign40Feet(stack: YardStack): boolean {
+    if (stack.isSpecialStack) return false;
+
+    const adjacentNumber = this.getAdjacentStackNumber(stack.stackNumber);
+    if (!adjacentNumber) return false;
+
+    return true;
   }
 
   private mapToStack(data: any): YardStack {
@@ -217,6 +226,7 @@ export class StackService {
       },
       containerPositions: [],
       isOddStack: data.is_odd_stack,
+      isSpecialStack: data.is_special_stack || false,
       isActive: data.is_active,
       containerSize: data.container_size || '20feet',
       assignedClientCode: data.assigned_client_code,

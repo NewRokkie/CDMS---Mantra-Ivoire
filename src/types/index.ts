@@ -125,23 +125,34 @@ export interface YardSection {
 
 export interface YardStack {
   id: string;
+  yardId?: string;
   stackNumber: number;
   sectionId: string;
+  sectionName?: string;
   rows: number;
-  maxTiers: number; // Maximum height (5 containers)
+  maxTiers: number;
   currentOccupancy: number;
-  capacity: number; // rows * maxTiers
+  capacity: number;
+  containerSize?: '20feet' | '40feet';
   position: {
     x: number;
     y: number;
     z: number;
   };
   dimensions: {
-    width: number; // Based on container size (20ft = 6m, 40ft = 12m)
-    length: number; // Row depth
+    width: number;
+    length: number;
   };
   containerPositions: YardPosition[];
-  isOddStack?: boolean; // For Tantarelli layout (odd numbered stacks)
+  isOddStack?: boolean;
+  isSpecialStack?: boolean;
+  isActive?: boolean;
+  assignedClientCode?: string;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface YardBlock {
