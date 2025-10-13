@@ -31,6 +31,10 @@ export class StackService {
     return data ? this.mapToStack(data) : null;
   }
 
+  async getByYardId(yardId: string): Promise<YardStack[]> {
+    return this.getAll(yardId);
+  }
+
   async getByStackNumber(yardId: string, stackNumber: number): Promise<YardStack | null> {
     const { data, error } = await supabase
       .from('stacks')
