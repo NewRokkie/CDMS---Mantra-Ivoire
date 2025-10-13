@@ -8,9 +8,9 @@ import { useAuth } from '../../hooks/useAuth';
 
 // Constants for image paths
 const IMAGE_PATHS = {
-  DEPOT_BACKGROUND: '../../assets/depot_background.jpg',
-  LOGO_WHITE: '../../assets/logo_white.png',
-  LOGO_MANTRA: '../../assets/logo_mantra.png'
+  DEPOT_BACKGROUND: '/assets/depot_background.jpg',
+  LOGO_WHITE: '/assets/logo_white.svg',
+  LOGO_MANTRA: '/assets/logo_mantra.svg'
 } as const;
 
 // Demo accounts configuration
@@ -203,14 +203,11 @@ export const LoginForm: React.FC = React.memo(() => {
     <div className="h-screen overflow-hidden bg-gradient-to-br from-[#2E2E2E] to-[#3A3A3A] flex animate-fade-in">
       {/* Left Column - Yard Depot Image */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden animate-slide-in-right">
-        {/* Image de fond Yard Depot */}
+        {/* Gradient de fond Yard Depot */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0"
           style={{
-            backgroundImage: `url("${IMAGE_PATHS.DEPOT_BACKGROUND}")`,
-            filter: 'brightness(1) contrast(1.05)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d3748 50%, #1a1a1a 100%)',
           }}
         >
           {/* Overlays de lisibilité neutres */}
