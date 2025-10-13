@@ -458,6 +458,8 @@ export const ModuleAccessManagement: React.FC = () => {
         }
       }
 
+      await loadUsers();
+
       if (targetUserIds.includes(currentUser.id)) {
         await refreshUser();
       }
@@ -574,6 +576,8 @@ export const ModuleAccessManagement: React.FC = () => {
       }
 
       await moduleAccessService.batchUpdateModuleAccess(updates, currentUser.id);
+
+      await loadUsers();
 
       if (bulkSelectedUserIds.includes(currentUser.id)) {
         await refreshUser();

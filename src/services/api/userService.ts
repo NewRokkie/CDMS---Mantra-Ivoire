@@ -1,11 +1,16 @@
 import { supabase } from './supabaseClient';
-import { User } from '../../types';
+import { User, ModuleAccess } from '../../types';
 
 export class UserService {
   async getAll(): Promise<User[]> {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        user_module_access (
+          module_permissions
+        )
+      `)
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -15,7 +20,12 @@ export class UserService {
   async getById(id: string): Promise<User | null> {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        user_module_access (
+          module_permissions
+        )
+      `)
       .eq('id', id)
       .maybeSingle();
 
@@ -26,7 +36,12 @@ export class UserService {
   async getByEmail(email: string): Promise<User | null> {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        user_module_access (
+          module_permissions
+        )
+      `)
       .eq('email', email)
       .maybeSingle();
 
@@ -87,13 +102,21 @@ export class UserService {
   }
 
   private mapToUser(data: any): User {
+    let moduleAccess: ModuleAccess = data.module_access || {};
+
+    if (data.user_module_access && Array.isArray(data.user_module_access) && data.user_module_access.length > 0) {
+      moduleAccess = data.user_module_access[0].module_permissions || {};
+    } else if (data.user_module_access && !Array.isArray(data.user_module_access) && data.user_module_access.module_permissions) {
+      moduleAccess = data.user_module_access.module_permissions || {};
+    }
+
     return {
       id: data.id,
       name: data.name,
       email: data.email,
       role: data.role,
       yardIds: data.yard_ids || [],
-      moduleAccess: data.module_access || {},
+      moduleAccess: moduleAccess,
       active: data.active,
       lastLogin: data.last_login ? new Date(data.last_login) : undefined,
       createdAt: new Date(data.created_at),
