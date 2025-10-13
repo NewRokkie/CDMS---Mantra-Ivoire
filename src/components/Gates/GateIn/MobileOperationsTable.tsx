@@ -85,7 +85,8 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
     );
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date?: Date) => {
+    if (!date) return 'N/A';
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -297,7 +298,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-gray-500 font-medium">Date</div>
                         <div className="text-sm font-bold text-gray-900">
-                          {formatDate(operation.date)}
+                          {formatDate(operation.completedAt || operation.createdAt)}
                         </div>
                       </div>
                     </div>

@@ -58,7 +58,8 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
     );
   };
 
-  const formatDate = (date: Date | string) => {
+  const formatDate = (date?: Date | string) => {
+    if (!date) return 'N/A';
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateObj.toLocaleDateString('en-US', {
       month: 'short',

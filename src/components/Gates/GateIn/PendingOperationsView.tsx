@@ -82,7 +82,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
     );
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date?: Date) => {
+    if (!date) return 'N/A';
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -241,7 +242,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <span className="text-sm text-gray-600">
-                      {formatDate(operation.date)}
+                      {formatDate(operation.completedAt || operation.createdAt)}
                     </span>
                   </div>
                   {operation.bookingReference && (
@@ -311,7 +312,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                 {filteredOperations.map((operation) => (
                   <tr key={operation.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(operation.date)}
+                      {formatDate(operation.completedAt || operation.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">{operation.truckNumber}</div>
