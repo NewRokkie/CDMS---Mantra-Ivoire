@@ -269,6 +269,16 @@ class ClientPoolService {
 
     if (error) throw error;
   }
+
+  getClientPoolUtilization(): Array<{
+    clientCode: string;
+    occupancyRate: number;
+    status: string;
+    usedSlots: number;
+    totalSlots: number;
+  }> {
+    return [];
+  }
 }
 
 export const clientPoolService = new ClientPoolService();

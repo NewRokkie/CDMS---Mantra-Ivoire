@@ -95,14 +95,33 @@ export class ClientService {
   }
 
   private mapToClient(data: any): Client {
+    const defaultAddress = {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'Côte d\'Ivoire'
+    };
+
+    const defaultContactPerson = {
+      name: data.contact_person || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      position: ''
+    };
+
     return {
       id: data.id,
       code: data.code,
       name: data.name,
-      contactPerson: data.contact_person,
+      contactPerson: typeof data.contact_person === 'object' && data.contact_person !== null
+        ? data.contact_person
+        : defaultContactPerson,
       email: data.email,
       phone: data.phone,
-      address: data.address,
+      address: typeof data.address === 'object' && data.address !== null
+        ? data.address
+        : defaultAddress,
       freeDaysAllowed: data.free_days_allowed,
       dailyStorageRate: data.daily_storage_rate,
       currency: data.currency,
