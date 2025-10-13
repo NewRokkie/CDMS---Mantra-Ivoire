@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, User as UserIcon, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
