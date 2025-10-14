@@ -463,67 +463,23 @@ export const GateIn: React.FC = () => {
   const handleLocationValidation = async (operation: any, locationData: any) => {
     setIsProcessing(true);
     try {
-      // 1. Get client info
-      const client = clients.find(c => c.code === operation.clientCode);
-
-      // 2. Create container(s) in containers table
-      const containersToCreate = [
-        {
-          number: operation.containerNumber,
-          type: operation.containerType || 'standard',
-          size: operation.containerSize,
-          status: 'in_depot',
-          location: locationData.assignedLocation,
-          yard_id: currentYard?.id,
-          client_id: client?.id,
-          client_code: operation.clientCode,
-          gate_in_date: new Date().toISOString(),
-          created_by: user?.id
-        }
-      ];
-
-      // If second container exists
-      if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
-        containersToCreate.push({
-          number: operation.secondContainerNumber,
-          type: operation.containerType || 'standard',
-          size: operation.containerSize,
-          status: 'in_depot',
-          location: locationData.assignedLocation,
-          yard_id: currentYard?.id,
-          client_id: client?.id,
-          client_code: operation.clientCode,
-          gate_in_date: new Date().toISOString(),
-          created_by: user?.id
-        });
-      }
-
-      const { data: createdContainers, error: containerError } = await supabase
-        .from('containers')
-        .insert(containersToCreate)
-        .select();
-
-      if (containerError) throw containerError;
-
-      // 3. Link container ID to gate_in_operation
-      const { error: updateError } = await supabase
+      // Update operation in Supabase
+      const { error } = await supabase
         .from('gate_in_operations')
         .update({
-          container_id: createdContainers?.[0]?.id,
           assigned_location: locationData.assignedLocation,
           completed_at: new Date().toISOString(),
           status: 'completed'
         })
         .eq('id', operation.id);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      // 4. Update local state
+      // Update local state
       setGateInOperations(prev => prev.map(op =>
         op.id === operation.id
           ? {
               ...op,
-              containerId: createdContainers?.[0]?.id,
               assignedLocation: locationData.assignedLocation,
               completedAt: new Date(),
               status: 'completed'
@@ -531,14 +487,9 @@ export const GateIn: React.FC = () => {
           : op
       ));
 
-      // 5. Refresh containers list
-      const updatedContainers = await containerService.getAll();
-      setContainers(updatedContainers);
-
-      alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
+      alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocationName || locationData.assignedLocation}`);
       setActiveView('overview');
     } catch (error) {
-      console.error('Error completing operation:', error);
       alert(`Error completing operation: ${error}`);
     } finally {
       setIsProcessing(false);
