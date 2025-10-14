@@ -423,7 +423,7 @@ export const GateOut: React.FC = () => {
         <GateOutModal
           showModal={showForm}
           setShowModal={setShowForm}
-          availableBookings={mockAvailableBookings}
+          availableBookings={releaseOrders}
           onSubmit={handleCreateGateOut}
           isProcessing={isProcessing}
         />
