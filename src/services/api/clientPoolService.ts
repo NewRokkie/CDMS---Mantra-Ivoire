@@ -279,6 +279,21 @@ class ClientPoolService {
   }> {
     return [];
   }
+
+  async getAssignedStacksForClient(clientCode: string, yardId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('client_pools')
+      .select('assigned_stacks')
+      .eq('client_code', clientCode)
+      .eq('yard_id', yardId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return [];
+
+    return data.assigned_stacks || [];
+  }
 }
 
 export const clientPoolService = new ClientPoolService();

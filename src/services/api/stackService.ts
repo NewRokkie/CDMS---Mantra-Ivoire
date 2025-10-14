@@ -31,6 +31,10 @@ export class StackService {
     return data ? this.mapToStack(data) : null;
   }
 
+  async getByYardId(yardId: string): Promise<YardStack[]> {
+    return this.getAll(yardId);
+  }
+
   async getByStackNumber(yardId: string, stackNumber: number): Promise<YardStack | null> {
     const { data, error } = await supabase
       .from('stacks')
@@ -112,12 +116,53 @@ export class StackService {
   }
 
   async delete(id: string): Promise<void> {
+    // Get stack info first
+    const stack = await this.getById(id);
+    if (!stack) {
+      throw new Error('Stack not found');
+    }
+
+    // Check if stack has containers
+    const { data: containersOnStack, error: containerCheckError } = await supabase
+      .from('containers')
+      .select('id, number')
+      .eq('yard_id', stack.yardId)
+      .eq('status', 'in_depot')
+      .ilike('location', `S${String(stack.stackNumber).padStart(2, '0')}-%`);
+
+    if (containerCheckError) throw containerCheckError;
+
+    if (containersOnStack && containersOnStack.length > 0) {
+      throw new Error(`Cannot delete stack S${String(stack.stackNumber).padStart(2, '0')}. There are ${containersOnStack.length} container(s) currently stored on this stack. Please relocate them first.`);
+    }
+
+    // Check if stack is part of a pairing
+    const { data: pairingData } = await supabase
+      .from('stack_pairings')
+      .select('*')
+      .eq('yard_id', stack.yardId)
+      .or(`first_stack_number.eq.${stack.stackNumber},second_stack_number.eq.${stack.stackNumber}`)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // If paired, we should deactivate the pairing
+    if (pairingData) {
+      await supabase
+        .from('stack_pairings')
+        .update({ is_active: false })
+        .eq('id', pairingData.id);
+    }
+
+    // Now delete the stack
     const { error } = await supabase
       .from('stacks')
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Delete error:', error);
+      throw error;
+    }
   }
 
   async updateOccupancy(id: string, occupancy: number): Promise<void> {
@@ -152,6 +197,34 @@ export class StackService {
       throw new Error('Special stacks cannot be configured for 40ft containers');
     }
 
+    // Check for existing 40ft containers on this stack
+    const { data: containersOnStack, error: containerCheckError } = await supabase
+      .from('containers')
+      .select('id, number, size, location')
+      .eq('yard_id', yardId)
+      .eq('status', 'in_depot')
+      .ilike('location', `S${String(stackNumber).padStart(2, '0')}-%`);
+
+    if (containerCheckError) throw containerCheckError;
+
+    // Check if trying to change FROM 40feet to 20feet while containers exist
+    if (currentStack.containerSize === '40feet' && newSize === '20feet' && containersOnStack && containersOnStack.length > 0) {
+      const has40ftContainers = containersOnStack.some(c => c.size === '40ft' || c.size === '40FT');
+      if (has40ftContainers) {
+        throw new Error(`Cannot change stack S${String(stackNumber).padStart(2, '0')} from 40ft to 20ft. There are ${containersOnStack.filter(c => c.size === '40ft' || c.size === '40FT').length} 40ft container(s) currently stored on this stack. Please relocate them first.`);
+      }
+    }
+
+    // Get pairing information from stack_pairings table
+    const { data: pairingData } = await supabase
+      .from('stack_pairings')
+      .select('*')
+      .eq('yard_id', yardId)
+      .or(`first_stack_number.eq.${stackNumber},second_stack_number.eq.${stackNumber}`)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // Update the current stack
     const { data, error } = await supabase
       .from('stacks')
       .update(updateData)
@@ -167,23 +240,40 @@ export class StackService {
 
     updatedStacks.push(this.mapToStack(data));
 
-    if (newSize === '40feet') {
-      const adjacentStackNumber = this.getAdjacentStackNumber(stackNumber);
-      if (adjacentStackNumber) {
-        const adjacentStack = await this.getByStackNumber(yardId, adjacentStackNumber);
+    // If there's a pairing, update the paired stack as well
+    if (pairingData) {
+      const pairedStackNumber = pairingData.first_stack_number === stackNumber
+        ? pairingData.second_stack_number
+        : pairingData.first_stack_number;
 
-        if (adjacentStack && !adjacentStack.isSpecialStack) {
-          const { data: adjacentData, error: adjacentError } = await supabase
-            .from('stacks')
-            .update(updateData)
-            .eq('yard_id', yardId)
-            .eq('stack_number', adjacentStackNumber)
-            .select()
-            .maybeSingle();
+      // Check for containers on paired stack
+      const { data: containersOnPaired } = await supabase
+        .from('containers')
+        .select('id, number, size, location')
+        .eq('yard_id', yardId)
+        .eq('status', 'in_depot')
+        .ilike('location', `S${String(pairedStackNumber).padStart(2, '0')}-%`);
 
-          if (!adjacentError && adjacentData) {
-            updatedStacks.push(this.mapToStack(adjacentData));
-          }
+      if (currentStack.containerSize === '40feet' && newSize === '20feet' && containersOnPaired && containersOnPaired.length > 0) {
+        const has40ftContainers = containersOnPaired.some(c => c.size === '40ft' || c.size === '40FT');
+        if (has40ftContainers) {
+          throw new Error(`Cannot change paired stack S${String(pairedStackNumber).padStart(2, '0')} from 40ft to 20ft. There are ${containersOnPaired.filter(c => c.size === '40ft' || c.size === '40FT').length} 40ft container(s) currently stored on the paired stack. Please relocate them first.`);
+        }
+      }
+
+      const pairedStack = await this.getByStackNumber(yardId, pairedStackNumber);
+
+      if (pairedStack && !pairedStack.isSpecialStack) {
+        const { data: pairedData, error: pairedError } = await supabase
+          .from('stacks')
+          .update(updateData)
+          .eq('yard_id', yardId)
+          .eq('stack_number', pairedStackNumber)
+          .select()
+          .maybeSingle();
+
+        if (!pairedError && pairedData) {
+          updatedStacks.push(this.mapToStack(pairedData));
         }
       }
     }

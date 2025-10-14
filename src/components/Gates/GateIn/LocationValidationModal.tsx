@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Loader, Package, MapPin, Calendar, Clock, Search, CheckCircle, AlertTriangle } from 'lucide-react';
 import { DatePicker } from '../../Common/DatePicker';
 import { TimePicker } from '../../Common/TimePicker';
 import { useAuth } from '../../../hooks/useAuth';
+import { clientPoolService } from '../../../services/api/clientPoolService';
+import { useYard } from '../../../hooks/useYard';
 
 interface LocationData {
   id: string;
@@ -10,6 +12,8 @@ interface LocationData {
   capacity: number;
   available: number;
   section: string;
+  stackId?: string;
+  stackNumber?: number;
 }
 
 interface LocationValidationOperation {
@@ -51,26 +55,55 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   isProcessing,
   mockLocations
 }) => {
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   const [truckDepartureDate, setTruckDepartureDate] = useState('');
   const [truckDepartureTime, setTruckDepartureTime] = useState('');
   const [searchLocation, setSearchLocation] = useState('');
   const [error, setError] = useState<string>('');
+  const [assignedStackIds, setAssignedStackIds] = useState<string[]>([]);
+  const [loadingPools, setLoadingPools] = useState(false);
 
   const { user } = useAuth();
+  const { currentYard } = useYard();
   const canManageTimeTracking = user?.role === 'admin';
+
+  // Load client pool assigned stacks when operation changes
+  useEffect(() => {
+    async function loadClientPools() {
+      if (!operation?.clientCode || !currentYard?.id) return;
+
+      setLoadingPools(true);
+      try {
+        const stacks = await clientPoolService.getAssignedStacksForClient(
+          operation.clientCode,
+          currentYard.id
+        );
+        setAssignedStackIds(stacks);
+      } catch (error) {
+        console.error('Error loading client pools:', error);
+        setAssignedStackIds([]);
+      } finally {
+        setLoadingPools(false);
+      }
+    }
+
+    loadClientPools();
+  }, [operation?.clientCode, currentYard?.id]);
 
   // Auto-assign damage stack for damaged containers
   React.useEffect(() => {
     if (operation?.isDamaged) {
-      setSelectedLocation('DMG-VIRTUAL');
+      const damageLocation = mockLocations.damage[0];
+      if (damageLocation) {
+        setSelectedLocation(damageLocation);
+      }
     }
-  }, [operation?.isDamaged]);
+  }, [operation?.isDamaged, mockLocations.damage]);
 
   // Reset form when modal opens/closes or operation changes
   React.useEffect(() => {
     if (!isOpen || !operation) {
-      setSelectedLocation('');
+      setSelectedLocation(null);
       // Set default system date and time
       const now = new Date();
       setTruckDepartureDate(now.toISOString().split('T')[0]);
@@ -87,9 +120,19 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
 
   if (!isOpen || !operation) return null;
 
-  const availableLocations = operation.isDamaged
+  // Normalize container size (20FT → 20ft, 40FT → 40ft)
+  const normalizedSize = operation.containerSize?.toLowerCase().replace('ft', 'ft') as '20ft' | '40ft';
+
+  let availableLocations = operation.isDamaged
     ? mockLocations.damage
-    : mockLocations[operation.containerSize as '20ft' | '40ft'] || [];
+    : mockLocations[normalizedSize] || [];
+
+  // Filter by client pool assigned stacks if applicable
+  if (assignedStackIds.length > 0) {
+    availableLocations = availableLocations.filter((loc: LocationData) =>
+      assignedStackIds.includes(loc.stackId)
+    );
+  }
 
   const filteredLocations = availableLocations.filter((loc: LocationData) =>
     loc.name.toLowerCase().includes(searchLocation.toLowerCase())
@@ -104,7 +147,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
     }
 
     const locationData = {
-      assignedLocation: selectedLocation,
+      assignedLocation: selectedLocation?.id || '',
       truckDepartureDate: truckDepartureDate || new Date().toISOString().split('T')[0],
       truckDepartureTime: truckDepartureTime || new Date().toTimeString().slice(0, 5)
     };
@@ -248,9 +291,9 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                 {filteredLocations.map((location: LocationData) => (
                   <div
                     key={location.id}
-                    onClick={() => !operation.isDamaged && setSelectedLocation(location.id)}
+                    onClick={() => !operation.isDamaged && setSelectedLocation(location)}
                     className={`p-3 sm:p-4 border rounded-lg transition-all duration-200 touch-target ${
-                      selectedLocation === location.id
+                      selectedLocation?.id === location.id
                         ? 'border-green-500 bg-green-100 shadow-md'
                         : operation.isDamaged
                         ? 'border-red-200 bg-red-50 cursor-not-allowed'

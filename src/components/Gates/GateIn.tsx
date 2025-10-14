@@ -4,6 +4,10 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, stackService } from '../../services/api';
+import { supabase } from '../../services/api/supabaseClient';
+import { formatLocationId, generateStackLocations } from '../../utils/locationHelpers';
+import { stackPairingService } from '../../services/api/stackPairingService';
+import moment from 'moment';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
@@ -28,21 +32,24 @@ export const GateIn: React.FC = () => {
   const [gateInOperations, setGateInOperations] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
   const [stacks, setStacks] = useState<any[]>([]);
+  const [pairingMap, setPairingMap] = useState<Map<number, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [clientsData, operationsData, containersData, stacksData] = await Promise.all([
+        const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
           clientService.getAll(),
           gateService.getGateInOperations(),
           containerService.getAll(),
-          stackService.getAll(currentYard?.id)
+          stackService.getAll(currentYard?.id),
+          stackPairingService.getPairingMap(currentYard?.id || '')
         ]);
         setClients(clientsData);
         setGateInOperations(operationsData);
         setContainers(containersData);
         setStacks(stacksData);
+        setPairingMap(pairingMapData);
       } catch (error) {
         console.error('Error loading gate in data:', error);
       } finally {
@@ -81,29 +88,70 @@ export const GateIn: React.FC = () => {
     };
   }, [currentYard?.id]);
 
-  // Generate locations from stacks
+  // Generate locations from stacks with Location ID format (S01-R1-H1)
+  // Filter by Client Pools and exclude occupied locations
   const mockLocations = React.useMemo(() => {
     const locations20ft: any[] = [];
     const locations40ft: any[] = [];
     const locationsDamage: any[] = [];
 
-    stacks.forEach((stack) => {
-      const available = stack.capacity - stack.currentOccupancy;
-      const locationData = {
-        id: stack.id,
-        name: `Stack ${stack.stackNumber}`,
-        capacity: stack.capacity,
-        available: available,
-        section: stack.sectionName || 'Main Section'
-      };
+    // Get all occupied locations from containers
+    const occupiedLocations = new Set(
+      containers
+        .filter(c => c.location && c.status === 'in_depot')
+        .map(c => c.location)
+    );
 
-      if (stack.isSpecialStack) {
-        locationsDamage.push(locationData);
-      } else if (stack.containerSize === '20feet') {
-        locations20ft.push(locationData);
-      } else if (stack.containerSize === '40feet') {
-        locations40ft.push(locationData);
+    // Track which virtual stacks we've already processed to avoid duplicates
+    const processedVirtualStacks = new Set<number>();
+
+    stacks.forEach((stack) => {
+      const rows = stack.rows || 6;
+      const maxTiers = stack.maxTiers || 4;
+
+      // Check if this stack is part of a pairing (for 40ft)
+      const virtualStackNumber = pairingMap.get(stack.stackNumber);
+
+      // For 40ft containers with pairing: S03→4, S05→4, S07→8, S09→8, etc.
+      // Only process each virtual stack once
+      if (virtualStackNumber && stack.containerSize === '40feet') {
+        if (processedVirtualStacks.has(virtualStackNumber)) {
+          return; // Skip, already processed this virtual stack
+        }
+        processedVirtualStacks.add(virtualStackNumber);
       }
+
+      // Generate locations with virtual stack number if paired
+      const allPositions = generateStackLocations(
+        stack.stackNumber,
+        rows,
+        maxTiers,
+        virtualStackNumber
+      );
+
+      // Filter out occupied positions
+      const availablePositions = allPositions.filter(locationId => !occupiedLocations.has(locationId));
+
+      availablePositions.forEach((locationId) => {
+        const locationData = {
+          id: locationId,
+          name: locationId,
+          stackId: stack.id,
+          stackNumber: stack.stackNumber,
+          virtualStackNumber: virtualStackNumber,
+          capacity: 1,
+          available: 1,
+          section: stack.sectionName || 'Main Section'
+        };
+
+        if (stack.isSpecialStack) {
+          locationsDamage.push(locationData);
+        } else if (stack.containerSize === '20feet') {
+          locations20ft.push(locationData);
+        } else if (stack.containerSize === '40feet') {
+          locations40ft.push(locationData);
+        }
+      });
     });
 
     return {
@@ -111,7 +159,7 @@ export const GateIn: React.FC = () => {
       '40ft': locations40ft,
       damage: locationsDamage
     };
-  }, [stacks]);
+  }, [stacks, containers, pairingMap]);
 
   const pendingOperations = gateInOperations.filter(op =>
     !op.completedAt || !op.assignedLocation
@@ -359,8 +407,8 @@ export const GateIn: React.FC = () => {
         return;
       }
 
-      // Add to pending operations (for UI tracking)
-      setPendingOperations(prev => [newOperation, ...prev]);
+      // Operation is already created in DB by gateService.processGateIn
+      // Real-time subscription will update the UI automatically
 
       // Update client pool occupancy if stack was assigned
       if (optimalStack && !formData.isDamaged) {
@@ -415,25 +463,82 @@ export const GateIn: React.FC = () => {
   const handleLocationValidation = async (operation: any, locationData: any) => {
     setIsProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 1. Get client info
+      const client = clients.find(c => c.code === operation.clientCode);
 
-      // Move from pending to completed
-      const completedOperation = {
-        ...operation,
-        operationStatus: 'completed' as const,
-        assignedLocation: locationData.assignedLocation,
-        truckDepartureDate: locationData.truckDepartureDate,
-        truckDepartureTime: locationData.truckDepartureTime,
-        completedAt: new Date()
-      };
+      // 2. Create container(s) in containers table
+      const containersToCreate = [
+        {
+          number: operation.containerNumber,
+          type: operation.containerType || 'standard',
+          size: operation.containerSize,
+          status: 'in_depot',
+          location: locationData.assignedLocation,
+          yard_id: currentYard?.id,
+          client_id: client?.id,
+          client_code: operation.clientCode,
+          gate_in_date: new Date().toISOString(),
+          created_by: user?.id
+        }
+      ];
 
-      // Remove from pending and add to completed
-      setPendingOperations(prev => prev.filter(op => op.id !== operation.id));
-      setCompletedOperations(prev => [completedOperation, ...prev]);
+      // If second container exists
+      if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
+        containersToCreate.push({
+          number: operation.secondContainerNumber,
+          type: operation.containerType || 'standard',
+          size: operation.containerSize,
+          status: 'in_depot',
+          location: locationData.assignedLocation,
+          yard_id: currentYard?.id,
+          client_id: client?.id,
+          client_code: operation.clientCode,
+          gate_in_date: new Date().toISOString(),
+          created_by: user?.id
+        });
+      }
+
+      const { data: createdContainers, error: containerError } = await supabase
+        .from('containers')
+        .insert(containersToCreate)
+        .select();
+
+      if (containerError) throw containerError;
+
+      // 3. Link container ID to gate_in_operation
+      const { error: updateError } = await supabase
+        .from('gate_in_operations')
+        .update({
+          container_id: createdContainers?.[0]?.id,
+          assigned_location: locationData.assignedLocation,
+          completed_at: new Date().toISOString(),
+          status: 'completed'
+        })
+        .eq('id', operation.id);
+
+      if (updateError) throw updateError;
+
+      // 4. Update local state
+      setGateInOperations(prev => prev.map(op =>
+        op.id === operation.id
+          ? {
+              ...op,
+              containerId: createdContainers?.[0]?.id,
+              assignedLocation: locationData.assignedLocation,
+              completedAt: new Date(),
+              status: 'completed'
+            }
+          : op
+      ));
+
+      // 5. Refresh containers list
+      const updatedContainers = await containerService.getAll();
+      setContainers(updatedContainers);
 
       alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
       setActiveView('overview');
     } catch (error) {
+      console.error('Error completing operation:', error);
       alert(`Error completing operation: ${error}`);
     } finally {
       setIsProcessing(false);
