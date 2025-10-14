@@ -140,7 +140,7 @@ export const GateOut: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleCreateGateOut = (data: GateOutFormData) => {
+  const handleCreateGateOut = async (data: GateOutFormData) => {
     if (!canPerformGateOut) return;
 
     // Validate yard operation
@@ -150,34 +150,42 @@ export const GateOut: React.FC = () => {
       return;
     }
 
+    if (!data.booking?.id) {
+      setError('Please select a valid booking');
+      return;
+    }
+
+    if (!currentYard?.id || !user?.id) {
+      setError('Missing yard or user information');
+      return;
+    }
+
     setIsProcessing(true);
     setError('');
     try {
-      // Create new pending operation
-      const newOperation: PendingGateOut = {
-        id: `PGO-${Date.now()}`,
-        date: new Date(),
-        bookingNumber: data.booking?.bookingNumber || data.booking?.id || 'Unknown',
-        clientCode: data.booking?.clientCode || 'Unknown',
-        clientName: data.booking?.clientName || 'Unknown',
-        bookingType: (data.booking?.bookingType as 'IMPORT' | 'EXPORT') || 'EXPORT',
-        totalContainers: data.booking?.totalContainers || 1,
-        processedContainers: 0,
-        remainingContainers: data.booking?.totalContainers || 1,
+      // Create pending gate out operation in database
+      const result = await gateService.createPendingGateOut({
+        releaseOrderId: data.booking.id,
         transportCompany: data.transportCompany,
         driverName: data.driverName,
         vehicleNumber: data.vehicleNumber,
-        status: 'pending',
-        createdBy: user?.name || 'Unknown',
-        createdAt: new Date(),
         notes: data.notes,
-        updatedBy: user?.name || 'System'
-      };
+        operatorId: user.id,
+        operatorName: user.name,
+        yardId: currentYard.id
+      });
 
-      setPendingOperations(prev => [newOperation, ...prev]);
+      if (!result.success) {
+        setError(result.error || 'Failed to create gate out operation');
+        return;
+      }
+
+      // Reload operations from database
+      const operations = await gateService.getGateOutOperations();
+      setGateOutOperations(operations);
+
       setShowForm(false);
-
-      setSuccessMessage(`Gate Out operation created for booking ${newOperation.bookingNumber}`);
+      setSuccessMessage(`Gate Out operation created for booking ${data.booking.bookingNumber || data.booking.id}`);
     } catch (error) {
       setError(`Error creating gate out operation: ${error}`);
     } finally {
@@ -193,39 +201,51 @@ export const GateOut: React.FC = () => {
   };
 
   const handleCompleteOperation = async (operation: PendingGateOut, containerNumbers: string[]) => {
+    if (!user?.id) {
+      setError('User information not available');
+      return;
+    }
+
     setIsProcessing(true);
     setError('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Find container IDs from container numbers
+      const containerIds = containers
+        .filter(c => containerNumbers.includes(c.number))
+        .map(c => c.id);
 
-      const processedCount = containerNumbers.length;
-      const newProcessedTotal = operation.processedContainers + processedCount;
-      const newRemainingTotal = operation.totalContainers - newProcessedTotal;
-
-      const updatedOperation: PendingGateOut = {
-        ...operation,
-        processedContainers: newProcessedTotal,
-        remainingContainers: newRemainingTotal,
-        status: newRemainingTotal === 0 ? 'completed' : 'in_process',
-        updatedAt: new Date(),
-        updatedBy: user?.name || 'System'
-      };
-
-      if (updatedOperation.status === 'completed') {
-        // Move to completed operations
-        setPendingOperations(prev => prev.filter(op => op.id !== operation.id));
-        setCompletedOperations(prev => [updatedOperation, ...prev]);
-      } else {
-        // Update in pending operations
-        setPendingOperations(prev =>
-          prev.map(op => op.id === operation.id ? updatedOperation : op)
-        );
+      if (containerIds.length !== containerNumbers.length) {
+        setError('Some containers were not found in the system');
+        return;
       }
+
+      // Update operation in database
+      const result = await gateService.updateGateOutOperation(operation.id, {
+        containerIds,
+        operatorId: user.id,
+        operatorName: user.name
+      });
+
+      if (!result.success) {
+        setError(result.error || 'Failed to process containers');
+        return;
+      }
+
+      // Reload operations and containers from database
+      const [operations, updatedContainers] = await Promise.all([
+        gateService.getGateOutOperations(),
+        containerService.getAll()
+      ]);
+
+      setGateOutOperations(operations);
+      setContainers(updatedContainers);
 
       setShowCompletionModal(false);
       setSelectedOperation(null);
 
-      const statusMessage = updatedOperation.status === 'completed'
+      const processedCount = containerNumbers.length;
+      const newRemainingTotal = operation.remainingContainers - processedCount;
+      const statusMessage = newRemainingTotal === 0
         ? 'Gate Out operation completed successfully!'
         : `${processedCount} container(s) processed. ${newRemainingTotal} remaining.`;
 

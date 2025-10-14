@@ -138,6 +138,67 @@ export class GateService {
     }
   }
 
+  async createPendingGateOut(data: {
+    releaseOrderId: string;
+    transportCompany: string;
+    driverName: string;
+    vehicleNumber: string;
+    notes?: string;
+    operatorId: string;
+    operatorName: string;
+    yardId: string;
+  }): Promise<{ success: boolean; operationId?: string; error?: string }> {
+    try {
+      // Get release order
+      const releaseOrder = await releaseService.getById(data.releaseOrderId);
+      if (!releaseOrder) {
+        return { success: false, error: 'Release order not found' };
+      }
+
+      // Create pending gate out operation
+      const { data: operation, error: opError } = await supabase
+        .from('gate_out_operations')
+        .insert({
+          release_order_id: data.releaseOrderId,
+          booking_number: releaseOrder.bookingNumber || '',
+          client_code: releaseOrder.clientCode,
+          client_name: releaseOrder.clientName,
+          booking_type: releaseOrder.bookingType,
+          total_containers: releaseOrder.totalContainers,
+          processed_containers: 0,
+          remaining_containers: releaseOrder.remainingContainers,
+          processed_container_ids: [],
+          transport_company: data.transportCompany,
+          driver_name: data.driverName,
+          vehicle_number: data.vehicleNumber,
+          status: 'pending',
+          operator_id: data.operatorId,
+          operator_name: data.operatorName,
+          yard_id: data.yardId,
+          edi_transmitted: false
+        })
+        .select()
+        .single();
+
+      if (opError) throw opError;
+
+      // Create audit log
+      await auditService.log({
+        entityType: 'gate_out_operation',
+        entityId: operation.id,
+        action: 'create',
+        changes: { created: operation },
+        userId: data.operatorId,
+        userName: data.operatorName
+      });
+
+      return { success: true, operationId: operation.id };
+    } catch (error: any) {
+      console.error('Create pending gate out error:', error);
+      return { success: false, error: error.message || 'Failed to create pending gate out' };
+    }
+  }
+
   async processGateOut(data: GateOutData): Promise<{ success: boolean; error?: string }> {
     try {
       // Get release order
@@ -269,6 +330,80 @@ export class GateService {
 
     if (error) throw error;
     return data.map(this.mapToGateInOperation);
+  }
+
+  async updateGateOutOperation(operationId: string, data: {
+    containerIds: string[];
+    operatorId: string;
+    operatorName: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get current operation
+      const { data: currentOp, error: fetchError } = await supabase
+        .from('gate_out_operations')
+        .select('*')
+        .eq('id', operationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!currentOp) {
+        return { success: false, error: 'Operation not found' };
+      }
+
+      // Process containers - update their status
+      for (const containerId of data.containerIds) {
+        await containerService.update(containerId, {
+          status: 'out_depot',
+          gateOutDate: new Date(),
+          updatedBy: data.operatorName
+        });
+
+        // Create audit log
+        await auditService.log({
+          entityType: 'container',
+          entityId: containerId,
+          action: 'gate_out',
+          changes: { status: 'out_depot' },
+          userId: data.operatorId,
+          userName: data.operatorName
+        });
+      }
+
+      // Update operation
+      const existingContainerIds = currentOp.processed_container_ids || [];
+      const newContainerIds = [...existingContainerIds, ...data.containerIds];
+      const processedCount = newContainerIds.length;
+      const remainingCount = currentOp.total_containers - processedCount;
+      const newStatus = remainingCount === 0 ? 'completed' : 'in_process';
+
+      const { data: updated, error: updateError } = await supabase
+        .from('gate_out_operations')
+        .update({
+          processed_containers: processedCount,
+          remaining_containers: remainingCount,
+          processed_container_ids: newContainerIds,
+          status: newStatus,
+          completed_at: newStatus === 'completed' ? new Date().toISOString() : null
+        })
+        .eq('id', operationId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Update release order if completed
+      if (newStatus === 'completed') {
+        await releaseService.update(currentOp.release_order_id, {
+          remainingContainers: 0,
+          status: 'completed'
+        });
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Update gate out operation error:', error);
+      return { success: false, error: error.message || 'Failed to update gate out operation' };
+    }
   }
 
   async getGateOutOperations(filters?: {
