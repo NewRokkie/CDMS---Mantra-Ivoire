@@ -4,7 +4,6 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, stackService } from '../../services/api';
-import { supabase } from '../../services/api/supabaseClient';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
@@ -360,8 +359,8 @@ export const GateIn: React.FC = () => {
         return;
       }
 
-      // Operation is already created in DB by gateService.processGateIn
-      // Real-time subscription will update the UI automatically
+      // Add to pending operations (for UI tracking)
+      setPendingOperations(prev => [newOperation, ...prev]);
 
       // Update client pool occupancy if stack was assigned
       if (optimalStack && !formData.isDamaged) {
@@ -416,29 +415,21 @@ export const GateIn: React.FC = () => {
   const handleLocationValidation = async (operation: any, locationData: any) => {
     setIsProcessing(true);
     try {
-      // Update operation in Supabase
-      const { error } = await supabase
-        .from('gate_in_operations')
-        .update({
-          assigned_location: locationData.assignedLocation,
-          completed_at: new Date().toISOString(),
-          status: 'completed'
-        })
-        .eq('id', operation.id);
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (error) throw error;
+      // Move from pending to completed
+      const completedOperation = {
+        ...operation,
+        operationStatus: 'completed' as const,
+        assignedLocation: locationData.assignedLocation,
+        truckDepartureDate: locationData.truckDepartureDate,
+        truckDepartureTime: locationData.truckDepartureTime,
+        completedAt: new Date()
+      };
 
-      // Update local state
-      setGateInOperations(prev => prev.map(op =>
-        op.id === operation.id
-          ? {
-              ...op,
-              assignedLocation: locationData.assignedLocation,
-              completedAt: new Date(),
-              status: 'completed'
-            }
-          : op
-      ));
+      // Remove from pending and add to completed
+      setPendingOperations(prev => prev.filter(op => op.id !== operation.id));
+      setCompletedOperations(prev => [completedOperation, ...prev]);
 
       alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
       setActiveView('overview');
