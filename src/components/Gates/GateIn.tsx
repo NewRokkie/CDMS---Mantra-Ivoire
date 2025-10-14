@@ -284,7 +284,7 @@ export const GateIn: React.FC = () => {
   };
 
   const handleClientChange = (clientId: string) => {
-    const selectedClient = clients.find(c => c.id === clientId) || mockClients.find(c => c.id === clientId);
+    const selectedClient = clients.find(c => c.id === clientId);
     if (selectedClient) {
       setFormData(prev => ({
         ...prev,
@@ -767,7 +767,7 @@ export const GateIn: React.FC = () => {
           handleStatusChange={handleStatusChange}
           handleDamageChange={handleDamageChange}
           handleClientChange={handleClientChange}
-          mockClients={mockClients}
+          clients={clients}
         />
       )}
     </div>

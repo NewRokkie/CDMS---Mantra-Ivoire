@@ -26,7 +26,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   handleStatusChange,
   handleDamageChange,
   handleClientChange,
-  mockClients,
+  clients,
 }) => {
   const { user } = useAuth();
   const canManageTimeTracking = user?.role === 'admin' || user?.role === 'supervisor';
@@ -213,7 +213,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                         Client *
                       </label>
                       <ClientSearchField
-                        clients={mockClients}
+                        clients={clients}
                         selectedClientId={formData.clientId}
                         onClientSelect={handleClientChange}
                         placeholder="Search client by name or code..."

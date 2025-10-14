@@ -62,7 +62,7 @@ export interface GateInModalProps {
   handleStatusChange: (isFullStatus: boolean) => void;
   handleDamageChange: (isDamaged: boolean) => void;
   handleClientChange: (clientId: string) => void;
-  mockClients: Array<{ id: string; code: string; name: string }>;
+  clients: Array<{ id: string; code: string; name: string }>;
 }
 
 export interface GateOutModalProps {
