@@ -19,6 +19,8 @@ class ClientPoolService {
 
     return (data || []).map(pool => ({
       ...pool,
+      clientName: pool.client_name || '', // Ensure clientName is always a string
+      clientCode: pool.client_code || '', // Ensure clientCode is always a string
       assignedStacks: pool.assigned_stacks || [],
       maxCapacity: pool.max_capacity,
       currentOccupancy: pool.current_occupancy,
@@ -211,7 +213,7 @@ class ClientPoolService {
       stackNumber: assignment.stack_number,
       clientPoolId: assignment.client_pool_id,
       clientCode: assignment.client_code,
-      assignedAt: toDate(assignment.assigned_at),
+      assignedAt: toDate(assignment.assigned_at) ?? new Date(),
       assignedBy: assignment.assigned_by,
       isExclusive: assignment.is_exclusive,
       priority: assignment.priority,
@@ -220,6 +222,19 @@ class ClientPoolService {
   }
 
   async assignStack(assignment: Partial<StackAssignment>, userId: string): Promise<StackAssignment> {
+    // Server-side role check
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (!user || authError) throw new Error('Authentication required');
+
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (!userProfile || !['admin','supervisor'].includes(userProfile.role)) {
+      throw new Error('Insufficient permissions');
+    }
     const { data, error } = await supabase
       .from('stack_assignments')
       .insert({
@@ -244,7 +259,7 @@ class ClientPoolService {
       stackNumber: data.stack_number,
       clientPoolId: data.client_pool_id,
       clientCode: data.client_code,
-      assignedAt: toDate(data.assigned_at),
+      assignedAt: toDate(data.assigned_at) ?? new Date(), // Ensure assignedAt is always a Date
       assignedBy: data.assigned_by,
       isExclusive: data.is_exclusive,
       priority: data.priority,

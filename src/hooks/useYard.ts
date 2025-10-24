@@ -1,7 +1,8 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { Yard, type YardContext } from '../types/yard';
-import { yardService } from '../services/yardService';
 import { useAuth } from './useAuth';
+import type { Yard as ApiYard } from '../types';
+import { yardsService } from '../services/api/yardsService';
 
 interface YardContextType extends YardContext {
   setCurrentYard: (yardId: string) => Promise<boolean>;
@@ -31,29 +32,76 @@ export const useYardProvider = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    console.log('useYardProvider useEffect triggered with user:', user);
-    initializeYardContext();
+    console.log('useYardProvider useEffect triggered with user:', user?.id);
+    if (user !== null) {
+      initializeYardContext();
+    } else {
+      // Reset yard context if user is null - no yards accessible
+      setYardContext({
+        currentYard: null,
+        availableYards: [],
+        isLoading: false,
+        error: null
+      });
+    }
   }, [user]);
 
   const initializeYardContext = async () => {
+    console.log('DEBUG: initializeYardContext called');
     try {
       setYardContext(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Get user's yard assignments
-      const userYardAssignments = user?.yardAssignments || ['depot-tantarelli']; // Default assignment
+      console.log('DEBUG: Using yardsService directly');
 
-      // Get accessible yards for user
-      const accessibleYards = yardService.getAccessibleYards(userYardAssignments);
+      console.log('DEBUG: yardsService imported successfully, calling getAll()');
+      // Get all yards from Supabase
+      const allYards = await yardsService.getAll().catch(err => {
+        console.error('Error loading yards from database:', err);
+        return [];
+      });
 
-      // Set default yard if none selected
-      let currentYard = yardService.getCurrentYard();
-      if (!currentYard || !userYardAssignments.includes(currentYard.id)) {
+      console.log('DEBUG: Retrieved yards:', allYards?.length || 0, 'yards');
+      console.log('DEBUG: All yards from DB:', allYards.map(y => ({ id: y.id, code: y.code, name: y.name })));
+
+      // Get user's yard assignments from database
+      const userYardAssignments = user?.yardAssignments || [];
+      console.log('DEBUG: User yard assignments:', userYardAssignments);
+
+      // Filter accessible yards for user based on their assignments (check both ID and code)
+      const accessibleYards: Yard[] = allYards.filter(yard => {
+        const nameLower = yard.name.toLowerCase().replace(/\s+/g, '-'); // "Depot Tantarelli" -> "depot-tantarelli"
+        const hasAccess = yard.isActive && (
+          userYardAssignments.includes(yard.id) ||
+          userYardAssignments.includes(yard.code) ||
+          userYardAssignments.includes(nameLower) || // Check formatted name
+          userYardAssignments.includes('all')
+        );
+        console.log('DEBUG: Yard', yard.code, 'hasAccess:', hasAccess, 'checking:', {
+          id: yard.id,
+          code: yard.code,
+          nameFormatted: nameLower,
+          userAssignments: userYardAssignments
+        });
+        return hasAccess;
+      });
+
+      console.log('DEBUG: Filtered accessible yards:', accessibleYards.length);
+
+      // Set default yard if none selected - prioritize first accessible yard
+      let currentYard = yardsService.getCurrentYard();
+      console.log('DEBUG: Current yard from yardsService:', currentYard?.id);
+      if (!currentYard || !accessibleYards.find(y => y.id === currentYard?.id)) {
         if (accessibleYards.length > 0) {
-          yardService.setCurrentYard(accessibleYards[0].id);
+          console.log('DEBUG: Setting default yard:', accessibleYards[0].id);
+          yardsService.setCurrentYard(accessibleYards[0].id);
           currentYard = accessibleYards[0];
+        } else {
+          // No accessible yards for this user
+          currentYard = null;
         }
       }
 
+      console.log('DEBUG: Final current yard:', currentYard?.id);
       setYardContext({
         currentYard,
         availableYards: accessibleYards,
@@ -62,6 +110,7 @@ export const useYardProvider = () => {
       });
 
     } catch (error) {
+      console.error('DEBUG: Error in initializeYardContext:', error);
       setYardContext(prev => ({
         ...prev,
         isLoading: false,
@@ -71,16 +120,27 @@ export const useYardProvider = () => {
   };
 
   const setCurrentYard = async (yardId: string): Promise<boolean> => {
+    console.log('DEBUG: setCurrentYard called with yardId:', yardId);
     try {
-      // Validate user access
+      // Validate user access based on their yard assignments (check both ID and code)
       const userYardAssignments = user?.yardAssignments || [];
-      if (!yardService.validateYardAccess(yardId, user?.id || '', userYardAssignments)) {
+      console.log('DEBUG: User yard assignments for validation:', userYardAssignments);
+
+      // Find the yard to check both ID and code
+      const yardToAccess = yardContext.availableYards.find(y => y.id === yardId);
+      const hasAccess = userYardAssignments.includes(yardId) ||
+                       userYardAssignments.includes(yardToAccess?.code || '') ||
+                       userYardAssignments.includes('all');
+      console.log('DEBUG: validateYardAccess result:', hasAccess, 'for yard:', yardToAccess?.code);
+      if (!hasAccess) {
         throw new Error('Access denied to selected yard');
       }
 
-      const success = yardService.setCurrentYard(yardId);
+      const success = yardsService.setCurrentYard(yardId);
+      console.log('DEBUG: yardsService.setCurrentYard success:', success);
       if (success) {
-        const newCurrentYard = yardService.getCurrentYard();
+        const newCurrentYard = yardsService.getCurrentYard();
+        console.log('DEBUG: New current yard after setting:', newCurrentYard?.id);
         setYardContext(prev => ({
           ...prev,
           currentYard: newCurrentYard,
@@ -93,6 +153,7 @@ export const useYardProvider = () => {
       }
       return false;
     } catch (error) {
+      console.error('DEBUG: Error in setCurrentYard:', error);
       setYardContext(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to switch yard'
@@ -107,10 +168,17 @@ export const useYardProvider = () => {
 
   const getAccessibleYards = (): Yard[] => {
     const userYardAssignments = user?.yardAssignments || [];
-    return yardService.getAccessibleYards(userYardAssignments);
+    // Filter from current available yards based on assignments (check both ID and code)
+    return yardContext.availableYards.filter(yard =>
+      userYardAssignments.includes(yard.id) ||
+      userYardAssignments.includes(yard.code) ||
+      userYardAssignments.includes('all')
+    );
   };
 
   const validateYardOperation = (operation: string): { isValid: boolean; message?: string } => {
+    console.log('DEBUG: validateYardOperation called with operation:', operation);
+    console.log('DEBUG: Current yard:', yardContext.currentYard?.id, 'active:', yardContext.currentYard?.isActive);
     if (!yardContext.currentYard) {
       return { isValid: false, message: 'No yard selected' };
     }
@@ -119,7 +187,8 @@ export const useYardProvider = () => {
       return { isValid: false, message: 'Current yard is not active' };
     }
 
-
+    // Add operation-specific validation logic here if needed
+    console.log('DEBUG: validateYardOperation result: valid');
     return { isValid: true };
   };
 

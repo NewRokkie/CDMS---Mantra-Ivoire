@@ -1,4 +1,4 @@
-import { Container, ReleaseOrder } from '../types';
+import { Container, BookingReference } from '../types';
 import { GateInOperation, GateOutOperation } from '../types/operations';
 
 export type EventType =
@@ -11,9 +11,9 @@ export type EventType =
   | 'GATE_OUT_STARTED'
   | 'GATE_OUT_COMPLETED'
   | 'GATE_OUT_FAILED'
-  | 'RELEASE_ORDER_CREATED'
-  | 'RELEASE_ORDER_UPDATED'
-  | 'RELEASE_ORDER_COMPLETED'
+  | 'BOOKING_REFERENCE_CREATED'
+  | 'BOOKING_REFERENCE_UPDATED'
+  | 'BOOKING_REFERENCE_COMPLETED'
   | 'CLIENT_CREATED'
   | 'CLIENT_UPDATED'
   | 'YARD_POSITION_ASSIGNED'
@@ -28,12 +28,12 @@ export interface EventPayload {
   GATE_IN_STARTED: { containerNumber: string; clientCode: string; operatorId: string };
   GATE_IN_COMPLETED: { container: Container; operation: GateInOperation };
   GATE_IN_FAILED: { containerNumber: string; error: string };
-  GATE_OUT_STARTED: { releaseOrderId: string; containerIds: string[]; operatorId: string };
-  GATE_OUT_COMPLETED: { containers: Container[]; operation: GateOutOperation; releaseOrder: ReleaseOrder };
-  GATE_OUT_FAILED: { releaseOrderId: string; error: string };
-  RELEASE_ORDER_CREATED: { releaseOrder: ReleaseOrder };
-  RELEASE_ORDER_UPDATED: { releaseOrderId: string; before: Partial<ReleaseOrder>; after: Partial<ReleaseOrder> };
-  RELEASE_ORDER_COMPLETED: { releaseOrder: ReleaseOrder };
+  GATE_OUT_STARTED: { bookingReferenceId: string; containerIds: string[]; operatorId: string };
+  GATE_OUT_COMPLETED: { containers: Container[]; operation: GateOutOperation; bookingReference: BookingReference };
+  GATE_OUT_FAILED: { bookingReferenceId: string; error: string };
+  BOOKING_REFERENCE_CREATED: { bookingReference: BookingReference };
+  BOOKING_REFERENCE_UPDATED: { bookingReferenceId: string; before: Partial<BookingReference>; after: Partial<BookingReference> };
+  BOOKING_REFERENCE_COMPLETED: { bookingReference: BookingReference };
   CLIENT_CREATED: { clientId: string; clientCode: string };
   CLIENT_UPDATED: { clientId: string; clientCode: string };
   YARD_POSITION_ASSIGNED: { containerId: string; location: string; yardId: string };

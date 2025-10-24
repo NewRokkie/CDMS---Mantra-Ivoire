@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Yard, User } from '../../types';
 import { useYard } from '../../hooks/useYard';
+import { userService } from '../../services/api/userService';
 
 interface DepotAssignmentModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ interface DepotAssignmentModalProps {
 
 interface UserWithAssignment extends User {
   isAssigned: boolean;
+  yardIds?: string[];
 }
 
 export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
@@ -39,168 +41,43 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const { availableYards } = useYard();
-
-  // Mock users data - in a real app, this would come from a user service
-  const mockUsers: User[] = [
-    {
-      id: 'user-1',
-      name: 'Jean-Baptiste Kouassi',
-      email: 'jb.kouassi@depot.ci',
-      role: 'operator',
-      company: 'Depot Management',
-      phone: '+225 01 02 03 04 05',
-      department: 'Operations',
-      isActive: true,
-      lastLogin: new Date(),
-      createdAt: new Date('2024-01-01'),
-      createdBy: 'System',
-      moduleAccess: {
-        dashboard: true,
-        containers: true,
-        gateIn: true,
-        gateOut: true,
-        releases: false,
-        edi: false,
-        yard: true,
-        clients: false,
-        users: false,
-        moduleAccess: false,
-        reports: false,
-        depotManagement: true
-      },
-      yardAssignments: ['depot-tantarelli']
-    },
-    {
-      id: 'user-2',
-      name: 'Marie Adjoua',
-      email: 'm.adjoua@depot.ci',
-      role: 'operator',
-      company: 'Depot Management',
-      phone: '+225 01 02 03 04 06',
-      department: 'Operations',
-      isActive: true,
-      lastLogin: new Date(),
-      createdAt: new Date('2024-02-01'),
-      createdBy: 'System',
-      moduleAccess: {
-        dashboard: true,
-        containers: true,
-        gateIn: true,
-        gateOut: true,
-        releases: false,
-        edi: false,
-        yard: true,
-        clients: false,
-        users: false,
-        moduleAccess: false,
-        reports: false,
-        depotManagement: true
-      },
-      yardAssignments: ['depot-vridi']
-    },
-    {
-      id: 'user-3',
-      name: 'Pierre Kouadio',
-      email: 'p.kouadio@depot.ci',
-      role: 'supervisor',
-      company: 'Depot Management',
-      phone: '+225 01 02 03 04 07',
-      department: 'Management',
-      isActive: true,
-      lastLogin: new Date(),
-      createdAt: new Date('2024-01-15'),
-      createdBy: 'System',
-      moduleAccess: {
-        dashboard: true,
-        containers: true,
-        gateIn: true,
-        gateOut: true,
-        releases: true,
-        edi: true,
-        yard: true,
-        clients: true,
-        users: false,
-        moduleAccess: false,
-        reports: true,
-        depotManagement: true
-      },
-      yardAssignments: ['depot-tantarelli', 'depot-vridi', 'depot-san-pedro']
-    },
-    {
-      id: 'user-4',
-      name: 'Sophie Traore',
-      email: 's.traore@depot.ci',
-      role: 'operator',
-      company: 'Depot Management',
-      phone: '+225 01 02 03 04 08',
-      department: 'Operations',
-      isActive: true,
-      lastLogin: new Date(),
-      createdAt: new Date('2024-03-01'),
-      createdBy: 'System',
-      moduleAccess: {
-        dashboard: true,
-        containers: true,
-        gateIn: true,
-        gateOut: true,
-        releases: false,
-        edi: false,
-        yard: true,
-        clients: false,
-        users: false,
-        moduleAccess: false,
-        reports: false,
-        depotManagement: true
-      },
-      yardAssignments: []
-    },
-    {
-      id: 'user-5',
-      name: 'Ahmed Diallo',
-      email: 'a.diallo@depot.ci',
-      role: 'admin',
-      company: 'Depot Management',
-      phone: '+225 01 02 03 04 09',
-      department: 'Administration',
-      isActive: true,
-      lastLogin: new Date(),
-      createdAt: new Date('2024-01-01'),
-      createdBy: 'System',
-      moduleAccess: {
-        dashboard: true,
-        containers: true,
-        gateIn: true,
-        gateOut: true,
-        releases: true,
-        edi: true,
-        yard: true,
-        clients: true,
-        users: true,
-        moduleAccess: true,
-        reports: true,
-        depotManagement: true
-      },
-      yardAssignments: ['all']
-    }
-  ];
 
   useEffect(() => {
     if (isOpen && depot) {
-      // Load users and their current assignments
-      const usersWithAssignments = mockUsers.map((user) => ({
+      loadUsers();
+    }
+    setSearchTerm('');
+  }, [isOpen, depot]);
+
+  const loadUsers = async () => {
+    if (!depot) return;
+
+    try {
+      setIsLoadingUsers(true);
+      const allUsers = await userService.getAll();
+
+      const usersWithAssignments = allUsers.map((user) => ({
         ...user,
         isAssigned:
-          user.yardAssignments.includes(depot.id) || user.yardAssignments.includes('all')
+          (user.yardIds && (user.yardIds.includes(depot.id) || user.yardIds.includes('all'))) || false,
+        yardIds: user.yardIds || []
       }));
 
       setUsers(usersWithAssignments);
       setSelectedUserIds(
         usersWithAssignments.filter((u) => u.isAssigned).map((u) => u.id)
       );
+    } catch (error) {
+      console.error('Error loading users:', error);
+      // Fallback to empty users list
+      setUsers([]);
+      setSelectedUserIds([]);
+    } finally {
+      setIsLoadingUsers(false);
     }
-    setSearchTerm('');
-  }, [isOpen, depot]);
+  };
 
   const filteredUsers = users.filter(
     (user) =>
@@ -233,8 +110,33 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
   };
 
   const handleSave = async () => {
+    if (!depot) return;
+
     setIsSaving(true);
     try {
+      // Update each user's yard assignments
+      const updatePromises = selectedUserIds.map(async (userId) => {
+        const user = users.find(u => u.id === userId);
+        if (!user) return;
+
+        // Add depot to user's yard assignments if not already assigned
+        const currentYardIds = user.yardIds || [];
+        if (!currentYardIds.includes(depot.id)) {
+          const updatedYardIds = [...currentYardIds, depot.id];
+          await userService.update(userId, { yardIds: updatedYardIds } as any);
+        }
+      });
+
+      // Remove depot from users who are no longer selected
+      const removePromises = users
+        .filter(user => !selectedUserIds.includes(user.id) && user.yardIds?.includes(depot.id))
+        .map(async (user) => {
+          const updatedYardIds = user.yardIds?.filter(id => id !== depot.id) || [];
+          await userService.update(user.id, { yardIds: updatedYardIds } as any);
+        });
+
+      await Promise.all([...updatePromises, ...removePromises]);
+
       await onAssign(selectedUserIds);
       onClose();
     } catch (error) {
@@ -390,17 +292,17 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
                             <span>{user.phone}</span>
                           </div>
                           <div className="text-sm text-gray-600">{user.department}</div>
-                          
+
                           {/* Current Yard Assignments */}
                           <div className="flex items-center space-x-2 mt-2">
                             <div className="text-xs text-gray-500">Current assignments:</div>
                             <div className="flex flex-wrap gap-1">
-                              {user.yardAssignments.includes('all') ? (
+                              {user.yardIds?.includes('all') ? (
                                 <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
                                   All Depots
                                 </span>
-                              ) : user.yardAssignments.length > 0 ? (
-                                user.yardAssignments.slice(0, 2).map(yardId => {
+                              ) : user.yardIds && user.yardIds.length > 0 ? (
+                                user.yardIds.slice(0, 2).map(yardId => {
                                   const yard = availableYards.find(y => y.id === yardId);
                                   return (
                                     <span key={yardId} className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
@@ -411,9 +313,9 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
                               ) : (
                                 <span className="text-xs text-gray-400 italic">No assignments</span>
                               )}
-                              {user.yardAssignments.length > 2 && (
+                              {user.yardIds && user.yardIds.length > 2 && (
                                 <span className="text-xs text-gray-500">
-                                  +{user.yardAssignments.length - 2} more
+                                  +{user.yardIds.length - 2} more
                                 </span>
                               )}
                             </div>
@@ -435,18 +337,23 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
               })}
             </div>
 
-            {filteredUsers.length === 0 && (
+            {isLoadingUsers ? (
+              <div className="text-center py-8">
+                <Loader className="h-8 w-8 mx-auto mb-2 animate-spin text-blue-600" />
+                <p className="text-sm text-gray-600">Loading users...</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                 <p className="text-sm">No users found</p>
                 <p className="text-xs">
-                  {searchTerm 
-                    ? "Try adjusting your search criteria." 
+                  {searchTerm
+                    ? "Try adjusting your search criteria."
                     : "No users available for assignment"
                   }
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 

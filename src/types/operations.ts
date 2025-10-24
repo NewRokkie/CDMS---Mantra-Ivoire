@@ -8,7 +8,7 @@ export interface GateInOperation {
   containerSize: string;
   transportCompany: string;
   driverName: string;
-  vehicleNumber: string;
+  truckNumber?: string; // Changed from vehicleNumber to truckNumber
   bookingNumber?: string;
   damageReported: boolean;
   damageDescription?: string;
@@ -17,6 +17,8 @@ export interface GateInOperation {
   temperature?: number;
   assignedLocation?: string;
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
+  operationStatus?: 'pending' | 'in_process' | 'completed' | 'cancelled'; // For filtering compatibility
+  isDamaged?: boolean; // For filtering compatibility
   operatorId: string;
   operatorName: string;
   createdAt: Date;
@@ -39,9 +41,11 @@ export interface GateOutOperation {
   remainingContainers: number;
   transportCompany: string;
   driverName: string;
-  vehicleNumber: string;
+  truckNumber?: string; // Changed from vehicleNumber to truckNumber
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   createdBy: string;
+  operatorId?: string;
+  operatorName?: string;
   createdAt: Date;
   updatedAt?: Date;
   updatedBy?: string;
@@ -51,11 +55,12 @@ export interface GateOutOperation {
   yardId: string;
   ediTransmitted: boolean;
   processedContainerIds?: string[];
+  bookingReferenceId: string;
 }
 
 export interface AuditLogEntry {
   id: string;
-  entityType: 'container' | 'release_order' | 'gate_operation' | 'user' | 'client' | 'yard';
+  entityType: 'container' | 'booking_reference' | 'gate_operation' | 'user' | 'client' | 'yard';
   entityId: string;
   action: 'create' | 'update' | 'delete' | 'gate_in' | 'gate_out' | 'status_change';
   userId: string;

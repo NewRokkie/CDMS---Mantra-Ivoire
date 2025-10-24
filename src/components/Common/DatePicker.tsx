@@ -40,6 +40,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     value ? new Date(value) : null
   );
   const [showYearSelector, setShowYearSelector] = useState(false);
+  const [showMonthSelector, setShowMonthSelector] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -98,6 +99,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                            label?.toLowerCase().includes('end date') ||
                            placeholder?.toLowerCase().includes('departure') ||
                            label?.toLowerCase().includes('departure');
+    if (minDate && date < new Date(minDate)) return true;
     if (maxDate && date > new Date(maxDate)) return true;
     return false;
   };
@@ -151,6 +153,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     setCurrentMonth(today.getMonth());
     setCurrentYear(today.getFullYear());
     setShowYearSelector(false);
+    setShowMonthSelector(false);
     setIsFocused(false);
     onChange('');
   };
@@ -168,6 +171,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     setCurrentMonth(today.getMonth());
     setCurrentYear(today.getFullYear());
     setShowYearSelector(false);
+    setShowMonthSelector(false);
     setIsFocused(false);
     setIsOpen(false);
   };
@@ -178,6 +182,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     setCurrentMonth(today.getMonth());
     setCurrentYear(today.getFullYear());
     setShowYearSelector(false);
+    setShowMonthSelector(false);
     setIsFocused(false);
     setIsOpen(false);
   };
@@ -191,6 +196,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       setCurrentMonth(today.getMonth());
       setCurrentYear(today.getFullYear());
       setShowYearSelector(false);
+      setShowMonthSelector(false);
 
       // Set selected date based on current value
       if (value) {
@@ -366,15 +372,32 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                     <ChevronLeft className="h-4 w-4 text-gray-600" />
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowYearSelector(!showYearSelector)}
-                    className="px-3 py-1 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <span className="font-semibold text-gray-900">
-                      {MONTHS[currentMonth]} {currentYear}
-                    </span>
-                  </button>
+                  <div className="flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMonthSelector(!showMonthSelector);
+                        setShowYearSelector(false);
+                      }}
+                      className="px-3 py-1 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <span className="font-semibold text-gray-900">
+                        {MONTHS[currentMonth]}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowYearSelector(!showYearSelector);
+                        setShowMonthSelector(false);
+                      }}
+                      className="px-3 py-1 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <span className="font-semibold text-gray-900">
+                        {currentYear}
+                      </span>
+                    </button>
+                  </div>
 
                   <button
                     type="button"
@@ -442,6 +465,37 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                             }`}
                           >
                             {year}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : showMonthSelector ? (
+                  /* Month Selector */
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-gray-700 text-center">Select Month</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      {MONTHS.map((month, index) => {
+                        const isCurrentMonth = index === today.getMonth() && currentYear === today.getFullYear();
+                        const isSelectedMonth = index === currentMonth;
+
+                        return (
+                          <button
+                            key={month}
+                            type="button"
+                            onClick={() => {
+                              setCurrentMonth(index);
+                              setShowMonthSelector(false);
+                            }}
+                            className={`p-2 text-sm rounded-lg transition-all duration-200 ${
+                              isSelectedMonth
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : isCurrentMonth
+                                ? 'bg-blue-50 text-blue-600 border-2 border-blue-200'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            {month}
                           </button>
                         );
                       })}

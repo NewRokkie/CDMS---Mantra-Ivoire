@@ -1,3 +1,5 @@
+import { Container } from ".";
+
 export interface Yard {
   id: string;
   name: string;
@@ -11,7 +13,7 @@ export interface Yard {
   updatedAt: Date;
   createdBy: string;
   updatedBy?: string;
-  layout: 'tantarelli' | 'standard';
+  layout: 'tantarelli' | 'yirima';
   // New multi-yard fields
   code: string; // Unique yard identifier (e.g., 'DEPOT-01', 'YARD-A')
   timezone: string; // Yard timezone for proper time handling

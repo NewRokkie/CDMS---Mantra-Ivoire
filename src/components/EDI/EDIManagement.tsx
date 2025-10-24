@@ -16,7 +16,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
-export const EDIManagement: React.FC = () => {
+const EDIManagement: React.FC = () => {
   const [transmissionLogs, setTransmissionLogs] = useState<EDITransmissionLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -55,7 +55,7 @@ export const EDIManagement: React.FC = () => {
     setIsLoading(true);
     try {
       const fileContent = await selectedFile.text();
-      
+
       let log: EDITransmissionLog;
       if (fileType === 'json') {
         log = await ediService.processFromJSON(fileContent, operation);
@@ -65,7 +65,7 @@ export const EDIManagement: React.FC = () => {
 
       setTransmissionLogs(prev => [log, ...prev]);
       setSelectedFile(null);
-      
+
       alert('EDI file processed and transmitted successfully!');
     } catch (error) {
       alert(`Error processing file: ${error}`);
@@ -78,7 +78,7 @@ export const EDIManagement: React.FC = () => {
     setIsLoading(true);
     try {
       const updatedLog = await ediService.retryFailedTransmission(logId);
-      setTransmissionLogs(prev => 
+      setTransmissionLogs(prev =>
         prev.map(log => log.id === logId ? updatedLog : log)
       );
       alert('Transmission retry successful!');
@@ -97,9 +97,10 @@ export const EDIManagement: React.FC = () => {
         id: 'mock-container-' + Date.now(),
         number: 'PCIU9507070',
         size: '40ft' as const,
-        type: 'dry' as const,
-        status: 'available' as const,
+        type: 'standard' as const,
+        status: 'in_depot' as const,
         location: 'A-01-01',
+        client: 'Maersk Line',
         clientId: 'client-001',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -107,12 +108,11 @@ export const EDIManagement: React.FC = () => {
         updatedBy: user?.name || 'System'
       };
 
-      const xmlContent = await ediService.generateSapXmlReport(
+      const { xmlContent, log } = await ediService.generateSapXmlReport(
         mockContainer,
         operation,
         'PROPRE MOYEN', // transporter
         '028-AA-01', // vehicleNumber
-        '0001052069', // clientCode
         user?.name || 'System', // userName
         'FULL' // containerLoadStatus
       );
@@ -158,7 +158,7 @@ export const EDIManagement: React.FC = () => {
       FAILED: { color: 'bg-red-100 text-red-800', label: 'Failed' },
       ACKNOWLEDGED: { color: 'bg-green-100 text-green-800', label: 'Acknowledged' }
     };
-    
+
     const config = statusConfig[status];
     return (
       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
@@ -223,7 +223,7 @@ export const EDIManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -237,7 +237,7 @@ export const EDIManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-red-100 rounded-lg">
@@ -251,7 +251,7 @@ export const EDIManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -270,7 +270,7 @@ export const EDIManagement: React.FC = () => {
       {/* File Upload Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">EDI Processing Options</h3>
-        
+
         {/* SAP XML Generation */}
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-3">Generate SAP CODECO XML</h4>
@@ -296,7 +296,7 @@ export const EDIManagement: React.FC = () => {
             </button>
           </div>
         </div>
-        
+
         {/* File Upload */}
         <h4 className="font-medium text-gray-900 mb-4">Process EDI from File</h4>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -313,7 +313,7 @@ export const EDIManagement: React.FC = () => {
               <option value="xml">XML</option>
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Operation
@@ -327,7 +327,7 @@ export const EDIManagement: React.FC = () => {
               <option value="GATE_OUT">Gate Out</option>
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select File
@@ -339,7 +339,7 @@ export const EDIManagement: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
+
           <button
             onClick={handleFileUpload}
             disabled={!selectedFile || isLoading}
@@ -395,8 +395,8 @@ export const EDIManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      log.operation === 'GATE_IN' 
-                        ? 'bg-green-100 text-green-800' 
+                      log.operation === 'GATE_IN'
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-blue-100 text-blue-800'
                     }`}>
                       {log.operation.replace('_', ' ')}
@@ -453,3 +453,5 @@ export const EDIManagement: React.FC = () => {
     </>
   );
 };
+
+export default EDIManagement;

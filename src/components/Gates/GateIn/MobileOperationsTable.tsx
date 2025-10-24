@@ -4,20 +4,23 @@ import { Calendar, Package, User, Truck, MapPin, AlertTriangle, CheckCircle, Clo
 interface Operation {
   id: string;
   date: Date;
+  createdAt: Date;
   containerNumber: string;
   secondContainerNumber?: string;
   containerSize: string;
   containerType?: string;
   clientCode: string;
   clientName: string;
-  truckNumber: string;
+  truckNumber?: string;
+  vehicleNumber?: string;
   driverName: string;
   transportCompany: string;
   operationStatus: 'pending' | 'completed';
   assignedLocation?: string;
   bookingReference?: string;
-  status: 'FULL' | 'EMPTY';
+  status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   isDamaged: boolean;
+  completedAt?: Date;
 }
 
 interface MobileOperationsTableProps {
@@ -40,7 +43,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
       filtered = filtered.filter(op =>
         op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        op.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         op.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
       );
@@ -50,10 +53,10 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
     if (selectedFilter !== 'all') {
       switch (selectedFilter) {
         case 'pending':
-          filtered = filtered.filter(op => !op.completedAt);
+          filtered = filtered.filter(op => op.status === 'pending');
           break;
         case 'completed':
-          filtered = filtered.filter(op => op.completedAt);
+          filtered = filtered.filter(op => op.status === 'completed');
           break;
         case 'damaged':
           filtered = filtered.filter(op => op.isDamaged);
@@ -173,12 +176,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-wrap items-center gap-2">
-                      {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {operation.status}
-                      </span>
+                      {getStatusBadge(operation.status)}
                       {operation.isDamaged && (
                         <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
                           Damaged
@@ -227,12 +225,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
-                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
-                        operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {operation.status}
-                      </span>
+                      {getStatusBadge(operation.status)}
                       {operation.isDamaged && (
                         <span className="flex items-center px-2.5 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
                           <AlertTriangle className="h-3 w-3 mr-1" />

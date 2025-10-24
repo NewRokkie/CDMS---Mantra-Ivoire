@@ -4,6 +4,17 @@ import { toDate } from '../../utils/dateHelpers';
 
 export class StackService {
   async getAll(yardId?: string): Promise<YardStack[]> {
+    console.log('StackService.getAll called with yardId:', yardId);
+
+    // First, let's check what stacks exist in the database
+    const { data: allStacks, error: allError } = await supabase
+      .from('stacks')
+      .select('id, yard_id, stack_number')
+      .limit(10);
+
+    console.log('All stacks in database (first 10):', allStacks);
+    console.log('All stacks error:', allError);
+
     let query = supabase
       .from('stacks')
       .select('*')
@@ -11,13 +22,19 @@ export class StackService {
 
     if (yardId) {
       query = query.eq('yard_id', yardId);
+      console.log('Filtering stacks by yard_id:', yardId);
+    } else {
+      console.log('No yardId provided, getting all stacks');
     }
 
     const { data, error } = await query;
+    console.log('Supabase query result - data length:', data?.length || 0, 'error:', error);
 
     if (error) throw error;
 
-    return (data || []).map((item) => this.mapToStack(item));
+    const mappedData = (data || []).map((item) => this.mapToStack(item));
+    console.log('Mapped stacks:', mappedData.length);
+    return mappedData;
   }
 
   async getById(id: string): Promise<YardStack | null> {
@@ -122,18 +139,29 @@ export class StackService {
       throw new Error('Stack not found');
     }
 
-    // Check if stack has containers
-    const { data: containersOnStack, error: containerCheckError } = await supabase
-      .from('containers')
-      .select('id, number')
-      .eq('yard_id', stack.yardId)
-      .eq('status', 'in_depot')
-      .ilike('location', `S${String(stack.stackNumber).padStart(2, '0')}-%`);
+    console.log('Attempting to delete stack:', stack.stackNumber, 'current_occupancy:', stack.currentOccupancy);
 
-    if (containerCheckError) throw containerCheckError;
+    // Check if stack has containers - use current_occupancy as primary check
+    if (stack.currentOccupancy > 0) {
+      console.log('Stack has current_occupancy > 0, checking containers table for confirmation');
+      // Double-check with containers table as backup
+      const { data: containersOnStack, error: containerCheckError } = await supabase
+        .from('containers')
+        .select('id, number')
+        .eq('yard_id', stack.yardId)
+        .eq('status', 'in_depot')
+        .ilike('location', `S${String(stack.stackNumber).padStart(2, '0')}-%`);
 
-    if (containersOnStack && containersOnStack.length > 0) {
-      throw new Error(`Cannot delete stack S${String(stack.stackNumber).padStart(2, '0')}. There are ${containersOnStack.length} container(s) currently stored on this stack. Please relocate them first.`);
+      if (containerCheckError) {
+        console.error('Error checking containers:', containerCheckError);
+        throw containerCheckError;
+      }
+
+      if (containersOnStack && containersOnStack.length > 0) {
+        throw new Error(`Cannot delete stack S${String(stack.stackNumber).padStart(2, '0')}. There are ${containersOnStack.length} container(s) currently stored on this stack. Please relocate them first.`);
+      }
+    } else {
+      console.log('Stack current_occupancy is 0, proceeding with delete');
     }
 
     // Check if stack is part of a pairing
@@ -153,15 +181,58 @@ export class StackService {
         .eq('id', pairingData.id);
     }
 
-    // Now delete the stack
-    const { error } = await supabase
+    // First verify the stack exists before deleting
+    console.log('Verifying stack exists before delete, ID:', id);
+    const existingStack = await this.getById(id);
+    console.log('Stack lookup result:', existingStack ? 'Found' : 'Not found');
+
+    if (!existingStack) {
+      throw new Error(`Stack with ID ${id} not found in database`);
+    }
+
+    // Since RLS policies should allow admin/supervisor to delete, let's try the actual deletion
+    console.log('Attempting actual deletion for admin/supervisor user');
+    console.log('Stack ID to delete:', id);
+
+    // First, let's check what the current user context is
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('Current user:', user?.email, 'user_metadata:', user?.user_metadata, 'app_metadata:', user?.app_metadata);
+
+    // Also check what the user role is from our auth context
+    console.log('Note: User role should be checked in the RLS policy using auth.jwt() ->> \'role\' or similar');
+
+    const { error, data, status } = await supabase
       .from('stacks')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
+
+    console.log('Delete result - status:', status, 'data:', data, 'error:', error);
 
     if (error) {
-      console.error('Delete error:', error);
-      throw error;
+      console.error('Delete error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw new Error(`Delete failed: ${error.message}`);
+    }
+
+    if (data && data.length > 0) {
+      console.log('Successfully deleted stack:', data[0]);
+    } else {
+      console.log('Delete completed but no data returned - this might indicate RLS filtering');
+      // Check if stack still exists
+      const checkAgain = await this.getById(id);
+      if (checkAgain) {
+        console.warn('Stack still exists after delete - RLS policy may be filtering the delete operation');
+        console.warn('This suggests the RLS policy condition is not matching the current user context');
+        console.warn('Check that the policy uses the correct user role/metadata field');
+        throw new Error('Delete operation completed but stack still exists - check RLS policies');
+      } else {
+        console.log('Stack successfully deleted (verified by secondary check)');
+      }
     }
   }
 
@@ -346,6 +417,7 @@ export class StackService {
   }
 
   private mapToStack(data: any): YardStack {
+    console.log('DEBUG: Stack containerSize from DB:', data.container_size);
     return {
       id: data.id,
       yardId: data.yard_id,
@@ -372,8 +444,8 @@ export class StackService {
       containerSize: data.container_size || '20feet',
       assignedClientCode: data.assigned_client_code,
       notes: data.notes,
-      createdAt: toDate(data.created_at),
-      updatedAt: toDate(data.updated_at),
+      createdAt: toDate(data.created_at) || undefined,
+      updatedAt: toDate(data.updated_at) || undefined,
       createdBy: data.created_by,
       updatedBy: data.updated_by
     };

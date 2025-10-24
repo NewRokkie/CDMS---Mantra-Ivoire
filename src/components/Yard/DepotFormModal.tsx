@@ -4,12 +4,10 @@ import {
   Save,
   Building,
   MapPin,
-  Settings,
   Clock,
   User,
   Phone,
   Mail,
-  Calendar,
   Loader,
   ChevronDown
 } from 'lucide-react';
@@ -41,8 +39,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
     code: '',
     description: '',
     location: '',
-    totalCapacity: 1000,
-    layout: 'standard' as 'tantarelli' | 'standard',
+    layout: 'yirima' as 'tantarelli' | 'yirima',
     isActive: true,
     // Contact information
     contactManager: '',
@@ -55,7 +52,12 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
     addressZipCode: '',
     addressCountry: 'Côte d\'Ivoire',
     // Basic settings
-    timezone: 'Africa/Abidjan'
+    timezone: 'Africa/Abidjan',
+    // Operating settings
+    operatingHoursStart: '08:00',
+    operatingHoursEnd: '18:00',
+    maxContainersPerOperation: 10,
+    defaultFreeDays: 5
   });
 
   useEffect(() => {
@@ -66,8 +68,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         code: selectedDepot.code,
         description: selectedDepot.description,
         location: selectedDepot.location,
-        totalCapacity: selectedDepot.totalCapacity,
-        layout: selectedDepot.layout,
+        layout: selectedDepot.layout || 'yirima',
         isActive: selectedDepot.isActive,
         contactManager: selectedDepot.contactInfo?.manager || '',
         contactPhone: selectedDepot.contactInfo?.phone || '',
@@ -77,7 +78,11 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         addressState: selectedDepot.address?.state || '',
         addressZipCode: selectedDepot.address?.zipCode || '',
         addressCountry: selectedDepot.address?.country || 'Côte d\'Ivoire',
-        timezone: selectedDepot.timezone || 'Africa/Abidjan'
+        timezone: selectedDepot.timezone || 'Africa/Abidjan',
+        operatingHoursStart: '08:00',
+        operatingHoursEnd: '18:00',
+        maxContainersPerOperation: 10,
+        defaultFreeDays: 5
       });
     } else {
       // Reset form for new depot
@@ -86,8 +91,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         code: '',
         description: '',
         location: '',
-        totalCapacity: 1000,
-        layout: 'standard',
+        layout: 'yirima',
         isActive: true,
         contactManager: '',
         contactPhone: '',
@@ -97,7 +101,11 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         addressState: '',
         addressZipCode: '',
         addressCountry: 'Côte d\'Ivoire',
-        timezone: 'Africa/Abidjan'
+        timezone: 'Africa/Abidjan',
+        operatingHoursStart: '08:00',
+        operatingHoursEnd: '18:00',
+        maxContainersPerOperation: 10,
+        defaultFreeDays: 5
       });
     }
     setErrors({});
@@ -117,9 +125,6 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
     }
     if (!formData.location.trim()) {
       newErrors.location = 'Location is required';
-    }
-    if (formData.totalCapacity <= 0) {
-      newErrors.totalCapacity = 'Capacity must be greater than 0';
     }
     if (formData.contactEmail && !/\S+@\S+\.\S+/.test(formData.contactEmail)) {
       newErrors.contactEmail = 'Invalid email format';
@@ -175,7 +180,6 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
       code: formData.code,
       description: formData.description,
       location: formData.location,
-      totalCapacity: formData.totalCapacity,
       layout: formData.layout,
       isActive: formData.isActive,
       contactInfo: {
@@ -201,7 +205,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in !mt-0">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong animate-slide-in-up max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -231,22 +235,22 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
               </button>
             </div>
           </div>
-          
+
           {/* Progress Bar */}
           <div className="mt-3">
             <div className="relative">
               <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
-              <div 
-                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300" 
+              <div
+                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300"
                 style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
               ></div>
-              
+
               <div className="flex justify-between relative z-20">
                 {[1, 2].map((step) => (
                   <div key={step} className="flex flex-col items-center">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
-                      step <= currentStep 
-                        ? 'bg-blue-600 text-white border border-blue-600' 
+                      step <= currentStep
+                        ? 'bg-blue-600 text-white border border-blue-600'
                         : 'bg-white text-gray-500 border border-gray-300'
                     }`}>
                       {step}
@@ -267,11 +271,11 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
                   <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                     <Building className="h-5 w-5 mr-2" />
@@ -341,21 +345,6 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                       {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Total Capacity *
-                      </label>
-                      <input
-                        type="number"
-                        required
-                        value={formData.totalCapacity}
-                        onChange={(e) => handleInputChange('totalCapacity', parseInt(e.target.value) || 0)}
-                        className={`form-input w-full ${errors.totalCapacity ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                        placeholder="1000"
-                        min="1"
-                      />
-                      {errors.totalCapacity && <p className="mt-1 text-sm text-red-600">{errors.totalCapacity}</p>}
-                    </div>
 
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
@@ -367,8 +356,8 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                           onChange={(e) => handleInputChange('layout', e.target.value)}
                           className="form-input w-full appearance-none pr-10"
                         >
-                          <option value="standard">Standard Grid</option>
-                          <option value="tantarelli">Tantarelli Layout</option>
+                          <option value="yirima">Yirima</option>
+                          <option value="tantarelli">Tantarelli</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 pointer-events-none" />
                       </div>
@@ -408,7 +397,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
             {/* Step 2: Contact & Address */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Contact Information */}
                 <div className="bg-green-50 rounded-xl p-6 border border-green-200">
                   <h4 className="font-semibold text-green-900 mb-4 flex items-center">
@@ -545,7 +534,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
             {/* Step 3: Operating Settings */}
             {currentStep === 3 && (
               <div className="space-y-6 animate-slide-in-right">
-                
+
                 {/* Operating Configuration */}
                 <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
                   <h4 className="font-semibold text-orange-900 mb-4 flex items-center">
@@ -647,7 +636,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
                 </button>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <button
                 type="button"
@@ -656,7 +645,7 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
               >
                 Cancel
               </button>
-              
+
               {currentStep < 2 ? (
                 <button
                   type="button"

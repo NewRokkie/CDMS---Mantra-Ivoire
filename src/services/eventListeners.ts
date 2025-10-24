@@ -25,7 +25,7 @@ export function initializeEventListeners() {
         await eventBus.emit('YARD_POSITION_ASSIGNED', {
           containerId: container.id,
           location: container.location,
-          yardId: container.yardId || 'unknown'
+          yardId: container.yardPosition?.yardId || 'unknown'
         });
       }
 
@@ -53,7 +53,7 @@ export function initializeEventListeners() {
   // GATE OUT EVENTS
   // ============================================
 
-  eventBus.on('GATE_OUT_COMPLETED', async ({ containers, operation, releaseOrder }) => {
+  eventBus.on('GATE_OUT_COMPLETED', async ({ containers, operation, bookingNumber }) => {
     console.log('[EventListeners] GATE_OUT_COMPLETED:', operation.bookingNumber);
 
     try {
@@ -61,7 +61,7 @@ export function initializeEventListeners() {
       console.log(`  ✓ ${containers.length} containers marked as out_depot`);
 
       // 2. Release order already decremented
-      console.log(`  ✓ Release order updated: ${releaseOrder.remainingContainers} remaining`);
+      console.log(`  ✓ Booking reference updated: ${bookingNumber.remainingContainers} remaining`);
 
       // 3. Request EDI transmission
       await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
@@ -70,9 +70,9 @@ export function initializeEventListeners() {
         messageType: 'CODECO'
       });
 
-      // 4. If release order completed, emit event
-      if (releaseOrder.status === 'completed') {
-        await eventBus.emit('RELEASE_ORDER_COMPLETED', { releaseOrder });
+      // 4. If booking reference completed, emit event
+      if (bookingNumber.status === 'completed') {
+        await eventBus.emit('BOOKING_REF_COMPLETED', { bookingNumber });
       }
 
     } catch (error) {
@@ -80,32 +80,32 @@ export function initializeEventListeners() {
     }
   });
 
-  eventBus.on('GATE_OUT_FAILED', async ({ releaseOrderId, error }) => {
-    console.error('[EventListeners] GATE_OUT_FAILED:', releaseOrderId, error);
+  eventBus.on('GATE_OUT_FAILED', async ({ bookingNumberId, error }) => {
+    console.error('[EventListeners] GATE_OUT_FAILED:', bookingNumberId, error);
   });
 
   // ============================================
   // RELEASE ORDER EVENTS
   // ============================================
 
-  eventBus.on('RELEASE_ORDER_CREATED', async ({ releaseOrder }) => {
-    console.log('[EventListeners] RELEASE_ORDER_CREATED:', releaseOrder.bookingNumber);
+  eventBus.on('BOOKING_REF_CREATED', async ({ bookingNumber }) => {
+    console.log('[EventListeners] BOOKING_REF_CREATED:', bookingNumber);
 
     try {
       // Could implement auto-reservation of containers here
       // For now, just log
-      console.log(`  ✓ Release order created for ${releaseOrder.totalContainers} containers`);
+      console.log(`  ✓ Booking reference created for ${bookingNumber.totalContainers} containers`);
 
       // Could send notification to client
       // Could reserve containers automatically based on booking details
 
     } catch (error) {
-      console.error('[EventListeners] Error handling RELEASE_ORDER_CREATED:', error);
+      console.error('[EventListeners] Error handling BOOKING_REF_CREATED:', error);
     }
   });
 
-  eventBus.on('RELEASE_ORDER_COMPLETED', async ({ releaseOrder }) => {
-    console.log('[EventListeners] RELEASE_ORDER_COMPLETED:', releaseOrder.bookingNumber);
+  eventBus.on('BOOKING_REF_COMPLETED', async ({ bookingNumber }) => {
+    console.log('[EventListeners] BOOKING_REF_COMPLETED:', bookingNumber);
     // Could send completion notification, generate invoice, etc.
   });
 
@@ -192,7 +192,7 @@ export function initializeEventListeners() {
   console.log('[EventListeners] Listening for:', [
     'GATE_IN_COMPLETED',
     'GATE_OUT_COMPLETED',
-    'RELEASE_ORDER_CREATED',
+    'BOOKING_REF_CREATED',
     'EDI_TRANSMISSION_REQUESTED',
     'YARD_POSITION_ASSIGNED',
     'and more...'

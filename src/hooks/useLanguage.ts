@@ -194,7 +194,7 @@ const translations = {
     'depot.form.country': 'Country',
     'depot.form.timezone': 'Timezone',
     'depot.form.status': 'Status',
-    'depot.layout.standard': 'Standard Grid',
+    'depot.layout.yirima': 'Yirima Grid',
     'depot.layout.tantarelli': 'Tantarelli Layout',
 
     // Stack Management
@@ -247,8 +247,8 @@ const translations = {
     'clients.edit': 'Edit Client',
     'clients.view': 'View Details',
     'clients.delete': 'Delete Client',
-    'clients.stats.total': 'Total Clients',
-    'clients.stats.active': 'Active Clients',
+    'clients.stats.total': 'Total Customers',
+    'clients.stats.active': 'Active Customers',
     'clients.stats.creditLimit': 'Total Credit Limit',
     'clients.stats.avgPayment': 'Avg Payment Terms',
     'clients.form.basicInfo': 'Basic Information',
@@ -644,7 +644,7 @@ const translations = {
     'depot.form.country': 'Pays',
     'depot.form.timezone': 'Fuseau Horaire',
     'depot.form.status': 'Statut',
-    'depot.layout.standard': 'Grille Standard',
+    'depot.layout.yirima': 'Grille Yirima',
     'depot.layout.tantarelli': 'Disposition Tantarelli',
 
     // Stack Management
@@ -697,7 +697,7 @@ const translations = {
     'clients.edit': 'Modifier le Client',
     'clients.view': 'Voir les Détails',
     'clients.delete': 'Supprimer le Client',
-    'clients.stats.total': 'Total des Clients',
+    'clients.stats.total': 'Total Clients',
     'clients.stats.active': 'Clients Actifs',
     'clients.stats.creditLimit': 'Limite de Crédit Totale',
     'clients.stats.avgPayment': 'Conditions de Paiement Moyennes',

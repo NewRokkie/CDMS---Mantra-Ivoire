@@ -2,7 +2,7 @@ import { CODECOGenerator } from './codecoGenerator';
 import { SapXmlGenerator, SapCodecoReportData } from '../sapXmlGenerator';
 import { Container, EDITransmissionConfig, EDITransmissionLog } from '../../types';
 import { format } from 'date-fns';
-import { yardService } from '../yardService';
+import { yardsService } from '../api/yardsService';
 
 export class EDIService {
   private transmissionConfigs: Map<string, EDITransmissionConfig> = new Map();
@@ -41,7 +41,7 @@ export class EDIService {
 
     const messageRef = this.generateMessageReference('GI', container.number);
     const partnerCode = this.getPartnerCodeForContainer(container);
-    
+
     // Generate CODECO message
     const ediContent = CODECOGenerator.generateFromContainer(
       container,
@@ -51,7 +51,8 @@ export class EDIService {
     );
 
     // Simulate transmission
-    return await this.simulateTransmission(ediContent, container, 'GATE_IN', messageRef, partnerCode);
+    const currentYard = yardsService.getCurrentYard();
+    return await this.simulateTransmission(ediContent, container, 'GATE_IN', messageRef, partnerCode, currentYard?.id || 'unknown');
   }
 
   async processGateOut(container: Container): Promise<EDITransmissionLog> {
@@ -61,7 +62,7 @@ export class EDIService {
 
     const messageRef = this.generateMessageReference('GO', container.number);
     const partnerCode = this.getPartnerCodeForContainer(container);
-    
+
     // Generate CODECO message
     const ediContent = CODECOGenerator.generateFromContainer(
       container,
@@ -71,7 +72,8 @@ export class EDIService {
     );
 
     // Simulate transmission
-    return await this.simulateTransmission(ediContent, container, 'GATE_OUT', messageRef, partnerCode);
+    const currentYard = yardsService.getCurrentYard();
+    return await this.simulateTransmission(ediContent, container, 'GATE_OUT', messageRef, partnerCode, currentYard?.id || 'unknown');
   }
 
   async generateSapXmlReport(
@@ -106,8 +108,8 @@ export class EDIService {
         container.number
       );
       const partnerCode = this.getPartnerCodeForContainer(container);
-      const currentYard = yardService.getCurrentYard();
-      
+      const currentYard = yardsService.getCurrentYard();
+
       const log = await this.simulateTransmission(
         xmlContent,
         container,
@@ -183,9 +185,11 @@ export class EDIService {
     yardId: string
   ): Promise<EDITransmissionLog> {
     const timestamp = format(new Date(), 'yyyyMMddHHmmss');
-    const yard = yardService.getYardById(yardId);
+    const yard = yardsService.getYardById(yardId);
     const yardCode = yard?.code || 'UNKNOWN';
-    const fileName = operation.includes('XML') 
+    // Determine file extension based on content type
+    const isXmlContent = ediContent.trim().startsWith('<');
+    const fileName = isXmlContent
       ? `SAP_CODECO_${yardCode}_${timestamp}_${container.number}_${operation}.xml`
       : `CODECO_${yardCode}_${timestamp}_${container.number}_${operation}.edi`;
 
@@ -199,12 +203,11 @@ export class EDIService {
       status: 'SENT', // Simulate successful transmission
       partnerCode,
       retryCount: 0,
-      createdBy: 'System',
-      updatedBy: 'System'
+      acknowledgmentReceived: new Date()
     };
 
     this.transmissionLogs.push(log);
-    
+
     // Simulate acknowledgment after a delay
     setTimeout(() => {
       log.status = 'ACKNOWLEDGED';
@@ -212,7 +215,7 @@ export class EDIService {
     }, 2000);
 
     // Log EDI operation
-    yardService.logOperation('edi_transmission', container.number, 'System', {
+    yardsService.logOperation('edi_transmission', container.number, 'System', {
       operation,
       partnerCode,
       fileName,
@@ -243,7 +246,7 @@ export class EDIService {
     log.retryCount++;
     log.status = 'SENT';
     log.transmissionDate = new Date();
-    
+
     // Simulate successful retry
     setTimeout(() => {
       log.status = 'ACKNOWLEDGED';
@@ -254,7 +257,7 @@ export class EDIService {
   }
 
   async checkPendingAcknowledgments(): Promise<void> {
-    const pendingLogs = this.transmissionLogs.filter(log => 
+    const pendingLogs = this.transmissionLogs.filter(log =>
       log.status === 'SENT' && !log.acknowledgmentReceived
     );
 
@@ -272,17 +275,17 @@ export class EDIService {
     try {
       const data = JSON.parse(jsonFile);
       const containerNumber = data.containerNumber || 'UNKNOWN';
-      
+
       const container = await this.getContainerByNumber(containerNumber);
       const messageRef = this.generateMessageReference(
         operation === 'GATE_IN' ? 'GI' : 'GO',
         containerNumber
       );
-      
+
       // Generate EDI content from JSON
       const ediContent = `JSON_PROCESSED_${messageRef}`;
-      
-      return await this.simulateTransmission(ediContent, container, operation, messageRef, 'DEFAULT');
+
+      return await this.simulateTransmission(ediContent, container, operation, messageRef, 'DEFAULT', 'unknown');
     } catch (error) {
       throw new Error(`Failed to process JSON file: ${error}`);
     }
@@ -293,17 +296,17 @@ export class EDIService {
       // Simple XML parsing simulation
       const containerMatch = xmlFile.match(/<containerNumber>(.*?)<\/containerNumber>/);
       const containerNumber = containerMatch ? containerMatch[1] : 'UNKNOWN';
-      
+
       const container = await this.getContainerByNumber(containerNumber);
       const messageRef = this.generateMessageReference(
         operation === 'GATE_IN' ? 'GI' : 'GO',
         containerNumber
       );
-      
+
       // Generate EDI content from XML
       const ediContent = `XML_PROCESSED_${messageRef}`;
-      
-      return await this.simulateTransmission(ediContent, container, operation, messageRef, 'DEFAULT');
+
+      return await this.simulateTransmission(ediContent, container, operation, messageRef, 'DEFAULT', 'unknown');
     } catch (error) {
       throw new Error(`Failed to process XML file: ${error}`);
     }
@@ -338,7 +341,8 @@ export class EDIService {
       status: 'in_depot',
       location: 'Block A-12',
       gateInDate: new Date(),
-      client: 'Maersk Line'
+      client: 'Maersk Line',
+      createdBy: 'system'
     };
   }
 

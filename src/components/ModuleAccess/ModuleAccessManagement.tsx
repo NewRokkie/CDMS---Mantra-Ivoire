@@ -316,10 +316,12 @@ export const ModuleAccessManagement: React.FC = () => {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const allUsers = await userService.getAll();
-      setUsers(allUsers);
+      const allUsers = await userService.getAll().catch(err => { console.error('Error loading users:', err); return []; });
+      setUsers(allUsers || []);
     } catch (error) {
       console.error('Error loading users:', error);
+      // Set empty array to prevent infinite loading
+      setUsers([]);
     } finally {
       setIsLoading(false);
     }
@@ -393,8 +395,8 @@ export const ModuleAccessManagement: React.FC = () => {
 
   // Bulk selection handler (checkbox behavior)
   const handleBulkUserSelect = (userId: string) => {
-    setBulkSelectedUserIds(prev => 
-      prev.includes(userId) 
+    setBulkSelectedUserIds(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
@@ -620,7 +622,7 @@ export const ModuleAccessManagement: React.FC = () => {
           ...acc,
           [key]: true
         }), {} as ModuleAccess);
-        
+
       case 'supervisor':
         return {
           ...baseAccess,
@@ -641,7 +643,7 @@ export const ModuleAccessManagement: React.FC = () => {
           billingReports: true,
           operationsReports: true
         };
-        
+
       case 'operator':
         return {
           ...baseAccess,
@@ -652,7 +654,7 @@ export const ModuleAccessManagement: React.FC = () => {
           yard: true,
           auditLogs: true
         };
-        
+
       case 'client':
         return {
           ...baseAccess,
@@ -660,7 +662,7 @@ export const ModuleAccessManagement: React.FC = () => {
           releases: true,
           yard: true
         };
-        
+
       default:
         return baseAccess;
     }
@@ -794,7 +796,7 @@ export const ModuleAccessManagement: React.FC = () => {
               className="w-full sm:w-64 pl-10 pr-4 py-2 lg:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
+
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
             <select
               value={roleFilter}
@@ -865,7 +867,7 @@ export const ModuleAccessManagement: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-        
+
         {/* Users Section */}
         <div className="lg:col-span-4 xl:col-span-3">
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -878,17 +880,17 @@ export const ModuleAccessManagement: React.FC = () => {
                       {filteredUsers.length}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     {/* Selection Mode Indicator - Compact */}
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      selectionMode === 'single' 
-                        ? 'bg-blue-100 text-blue-700' 
+                      selectionMode === 'single'
+                        ? 'bg-blue-100 text-blue-700'
                         : 'bg-purple-100 text-purple-700'
                     }`}>
                       {selectionMode === 'single' ? 'Single' : 'Bulk'}
                     </span>
-                    
+
                     {/* Select All Button - Only in bulk mode */}
                     {selectionMode === 'bulk' && (
                       <button
@@ -906,7 +908,7 @@ export const ModuleAccessManagement: React.FC = () => {
             <div className="divide-y divide-gray-200 h-96 lg:h-[500px] overflow-y-auto scrollbar-none">
               {filteredUsers.map((user) => {
                 // Determine if user is selected based on current mode
-                const isSelected = selectionMode === 'single' 
+                const isSelected = selectionMode === 'single'
                   ? selectedUserId === user.id
                   : bulkSelectedUserIds.includes(user.id);
                 const accessPercentage = calculateAccessPercentage(user);
@@ -914,12 +916,12 @@ export const ModuleAccessManagement: React.FC = () => {
                 return (
                   <button
                     key={user.id}
-                    onClick={() => selectionMode === 'single' 
-                      ? handleSingleUserSelect(user.id) 
+                    onClick={() => selectionMode === 'single'
+                      ? handleSingleUserSelect(user.id)
                       : handleBulkUserSelect(user.id)
                     }
                     className={`w-full text-left p-3 lg:p-4 transition-all duration-200 hover:bg-gray-50 relative ${
-                      isSelected 
+                      isSelected
                         ? selectionMode === 'single'
                           ? 'bg-blue-50 border-l-4 border-blue-500'
                           : 'bg-purple-50 border-l-4 border-purple-500'
@@ -928,15 +930,15 @@ export const ModuleAccessManagement: React.FC = () => {
                   >
                     <div className="flex items-start space-x-3">
                       <div className={`p-2 lg:p-3 rounded-lg transition-all duration-200 flex-shrink-0 ${
-                        isSelected 
-                          ? selectionMode === 'single' 
-                            ? 'bg-blue-100' 
+                        isSelected
+                          ? selectionMode === 'single'
+                            ? 'bg-blue-100'
                             : 'bg-purple-100'
                           : 'bg-gray-100'
                       }`}>
                         {getRoleIcon(user.role)}
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -947,7 +949,7 @@ export const ModuleAccessManagement: React.FC = () => {
                               {user.email}
                             </p>
                           </div>
-                          
+
                           {/* Selection Indicator */}
                           <div className="flex-shrink-0 ml-2">
                             {isSelected && (
@@ -964,7 +966,7 @@ export const ModuleAccessManagement: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="mt-3">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-500">Module Access</span>
@@ -1007,7 +1009,7 @@ export const ModuleAccessManagement: React.FC = () => {
                 <div>
                   <h3 className="text-base lg:text-lg font-semibold text-gray-900">Module Access Configuration</h3>
                   <p className="text-xs lg:text-sm text-gray-600">
-                    {(selectionMode === 'single' ? selectedUserId : bulkSelectedUserIds.length > 0) 
+                    {(selectionMode === 'single' ? selectedUserId : bulkSelectedUserIds.length > 0)
                       ? `Configuring access for ${selectionMode === 'single' ? '1' : bulkSelectedUserIds.length} selected user${(selectionMode === 'single' ? 1 : bulkSelectedUserIds.length) !== 1 ? 's' : ''}`
                       : 'Select users to configure their module access'
                     }
@@ -1024,7 +1026,7 @@ export const ModuleAccessManagement: React.FC = () => {
                     {selectionMode === 'single' ? 'No User Selected' : 'No Users Selected'}
                   </h3>
                   <p className="text-gray-600">
-                    {selectionMode === 'single' 
+                    {selectionMode === 'single'
                       ? 'Select a user from the left panel to configure their module access.'
                       : 'Select one or more users from the left panel to configure their module access.'
                     }
@@ -1042,8 +1044,8 @@ export const ModuleAccessManagement: React.FC = () => {
                 <div className="space-y-6">
                   {/* Selection Mode Info */}
                   <div className={`p-4 rounded-lg border ${
-                    selectionMode === 'single' 
-                      ? 'bg-blue-50 border-blue-200' 
+                    selectionMode === 'single'
+                      ? 'bg-blue-50 border-blue-200'
                       : 'bg-purple-50 border-purple-200'
                   }`}>
                     <div className="flex items-center justify-between">
@@ -1062,7 +1064,7 @@ export const ModuleAccessManagement: React.FC = () => {
                           <p className={`text-sm ${
                             selectionMode === 'single' ? 'text-blue-700' : 'text-purple-700'
                           }`}>
-                            {selectionMode === 'single' 
+                            {selectionMode === 'single'
                               ? 'Configuring module access for 1 user'
                               : `Configuring module access for ${bulkSelectedUserIds.length} users`
                             }

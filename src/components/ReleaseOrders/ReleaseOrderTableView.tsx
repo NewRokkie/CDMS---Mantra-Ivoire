@@ -16,11 +16,11 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react';
-import { ReleaseOrder } from '../../types';
+import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 
 interface ReleaseOrderTableViewProps {
-  orders: ReleaseOrder[];
+  orders: BookingReference[];
 }
 
 type SortField = 'id' | 'containerCount' | 'clientName' | 'status';
@@ -38,7 +38,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
   const [clientFilter, setClientFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'id', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedOrder, setSelectedOrder] = useState<ReleaseOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<BookingReference | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Fixed items per page to 5
@@ -121,12 +121,12 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
     setCurrentPage(1);
   };
 
-  const handleViewDetails = (order: ReleaseOrder) => {
+  const handleViewDetails = (order: BookingReference) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
   };
 
-  const getStatusBadge = (status: ReleaseOrder['status']) => {
+  const getStatusBadge = (status: BookingReference['status']) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       in_process: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },

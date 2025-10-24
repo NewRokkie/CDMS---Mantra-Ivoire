@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { Container, Client, User, ReleaseOrder } from '../types';
+import { Container, Client, User, BookingReference } from '../types';
 import { GateInOperation, GateOutOperation, AuditLogEntry } from '../types/operations';
 import { MOCK_CONTAINERS, MOCK_CLIENTS, MOCK_USERS, MOCK_RELEASE_ORDERS } from '../data/mockData';
 
@@ -8,7 +8,7 @@ interface GlobalStore {
   containers: Container[];
   clients: Client[];
   users: User[];
-  releaseOrders: ReleaseOrder[];
+  bookingReferences: BookingReference[];
   gateInOperations: GateInOperation[];
   gateOutOperations: GateOutOperation[];
   auditLogs: AuditLogEntry[];
@@ -32,12 +32,12 @@ interface GlobalStore {
   deleteUser: (id: string) => void;
   getUserById: (id: string) => User | undefined;
 
-  addReleaseOrder: (order: ReleaseOrder) => void;
-  updateReleaseOrder: (id: string, updates: Partial<ReleaseOrder>) => void;
-  deleteReleaseOrder: (id: string) => void;
-  getReleaseOrderById: (id: string) => ReleaseOrder | undefined;
-  getReleaseOrdersByClient: (clientCode: string) => ReleaseOrder[];
-  getReleaseOrdersByStatus: (status: ReleaseOrder['status']) => ReleaseOrder[];
+  addBookingReference: (order: BookingReference) => void;
+  updateBookingReference: (id: string, updates: Partial<BookingReference>) => void;
+  deleteBookingReference: (id: string) => void;
+  getBookingReferenceById: (id: string) => BookingReference | undefined;
+  getBookingReferencesByClient: (clientCode: string) => BookingReference[];
+  getBookingReferencesByStatus: (status: BookingReference['status']) => BookingReference[];
 
   addGateInOperation: (operation: GateInOperation) => void;
   updateGateInOperation: (id: string, updates: Partial<GateInOperation>) => void;
@@ -68,7 +68,7 @@ interface GlobalStore {
   }) => { success: boolean; containerId?: string; error?: string };
 
   processGateOut: (data: {
-    releaseOrderId: string;
+    bookingReferenceId: string;
     containerIds: string[];
     transportCompany: string;
     driverName: string;
@@ -89,7 +89,7 @@ export const useGlobalStore = create<GlobalStore>()(
         containers: [],
         clients: [],
         users: [],
-        releaseOrders: [],
+        bookingReferences: [],
         gateInOperations: [],
         gateOutOperations: [],
         auditLogs: [],
@@ -216,11 +216,11 @@ export const useGlobalStore = create<GlobalStore>()(
 
         getUserById: (id) => get().users.find(u => u.id === id),
 
-        addReleaseOrder: (order) =>
+        addBookingReference: (order: BookingReference) =>
           set((state) => {
             const auditLog: AuditLogEntry = {
               id: `audit-${Date.now()}`,
-              entityType: 'release_order',
+              entityType: 'booking_reference',
               entityId: order.id,
               action: 'create',
               userId: order.createdBy,
@@ -231,30 +231,30 @@ export const useGlobalStore = create<GlobalStore>()(
             };
 
             return {
-              releaseOrders: [...state.releaseOrders, order],
+              bookingReferences: [...state.bookingReferences, order],
               auditLogs: [...state.auditLogs, auditLog]
             };
           }),
 
-        updateReleaseOrder: (id, updates) =>
+        updateBookingReference: (id, updates) =>
           set((state) => ({
-            releaseOrders: state.releaseOrders.map(ro =>
-              ro.id === id ? { ...ro, ...updates } : ro
+            bookingReferences: state.bookingReferences.map(br =>
+              br.id === id ? { ...br, ...updates } : br
             )
           })),
 
-        deleteReleaseOrder: (id) =>
+        deleteBookingReference: (id) =>
           set((state) => ({
-            releaseOrders: state.releaseOrders.filter(ro => ro.id !== id)
+            bookingReferences: state.bookingReferences.filter(br => br.id !== id)
           })),
 
-        getReleaseOrderById: (id) => get().releaseOrders.find(ro => ro.id === id),
+        getBookingReferenceById: (id) => get().bookingReferences.find(br => br.id === id),
 
-        getReleaseOrdersByClient: (clientCode) =>
-          get().releaseOrders.filter(ro => ro.clientCode === clientCode),
+        getBookingReferencesByClient: (clientCode) =>
+          get().bookingReferences.filter(br => br.clientCode === clientCode),
 
-        getReleaseOrdersByStatus: (status) =>
-          get().releaseOrders.filter(ro => ro.status === status),
+        getBookingReferencesByStatus: (status) =>
+          get().bookingReferences.filter(br => br.status === status),
 
         addGateInOperation: (operation) =>
           set((state) => ({
@@ -420,9 +420,9 @@ export const useGlobalStore = create<GlobalStore>()(
         },
 
         processGateOut: (data) => {
-          const releaseOrder = get().getReleaseOrderById(data.releaseOrderId);
-          if (!releaseOrder) {
-            return { success: false, error: 'Release order not found' };
+          const bookingReference = get().getBookingReferenceById(data.bookingReferenceId);
+          if (!bookingReference) {
+            return { success: false, error: 'Booking reference not found' };
           }
 
           const containers = data.containerIds
@@ -438,13 +438,13 @@ export const useGlobalStore = create<GlobalStore>()(
           const gateOutOperation: GateOutOperation = {
             id: operationId,
             date: new Date(),
-            bookingNumber: releaseOrder.bookingNumber,
-            clientCode: releaseOrder.clientCode,
-            clientName: releaseOrder.clientName,
-            bookingType: releaseOrder.bookingType,
-            totalContainers: releaseOrder.totalContainers,
+            bookingNumber: bookingReference.bookingNumber,
+            clientCode: bookingReference.clientCode || '',
+            clientName: bookingReference.clientName,
+            bookingType: bookingReference.bookingType,
+            totalContainers: bookingReference.totalContainers,
             processedContainers: data.containerIds.length,
-            remainingContainers: releaseOrder.remainingContainers - data.containerIds.length,
+            remainingContainers: bookingReference.remainingContainers - data.containerIds.length,
             transportCompany: data.transportCompany,
             driverName: data.driverName,
             vehicleNumber: data.vehicleNumber,
@@ -454,7 +454,8 @@ export const useGlobalStore = create<GlobalStore>()(
             completedAt: new Date(),
             yardId: data.yardId,
             ediTransmitted: false,
-            processedContainerIds: data.containerIds
+            processedContainerIds: data.containerIds,
+            bookingReferenceId: data.bookingReferenceId
           };
 
           data.containerIds.forEach(id => {
@@ -465,9 +466,9 @@ export const useGlobalStore = create<GlobalStore>()(
             });
           });
 
-          get().updateReleaseOrder(data.releaseOrderId, {
-            remainingContainers: releaseOrder.remainingContainers - data.containerIds.length,
-            status: releaseOrder.remainingContainers - data.containerIds.length === 0
+          get().updateBookingReference(data.bookingReferenceId, {
+            remainingContainers: bookingReference.remainingContainers - data.containerIds.length,
+            status: bookingReference.remainingContainers - data.containerIds.length === 0
               ? 'completed'
               : 'in_process'
           });
@@ -484,7 +485,7 @@ export const useGlobalStore = create<GlobalStore>()(
               containers: MOCK_CONTAINERS,
               clients: MOCK_CLIENTS,
               users: MOCK_USERS,
-              releaseOrders: MOCK_RELEASE_ORDERS,
+              bookingReferences: MOCK_RELEASE_ORDERS,
               gateInOperations: [],
               gateOutOperations: [],
               auditLogs: []
@@ -497,7 +498,7 @@ export const useGlobalStore = create<GlobalStore>()(
             containers: MOCK_CONTAINERS,
             clients: MOCK_CLIENTS,
             users: MOCK_USERS,
-            releaseOrders: MOCK_RELEASE_ORDERS,
+            bookingReferences: MOCK_RELEASE_ORDERS,
             gateInOperations: [],
             gateOutOperations: [],
             auditLogs: []
@@ -510,7 +511,7 @@ export const useGlobalStore = create<GlobalStore>()(
           containers: state.containers,
           clients: state.clients,
           users: state.users,
-          releaseOrders: state.releaseOrders,
+          bookingReferences: state.bookingReferences,
           gateInOperations: state.gateInOperations,
           gateOutOperations: state.gateOutOperations,
           auditLogs: state.auditLogs

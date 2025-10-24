@@ -3,7 +3,7 @@ import { AlertTriangle, Menu, X, Clock, Plus, Truck, Package, Search, Filter, Ch
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { gateService, releaseService, containerService } from '../../services/api';
+import { gateService, bookingReferenceService, containerService } from '../../services/api';
 import { realtimeService } from '../../services/api/realtimeService';
 import { GateOutModal } from './GateOutModal';
 import { MobileGateOutOperationsTable } from './GateOut/MobileGateOutOperationsTable';
@@ -50,16 +50,21 @@ export const GateOut: React.FC = () => {
   useEffect(() => {
     async function loadData() {
       try {
+        setLoading(true);
         const [ordersData, containersData, operationsData] = await Promise.all([
-          releaseService.getAll(),
-          containerService.getAll(),
-          gateService.getGateOutOperations()
+          bookingReferenceService.getAll().catch(err => { console.error('Error loading orders:', err); return []; }),
+          containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; }),
+          gateService.getGateOutOperations().catch(err => { console.error('Error loading operations:', err); return []; })
         ]);
-        setReleaseOrders(ordersData);
-        setContainers(containersData);
-        setGateOutOperations(operationsData);
+        setReleaseOrders(ordersData || []);
+        setContainers(containersData || []);
+        setGateOutOperations(operationsData || []);
       } catch (error) {
         console.error('Error loading gate out data:', error);
+        // Set empty arrays to prevent infinite loading
+        setReleaseOrders([]);
+        setContainers([]);
+        setGateOutOperations([]);
       } finally {
         setLoading(false);
       }
@@ -81,10 +86,10 @@ export const GateOut: React.FC = () => {
       }
     );
 
-    const unsubscribeReleaseOrders = realtimeService.subscribeToReleaseOrders(
+    const unsubscribeBookingReferences = realtimeService.subscribeToBookingReferences(
       async (payload) => {
-        console.log(`📡 Release Order ${payload.eventType}:`, payload.new);
-        const orders = await releaseService.getAll();
+        console.log(`📡 Booking Reference ${payload.eventType}:`, payload.new);
+        const orders = await bookingReferenceService.getAll();
         setReleaseOrders(orders);
       }
     );
@@ -99,7 +104,7 @@ export const GateOut: React.FC = () => {
 
     return () => {
       unsubscribeGateOut();
-      unsubscribeReleaseOrders();
+      unsubscribeBookingReferences();
       unsubscribeContainers();
       console.log(`🔌 Cleaned up Gate Out real-time subscriptions`);
     };
@@ -165,7 +170,7 @@ export const GateOut: React.FC = () => {
     try {
       // Create pending gate out operation in database
       const result = await gateService.createPendingGateOut({
-        releaseOrderId: data.booking.id,
+        bookingReferenceId: data.booking.id,
         transportCompany: data.transportCompany,
         driverName: data.driverName,
         vehicleNumber: data.vehicleNumber,
@@ -371,7 +376,7 @@ export const GateOut: React.FC = () => {
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between p-4 lg:p-4">
             {/* Search Bar */}
             <div className="relative mb-4 lg:mb-0">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
@@ -393,14 +398,14 @@ export const GateOut: React.FC = () => {
             </div>
 
             {/* Filter Chips (Mobile) / Dropdown (Desktop) */}
-            <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4">
+            <div className="lg:hidden flex items-center justify-center space-x-2 overflow-x-auto py-2 scrollbar-none -mx-4 px-4">
               {['all', 'pending', 'in_process', 'completed'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
                   className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                     selectedFilter === filter
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
                   }`}
                 >

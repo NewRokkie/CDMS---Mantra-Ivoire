@@ -16,10 +16,13 @@ export const ClientMasterData: React.FC = () => {
   useEffect(() => {
     async function loadClients() {
       try {
-        const data = await clientService.getAll();
-        setClients(data);
+        setLoading(true);
+        const data = await clientService.getAll().catch(err => { console.error('Error loading clients:', err); return []; });
+        setClients(data || []);
       } catch (error) {
         console.error('Error loading clients:', error);
+        // Set empty array to prevent infinite loading
+        setClients([]);
       } finally {
         setLoading(false);
       }
@@ -53,7 +56,7 @@ export const ClientMasterData: React.FC = () => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
                          (statusFilter === 'active' && client.isActive) ||
                          (statusFilter === 'inactive' && !client.isActive);
     return matchesSearch && matchesStatus;
@@ -114,7 +117,7 @@ export const ClientMasterData: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -128,7 +131,7 @@ export const ClientMasterData: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -142,7 +145,7 @@ export const ClientMasterData: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
@@ -172,7 +175,7 @@ export const ClientMasterData: React.FC = () => {
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -183,7 +186,7 @@ export const ClientMasterData: React.FC = () => {
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          
+
           <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Filter className="h-4 w-4" />
             <span>Advanced Filter</span>
@@ -266,8 +269,8 @@ export const ClientMasterData: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      client.isActive 
-                        ? 'bg-green-100 text-green-800' 
+                      client.isActive
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
                       {client.isActive ? 'Active' : 'Inactive'}

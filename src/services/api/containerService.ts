@@ -5,17 +5,23 @@ export class ContainerService {
   async getAll(): Promise<Container[]> {
     const { data, error } = await supabase
       .from('containers')
-      .select('*')
+      .select(`
+        *,
+        clients!containers_client_id_fkey(name)
+      `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data.map(this.mapToContainer);
+    return data ? data.map(this.mapToContainer) : [];
   }
 
   async getById(id: string): Promise<Container | null> {
     const { data, error } = await supabase
       .from('containers')
-      .select('*')
+      .select(`
+        *,
+        clients!containers_client_id_fkey(name)
+      `)
       .eq('id', id)
       .maybeSingle();
 
@@ -136,7 +142,7 @@ export class ContainerService {
       location: data.location,
       yardId: data.yard_id,
       clientId: data.client_id,
-      client: data.client_name,
+      client: data.clients?.name || '',
       clientCode: data.client_code,
       gateInDate: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
       gateOutDate: data.gate_out_date ? new Date(data.gate_out_date) : undefined,

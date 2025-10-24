@@ -3,7 +3,7 @@ import { Building, Package, Settings, Plus, Search, Filter, CreditCard as Edit, 
 import { Yard } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { yardService } from '../../services/yardService';
+import { yardsService } from '../../services/api/yardsService';
 import { DepotFormModal } from './DepotFormModal';
 import { DepotDetailModal } from './DepotDetailModal';
 import { DepotAssignmentModal } from './DepotAssignmentModal';
@@ -40,7 +40,9 @@ export const DepotManagement: React.FC = () => {
   const loadDepots = async () => {
     try {
       setIsLoading(true);
-      const availableDepots = yardService.getAvailableYards();
+      console.log('DepotManagement: Starting to load depots from yardsService');
+      const availableDepots = await yardsService.getAll();
+      console.log('DepotManagement: Depots loaded successfully:', availableDepots);
 
       setDepots(availableDepots);
 
@@ -95,7 +97,7 @@ export const DepotManagement: React.FC = () => {
   const handleCreateDepot = async (data: any) => {
     try {
       setIsFormLoading(true);
-      const newDepot = yardService.createYard(data, user?.name);
+      const newDepot = await yardsService.create(data, user?.id || 'unknown');
       await loadDepots();
       await refreshYards(); // Refresh yard context
       setShowForm(false);
@@ -113,7 +115,7 @@ export const DepotManagement: React.FC = () => {
 
     try {
       setIsFormLoading(true);
-      const updatedDepot = yardService.updateYard(selectedDepot.id, data, user?.name);
+      const updatedDepot = await yardsService.update(selectedDepot.id, data, user?.id || 'unknown');
       if (updatedDepot) {
         await loadDepots();
         await refreshYards(); // Refresh yard context
@@ -138,7 +140,7 @@ export const DepotManagement: React.FC = () => {
 
     if (confirm(`Are you sure you want to delete the depot "${depot.name}"? This action cannot be undone.`)) {
       try {
-        const success = yardService.deleteYard(depot.id, user?.name);
+        const success = await yardsService.delete(depot.id, user?.id || 'unknown');
         if (success) {
           await loadDepots();
           await refreshYards(); // Refresh yard context
@@ -172,12 +174,10 @@ export const DepotManagement: React.FC = () => {
 
     try {
       setIsAssignmentLoading(true);
-      // In a real implementation, this would update user assignments
-      console.log(`Assigning users ${userIds.join(', ')} to depot ${selectedDepot.name}`);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // The actual assignment is now handled in DepotAssignmentModal
+      // This callback is just for UI feedback
+      console.log(`Assigned users ${userIds.join(', ')} to depot ${selectedDepot.name}`);
+
       alert(`Successfully assigned ${userIds.length} user(s) to ${selectedDepot.name}`);
       setShowAssignment(false);
       setSelectedDepot(null);
