@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader, Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings } from 'lucide-react';
 import { Yard, YardStack } from '../../../types';
-import { yardService } from '../../../services/yardService';
+import { yardsService } from '../../../services/api/yardsService';
 
 interface StackFormModalProps {
   isOpen: boolean;
@@ -33,24 +33,62 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
   // Initialize form data
   useEffect(() => {
+    console.log('StackFormModal: Initializing form data', {
+      selectedStack: !!selectedStack,
+      yardId: yard?.id,
+      yardName: yard?.name,
+      sectionsCount: yard?.sections?.length,
+      sections: yard?.sections,
+      isOpen
+    });
+
     if (selectedStack) {
       // Load existing stack data
+      console.log('StackFormModal: Loading existing stack data', selectedStack);
+      const containerSize = selectedStack.containerSize === '40feet' ? '40ft' : '20ft';
+      const stackType = selectedStack.isSpecialStack ? 'special' : 'regular';
+
+      console.log('StackFormModal: Mapped containerSize and stackType', { containerSize, stackType });
+
       setFormData({
         stackNumber: selectedStack.stackNumber,
         sectionId: selectedStack.sectionId || '',
-        containerSize: selectedStack.containerSize === '40feet' ? '40ft' : '20ft',
-        stackType: selectedStack.isSpecialStack ? 'special' : 'regular',
+        containerSize,
+        stackType,
         rows: selectedStack.rows,
         maxTiers: selectedStack.maxTiers,
       });
     } else if (yard?.sections && yard.sections.length > 0) {
       // Reset for new stack
+      console.log('StackFormModal: Resetting for new stack');
       const firstSection = yard.sections[0];
-      const suggestedNumber = firstSection && yard.id ? yardService.getNextStackNumber(yard.id, firstSection.id) : 1;
-      
+      console.log('StackFormModal: First section', firstSection);
+
+      let suggestedNumber = 1;
+      try {
+        if (firstSection && yard.id) {
+          suggestedNumber = yardsService.getNextStackNumber(yard.id, firstSection.id);
+          console.log('StackFormModal: Suggested stack number', suggestedNumber);
+        }
+      } catch (error) {
+        console.error('StackFormModal: Error getting next stack number', error);
+        suggestedNumber = 1;
+      }
+
       setFormData({
         stackNumber: suggestedNumber,
         sectionId: firstSection?.id || '',
+        containerSize: '20ft',
+        stackType: 'regular',
+        rows: 4,
+        maxTiers: 5,
+      });
+    } else {
+      console.warn('StackFormModal: No sections available in yard', yard);
+      // Provide default values even if no sections are available
+      setFormData({
+        stackNumber: 1,
+        sectionId: '',
         containerSize: '20ft',
         stackType: 'regular',
         rows: 4,
@@ -61,6 +99,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   }, [selectedStack, yard, isOpen]);
 
   const validateForm = () => {
+    console.log('StackFormModal: Validating form data', formData);
     const newErrors: Record<string, string> = {};
 
     if (formData.stackNumber <= 0) {
@@ -79,18 +118,11 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       newErrors.maxTiers = 'Max tiers must be between 1 and 8';
     }
 
-    if (formData.dimensions.width <= 0) {
-      newErrors.width = 'Width must be greater than 0';
-    }
-
-    if (formData.dimensions.length <= 0) {
-      newErrors.length = 'Length must be greater than 0';
-    }
-
     // Auto-adjust rows and tiers based on container size
     if (formData.containerSize === '40ft') {
       // 40ft containers typically need more space
       if (formData.rows < 4) {
+        console.log('StackFormModal: Auto-adjusting rows to 4 for 40ft containers');
         setFormData(prev => ({ ...prev, rows: 4 }));
       }
     }
@@ -100,11 +132,13 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       newErrors.containerSize = 'Special stacks can only accommodate 20ft containers';
     }
 
+    console.log('StackFormModal: Validation errors', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (field: string, value: any) => {
+    console.log('StackFormModal: Input change', field, value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -113,6 +147,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     // Auto-adjust settings based on container size
     if (field === 'containerSize') {
       if (value === '40ft') {
+        console.log('StackFormModal: Auto-adjusting for 40ft container size');
         setFormData(prev => ({
           ...prev,
           containerSize: value,
@@ -120,6 +155,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
           stackType: 'regular' // Force regular for 40ft
         }));
       } else {
+        console.log('StackFormModal: Setting container size to 20ft');
         setFormData(prev => ({
           ...prev,
           containerSize: value
@@ -130,12 +166,14 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     // Auto-adjust container size based on stack type
     if (field === 'stackType') {
       if (value === 'special') {
+        console.log('StackFormModal: Auto-adjusting for special stack type');
         setFormData(prev => ({
           ...prev,
           stackType: value,
           containerSize: '20ft' // Force 20ft for special stacks
         }));
       } else {
+        console.log('StackFormModal: Setting stack type to regular');
         setFormData(prev => ({
           ...prev,
           stackType: value
@@ -145,6 +183,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
     // Clear error for this field
     if (errors[field]) {
+      console.log('StackFormModal: Clearing error for field', field);
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
@@ -158,8 +197,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('StackFormModal: Handling submit', formData);
 
     if (!validateForm()) {
+      console.log('StackFormModal: Form validation failed');
       return;
     }
 
@@ -172,11 +213,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       rows: formData.rows,
       maxTiers: formData.maxTiers,
       capacity: calculateCapacity(),
-      dimensions: formData.dimensions,
-      position: formData.position,
       isActive: true,
     };
 
+    console.log('StackFormModal: Submitting stack data', stackData);
     onSubmit(stackData);
   };
 
@@ -185,7 +225,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   };
 
   const getContainerSizeDescription = (size: '20ft' | '40ft') => {
-    return size === '20ft' 
+    return size === '20ft'
       ? 'Standard containers, single slot per container'
       : 'High capacity containers, requires paired stacks';
   };
@@ -206,7 +246,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     }
     return {
       stackNumbers: 'Sequential numbers (1, 2, 3, 4, etc.)',
-      dimensions: 'Standard: 12m × 6m',
+      dimensions: 'Yirima: 12m × 6m',
       positioning: 'Grid-based layout'
     };
   };
@@ -218,7 +258,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -260,7 +300,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
                 <Grid3X3 className="h-5 w-5 mr-2" />
-                {yard?.layout === 'tantarelli' ? 'Tantarelli' : 'Standard'} Layout Guidelines
+                {yard?.layout === 'tantarelli' ? 'Tantarelli' : 'Yirima'} Layout Guidelines
               </h4>
               <div className="text-sm text-blue-800 space-y-1">
                 <div><strong>Stack Numbers:</strong> {suggestions.stackNumbers}</div>
@@ -295,7 +335,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   {errors.stackNumber && <p className="mt-1 text-sm text-red-600">{errors.stackNumber}</p>}
                   {yard?.layout === 'tantarelli' && !selectedStack && (
                     <p className="mt-1 text-xs text-blue-600">
-                      Suggested: {yard?.id ? yardService.getNextStackNumber(yard.id, formData.sectionId) : 'N/A'}
+                      Suggested: {yard?.id && formData.sectionId ? yardsService.getNextStackNumber(yard.id, formData.sectionId) : 'N/A'}
                     </p>
                   )}
                 </div>
@@ -315,9 +355,14 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       onChange={(e) => {
                         handleInputChange('sectionId', e.target.value);
                         // Update suggested stack number when section changes
-                        if (e.target.value) {
-                          const suggested = yard?.id ? yardService.getNextStackNumber(yard.id, e.target.value) : 1;
-                          handleInputChange('stackNumber', suggested);
+                        if (e.target.value && yard?.id) {
+                          try {
+                            const suggested = yardsService.getNextStackNumber(yard.id, e.target.value);
+                            handleInputChange('stackNumber', suggested);
+                            console.log('StackFormModal: Updated stack number to', suggested);
+                          } catch (error) {
+                            console.error('StackFormModal: Error updating stack number', error);
+                          }
                         }
                       }}
                       className={`form-input w-full ${errors.sectionId ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
@@ -327,7 +372,9 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                         <option key={section.id} value={section.id}>
                           {section.name} ({section.stacks.length} stacks)
                         </option>
-                      ))}
+                      )) || (
+                        <option value="" disabled>No sections available</option>
+                      )}
                     </select>
                   )}
                   {errors.sectionId && <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>}
@@ -585,7 +632,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {formData.containerSize === '40ft' && formData.stackType === 'regular' && (
                 <div className="mt-4 flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <Package className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />

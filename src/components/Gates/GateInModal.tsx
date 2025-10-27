@@ -110,10 +110,16 @@ export const GateInModal: React.FC<GateInModalProps> = ({
         {/* Modal Body - Scrollable */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
           <form onSubmit={(e) => {
+            console.log('🪲 DEBUG - Form onSubmit triggered', {
+              currentStep,
+              formValid: e.currentTarget.checkValidity()
+            });
             e.preventDefault();
             if (currentStep < 2) {
+              console.log('🪲 DEBUG - Moving to next step');
               handleNextStep();
             } else {
+              console.log('🪲 DEBUG - Submitting form');
               handleSubmit();
             }
           }} className="space-y-6">
@@ -595,6 +601,11 @@ export const GateInModal: React.FC<GateInModalProps> = ({
                   type="submit"
                   disabled={isProcessing || !validateStep(currentStep)}
                   className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
+                  onClick={(e) => {
+                    console.log('🪲 DEBUG - Submit button clicked, calling handleSubmit directly');
+                    e.preventDefault(); // Prevent any default form submission
+                    handleSubmit(); // Call handleSubmit directly
+                  }}
                 >
                   {isProcessing ? (
                     <>

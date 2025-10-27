@@ -1,4 +1,4 @@
-import { ReleaseOrder } from '../../types';
+import { BookingReference } from '../../types';
 
 // ========== FORM DATA TYPES ==========
 
@@ -68,7 +68,7 @@ export interface GateInModalProps {
 export interface GateOutModalProps {
   showModal: boolean;
   setShowModal: (show: boolean) => void;
-  availableBookings: ReleaseOrder[];
+  availableBookings: BookingReference[];
   onSubmit: (data: any) => void;
   isProcessing: boolean;
 }

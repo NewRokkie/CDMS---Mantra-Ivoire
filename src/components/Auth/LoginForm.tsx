@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container, Eye, EyeOff, Loader, User, Lock,
+  Eye, EyeOff, Loader, User, Lock,
   ArrowRight, Shield, Warehouse, Ship, Package
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';

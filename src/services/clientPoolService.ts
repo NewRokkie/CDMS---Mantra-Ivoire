@@ -1,6 +1,6 @@
 import { ClientPool, StackAssignment, ClientPoolStats, ContainerAssignmentRequest, StackAvailabilityResult } from '../types/clientPool';
 import { Yard, YardStack, Container } from '../types';
-import { yardService } from './yardService'; // Correct import for yardService in same directory
+import { yardsService } from './api/yardsService';
 
 /**
  * Client Pool Service
@@ -171,8 +171,9 @@ export class ClientPoolService {
     containers: Container[],
     yardId?: string
   ): StackAvailabilityResult[] {
+    console.log('DEBUG: Container size for client:', containerSize);
     // Use current yard if not specified
-    const targetYard = yardId ? yardService.getYardById(yardId) : yard;
+    const targetYard = yardId ? yardsService.getYardById(yardId) : yard;
     if (!targetYard) {
       console.warn('No valid yard found for stack availability check');
       return [];
@@ -191,7 +192,7 @@ export class ClientPoolService {
       // Calculate current occupancy for this stack in the specific yard
       const stackContainers = containers.filter(c => {
         const isInStack = c.location.includes(`Stack S${stack.stackNumber}`);
-        const isInYard = yardService.isContainerInYard ? yardService.isContainerInYard(c, targetYard.id) : true;
+        const isInYard = yardsService.isContainerInYard ? yardsService.isContainerInYard(c, targetYard.id) : true;
         return isInStack && isInYard;
       });
       const currentOccupancy = stackContainers.length;
@@ -236,7 +237,7 @@ export class ClientPoolService {
     yardId: string,
     containers: Container[]
   ): StackAvailabilityResult[] {
-    const yard = yardService.getYardById(yardId);
+    const yard = yardsService.getYardById(yardId);
     if (!yard) {
       console.warn(`Yard ${yardId} not found`);
       return [];
@@ -264,7 +265,7 @@ export class ClientPoolService {
    * Check if a stack belongs to a specific yard
    */
   private isStackInYard(stackId: string, yardId: string): boolean {
-    const yard = yardService.getYardById(yardId);
+    const yard = yardsService.getYardById(yardId);
     if (!yard) return false;
 
     // Check if stack exists in any section of this yard
@@ -371,7 +372,7 @@ export class ClientPoolService {
       }
 
       // Validate yard context
-      const currentYard = yardService.getCurrentYard();
+      const currentYard = yardsService.getCurrentYard();
       if (!currentYard) {
         throw new Error('No yard selected for container assignment');
       }
@@ -399,8 +400,8 @@ export class ClientPoolService {
       // Update client pool occupancy
       this.updateClientPoolOccupancy(request.clientCode, 1, userName);
 
-      // Log operation using yardService
-      yardService.logOperation('container_assign', request.containerNumber, userName || 'System', {
+      // Log operation using yardsService
+      yardsService.logOperation('container_assign', request.containerNumber, userName || 'System', {
         clientCode: request.clientCode,
         stackId: selectedStack.stackId,
         yardId: currentYard.id,
@@ -485,7 +486,7 @@ export class ClientPoolService {
     }
 
     // Log operation
-    yardService.logOperation('stack_assignment', undefined, effectiveUserName, {
+    yardsService.logOperation('stack_assignment', undefined, effectiveUserName, {
       stackId,
       clientCode,
       isExclusive
@@ -520,7 +521,7 @@ export class ClientPoolService {
       this.clientStackMap.set(clientCode, clientStacks.filter(id => id !== stackId));
 
       // Log operation
-      yardService.logOperation('stack_assignment', undefined, effectiveUserName, {
+      yardsService.logOperation('stack_assignment', undefined, effectiveUserName, {
         stackId,
         clientCode,
         action: 'remove'
@@ -617,8 +618,8 @@ export class ClientPoolService {
     userName?: string
   ): ClientPool {
     const effectiveUserName = userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
+    const currentYard = yardsService.getCurrentYard();
+
     const pool: ClientPool = {
       id: `pool-${clientCode.toLowerCase()}`,
       clientId,
@@ -648,7 +649,7 @@ export class ClientPoolService {
     });
 
     // Log creation
-    yardService.logOperation('client_pool_create', undefined, effectiveUserName, {
+    yardsService.logOperation('client_pool_create', undefined, effectiveUserName, {
       clientCode,
       yardId: currentYard?.id,
       yardCode: currentYard?.code,
@@ -683,7 +684,7 @@ export class ClientPoolService {
     }
 
     // Log update
-    yardService.logOperation('client_pool_update', undefined, effectiveUserName, {
+    yardsService.logOperation('client_pool_update', undefined, effectiveUserName, {
       clientCode,
       updates: Object.keys(updates)
     });
@@ -782,8 +783,8 @@ export class ClientPoolService {
     userName?: string
   ): StackAssignment[] {
     const effectiveUserName = assignedBy || userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
+    const currentYard = yardsService.getCurrentYard();
+
     const assignments: StackAssignment[] = [];
     stackIds.forEach(stackId => {
       try {
@@ -804,7 +805,7 @@ export class ClientPoolService {
     });
 
     // Log bulk assignment
-    yardService.logOperation('stack_bulk_assign', undefined, effectiveUserName, {
+    yardsService.logOperation('stack_bulk_assign', undefined, effectiveUserName, {
       clientCode,
       yardId: currentYard?.id,
       yardCode: currentYard?.code,
@@ -821,12 +822,12 @@ export class ClientPoolService {
    */
   releaseContainerFromPool(containerNumber: string, clientCode: string, userName?: string): void {
     const effectiveUserName = userName || 'System';
-    const currentYard = yardService.getCurrentYard();
-    
+    const currentYard = yardsService.getCurrentYard();
+
     try {
       this.updateClientPoolOccupancy(clientCode, -1, effectiveUserName);
       // Log release
-      yardService.logOperation('container_release', containerNumber, effectiveUserName, {
+      yardsService.logOperation('container_release', containerNumber, effectiveUserName, {
         clientCode,
         yardId: currentYard?.id,
         yardCode: currentYard?.code,

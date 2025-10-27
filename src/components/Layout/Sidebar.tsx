@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronDown, ChevronRight, Cog, X } from 'lucide-react';
+import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronDown, ChevronRight, Cog, X, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
+import { ModuleAccess } from '../../types';
+
+interface MenuItem {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  moduleKey: keyof ModuleAccess;
+}
 
 interface SidebarProps {
   activeModule: string;
@@ -25,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Check if any configuration module is active
   const configurationModules = [
     'depot-management',
-    'stack-management', 
+    'stack-management',
     'client-pools',
     'clients',
     'users',
@@ -35,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Auto-open configurations dropdown if a configuration module is active
   React.useEffect(() => {
+    console.log('useEffect triggered: activeModule =', activeModule, 'isConfigurationActive =', isConfigurationActive);
     if (isConfigurationActive) {
       setIsConfigurationsOpen(true);
     }
@@ -59,18 +68,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [activeModule, isConfigurationsOpen]);
   // Main menu items (not in configurations)
-  const mainMenuItems = [
+  const mainMenuItems: MenuItem[] = [
     // 1. Dashboard - Always first
     { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), moduleKey: 'dashboard' as const },
 
     // 2. Gate In - First operational step
-    { id: 'gate-in', icon: LogIn, label: 'Gate In', moduleKey: 'gateIn' as const },
+    { id: 'gate-in', icon: LogIn, label: t('Gate In'), moduleKey: 'gateIn' as const },
 
     // 3. Release Orders - Must be created before Gate Out
-    { id: 'releases', icon: FileText, label: 'Booking Reference', moduleKey: 'releases' as const },
+    { id: 'releases', icon: FileText, label: t('Booking Reference'), moduleKey: 'releases' as const },
 
     // 4. Gate Out - Depends on Release Orders
-    { id: 'gate-out', icon: LogOutIcon, label: 'Gate Out', moduleKey: 'gateOut' as const },
+    { id: 'gate-out', icon: LogOutIcon, label: t('Gate Out'), moduleKey: 'gateOut' as const },
 
     // 5. Containers - Overview after operations
     { id: 'containers', icon: Container, label: t('nav.containers'), moduleKey: 'containers' as const },
@@ -84,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   // Configuration submenu items
-  const configurationMenuItems = [
+  const configurationMenuItems: MenuItem[] = [
     { id: 'depot-management', icon: Building, label: 'Depot Management', moduleKey: 'depotManagement' as const },
     { id: 'stack-management', icon: Settings, label: 'Stack Management', moduleKey: 'stackManagement' as const },
     { id: 'client-pools', icon: Users, label: 'Client Pools', moduleKey: 'clientPools' as const },
@@ -94,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   // Filter menu items based on user's module access
-  const getFilteredMenuItems = (items: typeof mainMenuItems) => {
+  const getFilteredMenuItems = (items: MenuItem[]) => {
     if (!user) return [];
 
     return items.filter(item => {
@@ -108,11 +117,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const filteredMainMenuItems = getFilteredMenuItems(mainMenuItems);
   const filteredConfigurationItems = getFilteredMenuItems(configurationMenuItems);
+  console.log('Filtered main menu items:', filteredMainMenuItems.map(item => item.id));
+  console.log('Filtered configuration items:', filteredConfigurationItems.map(item => item.id));
 
   // Check if user has access to any configuration modules
   const hasConfigurationAccess = filteredConfigurationItems.length > 0;
 
   const handleConfigurationToggle = () => {
+    console.log('Toggling configurations: current state =', isConfigurationsOpen);
     saveScrollPosition();
     setIsConfigurationsOpen(!isConfigurationsOpen);
   };
@@ -125,6 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleMainMenuClick = (itemId: string) => {
+    console.log('Main menu clicked: itemId =', itemId);
     saveScrollPosition();
     setActiveModule(itemId);
     // Close mobile menu when an item is clicked
@@ -137,6 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [localIsMobileMenuOpen, setLocalIsMobileMenuOpen] = useState(false);
   const isMobileMenuOpen = externalIsMobileMenuOpen !== undefined ? externalIsMobileMenuOpen : localIsMobileMenuOpen;
   const setIsMobileMenuOpen = externalSetIsMobileMenuOpen || setLocalIsMobileMenuOpen;
+  console.log('Mobile menu open state:', isMobileMenuOpen);
 
   return (
     <>

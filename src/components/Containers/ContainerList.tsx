@@ -35,11 +35,14 @@ export const ContainerList: React.FC = () => {
     async function loadContainers() {
       try {
         setLoading(true);
-        const data = await containerService.getAll();
-        setAllContainers(data);
-        setContainers(data);
+        const data = await containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; });
+        setAllContainers(data || []);
+        setContainers(data || []);
       } catch (error) {
         console.error('Error loading containers:', error);
+        // Set empty arrays to prevent infinite loading
+        setAllContainers([]);
+        setContainers([]);
       } finally {
         setLoading(false);
       }
@@ -108,16 +111,15 @@ export const ContainerList: React.FC = () => {
 
     // Filter by current yard first
     if (currentYard) {
+      console.log('[ContainerList] Filtering by yard:', currentYard.id, 'Containers before filter:', filtered.length);
       filtered = filtered.filter(container => {
-        // Check if container belongs to current yard
-        // For Tantarelli yard, check for specific stack patterns
-        if (currentYard.id === 'depot-tantarelli') {
-          return container.location.includes('Stack S') &&
-                 /Stack S(1|3|5|7|9|11|13|15|17|19|21|23|25|27|29|31|33|35|37|39|41|43|45|47|49|51|53|55|61|63|65|67|69|71|73|75|77|79|81|83|85|87|89|91|93|95|97|99|101|103)/.test(container.location);
-        }
-        // For other yards, use different patterns
-        return container.location.includes(currentYard.code) || container.location.includes(currentYard.name);
+        const matches = container.yardId === currentYard.id;
+        console.log('[ContainerList] Container', container.id, 'yardId:', container.yardId, 'matches:', matches);
+        return matches;
       });
+      console.log('[ContainerList] Containers after yard filter:', filtered.length);
+    } else {
+      console.log('[ContainerList] No current yard, showing all containers:', filtered.length);
     }
 
     // Apply client filter for client users (internal permission)
@@ -182,7 +184,9 @@ export const ContainerList: React.FC = () => {
     return filtered;
   };
 
+  console.log('[ContainerList] Current yard:', currentYard?.id, 'Total containers:', containers.length);
   const filteredContainers = getFilteredContainers();
+  console.log('[ContainerList] Filtered containers:', filteredContainers.length);
   const canEditContainers = user?.role === 'admin' || user?.role === 'supervisor';
   const canAccessEDI = hasModuleAccess('edi');
 

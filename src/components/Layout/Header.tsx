@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, User, Globe, LogOut, Menu, X, MapPin, LayoutGrid } from 'lucide-react';
+import { Bell, User, Globe, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { YardSelector } from './YardSelector';

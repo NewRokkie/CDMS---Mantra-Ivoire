@@ -105,10 +105,13 @@ export const UserManagement: React.FC = () => {
   useEffect(() => {
     async function loadUsers() {
       try {
-        const data = await userService.getAll();
-        setUsers(data);
+        setLoading(true);
+        const data = await userService.getAll().catch(err => { console.error('Error loading users:', err); return []; });
+        setUsers(data || []);
       } catch (error) {
         console.error('Error loading users:', error);
+        // Set empty array to prevent infinite loading
+        setUsers([]);
       } finally {
         setLoading(false);
       }
@@ -175,9 +178,10 @@ export const UserManagement: React.FC = () => {
         department: userData.department,
         company: userData.company,
         role: userData.role,
-        yardAssignments: userData.yardAssignments,
+        yardAssignments: userData.yardAssignments || [],
         isActive: userData.isActive,
         createdAt: new Date(),
+        createdBy: 'System',
         moduleAccess: getModuleAccessForRole(userData.role)
       };
       addUser(newUser);
@@ -220,8 +224,6 @@ export const UserManagement: React.FC = () => {
         return <UserIcon className="h-4 w-4 text-blue-600" />;
       case 'client':
         return <UserIcon className="h-4 w-4 text-green-600" />;
-      case 'viewer':
-        return <Eye className="h-4 w-4 text-gray-600" />;
       default:
         return <UserIcon className="h-4 w-4 text-gray-600" />;
     }

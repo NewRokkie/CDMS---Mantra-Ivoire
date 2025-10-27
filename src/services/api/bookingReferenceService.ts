@@ -1,65 +1,66 @@
 import { supabase } from './supabaseClient';
 import { eventBus } from '../eventBus';
-import { ReleaseOrder } from '../../types';
+import { BookingReference } from '../../types';
 
-export class ReleaseService {
-  async getAll(): Promise<ReleaseOrder[]> {
+export class BookingReferenceService {
+  async getAll(): Promise<BookingReference[]> {
     const { data, error } = await supabase
-      .from('release_orders')
+      .from('booking_references')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data.map(this.mapToReleaseOrder);
+    return data.map(this.mapToBookingReference);
   }
 
-  async getById(id: string): Promise<ReleaseOrder | null> {
+  async getById(id: string): Promise<BookingReference | null> {
     const { data, error} = await supabase
-      .from('release_orders')
+      .from('booking_references')
       .select('*')
       .eq('id', id)
       .maybeSingle();
 
     if (error) throw error;
-    return data ? this.mapToReleaseOrder(data) : null;
+    return data ? this.mapToBookingReference(data) : null;
   }
 
-  async getByClientCode(clientCode: string): Promise<ReleaseOrder[]> {
+  async getByClientCode(clientCode: string): Promise<BookingReference[]> {
     const { data, error } = await supabase
-      .from('release_orders')
+      .from('booking_references')
       .select('*')
       .eq('client_code', clientCode)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data.map(this.mapToReleaseOrder);
+    return data.map(this.mapToBookingReference);
   }
 
-  async getByStatus(status: ReleaseOrder['status']): Promise<ReleaseOrder[]> {
+  async getByStatus(status: BookingReference['status']): Promise<BookingReference[]> {
     const { data, error } = await supabase
-      .from('release_orders')
+      .from('booking_references')
       .select('*')
       .eq('status', status)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data.map(this.mapToReleaseOrder);
+    return data.map(this.mapToBookingReference);
   }
 
-  async create(order: Omit<ReleaseOrder, 'id' | 'createdAt' | 'updatedAt'>): Promise<ReleaseOrder> {
+  async create(order: Omit<BookingReference, 'id' | 'createdAt' | 'completedAt'>): Promise<BookingReference> {
     const { data, error } = await supabase
-      .from('release_orders')
+      .from('booking_references')
       .insert({
         booking_number: order.bookingNumber,
         client_id: order.clientId,
         client_code: order.clientCode,
         client_name: order.clientName,
         booking_type: order.bookingType,
+        container_quantities: order.containerQuantities,
         total_containers: order.totalContainers,
         remaining_containers: order.remainingContainers,
+        max_quantity_threshold: order.maxQuantityThreshold,
+        requires_detailed_breakdown: order.requiresDetailedBreakdown,
         status: order.status,
-        valid_from: order.validFrom?.toISOString(),
-        valid_until: order.validUntil?.toISOString(),
         notes: order.notes,
         created_by: order.createdBy
       })
@@ -67,15 +68,15 @@ export class ReleaseService {
       .single();
 
     if (error) throw error;
-    const releaseOrder = this.mapToReleaseOrder(data);
+    const bookingReference = this.mapToBookingReference(data);
 
-    // Emit RELEASE_ORDER_CREATED event
-    eventBus.emitSync('RELEASE_ORDER_CREATED', { releaseOrder });
+    // Emit BOOKING_REFERENCE_CREATED event
+    eventBus.emitSync('BOOKING_REFERENCE_CREATED', { bookingReference });
 
-    return releaseOrder;
+    return bookingReference;
   }
 
-  async update(id: string, updates: Partial<ReleaseOrder>): Promise<ReleaseOrder> {
+  async update(id: string, updates: Partial<BookingReference>): Promise<BookingReference> {
     const updateData: any = {
       updated_at: new Date().toISOString()
     };
@@ -85,52 +86,56 @@ export class ReleaseService {
     if (updates.clientCode) updateData.client_code = updates.clientCode;
     if (updates.clientName) updateData.client_name = updates.clientName;
     if (updates.bookingType) updateData.booking_type = updates.bookingType;
+    if (updates.containerQuantities) updateData.container_quantities = updates.containerQuantities;
     if (updates.totalContainers !== undefined) updateData.total_containers = updates.totalContainers;
     if (updates.remainingContainers !== undefined) updateData.remaining_containers = updates.remainingContainers;
+    if (updates.maxQuantityThreshold !== undefined) updateData.max_quantity_threshold = updates.maxQuantityThreshold;
+    if (updates.requiresDetailedBreakdown !== undefined) updateData.requires_detailed_breakdown = updates.requiresDetailedBreakdown;
     if (updates.status) updateData.status = updates.status;
-    if (updates.validFrom !== undefined) updateData.valid_from = updates.validFrom?.toISOString();
-    if (updates.validUntil !== undefined) updateData.valid_until = updates.validUntil?.toISOString();
     if (updates.notes !== undefined) updateData.notes = updates.notes;
+    if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt?.toISOString();
 
     const { data, error } = await supabase
-      .from('release_orders')
+      .from('booking_references')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
-    return this.mapToReleaseOrder(data);
+    return this.mapToBookingReference(data);
   }
 
   async delete(id: string): Promise<void> {
     const { error } = await supabase
-      .from('release_orders')
+      .from('booking_references')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
   }
 
-  private mapToReleaseOrder(data: any): ReleaseOrder {
+  private mapToBookingReference(data: any): BookingReference {
     return {
+      containers: data.containers || [],
+      remainingContainers: data.remaining_containers,
       id: data.id,
       bookingNumber: data.booking_number,
       clientId: data.client_id,
       clientCode: data.client_code,
       clientName: data.client_name,
       bookingType: data.booking_type,
+      containerQuantities: data.container_quantities,
       totalContainers: data.total_containers,
-      remainingContainers: data.remaining_containers,
+      maxQuantityThreshold: data.max_quantity_threshold,
+      requiresDetailedBreakdown: data.requires_detailed_breakdown,
       status: data.status,
-      validFrom: data.valid_from ? new Date(data.valid_from) : undefined,
-      validUntil: data.valid_until ? new Date(data.valid_until) : undefined,
-      notes: data.notes,
       createdBy: data.created_by,
       createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      completedAt: data.completed_at ? new Date(data.completed_at) : undefined,
+      notes: data.notes
     };
   }
 }
 
-export const releaseService = new ReleaseService();
+export const bookingReferenceService = new BookingReferenceService();

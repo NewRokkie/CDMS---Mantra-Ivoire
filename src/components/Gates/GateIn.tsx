@@ -1,21 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, ArrowLeft, X, Menu, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { gateService, clientService, containerService, stackService } from '../../services/api';
+import { gateService, clientService, containerService, stackService, realtimeService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
 import { formatLocationId, generateStackLocations } from '../../utils/locationHelpers';
 import { stackPairingService } from '../../services/api/stackPairingService';
-import moment from 'moment';
+// import moment from 'moment'; // Commented out - not used in current code
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
-import { MobileGateInHeader } from './GateIn/MobileGateInHeader';
-import { MobileGateInStats } from './GateIn/MobileGateInStats';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
 import { GateInFormData, GateInOperation } from './types';
 import { validateContainerNumber, formatContainerNumberForDisplay, validateGateInStep, getStatusBadgeConfig } from './utils';
-import { realtimeService } from '../../services/api/realtimeService';
 
 export const GateIn: React.FC = () => {
   const { t } = useLanguage();
@@ -35,58 +32,96 @@ export const GateIn: React.FC = () => {
   const [pairingMap, setPairingMap] = useState<Map<number, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
-          clientService.getAll(),
-          gateService.getGateInOperations(),
-          containerService.getAll(),
-          stackService.getAll(currentYard?.id),
-          stackPairingService.getPairingMap(currentYard?.id || '')
-        ]);
-        setClients(clientsData);
-        setGateInOperations(operationsData);
-        setContainers(containersData);
-        setStacks(stacksData);
-        setPairingMap(pairingMapData);
-      } catch (error) {
-        console.error('Error loading gate in data:', error);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // DIAGNOSTIC LOGGING - Check current yard state
+      console.log('🔍 [GateIn] loadData called with currentYard:', currentYard);
+      console.log('🔍 [GateIn] currentYard?.id:', currentYard?.id);
+
+      const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
+        clientService.getAll().catch(err => { console.error('Error loading clients:', err); return []; }),
+        gateService.getGateInOperations({ yardId: currentYard?.id }).catch(err => {
+          console.error('❌ [GateIn] Error loading operations:', err);
+          console.error('❌ [GateIn] currentYard?.id at time of error:', currentYard?.id);
+          return [];
+        }),
+        containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; }),
+        stackService.getAll(currentYard?.id).catch(err => { console.error('Error loading stacks:', err); return []; }),
+        stackPairingService.getPairingMap(currentYard?.id || '').catch(err => { console.error('Error loading pairing map:', err); return new Map(); })
+      ]);
+
+      // DIAGNOSTIC LOGGING - Check what data was loaded
+      console.log('🔍 [GateIn] Operations data loaded:', operationsData?.length || 0, 'operations');
+      console.log('🔍 [GateIn] First few operations:', operationsData?.slice(0, 5) || []);
+      console.log('🔍 [GateIn] Clients data loaded:', clientsData?.length || 0, 'clients');
+      console.log('🔍 [GateIn] Containers data loaded:', containersData?.length || 0, 'containers');
+      console.log('🔍 [GateIn] Stacks data loaded:', stacksData?.length || 0, 'stacks');
+
+      setClients(clientsData || []);
+      setGateInOperations(operationsData || []);
+      setContainers(containersData || []);
+      setStacks(stacksData || []);
+      setPairingMap(pairingMapData || new Map());
+    } catch (error) {
+      console.error('❌ [GateIn] Error loading gate in data:', error);
+      // Set empty arrays/maps to prevent infinite loading
+      setClients([]);
+      setGateInOperations([]);
+      setContainers([]);
+      setStacks([]);
+      setPairingMap(new Map());
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, [currentYard?.id]);
 
   useEffect(() => {
-    if (!currentYard) return;
+    loadData();
+  }, [loadData]);
 
-    console.log(`🔌 Setting up Gate In real-time subscriptions for yard: ${currentYard.id}`);
+
+useEffect(() => {
+    if (!currentYard?.id) {
+        console.log('⚠️ [GateIn] No currentYard?.id available, skipping realtime subscriptions');
+        return;
+    }
+
+    console.log(`🔌 [GateIn] Setting up direct realtime subscriptions for yard: ${currentYard.id}`);
 
     const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
-      currentYard.id,
-      async (payload) => {
-        console.log(`📡 Gate In ${payload.eventType}:`, payload.new);
-        const operations = await gateService.getGateInOperations();
-        setGateInOperations(operations);
-      }
+        currentYard.id,
+        (payload) => {
+            console.log(`🔄 [GateIn] Direct GateIn ${payload.eventType} update received:`, payload.new);
+            console.log(`🔄 [GateIn] Document visibility state: ${document.visibilityState}`);
+            if (document.visibilityState === 'visible') {
+                console.log(`🔄 [GateIn] Triggering loadData() after GateIn update`);
+                loadData();
+            } else {
+                console.log(`🔄 [GateIn] Skipping GateIn update - tab not visible`);
+            }
+        }
     );
 
     const unsubscribeContainers = realtimeService.subscribeToContainers(
-      async (payload) => {
-        console.log(`📡 Container ${payload.eventType}:`, payload.new);
-        const containers = await containerService.getAll();
-        setContainers(containers);
-      }
+        (payload) => {
+            console.log(`🔄 [GateIn] Container ${payload.eventType} update received:`, payload.new);
+            if (document.visibilityState === 'visible') {
+                console.log(`🔄 [GateIn] Triggering loadData() after container update`);
+                loadData();
+            } else {
+                console.log(`🔄 [GateIn] Skipping container update - tab not visible`);
+            }
+        }
     );
 
     return () => {
-      unsubscribeGateIn();
-      unsubscribeContainers();
-      console.log(`🔌 Cleaned up Gate In real-time subscriptions`);
+        console.log(`🔌 [GateIn] Cleaning up direct realtime subscriptions`);
+        unsubscribeGateIn();
+        unsubscribeContainers();
     };
-  }, [currentYard?.id]);
+}, [currentYard?.id, loadData])
 
   // Generate locations from stacks with Location ID format (S01-R1-H1)
   // Filter by Client Pools and exclude occupied locations
@@ -162,12 +197,11 @@ export const GateIn: React.FC = () => {
   }, [stacks, containers, pairingMap]);
 
   const pendingOperations = gateInOperations.filter(op =>
-    !op.completedAt || !op.assignedLocation
+    op.status === 'pending' || !op.assignedLocation
   );
   const completedOperations = gateInOperations.filter(op =>
-    op.completedAt && op.assignedLocation
+    op.status === 'completed' && op.assignedLocation
   );
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -209,8 +243,19 @@ export const GateIn: React.FC = () => {
 
   // Combine all operations for unified display
   const allOperations = [...pendingOperations, ...completedOperations].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+    new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
   );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+
+  const todayGateIns = allOperations.filter(op => {
+    const opDate = new Date(op.createdAt || op.date);
+    opDate.setHours(0, 0, 0, 0);
+    return opDate.getTime() === today.getTime();
+  });
+
+  const damagedContainersCount = allOperations.filter(op => op.isDamaged).length;
 
   const handleInputChange = (field: keyof GateInFormData, value: any) => {
     // Special handling for container number validation
@@ -323,15 +368,28 @@ export const GateIn: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!canPerformGateIn) return;
+    console.log('🪲 DEBUG - handleSubmit called', {
+      canPerformGateIn,
+      userRole: user?.role,
+      currentYard: currentYard?.id
+    });
+
+    if (!canPerformGateIn) {
+      console.log('🪲 DEBUG - Cannot perform gate in: insufficient permissions');
+      return;
+    }
 
     // Validate yard operation
     const yardValidation = validateYardOperation('gate_in');
+    console.log('🪲 DEBUG - Yard validation result:', yardValidation);
+
     if (!yardValidation.isValid) {
+      console.log('🪲 DEBUG - Yard validation failed:', yardValidation.message);
       alert(`Cannot perform gate in: ${yardValidation.message}`);
       return;
     }
 
+    console.log('🪲 DEBUG - Starting gate in processing...');
     setIsProcessing(true);
     try {
       // Use client pool service to find optimal stack assignment
@@ -356,44 +414,16 @@ export const GateIn: React.FC = () => {
       // Simulate processing
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Create new operation
-      const newOperation = {
-        id: `PO-${Date.now()}`,
-        date: new Date(),
-        yardId: currentYard?.id,
-        yardCode: currentYard?.code,
-        containerNumber: formatContainerNumberForDisplay(formData.containerNumber),
-        secondContainerNumber: formData.secondContainerNumber ? formatContainerNumberForDisplay(formData.secondContainerNumber) : '',
-        containerSize: formData.containerSize,
-        containerType: formData.containerType,
-        containerQuantity: formData.containerQuantity,
-        status: formData.status,
-        isDamaged: formData.isDamaged,
-        bookingReference: formData.bookingReference,
-        clientCode: formData.clientCode,
-        clientName: formData.clientName,
-        truckNumber: formData.truckNumber,
-        driverName: formData.driverName,
-        transportCompany: formData.transportCompany,
-        operationStatus: 'pending' as const,
-        assignedLocation: '',
-        truckArrivalDate: formData.truckArrivalDate,
-        truckArrivalTime: formData.truckArrivalTime,
-        truckDepartureDate: '',
-        truckDepartureTime: ''
-      };
-
       // Process Gate In through API service
-      const result = await gateService.processGateIn({
+      console.log('🪲 DEBUG - Calling gateService.processGateIn with:', {
         containerNumber: formData.containerNumber,
         clientCode: formData.clientCode,
         containerType: formData.containerType,
         containerSize: formData.containerSize,
         transportCompany: formData.transportCompany,
         driverName: formData.driverName,
-        vehicleNumber: formData.truckNumber,
+        truckNumber: formData.truckNumber,
         location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
-        weight: undefined,
         operatorId: user?.id || 'unknown',
         operatorName: user?.name || 'Unknown Operator',
         yardId: currentYard?.id || 'unknown',
@@ -401,14 +431,40 @@ export const GateIn: React.FC = () => {
         damageDescription: formData.isDamaged ? 'Container flagged as damaged during gate in' : undefined
       });
 
-      if (!result.success) {
-        alert(result.error || 'Failed to process gate in');
+      try {
+        const result = await gateService.processGateIn({
+          containerNumber: formData.containerNumber,
+          clientCode: formData.clientCode,
+          containerType: formData.containerType,
+          containerSize: formData.containerSize,
+          transportCompany: formData.transportCompany,
+          driverName: formData.driverName,
+          truckNumber: formData.truckNumber,
+          location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
+          weight: undefined,
+          operatorId: user?.id || 'unknown',
+          operatorName: user?.name || 'Unknown Operator',
+          yardId: currentYard?.id || 'unknown',
+          damageReported: formData.isDamaged,
+          damageDescription: formData.isDamaged ? 'Container flagged as damaged during gate in' : undefined
+        });
+
+        console.log('🪲 DEBUG - gateService.processGateIn result:', result);
+
+        if (!result.success) {
+          console.log('🪲 DEBUG - Gate in processing failed:', result.error);
+          alert(result.error || 'Failed to process gate in');
+          setIsProcessing(false);
+          return;
+        }
+
+        console.log('🪲 DEBUG - Gate in processing successful');
+      } catch (apiError) {
+        console.error('🪲 DEBUG - Exception in gateService.processGateIn:', apiError);
+        alert(`API Error: ${apiError}`);
         setIsProcessing(false);
         return;
       }
-
-      // Operation is already created in DB by gateService.processGateIn
-      // Real-time subscription will update the UI automatically
 
       // Update client pool occupancy if stack was assigned
       if (optimalStack && !formData.isDamaged) {
@@ -453,8 +509,10 @@ export const GateIn: React.FC = () => {
       setCurrentStep(1);
       setShowForm(false);
     } catch (error) {
+      console.error('🪲 DEBUG - Exception in handleSubmit:', error);
       alert(`Error processing gate in: ${error}`);
     } finally {
+      console.log('🪲 DEBUG - handleSubmit finally block, setting isProcessing to false');
       setIsProcessing(false);
     }
   };
@@ -551,16 +609,47 @@ export const GateIn: React.FC = () => {
     const matchesSearch = !searchTerm ||
       op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      op.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       op.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesFilter = selectedFilter === 'all' ||
-                         op.operationStatus === selectedFilter ||
+                         op.status === selectedFilter ||
                          (selectedFilter === 'damaged' && op.isDamaged);
 
-    return matchesSearch && matchesFilter;
+    // DIAGNOSTIC LOGGING - Check individual operation filtering
+    if (selectedFilter !== 'all') {
+      console.log('🔍 [GateIn] Filter debug for operation:', op.id, {
+        status: op.status,
+        isDamaged: op.isDamaged,
+        truckNumber : op.truckNumber,
+        selectedFilter,
+        matchesFilter,
+        matchesSearch
+      });
+    }
+
+    const result = matchesSearch && matchesFilter;
+    return result;
   });
+
+  // DIAGNOSTIC LOGGING - Check filtering results
+  console.log('🔍 [GateIn] Filtering debug:', {
+    totalOperations: allOperations.length,
+    filteredOperations: filteredOperations.length,
+    searchTerm,
+    selectedFilter,
+    pendingOperations: pendingOperations.length,
+    completedOperations: completedOperations.length
+  });
+
+  // DIAGNOSTIC LOGGING - Check operation status values
+  if (allOperations.length > 0) {
+    const statusValues = [...new Set(allOperations.map(op => op.status))];
+    const damageValues = [...new Set(allOperations.map(op => op.isDamaged))];
+    console.log('🔍 [GateIn] Unique status values:', statusValues);
+    console.log('🔍 [GateIn] Unique isDamaged values:', damageValues);
+  }
 
   if (!canPerformGateIn) {
     return (
@@ -633,7 +722,7 @@ export const GateIn: React.FC = () => {
                 <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">12</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">{todayGateIns.length}</p>
                 <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Today's Gate Ins</p>
               </div>
             </div>
@@ -659,7 +748,7 @@ export const GateIn: React.FC = () => {
                 <ContainerIcon className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-blue-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">892</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">{completedOperations.length}</p>
                 <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">Containers Processed</p>
               </div>
             </div>
@@ -672,7 +761,7 @@ export const GateIn: React.FC = () => {
                 <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-purple-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">3</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">{damagedContainersCount}</p>
                 <p className="text-xs font-medium text-red-700 lg:text-gray-500 leading-tight">Damaged Containers</p>
               </div>
             </div>
@@ -681,7 +770,7 @@ export const GateIn: React.FC = () => {
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between p-4 lg:p-4">
             {/* Search Bar */}
             <div className="relative mb-4 lg:mb-0">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
@@ -703,14 +792,14 @@ export const GateIn: React.FC = () => {
             </div>
 
             {/* Filter Chips (Mobile) / Dropdown (Desktop) */}
-            <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4">
+            <div className="lg:hidden flex items-center justify-center space-x-2 overflow-x-auto py-2 scrollbar-none -mx-4 px-4">
               {['all', 'pending', 'completed', 'damaged'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
                   className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                     selectedFilter === filter
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
                   }`}
                 >

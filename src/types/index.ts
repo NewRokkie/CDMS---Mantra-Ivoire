@@ -103,7 +103,7 @@ export interface Yard {
   updatedAt: Date;
   createdBy: string;
   updatedBy?: string;
-  layout: 'tantarelli' | 'standard'; // Layout type for different rendering
+  layout: 'tantarelli' | 'yirima'; // Layout type for different rendering
   timezone?: string;
   contactInfo?: { manager: string; phone: string; email: string };
   address?: { street: string; city: string; state: string; zipCode: string; country: string };
@@ -203,11 +203,13 @@ export interface Container {
   size: '20ft' | '40ft';
   status: 'in_depot' | 'out_depot' | 'in_service' | 'maintenance' | 'cleaning';
   location: string;
+  yardId?: string; // Add yard ID for direct relations
   yardPosition?: YardPosition;
   gateInDate?: Date;
   gateOutDate?: Date;
   createdAt?: Date;
   updatedAt?: Date;
+  placedAt?: Date;
   createdBy: string;
   updatedBy?: string;
   client: string;
@@ -228,9 +230,12 @@ export interface Container {
   temperature?: number; // For reefer containers
   hazardous?: boolean; // Hazardous materials flag
   customsStatus?: 'pending' | 'cleared' | 'hold';
+  bookingReference?: string;
+  sealNumber?: string;
+  temperatureSetting?: number;
 }
 
-export interface ReleaseOrderContainer {
+export interface BookinReferenceContainer {
   id: string;
   containerId: string;
   containerNumber: string;

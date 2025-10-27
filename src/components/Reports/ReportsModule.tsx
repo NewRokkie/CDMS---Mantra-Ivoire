@@ -22,7 +22,7 @@ import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { reportService, containerService, clientService } from '../../services/api';
-import { yardService } from '../../services/yardService';
+import { yardsService } from '../../services/api/yardsService';
 import { DatePicker } from '../Common/DatePicker';
 import { AnalyticsTab } from './AnalyticsTab';
 import { OperationsTab } from './OperationsTab';
@@ -212,96 +212,6 @@ const generateBillingDataFromStore = (storeContainers: any[], storeClients: any[
         currency: client.currency || 'USD'
       };
     }).filter(Boolean) as ContainerBilling[];
-
-    // Legacy mock data for fallback
-    const mockContainers: RawContainerData[] = [
-      { number: 'MSKU-123456-7', clientCode: 'MAEU', depotId: 'depot-tantarelli', placedDaysAgo: 5, outDaysAgo: null, location: 'Block A-12' },
-      { number: 'TCLU-987654-3', clientCode: 'MSCU', depotId: 'depot-tantarelli', placedDaysAgo: 8, outDaysAgo: 1, location: 'Gate 2' },
-      { number: 'GESU-456789-1', clientCode: 'CMDU', depotId: 'depot-tantarelli', placedDaysAgo: 12, outDaysAgo: null, location: 'Workshop 1' },
-      { number: 'SHIP-111222-8', clientCode: 'SHIP001', depotId: 'depot-vridi', placedDaysAgo: 3, outDaysAgo: null, location: 'Block B-05' },
-      { number: 'SHIP-333444-9', clientCode: 'SHIP001', depotId: 'depot-vridi', placedDaysAgo: 15, outDaysAgo: 2, location: 'Workshop 2' },
-      { number: 'MAEU-555666-4', clientCode: 'MAEU', depotId: 'depot-san-pedro', placedDaysAgo: 7, outDaysAgo: null, location: 'Block A-08' },
-      { number: 'CMDU-789012-5', clientCode: 'CMDU', depotId: 'depot-san-pedro', placedDaysAgo: 20, outDaysAgo: 5, location: 'Block C-03' },
-      { number: 'HLCU-345678-9', clientCode: 'HLCU', depotId: 'depot-vridi', placedDaysAgo: 6, outDaysAgo: null, location: 'Block D-01' }
-    ];
-
-    return containers.map((container, index) => {
-      const clientConfig = mockClientFreeDays.find(c => c.clientCode === container.clientCode);
-
-      // Handle missing client configuration
-      if (!clientConfig) {
-        console.warn(`No client configuration found for client code: ${container.clientCode}`);
-        return null;
-      }
-
-      // Validate depot exists
-      const depotExists = availableDepots.some(depot => depot.id === container.depotId);
-      if (!depotExists) {
-        console.warn(`Invalid depot ID: ${container.depotId}`);
-        return null;
-      }
-
-      try {
-        const now = new Date();
-
-        // Validate dates
-        if (container.placedDaysAgo < 0) {
-          console.warn(`Invalid placedDaysAgo for container ${container.number}: ${container.placedDaysAgo}`);
-          return null;
-        }
-
-        const placedDate = new Date(now.getTime() - (container.placedDaysAgo * 24 * 60 * 60 * 1000));
-
-        // Validate placed date
-        if (isNaN(placedDate.getTime())) {
-          console.warn(`Invalid placed date calculated for container ${container.number}`);
-          return null;
-        }
-
-        const outDate = container.outDaysAgo
-          ? new Date(now.getTime() - (container.outDaysAgo * 24 * 60 * 60 * 1000))
-          : undefined;
-
-        if (outDate && isNaN(outDate.getTime())) {
-          console.warn(`Invalid out date calculated for container ${container.number}`);
-          return null;
-        }
-
-        const totalDays = outDate
-          ? Math.ceil((outDate.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24))
-          : Math.ceil((now.getTime() - placedDate.getTime()) / (1000 * 60 * 60 * 24));
-
-        // Validate total days calculation
-        if (totalDays < 0) {
-          console.warn(`Negative total days calculated for container ${container.number}: ${totalDays}`);
-          return null;
-        }
-
-        const freeDaysUsed = Math.min(totalDays, clientConfig.freeDaysAllowed);
-        const billableDays = Math.max(0, totalDays - clientConfig.freeDaysAllowed);
-        const totalAmount = billableDays * clientConfig.dailyRate;
-
-        return {
-          id: `billing-${index + 1}`,
-          containerNumber: container.number,
-          clientCode: container.clientCode,
-          clientName: clientConfig.clientName,
-          depotId: container.depotId,
-          placedDate,
-          outDate,
-          totalDays,
-          freeDaysUsed,
-          billableDays,
-          dailyRate: clientConfig.dailyRate,
-          totalAmount,
-          status: outDate ? 'completed' : 'active',
-          location: container.location
-        } as ContainerBilling;
-      } catch (error) {
-        console.error(`Error processing container ${container.number}:`, error);
-        return null;
-      }
-    }).filter((item): item is ContainerBilling => item !== null);
   } catch (error) {
     console.error('Error generating mock billing data:', error);
     throw new Error('Failed to generate billing data');

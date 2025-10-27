@@ -7,7 +7,7 @@
 
 import { clientService } from '../clientService';
 import { containerService } from '../containerService';
-import { releaseService } from '../releaseService';
+import { bookingReferenceService } from '../bookingReferenceService';
 import { gateService } from '../gateService';
 import { userService } from '../userService';
 import { auditService } from '../auditService';
@@ -32,10 +32,10 @@ function setupEventTracking() {
     console.log('     Containers:', payload.containers.length);
   });
 
-  eventBus.on('RELEASE_ORDER_CREATED', (payload) => {
-    capturedEvents.push({ type: 'RELEASE_ORDER_CREATED', timestamp: new Date() });
-    console.log('  🎯 Event captured: RELEASE_ORDER_CREATED');
-    console.log('     Booking:', payload.releaseOrder.bookingNumber);
+  eventBus.on('BOOKING_REFERENCE_CREATED', (payload) => {
+    capturedEvents.push({ type: 'BOOKING_REFERENCE_CREATED', timestamp: new Date() });
+    console.log('  🎯 Event captured: BOOKING_REFERENCE_CREATED');
+    console.log('     Booking:', payload.bookingReference.bookingNumber);
   });
 
   eventBus.on('EDI_TRANSMISSION_REQUESTED', (payload) => {
@@ -128,16 +128,16 @@ async function testServices() {
     }
 
     // ============================================
-    // TEST 4: Release Order Service
+    // TEST 4: Booking Reference Service
     // ============================================
-    console.log('\n📋 TEST 4: Release Order Service');
+    console.log('\n📋 TEST 4: Booking Reference Service');
     console.log('-'.repeat(60));
 
-    const releaseOrders = await releaseService.getAll();
-    console.log(`✓ Fetched ${releaseOrders.length} release orders`);
+    const bookingReferences = await bookingReferenceService.getAll();
+    console.log(`✓ Fetched ${bookingReferences.length} booking references`);
 
-    if (releaseOrders.length > 0) {
-      const firstOrder = releaseOrders[0];
+    if (bookingReferences.length > 0) {
+      const firstOrder = bookingReferences[0];
       console.log(`  - Sample: ${firstOrder.bookingNumber}`);
       console.log(`  - Client: ${firstOrder.clientName} (${firstOrder.clientCode})`);
       console.log(`  - Containers: ${firstOrder.totalContainers} total, ${firstOrder.remainingContainers} remaining`);
@@ -145,7 +145,7 @@ async function testServices() {
 
       testsPassed += 1;
     } else {
-      console.log('⚠️  No release orders found (this is OK for fresh DB)');
+      console.log('⚠️  No booking references found (this is OK for fresh DB)');
       testsPassed += 1;
     }
 
@@ -200,19 +200,19 @@ async function testServices() {
       // ============================================
       // TEST 6: Gate Service - Gate Out
       // ============================================
-      if (releaseOrders.length > 0 && containers.length > 0) {
+      if (bookingReferences.length > 0 && containers.length > 0) {
         console.log('\n🚪 TEST 6: Gate Service - Gate Out');
         console.log('-'.repeat(60));
 
-        const testReleaseOrder = releaseOrders.find(ro => ro.status === 'pending' && ro.remainingContainers > 0);
+        const testBookingReference = bookingReferences.find(br => br.status === 'pending' && br.remainingContainers > 0);
         const availableContainer = containers.find(c => c.status === 'in_depot');
 
-        if (testReleaseOrder && availableContainer) {
-          console.log(`Using release order: ${testReleaseOrder.bookingNumber}`);
+        if (testBookingReference && availableContainer) {
+          console.log(`Using booking reference: ${testBookingReference.bookingNumber}`);
           console.log(`Using container: ${availableContainer.number}`);
 
           const gateOutResult = await gateService.processGateOut({
-            releaseOrderId: testReleaseOrder.id,
+            bookingReferenceId: testBookingReference.id,
             containerIds: [availableContainer.id],
             transportCompany: 'Test Transport Ltd',
             driverName: 'Test Driver Out',

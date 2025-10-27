@@ -20,7 +20,7 @@ export const StackManagement: React.FC = () => {
   const [sectionFilter, setSectionFilter] = useState('all');
 
   const { user } = useAuth();
-  const { currentYard } = useYard();
+  const { currentYard, refreshYards } = useYard();
 
   useEffect(() => {
     if (currentYard?.id) {
@@ -28,24 +28,59 @@ export const StackManagement: React.FC = () => {
     }
   }, [currentYard]);
 
+  // Refresh the current yard sections when the component mounts or currentYard changes
+  useEffect(() => {
+    const refreshCurrentYardSections = async () => {
+      if (currentYard?.id) {
+        console.log('DEBUG: Refreshing current yard sections');
+        await refreshYards();
+      }
+    };
+    refreshCurrentYardSections();
+  }, [currentYard?.id, refreshYards]);
+
   const loadStacks = async () => {
     try {
       setLoading(true);
-      console.log('Loading stacks for yard:', currentYard?.id);
-      const data = await stackService.getAll(currentYard?.id);
-      console.log('Loaded stacks:', data.length, 'stacks');
-      setStacks(data);
+      console.log('Loading stacks for yard:', currentYard?.id, 'currentYard:', currentYard);
+      if (!currentYard?.id) {
+        console.log('No current yard selected, skipping stack load');
+        setStacks([]);
+        return;
+      }
+      const data = await stackService.getAll(currentYard.id);
+      console.log('Loaded stacks:', data.length, 'stacks for yard:', currentYard.id);
+      console.log('Stack data:', data);
+      setStacks(data || []);
     } catch (error) {
       console.error('Error loading stacks:', error);
+      // Set empty array to prevent infinite loading
+      setStacks([]);
       alert('Error loading stacks: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateStack = () => {
-    setSelectedStack(null);
-    setShowStackForm(true);
+  const handleCreateStack = async () => {
+    console.log('DEBUG: handleCreateStack called, currentYard:', currentYard);
+    console.log('DEBUG: currentYard sections:', currentYard?.sections);
+
+    // Ensure current yard has sections loaded
+    if (currentYard && (!currentYard.sections || currentYard.sections.length === 0)) {
+      console.log('DEBUG: Refreshing yards to load sections');
+      await refreshYards();
+
+      // Wait a bit for the refresh to complete
+      setTimeout(() => {
+        console.log('DEBUG: After refresh, currentYard sections:', currentYard?.sections);
+        setSelectedStack(null);
+        setShowStackForm(true);
+      }, 100);
+    } else {
+      setSelectedStack(null);
+      setShowStackForm(true);
+    }
   };
 
   const handleEditStack = (stack: YardStack) => {
@@ -60,6 +95,7 @@ export const StackManagement: React.FC = () => {
 
     try {
       await stackService.delete(stackId);
+      // Remove from local state to update UI immediately
       setStacks(prev => prev.filter(s => s.id !== stackId));
       alert('Stack deleted successfully!');
     } catch (error) {
@@ -150,8 +186,9 @@ export const StackManagement: React.FC = () => {
     <div className="space-y-6">
       <StackManagementHeader
         onCreateStack={handleCreateStack}
-        totalStacks={stacks.length}
-        activeStacks={stacks.filter(s => s.isActive).length}
+        hasChanges={false}
+        onSave={() => {}}
+        onReset={() => {}}
       />
 
       <StackManagementFilters
@@ -180,7 +217,7 @@ export const StackManagement: React.FC = () => {
         </div>
       </div>
 
-      {showStackForm && (
+      {showStackForm && currentYard && currentYard.sections && currentYard.sections.length > 0 && (
         <StackFormModal
           isOpen={showStackForm}
           onClose={() => {
@@ -189,7 +226,45 @@ export const StackManagement: React.FC = () => {
           }}
           selectedStack={selectedStack}
           onSubmit={handleSaveStack}
+          yard={currentYard}
         />
+      )}
+
+      {showStackForm && currentYard && (!currentYard.sections || currentYard.sections.length === 0) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-strong p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Loading Yard Sections...</h3>
+              <p className="text-gray-600">Please wait while we load the yard configuration.</p>
+              <button
+                onClick={() => setShowStackForm(false)}
+                className="mt-4 btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Debug: Show current yard info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 bg-black text-white p-2 text-xs rounded z-50 max-w-xs">
+          <div>Current Yard: {currentYard?.name || 'None'}</div>
+          <div>ID: {currentYard?.id || 'None'}</div>
+          <div>Sections: {currentYard?.sections?.length || 0}</div>
+          <div>Layout: {currentYard?.layout || 'None'}</div>
+          <div>Show Form: {showStackForm ? 'true' : 'false'}</div>
+          <div>Can Show Modal: {(showStackForm && currentYard) ? 'true' : 'false'}</div>
+          {currentYard?.sections && currentYard.sections.length > 0 && (
+            <div className="mt-1 border-t border-gray-600 pt-1">
+              <div>Sections:</div>
+              {currentYard.sections.map((s, i) => (
+                <div key={i} className="ml-2">• {s.name}</div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

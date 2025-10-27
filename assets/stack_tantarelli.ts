@@ -1,0 +1,61 @@
+const zoneA = [
+  { stackNumber: 1, rows: 4, x: 20, y: 20 },
+  { stackNumber: 3, rows: 5, x: 50, y: 20 },
+  { stackNumber: 5, rows: 5, x: 80, y: 20 },
+  { stackNumber: 7, rows: 5, x: 110, y: 20 },
+  { stackNumber: 9, rows: 5, x: 140, y: 20 },
+  { stackNumber: 11, rows: 5, x: 170, y: 20 },
+  { stackNumber: 13, rows: 5, x: 200, y: 20 },
+  { stackNumber: 15, rows: 5, x: 230, y: 20 },
+  { stackNumber: 17, rows: 5, x: 260, y: 20 },
+  { stackNumber: 19, rows: 5, x: 290, y: 20 },
+  { stackNumber: 21, rows: 5, x: 320, y: 20 },
+  { stackNumber: 23, rows: 5, x: 350, y: 20 },
+  { stackNumber: 25, rows: 5, x: 20, y: 60 },
+  { stackNumber: 27, rows: 5, x: 50, y: 60 },
+  { stackNumber: 29, rows: 5, x: 80, y: 60 },
+  { stackNumber: 31, rows: 7, x: 110, y: 60 },
+];
+
+const zoneB = [
+  { stackNumber: 33, rows: 5, x: 20, y: 160 },
+  { stackNumber: 35, rows: 5, x: 50, y: 160 },
+  { stackNumber: 37, rows: 5, x: 80, y: 160 },
+  { stackNumber: 39, rows: 5, x: 110, y: 160 },
+  { stackNumber: 41, rows: 4, x: 140, y: 160 },
+  { stackNumber: 43, rows: 4, x: 170, y: 160 },
+  { stackNumber: 45, rows: 4, x: 200, y: 160 },
+  { stackNumber: 47, rows: 4, x: 230, y: 160 },
+  { stackNumber: 49, rows: 4, x: 260, y: 160 },
+  { stackNumber: 51, rows: 4, x: 290, y: 160 },
+  { stackNumber: 53, rows: 4, x: 320, y: 160 },
+  { stackNumber: 55, rows: 4, x: 350, y: 160 },
+];
+
+const zoneC = [
+  // High capacity stacks (6 rows)
+  { stackNumber: 61, rows: 6, x: 20, y: 280 },
+  { stackNumber: 63, rows: 6, x: 50, y: 280 },
+  { stackNumber: 65, rows: 6, x: 80, y: 280 },
+  { stackNumber: 67, rows: 6, x: 110, y: 280 },
+  { stackNumber: 69, rows: 6, x: 140, y: 280 },
+  { stackNumber: 71, rows: 6, x: 170, y: 280 },
+  // Standard stacks (4 rows)
+  { stackNumber: 73, rows: 4, x: 200, y: 280 },
+  { stackNumber: 75, rows: 4, x: 230, y: 280 },
+  { stackNumber: 77, rows: 4, x: 260, y: 280 },
+  { stackNumber: 79, rows: 4, x: 290, y: 280 },
+  { stackNumber: 81, rows: 4, x: 320, y: 280 },
+  { stackNumber: 83, rows: 4, x: 350, y: 280 },
+  { stackNumber: 85, rows: 4, x: 20, y: 320 },
+  { stackNumber: 87, rows: 4, x: 50, y: 320 },
+  { stackNumber: 89, rows: 4, x: 80, y: 320 },
+  { stackNumber: 91, rows: 4, x: 110, y: 320 },
+  { stackNumber: 93, rows: 4, x: 140, y: 320 },
+  { stackNumber: 95, rows: 4, x: 170, y: 320 },
+  { stackNumber: 97, rows: 4, x: 200, y: 320 },
+  { stackNumber: 99, rows: 4, x: 230, y: 320 },
+  // Special stacks
+  { stackNumber: 101, rows: 1, x: 260, y: 320 },
+  { stackNumber: 103, rows: 2, x: 290, y: 320 },
+];

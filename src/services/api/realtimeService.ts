@@ -9,6 +9,7 @@ type ChangeCallback<T = any> = (payload: {
 
 class RealtimeService {
   private channels: Map<string, RealtimeChannel> = new Map();
+  private channelRefs: Map<string, number> = new Map();
 
   subscribeToTable<T = any>(
     tableName: string,
@@ -19,8 +20,13 @@ class RealtimeService {
       ? `${tableName}:${filter}`
       : tableName;
 
+    // Increment reference count for this channel
+    const currentRefs = this.channelRefs.get(channelName) || 0;
+    this.channelRefs.set(channelName, currentRefs + 1);
+
+    // If already subscribed, just return the unsubscribe function
     if (this.channels.has(channelName)) {
-      console.warn(`Already subscribed to ${channelName}`);
+      console.log(`🔄 [REALTIME] Reference count increased to ${currentRefs + 1} for ${channelName}`);
       return () => this.unsubscribe(channelName);
     }
 
@@ -44,9 +50,9 @@ class RealtimeService {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`✅ Subscribed to ${tableName} changes`);
+          console.log(`✅ Subscribed to ${tableName} changes (channel: ${channelName})`);
         } else if (status === 'CHANNEL_ERROR') {
-          console.error(`❌ Error subscribing to ${tableName}`);
+          console.error(`❌ Error subscribing to ${tableName} (channel: ${channelName})`);
         }
       });
 
@@ -56,11 +62,23 @@ class RealtimeService {
   }
 
   unsubscribe(channelName: string): void {
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      supabase.removeChannel(channel);
-      this.channels.delete(channelName);
-      console.log(`🔌 Unsubscribed from ${channelName}`);
+    const currentRefs = this.channelRefs.get(channelName) || 0;
+    const newRefs = currentRefs - 1;
+    this.channelRefs.set(channelName, newRefs);
+
+    console.log(`🔄 [REALTIME] Reference count decreased to ${newRefs} for ${channelName}`);
+
+    // Only actually unsubscribe when reference count reaches 0
+    if (newRefs <= 0) {
+      const channel = this.channels.get(channelName);
+      if (channel) {
+        supabase.removeChannel(channel);
+        this.channels.delete(channelName);
+        console.log(`🔌 Unsubscribed from ${channelName}`);
+      }
+      this.channelRefs.delete(channelName);
+    } else {
+      console.log(`🔄 [REALTIME] Keeping ${channelName} subscribed (refs: ${newRefs})`);
     }
   }
 
@@ -70,6 +88,7 @@ class RealtimeService {
       console.log(`🔌 Unsubscribed from ${name}`);
     });
     this.channels.clear();
+    this.channelRefs.clear();
   }
 
   subscribeToStacks(yardId: string, callback: ChangeCallback): () => void {
@@ -88,8 +107,8 @@ class RealtimeService {
     return this.subscribeToTable('gate_out_operations', callback, `yard_id=eq.${yardId}`);
   }
 
-  subscribeToReleaseOrders(callback: ChangeCallback): () => void {
-    return this.subscribeToTable('release_orders', callback);
+  subscribeToBookingReferences(callback: ChangeCallback): () => void {
+    return this.subscribeToTable('booking_references', callback);
   }
 
   subscribeToClients(callback: ChangeCallback): () => void {

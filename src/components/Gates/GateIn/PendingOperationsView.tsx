@@ -5,6 +5,7 @@ import { LocationValidationModal } from './LocationValidationModal';
 interface PendingOperation {
   id: string;
   date: Date;
+  createdAt: Date;
   containerNumber: string;
   secondContainerNumber?: string;
   containerSize: string;
@@ -12,14 +13,15 @@ interface PendingOperation {
   containerType?: string;
   clientCode: string;
   clientName: string;
-  truckNumber: string;
+  truckNumber?: string;
   driverName: string;
   transportCompany: string;
   operationStatus: 'pending' | 'completed';
   assignedLocation?: string;
   bookingReference?: string;
-  status: 'FULL' | 'EMPTY';
+  status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   isDamaged: boolean;
+  completedAt?: Date;
 }
 
 interface PendingOperationsViewProps {
@@ -47,7 +49,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   const filteredOperations = operations.filter(operation => {
     const matchesSearch = operation.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.truckNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         operation.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
@@ -188,12 +190,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {operation.status}
-                    </span>
+                    {getStatusBadge(operation.status)}
                     {operation.isDamaged && (
                       <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
                         Damaged
@@ -339,7 +336,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        {getStatusBadge(operation.completedAt ? 'completed' : 'pending')}
+                        {getStatusBadge(operation.status)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

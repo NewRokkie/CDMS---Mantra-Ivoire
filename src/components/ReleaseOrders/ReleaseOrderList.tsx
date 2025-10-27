@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ReleaseOrder, Container } from '../../types';
+import { BookingReference, Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { releaseService, containerService } from '../../services/api';
+import { bookingReferenceService, containerService } from '../../services/api';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
 import { MobileReleaseOrderHeader } from './MobileReleaseOrderHeader';
 import { MobileReleaseOrderStats } from './MobileReleaseOrderStats';
@@ -19,14 +19,18 @@ export const ReleaseOrderList: React.FC = () => {
   useEffect(() => {
     async function loadData() {
       try {
+        setLoading(true);
         const [ordersData, containersData] = await Promise.all([
-          releaseService.getAll(),
-          containerService.getAll()
+          bookingReferenceService.getAll().catch(err => { console.error('Error loading orders:', err); return []; }),
+          containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; })
         ]);
-        setReleaseOrders(ordersData);
-        setContainers(containersData);
+        setReleaseOrders(ordersData || []);
+        setContainers(containersData || []);
       } catch (error) {
         console.error('Error loading release orders:', error);
+        // Set empty arrays to prevent infinite loading
+        setReleaseOrders([]);
+        setContainers([]);
       } finally {
         setLoading(false);
       }
@@ -34,13 +38,13 @@ export const ReleaseOrderList: React.FC = () => {
     loadData();
   }, []);
 
-  const addReleaseOrder = async (order: any) => {
-    const newOrder = await releaseService.create(order);
+  const addBookingReference = async (order: any) => {
+    const newOrder = await bookingReferenceService.create(order);
     setReleaseOrders(prev => [...prev, newOrder]);
   };
 
-  const updateReleaseOrder = async (id: string, updates: any) => {
-    await releaseService.update(id, updates);
+  const updateBookingReference = async (id: string, updates: any) => {
+    await bookingReferenceService.update(id, updates);
     setReleaseOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
   };
 
@@ -49,7 +53,7 @@ export const ReleaseOrderList: React.FC = () => {
   };
 
   const [showForm, setShowForm] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<ReleaseOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<BookingReference | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -102,7 +106,7 @@ export const ReleaseOrderList: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleViewDetails = (order: ReleaseOrder) => {
+  const handleViewDetails = (order: BookingReference) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
   };
@@ -121,7 +125,7 @@ export const ReleaseOrderList: React.FC = () => {
 
   const stats = getOrderStats();
 
-  const getStatusBadge = (status: ReleaseOrder['status']) => {
+  const getStatusBadge = (status: BookingReference['status']) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       inProcess: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
@@ -177,7 +181,7 @@ export const ReleaseOrderList: React.FC = () => {
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between p-4 lg:p-4">
             {/* Search Bar */}
             <div className="relative mb-4 lg:mb-0">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
@@ -199,14 +203,14 @@ export const ReleaseOrderList: React.FC = () => {
             </div>
 
             {/* Filter Chips (Mobile) / Dropdown (Desktop) */}
-            <div className="lg:hidden flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4">
+            <div className="lg:hidden flex items-center justify-center space-x-2 overflow-x-auto py-2 scrollbar-none -mx-4 px-4">
               {['all', 'pending', 'in_process', 'completed'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
                   className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                     selectedFilter === filter
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
                   }`}
                 >

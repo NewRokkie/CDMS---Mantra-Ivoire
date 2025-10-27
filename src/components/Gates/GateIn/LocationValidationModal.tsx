@@ -19,26 +19,28 @@ interface LocationData {
 interface LocationValidationOperation {
   id: string;
   date: Date;
+  createdAt: Date;
   containerNumber: string;
   secondContainerNumber?: string;
   containerSize: string;
   containerQuantity: number;
-  status: 'FULL' | 'EMPTY';
+  status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   isDamaged: boolean;
   bookingReference?: string;
   clientCode: string;
   clientName: string;
-  truckNumber: string;
+  truckNumber?: string;
   driverName: string;
   transportCompany: string;
   operationStatus: 'pending' | 'completed';
+  completedAt?: Date;
 }
 
 interface LocationValidationModalProps {
   isOpen: boolean;
   onClose: () => void;
   operation: LocationValidationOperation | null;
-  onComplete: (operation: LocationValidationOperation, locationData: any) => void;
+  onComplete: (operation: LocationValidationOperation, locationData: any) => Promise<void>;
   isProcessing: boolean;
   mockLocations: {
     '20ft': LocationData[];
@@ -130,7 +132,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   // Filter by client pool assigned stacks if applicable
   if (assignedStackIds.length > 0) {
     availableLocations = availableLocations.filter((loc: LocationData) =>
-      assignedStackIds.includes(loc.stackId)
+      loc.stackId && assignedStackIds.includes(loc.stackId)
     );
   }
 
@@ -138,7 +140,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
     loc.name.toLowerCase().includes(searchLocation.toLowerCase())
   );
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setError('');
 
     if (!selectedLocation) {
@@ -152,7 +154,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
       truckDepartureTime: truckDepartureTime || new Date().toTimeString().slice(0, 5)
     };
 
-    onComplete(operation, locationData);
+    await onComplete(operation, locationData);
   };
 
   const isFormValid = selectedLocation;
@@ -220,9 +222,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                 <div className="space-y-1">
                   <span className="text-xs sm:text-sm text-blue-700 font-medium">Status:</span>
                   <div className="flex items-center space-x-2">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      operation.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
                       {operation.status}
                     </span>
                     {operation.isDamaged && (
@@ -313,7 +313,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
                       </div>
                     </div>
 
-                    {selectedLocation === location.id && (
+                    {selectedLocation?.id === location.id && (
                       <div className="mt-2 flex items-center text-green-600">
                         <CheckCircle className="h-4 w-4 mr-1" />
                         <span className="text-xs sm:text-sm font-medium">Selected</span>

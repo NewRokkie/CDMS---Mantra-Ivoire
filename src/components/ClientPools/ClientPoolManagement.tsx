@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Building, X, Loader, Calendar } from 'lucide-react';
 import { ClientPool, ClientPoolStats } from '../../types/clientPool';
+import { supabase } from '../../services/api/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/api';
 import { ClientPoolForm } from './ClientPoolForm';
@@ -98,7 +99,17 @@ export const ClientPoolManagement: React.FC = () => {
     createdBy: "System",
     layout: 'tantarelli' as const
   };
-  const canManageClientPools = user?.role === 'admin' || user?.role === 'supervisor';
+  const canManageClientPools = async () => {
+    if (!user) return false;
+
+    const { data: userProfile, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    return userProfile?.role === 'admin' || userProfile?.role === 'supervisor';
+  };
 
   useEffect(() => {
     loadClientPools();
@@ -108,13 +119,16 @@ export const ClientPoolManagement: React.FC = () => {
     try {
       setIsLoading(true);
 
-      const pools = await clientPoolService.getAll(currentYard?.id);
-      const poolStats = await clientPoolService.getStats(currentYard?.id);
+      const pools = await clientPoolService.getAll(currentYard?.id).catch(err => { console.error('Error loading client pools:', err); return []; });
+      const poolStats = await clientPoolService.getStats(currentYard?.id).catch(err => { console.error('Error loading pool stats:', err); return null; });
 
-      setClientPools(pools);
+      setClientPools(pools || []);
       setStats(poolStats);
     } catch (error) {
       console.error('Error loading client pools:', error);
+      // Set empty arrays to prevent infinite loading
+      setClientPools([]);
+      setStats(null);
     } finally {
       setIsLoading(false);
     }
@@ -390,7 +404,7 @@ export const ClientPoolManagement: React.FC = () => {
                       <div className="text-sm text-gray-900">{pool.assignedStacks.length} stacks</div>
                       <div className="text-sm text-gray-500">
                         {pool.assignedStacks.slice(0, 3).map(stackId =>
-                          `S${clientPoolService['extractStackNumber'](stackId).toString().padStart(2, '0')}`
+                          `S${stackId.split('-').pop()?.toString().padStart(2, '0')}`
                         ).join(', ')} {pool.assignedStacks.length > 3 && ` +${pool.assignedStacks.length - 3} more`}
                       </div>
                     </td>
@@ -444,10 +458,16 @@ export const ClientPoolManagement: React.FC = () => {
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (confirm(`Are you sure you want to delete the pool for ${pool.clientName}?`)) {
-                              // Handle delete
-                              console.log('Delete pool:', pool.id);
+                              try {
+                                await clientPoolService.delete(pool.id);
+                                await loadClientPools(); // Reload pools after deletion
+                                alert(`Client pool for ${pool.clientName} deleted successfully!`);
+                              } catch (error) {
+                                console.error('Error deleting client pool:', error);
+                                alert(`Error deleting client pool: ${error}`);
+                              }
                             }
                           }}
                           className="text-red-600 hover:text-red-900 p-1 rounded"
@@ -507,8 +527,7 @@ export const ClientPoolManagement: React.FC = () => {
               </div>
               <div className="text-sm text-gray-600">
                 <div>Utilization: {util.occupancyRate.toFixed(1)}%</div>
-                <div>Available: {util.availableCapacity} slots</div>
-                <div>Stacks: {util.assignedStacks}</div>
+                <div>Used: {util.usedSlots} / {util.totalSlots} slots</div>
               </div>
             </div>
           ))}
