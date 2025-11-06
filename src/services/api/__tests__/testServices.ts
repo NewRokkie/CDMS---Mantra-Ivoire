@@ -161,7 +161,7 @@ async function testServices() {
     const gateInResult = await gateService.processGateIn({
       containerNumber: testContainerNumber,
       clientCode: firstClient.code,
-      containerType: 'standard',
+      containerType: 'dry',
       containerSize: '20ft',
       transportCompany: 'Test Transport Ltd',
       driverName: 'Test Driver',
@@ -171,7 +171,8 @@ async function testServices() {
       operatorId: adminUser?.id || 'test-op',
       operatorName: adminUser?.name || 'Test Operator',
       yardId: 'depot-tantarelli',
-      damageReported: false
+      damageReported: false,
+      damageAssessment: undefined // Damage assessment now happens during assignment stage
     });
 
     if (gateInResult.success) {

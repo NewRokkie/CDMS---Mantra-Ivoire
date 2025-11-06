@@ -2,7 +2,17 @@ import { useState, useEffect, createContext, useContext, useRef, useCallback } f
 import type { User as AppUser, ModuleAccess } from '../types';
 import { supabase } from '../services/api/supabaseClient';
 import { userService } from '../services/api';
+import { moduleAccessService } from '../services/api/moduleAccessService';
+import { syncManager } from '../services/sync/SyncManager';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+
+export interface SyncStatus {
+  isHealthy: boolean;
+  lastSyncAt?: Date;
+  inconsistencyCount: number;
+  failedSyncCount: number;
+  nextScheduledSync?: Date;
+}
 
 interface AuthContextType {
   user: AppUser | null;
@@ -14,6 +24,10 @@ interface AuthContextType {
   canViewAllData: () => boolean;
   getClientFilter: () => string | null;
   refreshUser: () => Promise<void>;
+  refreshModuleAccess: () => Promise<void>;
+  getSyncStatus: () => SyncStatus;
+  onSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
+  offSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,11 +46,17 @@ export const useAuthProvider = () => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
+    isHealthy: true,
+    inconsistencyCount: 0,
+    failedSyncCount: 0
+  });
 
   // Références pour éviter les re-renders
   const userRef = useRef<AppUser | null>(null);
   const isLoadingRef = useRef(true);
   const isAuthenticatedRef = useRef(false);
+  const syncStatusCallbacks = useRef<((status: SyncStatus) => void)[]>([]);
 
   // Mettre à jour à la fois l'état et les refs
   const setAuthState = useCallback((newUser: AppUser | null, loading: boolean, authenticated: boolean) => {
@@ -56,7 +76,7 @@ export const useAuthProvider = () => {
     setIsAuthenticated(authenticated);
   }, []);
 
-  // Load user profile (identique à votre version originale)
+  // Load user profile with enhanced module access handling
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
     console.log('📋 [LOAD_PROFILE] Loading profile for:', authUser.email, 'auth_uid:', authUser.id);
 
@@ -84,22 +104,21 @@ export const useAuthProvider = () => {
       // Map database user to app user
       console.log('📋 [LOAD_PROFILE] Mapping user data to AppUser...');
 
-      let modulePermissions = users.module_access;
-
-      if (!modulePermissions) {
-        try {
-          const { moduleAccessService } = await import('../services/api');
-          const customPermissions = await moduleAccessService.getUserModuleAccess(users.id);
-
-          if (customPermissions) {
-            modulePermissions = customPermissions;
-          }
-        } catch (error) {
-          console.error('Error loading custom module access:', error);
-        }
+      // Use the enhanced ModuleAccessService with fallback mechanism
+      let modulePermissions: ModuleAccess | null = null;
+      
+      try {
+        console.log('📋 [LOAD_PROFILE] Using getUserModuleAccessWithFallback for unified data access');
+        modulePermissions = await moduleAccessService.getUserModuleAccessWithFallback(users.id);
+        console.log('📋 [LOAD_PROFILE] Module permissions from unified service:', modulePermissions);
+      } catch (error) {
+        console.error('📋 [LOAD_PROFILE] Error loading module access with fallback:', error);
+        // Continue with default permissions if service fails
       }
 
+      // Fallback to default permissions if no data found
       if (!modulePermissions) {
+        console.log('📋 [LOAD_PROFILE] Using default module permissions');
         modulePermissions = {
           dashboard: true,
           containers: false,
@@ -197,19 +216,72 @@ export const useAuthProvider = () => {
     }
   }, [setAuthState]);
 
-  // useEffect optimisé
+  // useEffect optimisé with sync monitoring
   useEffect(() => {
     let mounted = true;
     let sessionCheckTimeout: NodeJS.Timeout;
+    let syncStatusInterval: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       await checkSession();
     };
 
+    // Initialize sync status monitoring
+    const initializeSyncMonitoring = () => {
+      // Update sync status every 30 seconds, but only if status actually changed
+      syncStatusInterval = setInterval(() => {
+        if (mounted && userRef.current) {
+          try {
+            const metrics = syncManager.getSyncMetrics();
+            const newStatus: SyncStatus = {
+              isHealthy: metrics.isHealthy,
+              lastSyncAt: metrics.lastSyncTime,
+              inconsistencyCount: metrics.recentErrors.length,
+              failedSyncCount: metrics.failedSyncs,
+              nextScheduledSync: metrics.nextScheduledSync
+            };
+            
+            // Only update if status actually changed to prevent unnecessary re-renders
+            const currentStatus = syncStatus;
+            if (currentStatus.isHealthy !== newStatus.isHealthy ||
+                currentStatus.inconsistencyCount !== newStatus.inconsistencyCount ||
+                currentStatus.failedSyncCount !== newStatus.failedSyncCount) {
+              updateSyncStatus(newStatus);
+            }
+          } catch (error) {
+            console.error('🔄 [SYNC_STATUS] Failed to update sync status:', error);
+          }
+        }
+      }, 30000); // 30 seconds
+
+      // Set up sync error callback
+      const handleSyncError = (error: any) => {
+        console.warn('🔄 [SYNC_ERROR] Sync error detected:', error);
+        if (mounted) {
+          const metrics = syncManager.getSyncMetrics();
+          const newStatus: SyncStatus = {
+            isHealthy: false,
+            lastSyncAt: metrics.lastSyncTime,
+            inconsistencyCount: metrics.recentErrors.length,
+            failedSyncCount: metrics.failedSyncs,
+            nextScheduledSync: metrics.nextScheduledSync
+          };
+          updateSyncStatus(newStatus);
+        }
+      };
+
+      syncManager.onSyncError(handleSyncError);
+
+      return () => {
+        syncManager.offSyncError(handleSyncError);
+      };
+    };
+
     initializeAuth();
+    const cleanupSyncMonitoring = initializeSyncMonitoring();
 
     // Écouteur DÉBONCÉ et FILTRÉ
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       console.log('🔄 [AUTH_CHANGE] Event:', event);
 
       if (!mounted) return;
@@ -234,7 +306,9 @@ export const useAuthProvider = () => {
     return () => {
       mounted = false;
       clearTimeout(sessionCheckTimeout);
+      clearInterval(syncStatusInterval);
       subscription.unsubscribe();
+      cleanupSyncMonitoring();
     };
   }, [checkSession]);
 
@@ -314,6 +388,32 @@ export const useAuthProvider = () => {
     }
   };
 
+  // New method to refresh only module access permissions
+  const refreshModuleAccess = async () => {
+    console.log('🔄 [REFRESH_MODULE_ACCESS] Refreshing module access permissions...');
+    
+    if (!userRef.current) {
+      console.warn('🔄 [REFRESH_MODULE_ACCESS] No user available for refresh');
+      return;
+    }
+
+    try {
+      const updatedPermissions = await moduleAccessService.getUserModuleAccessWithFallback(userRef.current.id);
+      
+      if (updatedPermissions && userRef.current) {
+        const updatedUser = {
+          ...userRef.current,
+          moduleAccess: updatedPermissions
+        };
+        
+        setAuthState(updatedUser, false, true);
+        console.log('🔄 [REFRESH_MODULE_ACCESS] ✅ Module access refreshed');
+      }
+    } catch (error) {
+      console.error('🔄 [REFRESH_MODULE_ACCESS] ❌ Failed to refresh module access:', error);
+    }
+  };
+
   // Mémoizer les fonctions de vérification d'accès
   const hasModuleAccess = useCallback((module: keyof ModuleAccess): boolean => {
     if (!userRef.current || !userRef.current.moduleAccess) return false;
@@ -334,6 +434,34 @@ export const useAuthProvider = () => {
     return null;
   }, [canViewAllData]);
 
+  // Sync status management
+  const getSyncStatus = useCallback((): SyncStatus => {
+    return syncStatus;
+  }, [syncStatus]);
+
+  const onSyncStatusChange = useCallback((callback: (status: SyncStatus) => void) => {
+    syncStatusCallbacks.current.push(callback);
+  }, []);
+
+  const offSyncStatusChange = useCallback((callback: (status: SyncStatus) => void) => {
+    const index = syncStatusCallbacks.current.indexOf(callback);
+    if (index > -1) {
+      syncStatusCallbacks.current.splice(index, 1);
+    }
+  }, []);
+
+  // Update sync status and notify callbacks
+  const updateSyncStatus = useCallback((newStatus: SyncStatus) => {
+    setSyncStatus(newStatus);
+    syncStatusCallbacks.current.forEach(callback => {
+      try {
+        callback(newStatus);
+      } catch (error) {
+        console.error('🔄 [SYNC_STATUS] Callback error:', error);
+      }
+    });
+  }, []);
+
   return {
     user,
     login,
@@ -343,7 +471,11 @@ export const useAuthProvider = () => {
     hasModuleAccess,
     canViewAllData,
     getClientFilter,
-    refreshUser
+    refreshUser,
+    refreshModuleAccess,
+    getSyncStatus,
+    onSyncStatusChange,
+    offSyncStatusChange
   };
 };
 

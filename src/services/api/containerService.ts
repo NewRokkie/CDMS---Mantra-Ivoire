@@ -7,7 +7,7 @@ export class ContainerService {
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name)
+        clients!containers_client_id_fkey(name, code)
       `)
       .order('created_at', { ascending: false });
 
@@ -20,7 +20,7 @@ export class ContainerService {
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name)
+        clients!containers_client_id_fkey(name, code)
       `)
       .eq('id', id)
       .maybeSingle();
@@ -43,7 +43,10 @@ export class ContainerService {
   async getByYardId(yardId: string): Promise<Container[]> {
     const { data, error } = await supabase
       .from('containers')
-      .select('*')
+      .select(`
+        *,
+        clients!containers_client_id_fkey(name, code)
+      `)
       .eq('yard_id', yardId)
       .order('created_at', { ascending: false });
 
@@ -54,7 +57,10 @@ export class ContainerService {
   async getByStatus(status: Container['status']): Promise<Container[]> {
     const { data, error } = await supabase
       .from('containers')
-      .select('*')
+      .select(`
+        *,
+        clients!containers_client_id_fkey(name, code)
+      `)
       .eq('status', status)
       .order('created_at', { ascending: false});
 
@@ -142,7 +148,7 @@ export class ContainerService {
       location: data.location,
       yardId: data.yard_id,
       clientId: data.client_id,
-      client: data.clients?.name || '',
+      clientName: data.clients?.name || '',
       clientCode: data.client_code,
       gateInDate: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
       gateOutDate: data.gate_out_date ? new Date(data.gate_out_date) : undefined,

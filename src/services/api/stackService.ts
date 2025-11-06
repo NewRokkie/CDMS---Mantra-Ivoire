@@ -49,7 +49,46 @@ export class StackService {
   }
 
   async getByYardId(yardId: string): Promise<YardStack[]> {
-    return this.getAll(yardId);
+    const stacks = await this.getAll(yardId);
+
+    console.log('StackService.getByYardId: Processing stacks for yard', yardId);
+
+    // Update current_occupancy based on actual containers in the database
+    const updatedStacks = await Promise.all(
+      stacks.map(async (stack) => {
+        // Count containers in this stack - try multiple location patterns
+        const stackPattern = `S${String(stack.stackNumber).padStart(2, '0')}-%`;
+        console.log(`Checking stack ${stack.stackNumber} with pattern: ${stackPattern}`);
+
+        const { data: containers, error } = await supabase
+          .from('containers')
+          .select('id, location, yard_id, status')
+          .eq('yard_id', yardId)
+          .eq('status', 'in_depot')
+          .ilike('location', stackPattern);
+
+        if (error) {
+          console.error('Error counting containers for stack', stack.stackNumber, ':', error);
+          return stack;
+        }
+
+        const actualOccupancy = containers?.length || 0;
+        console.log(`Stack ${stack.stackNumber}: Found ${actualOccupancy} containers with locations:`, containers?.map(c => c.location));
+
+        // Update the stack's currentOccupancy if it doesn't match
+        if (actualOccupancy !== stack.currentOccupancy) {
+          console.log(`Updating stack ${stack.stackNumber} occupancy from ${stack.currentOccupancy} to ${actualOccupancy}`);
+          await this.updateOccupancy(stack.id, actualOccupancy);
+          stack.currentOccupancy = actualOccupancy;
+        }
+
+        return stack;
+      })
+    );
+
+    console.log('StackService.getByYardId: Final stack occupancies:', updatedStacks.map(s => ({ stackNumber: s.stackNumber, occupancy: s.currentOccupancy })));
+
+    return updatedStacks;
   }
 
   async getByStackNumber(yardId: string, stackNumber: number): Promise<YardStack | null> {

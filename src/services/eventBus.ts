@@ -19,7 +19,9 @@ export type EventType =
   | 'YARD_POSITION_ASSIGNED'
   | 'EDI_TRANSMISSION_REQUESTED'
   | 'EDI_TRANSMISSION_COMPLETED'
-  | 'EDI_TRANSMISSION_FAILED';
+  | 'EDI_TRANSMISSION_FAILED'
+  | 'DAMAGE_ASSESSMENT_RECORDED'
+  | 'DAMAGE_NOTIFICATION_REQUIRED';
 
 export interface EventPayload {
   CONTAINER_ADDED: { container: Container; operation: GateInOperation };
@@ -40,6 +42,31 @@ export interface EventPayload {
   EDI_TRANSMISSION_REQUESTED: { entityId: string; entityType: string; messageType: string };
   EDI_TRANSMISSION_COMPLETED: { entityId: string; transmissionId: string };
   EDI_TRANSMISSION_FAILED: { entityId: string; error: string };
+  DAMAGE_ASSESSMENT_RECORDED: { 
+    operationId: string; 
+    containerId?: string; 
+    assessment: {
+      hasDamage: boolean;
+      damageType?: string;
+      damageDescription?: string;
+      assessmentStage: 'assignment' | 'inspection';
+      assessedBy: string;
+      assessedAt: Date;
+    };
+    assessedBy: string;
+  };
+  DAMAGE_NOTIFICATION_REQUIRED: {
+    containerId: string;
+    assessment: {
+      hasDamage: boolean;
+      damageType?: string;
+      damageDescription?: string;
+      assessmentStage: 'assignment' | 'inspection';
+      assessedBy: string;
+      assessedAt: Date;
+    };
+    assessedBy: string;
+  };
 }
 
 type EventHandler<T extends EventType> = (payload: EventPayload[T]) => void | Promise<void>;

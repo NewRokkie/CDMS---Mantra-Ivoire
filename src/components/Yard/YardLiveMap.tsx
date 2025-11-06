@@ -3,6 +3,7 @@ import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye, Truck, Maxi
 import { Container } from '../../types';
 import { Yard, YardStack } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
+import { formatContainerNumberForDisplay } from '../Gates/utils';
 
 // Helper function to calculate virtual location for 40ft containers
 const getVirtualLocation = (container: Container, getStackConfiguration: (stackNum: number) => any): string => {
@@ -372,7 +373,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 row,
                 tier,
                 status,
-                client: c.client,
+                client: c.clientName,
                 transporter: 'Swift Transport',
                 containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
               };
@@ -400,7 +401,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 row,
                 tier,
                 status,
-                client: c.client,
+                client: c.clientName,
                 transporter: 'Swift Transport',
                 containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
               };
@@ -463,7 +464,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 row,
                 tier,
                 status,
-                client: c.client,
+                client: c.clientName,
                 transporter: 'Swift Transport',
                 containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
               };
@@ -513,7 +514,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             row,
             tier,
             status,
-            client: c.client,
+            client: c.clientName,
             transporter: 'Swift Transport',
             containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
           };
@@ -737,7 +738,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     }}
                   >
                     <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
-                    <div className="text-xs text-gray-500">{container.client} • {getVirtualLocation(container, getStackConfiguration)}</div>
+                    <div className="text-xs text-gray-500">{container.clientName} • {getVirtualLocation(container, getStackConfiguration)}</div>
                   </div>
                 ))}
               </div>
@@ -989,7 +990,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     <Truck className="h-4 w-4 text-green-600" />
                     <label className="text-xs font-semibold text-green-900 uppercase tracking-wide">Client</label>
                   </div>
-                  <p className="text-lg font-bold text-green-900">{selectedContainer.client}</p>
+                  <p className="text-lg font-bold text-green-900">{selectedContainer.clientName}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
@@ -1168,9 +1169,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                             }}
                           >
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
+                              <div className="font-mono text-sm font-medium text-gray-900">{formatContainerNumberForDisplay(container.number)}</div>
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{container.client}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{container.clientName}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                               <div className="flex items-center">
                                 <Truck className="h-4 w-4 mr-1 text-gray-400" />

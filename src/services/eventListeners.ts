@@ -39,6 +39,11 @@ export function initializeEventListeners() {
       // 4. Dashboard stats auto-update (via DB queries)
       console.log('  ✓ Dashboard will reflect new container on next refresh');
 
+      // 5. Handle damage assessment if provided during gate in
+      if (container.damage && container.damage.length > 0) {
+        console.log('  ✓ Container has damage recorded during assignment stage');
+      }
+
     } catch (error) {
       console.error('[EventListeners] Error handling GATE_IN_COMPLETED:', error);
     }
@@ -47,6 +52,50 @@ export function initializeEventListeners() {
   eventBus.on('GATE_IN_FAILED', async ({ containerNumber, error }) => {
     console.error('[EventListeners] GATE_IN_FAILED:', containerNumber, error);
     // Could send notification, alert, etc.
+  });
+
+  // ============================================
+  // DAMAGE ASSESSMENT EVENTS
+  // ============================================
+
+  // When damage assessment is recorded during assignment stage
+  eventBus.on('DAMAGE_ASSESSMENT_RECORDED', async ({ operationId, containerId, assessment, assessedBy }) => {
+    console.log('[EventListeners] DAMAGE_ASSESSMENT_RECORDED:', operationId);
+
+    try {
+      // 1. Log damage assessment for audit trail
+      console.log(`  ✓ Damage assessment recorded by ${assessedBy} at ${assessment.assessmentStage} stage`);
+
+      // 2. Update container status if severely damaged
+      if (assessment.hasDamage && assessment.damageType === 'structural') {
+        console.log('  ✓ Severe damage detected - container may need special handling');
+      }
+
+      // 3. Notify relevant stakeholders if damage is reported
+      if (assessment.hasDamage) {
+        console.log('  ✓ Damage notification will be sent to relevant parties');
+        
+        // Could emit notification event
+        await eventBus.emit('DAMAGE_NOTIFICATION_REQUIRED', {
+          containerId,
+          assessment,
+          assessedBy
+        });
+      }
+
+      // 4. Update dashboard statistics
+      console.log('  ✓ Dashboard damage statistics will be updated on next refresh');
+
+    } catch (error) {
+      console.error('[EventListeners] Error handling DAMAGE_ASSESSMENT_RECORDED:', error);
+    }
+  });
+
+  eventBus.on('DAMAGE_NOTIFICATION_REQUIRED', async ({ containerId, assessment, assessedBy }) => {
+    console.log('[EventListeners] DAMAGE_NOTIFICATION_REQUIRED:', containerId);
+    // Could send email, SMS, or system notification to relevant parties
+    // Could create work orders for repairs
+    // Could update container routing for special handling
   });
 
   // ============================================
@@ -193,6 +242,7 @@ export function initializeEventListeners() {
     'GATE_IN_COMPLETED',
     'GATE_OUT_COMPLETED',
     'BOOKING_REF_CREATED',
+    'DAMAGE_ASSESSMENT_RECORDED',
     'EDI_TRANSMISSION_REQUESTED',
     'YARD_POSITION_ASSIGNED',
     'and more...'

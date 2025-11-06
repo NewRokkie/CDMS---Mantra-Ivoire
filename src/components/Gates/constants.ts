@@ -1,4 +1,4 @@
-import { ReleaseOrder } from '../../types';
+import { BookingReference } from '../../types';
 import { Client, MockLocations, GateInOperation, PendingGateOut } from './types';
 
 // ========== CLIENT DATA ==========
@@ -40,10 +40,10 @@ export const mockPendingGateInOperations: GateInOperation[] = [
     containerNumber: 'MSKU-123456-7',
     secondContainerNumber: '',
     containerSize: '40ft',
-    containerType: 'standard',
+    containerType: 'dry',
     containerQuantity: 1,
     status: 'FULL',
-    isDamaged: false,
+    classification: 'divers',
     bookingReference: 'BK-MAE-2025-001',
     bookingType: 'EXPORT',
     clientCode: '1088663',
@@ -56,7 +56,8 @@ export const mockPendingGateInOperations: GateInOperation[] = [
     truckArrivalDate: '',
     truckArrivalTime: '',
     truckDepartureDate: '',
-    truckDepartureTime: ''
+    truckDepartureTime: '',
+    createdAt: new Date()
   },
   {
     id: 'PO-002',
@@ -67,7 +68,7 @@ export const mockPendingGateInOperations: GateInOperation[] = [
     containerType: 'reefer',
     containerQuantity: 2,
     status: 'EMPTY',
-    isDamaged: true,
+    classification: 'alimentaire',
     bookingReference: '',
     clientCode: '2045789',
     clientName: 'MSC MEDITERRANEAN SHIPPING',
@@ -79,7 +80,8 @@ export const mockPendingGateInOperations: GateInOperation[] = [
     truckArrivalDate: '',
     truckArrivalTime: '',
     truckDepartureDate: '',
-    truckDepartureTime: ''
+    truckDepartureTime: '',
+    createdAt: new Date()
   },
   {
     id: 'PO-003',
@@ -87,10 +89,10 @@ export const mockPendingGateInOperations: GateInOperation[] = [
     containerNumber: 'GESU-456789-1',
     secondContainerNumber: '',
     containerSize: '40ft',
-    containerType: 'standard',
+    containerType: 'dry',
     containerQuantity: 1,
     status: 'FULL',
-    isDamaged: false,
+    classification: 'divers',
     bookingReference: 'BK-CMA-2025-003',
     clientCode: '3067234',
     clientName: 'CMA CGM',
@@ -102,7 +104,8 @@ export const mockPendingGateInOperations: GateInOperation[] = [
     truckArrivalDate: '',
     truckArrivalTime: '',
     truckDepartureDate: '',
-    truckDepartureTime: ''
+    truckDepartureTime: '',
+    createdAt: new Date()
   }
 ];
 
@@ -113,10 +116,10 @@ export const mockCompletedGateInOperations: GateInOperation[] = [
     containerNumber: 'SHIP-111222-8',
     secondContainerNumber: '',
     containerSize: '20ft',
-    containerType: 'standard',
+    containerType: 'dry',
     containerQuantity: 1,
     status: 'FULL',
-    isDamaged: false,
+    classification: 'divers',
     bookingReference: 'BK-SHIP-2025-001',
     clientCode: '4012567',
     clientName: 'SHIPPING SOLUTIONS INC',
@@ -137,10 +140,10 @@ export const mockCompletedGateInOperations: GateInOperation[] = [
     containerNumber: 'MAEU-777888-9',
     secondContainerNumber: 'MAEU-777889-0',
     containerSize: '20ft',
-    containerType: 'standard',
+    containerType: 'dry',
     containerQuantity: 2,
     status: 'EMPTY',
-    isDamaged: false,
+    classification: 'divers',
     bookingReference: '',
     clientCode: '1088663',
     clientName: 'MAERSK LINE',
@@ -260,8 +263,8 @@ export const mockCompletedGateOutOperations: PendingGateOut[] = [
 // ========== CONTAINER TYPE OPTIONS ==========
 
 export const containerTypeOptions = [
-  { value: 'standard', label: 'Standard', code20: '22G1', code40: '42G1' },
-  { value: 'hi_cube', label: 'Hi-Cube', code20: '25G1', code40: '45G1' },
+  { value: 'dry', label: 'Dry', code20: '22G1', code40: '42G1' },
+  { value: 'high_cube', label: 'High-Cube (HC-45ft)', code20: '', code40: '45G1' },
   { value: 'hard_top', label: 'Hard Top', code20: '22H1', code40: '42H1' },
   { value: 'ventilated', label: 'Ventilated', code20: '22V1', code40: '42V1' },
   { value: 'reefer', label: 'Reefer', code20: '22R1', code40: '42R1' },

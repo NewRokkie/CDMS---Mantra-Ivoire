@@ -35,7 +35,7 @@ export const useModuleAccessSync = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, refreshUser]);
+  }, [user?.id]); // Remove refreshUser from dependencies to prevent infinite loops
 
   return { hasPermissionUpdate };
 };

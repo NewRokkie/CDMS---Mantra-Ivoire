@@ -12,9 +12,11 @@ export interface ContainerStats {
   outDepot: number;
   maintenance: number;
   cleaning: number;
+  damaged: number; // Add damaged containers count
   byType: Record<string, number>;
   bySize: Record<string, number>;
   byClient: Array<{ clientCode: string; clientName: string; count: number }>;
+  byDamageAssessmentStage: Record<string, number>; // Track damage assessments by stage
 }
 
 export interface GateStats {
@@ -111,15 +113,23 @@ export class ReportService {
       outDepot: containers.filter(c => c.status === 'out_depot').length,
       maintenance: containers.filter(c => c.status === 'maintenance').length,
       cleaning: containers.filter(c => c.status === 'cleaning').length,
+      damaged: containers.filter(c => c.damage && Array.isArray(c.damage) && c.damage.length > 0).length,
       byType: {},
       bySize: {},
-      byClient: []
+      byClient: [],
+      byDamageAssessmentStage: {}
     };
 
-    // Group by type
+    // Group by type, size, and damage assessment stage
     containers.forEach(c => {
       stats.byType[c.type] = (stats.byType[c.type] || 0) + 1;
       stats.bySize[c.size] = (stats.bySize[c.size] || 0) + 1;
+      
+      // Track damage assessment stage if available
+      if (c.damage_assessment_stage) {
+        stats.byDamageAssessmentStage[c.damage_assessment_stage] = 
+          (stats.byDamageAssessmentStage[c.damage_assessment_stage] || 0) + 1;
+      }
     });
 
     // Group by client
@@ -524,7 +534,7 @@ export class ReportService {
   /**
    * Export data to JSON format
    */
-  async exportToJSON(data: any[], options?: ExportOptions): Promise<string> {
+  async exportToJSON(data: any[], _options?: ExportOptions): Promise<string> {
     return JSON.stringify(data, null, 2);
   }
 
@@ -583,6 +593,85 @@ export class ReportService {
     `.trim();
 
     return html;
+  }
+
+  /**
+   * Get damage assessment report
+   */
+  async getDamageAssessmentReport(yardId?: string, dateRange?: DateRange) {
+    let query = supabase
+      .from('gate_in_operations')
+      .select(`
+        id,
+        container_number,
+        client_code,
+        client_name,
+        damage_reported,
+        damage_description,
+        damage_type,
+        damage_assessment_stage,
+        damage_assessed_by,
+        damage_assessed_at,
+        created_at
+      `)
+      .eq('damage_reported', true);
+
+    if (yardId) {
+      query = query.eq('yard_id', yardId);
+    }
+
+    if (dateRange) {
+      query = query
+        .gte('created_at', dateRange.startDate.toISOString())
+        .lte('created_at', dateRange.endDate.toISOString());
+    }
+
+    const { data, error } = await query.order('damage_assessed_at', { ascending: false });
+    if (error) throw error;
+
+    const summary = {
+      totalDamaged: data?.length || 0,
+      byStage: {
+        assignment: 0,
+        inspection: 0
+      },
+      byType: {} as Record<string, number>,
+      avgAssessmentTime: 0
+    };
+
+    let totalAssessmentTime = 0;
+    let assessmentTimeCount = 0;
+
+    data?.forEach(record => {
+      // Count by stage
+      if (record.damage_assessment_stage === 'assignment') {
+        summary.byStage.assignment++;
+      } else if (record.damage_assessment_stage === 'inspection') {
+        summary.byStage.inspection++;
+      }
+
+      // Count by damage type
+      if (record.damage_type) {
+        summary.byType[record.damage_type] = (summary.byType[record.damage_type] || 0) + 1;
+      }
+
+      // Calculate assessment time if both dates are available
+      if (record.damage_assessed_at && record.created_at) {
+        const assessmentTime = new Date(record.damage_assessed_at).getTime() - new Date(record.created_at).getTime();
+        totalAssessmentTime += assessmentTime;
+        assessmentTimeCount++;
+      }
+    });
+
+    // Calculate average assessment time in hours
+    if (assessmentTimeCount > 0) {
+      summary.avgAssessmentTime = Math.round((totalAssessmentTime / assessmentTimeCount) / (1000 * 60 * 60) * 10) / 10;
+    }
+
+    return {
+      summary,
+      details: data || []
+    };
   }
 
   /**

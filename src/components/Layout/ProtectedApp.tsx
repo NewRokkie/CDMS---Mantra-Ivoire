@@ -15,7 +15,7 @@ const EDIManagement = React.lazy(() => import('../EDI/EDIManagement').then(modul
 const YardManagement = React.lazy(() => import('../Yard/YardManagement').then(module => ({ default: module.YardManagement })));
 const ClientMasterData = React.lazy(() => import('../Clients/ClientMasterData').then(module => ({ default: module.ClientMasterData })));
 const UserManagement = React.lazy(() => import('../Users/UserManagement').then(module => ({ default: module.UserManagement })));
-const DepotManagement = React.lazy(() => import('../Yard/DepotManagement').then(module => ({ default: module.DepotManagement })));
+const DepotManagement = React.lazy(() => import('../Yard/DepotManagement/DepotManagement').then(module => ({ default: module.DepotManagement })));
 const StackManagement = React.lazy(() => import('../Yard/StackManagement').then(module => ({ default: module.StackManagement })));
 const ClientPoolManagement = React.lazy(() => import('../ClientPools/ClientPoolManagement').then(module => ({ default: module.ClientPoolManagement })));
 const ModuleAccessManagement = React.lazy(() => import('../ModuleAccess/ModuleAccessManagement').then(module => ({ default: module.ModuleAccessManagement })));
@@ -76,10 +76,10 @@ const ProtectedApp: React.FC = () => {
 
   // Initialize store when user is available
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       initializeStore();
     }
-  }, [initializeStore, user]);
+  }, [user?.id]); // Only depend on user ID, not the entire user object or initializeStore function
 
   console.log('App render - user:', user?.name, 'activeModule:', activeModule);
 

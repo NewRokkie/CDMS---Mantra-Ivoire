@@ -10,5 +10,6 @@ export * from './clientPoolService';
 export * from './moduleAccessService';
 export * from './stackService';
 export * from './stackPairingService';
+export * from '../sync';
 export * from './realtimeService';
 export * from './yardsService';

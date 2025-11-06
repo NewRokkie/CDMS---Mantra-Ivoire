@@ -157,8 +157,13 @@ export type Database = {
           driver_name: string | null;
           vehicle_number: string | null;
           assigned_location: string | null;
+          classification: string | null;
           damage_reported: boolean;
           damage_description: string | null;
+          damage_assessment_stage: string | null; // Now defaults to 'assignment' stage
+          damage_assessed_by: string | null;
+          damage_assessed_at: string | null;
+          damage_type: string | null;
           weight: number | null;
           status: string;
           operator_id: string | null;
@@ -181,8 +186,13 @@ export type Database = {
           driver_name?: string | null;
           vehicle_number?: string | null;
           assigned_location?: string | null;
+          classification?: string | null;
           damage_reported?: boolean;
           damage_description?: string | null;
+          damage_assessment_stage?: string | null; // Now defaults to 'assignment' stage
+          damage_assessed_by?: string | null;
+          damage_assessed_at?: string | null;
+          damage_type?: string | null;
           weight?: number | null;
           status?: string;
           operator_id?: string | null;
@@ -255,6 +265,12 @@ export type Database = {
           last_login: string | null;
           created_at: string;
           updated_at: string;
+          created_by: string | null;
+          updated_by: string | null;
+          // Soft delete fields
+          is_deleted: boolean;
+          deleted_at: string | null;
+          deleted_by: string | null;
         };
         Insert: {
           id?: string;
@@ -266,6 +282,12 @@ export type Database = {
           module_access?: any;
           active?: boolean;
           last_login?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+          // Soft delete fields
+          is_deleted?: boolean;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['users']['Insert']>;
       };

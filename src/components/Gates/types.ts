@@ -1,32 +1,57 @@
 import { BookingReference } from '../../types';
 
+// Import DamageAssessment interface
+export interface DamageAssessment {
+  hasDamage: boolean;
+  damageType?: string;
+  damageDescription?: string;
+  assessmentStage: 'assignment';
+  assessedBy: string;
+  assessedAt: Date;
+}
+
 // ========== FORM DATA TYPES ==========
 
 export interface GateInFormData {
   // Step 1: Container Information
   containerSize: '20ft' | '40ft';
-  containerType: 'standard' | 'hi_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  containerType: 'dry' | 'high_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   containerQuantity: 1 | 2;
   status: 'FULL' | 'EMPTY';
-  isDamaged: boolean;
   clientId: string;
   clientCode: string;
   clientName: string;
   bookingReference: string;
   containerNumber: string;
+  containerNumberConfirmation: string; // Confirmation field for container number
   secondContainerNumber: string; // For when quantity is 2
+  secondContainerNumberConfirmation: string; // Confirmation field for second container number
+
+  // Container Classification (replaces damage status)
+  classification: 'divers' | 'alimentaire';
 
   // Step 2: Transport Details
   driverName: string;
   truckNumber: string;
   transportCompany: string;
 
-  // Location & Validation (Step 3)
-  assignedLocation: string;
+  // Location & Validation (assigned later in pending operations)
+  assignedLocation?: string;
+  assignedStack?: string; // Stack selection (S##R#H# format)
   truckArrivalDate: string; // Now captured in Gate In form
   truckArrivalTime: string; // Now captured in Gate In form
   truckDepartureDate: string;
   truckDepartureTime: string;
+
+  // Damage Assessment (completed during assignment stage)
+  damageAssessment?: {
+    hasDamage: boolean;
+    damageType?: string;
+    damageDescription?: string;
+    assessmentStage: 'assignment';
+    assessedBy: string;
+    assessedAt: Date;
+  };
 
   // Additional fields
   notes: string;
@@ -53,6 +78,7 @@ export interface GateInModalProps {
   isProcessing: boolean;
   autoSaving: boolean;
   validateStep: (step: number) => boolean;
+  isCurrentStepValid: boolean;
   handleSubmit: () => void;
   handleNextStep: () => void;
   handlePrevStep: () => void;
@@ -60,9 +86,13 @@ export interface GateInModalProps {
   handleContainerSizeChange: (size: '20ft' | '40ft') => void;
   handleQuantityChange: (quantity: 1 | 2) => void;
   handleStatusChange: (isFullStatus: boolean) => void;
-  handleDamageChange: (isDamaged: boolean) => void;
   handleClientChange: (clientId: string) => void;
+  // handleStackSelect?: (stackId: string, formattedLocation: string) => void; // Removed - stack selection moved to pending operations
+  // handleDamageAssessment?: (assessment: DamageAssessment) => void; // Moved to pending operations
   clients: Array<{ id: string; code: string; name: string }>;
+  submissionError?: string | null;
+  validationErrors?: string[];
+  validationWarnings?: string[];
 }
 
 export interface GateOutModalProps {
@@ -85,7 +115,6 @@ export interface GateInOperation {
   containerType?: string;
   containerQuantity?: number;
   status?: 'FULL' | 'EMPTY' | 'pending' | 'in_process' | 'completed' | 'cancelled';
-  isDamaged?: boolean;
   bookingReference?: string;
   bookingType?: 'EXPORT' | 'IMPORT';
   clientCode: string;

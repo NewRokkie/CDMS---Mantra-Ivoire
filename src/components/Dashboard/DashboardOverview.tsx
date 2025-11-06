@@ -10,8 +10,7 @@ import {
   Cell,
   RadialBarChart,
   RadialBar,
-  Tooltip as RechartsTooltip,
-  Legend
+  Tooltip as RechartsTooltip
 } from 'recharts';
 import {
   Building,
@@ -42,12 +41,6 @@ interface FilteredData {
   title: string;
   description: string;
 }
-
-/**
- * DashboardOverview (enhanced)
- * - preserves all original logic & hooks
- * - adds animations, charts, csv export, refreshed UI (light-only)
- */
 
 /* ---------- small UI helpers ---------- */
 const Spinner: React.FC<{ className?: string }> = ({ className = '' }) => (
@@ -148,7 +141,7 @@ export const DashboardOverview: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, [loadDashboardData]);
+  }, [currentYard?.id, viewMode]); // Use the same dependencies as loadDashboardData instead of the function itself
 
   const clientFilter = getClientFilter();
   const showClientNotice = !canViewAllData() && user?.role === 'client';
@@ -164,7 +157,7 @@ export const DashboardOverview: React.FC = () => {
     if (clientFilter) {
       containers = containers.filter(container =>
         container.clientCode === clientFilter ||
-        container.client === user?.company
+        container.clientName === user?.company
       );
     }
 
@@ -172,6 +165,9 @@ export const DashboardOverview: React.FC = () => {
   }, [allContainers, clientFilter, user?.company]);
 
   const filteredContainers = useMemo(() => getFilteredContainers(), [getFilteredContainers]);
+
+  // Colors for pie chart
+  const pieColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#60A5FA'];
 
   // Get multi-depot data for managers
   const getMultiDepotData = useCallback((allContainersForMultiDepot: any[]) => {
@@ -221,9 +217,15 @@ export const DashboardOverview: React.FC = () => {
   const stats = useMemo(() => {
     // Total per customer
     const customerStats = filteredContainers.reduce((acc, container) => {
-      const key = container.clientCode || container.client;
+      const key = container.clientCode || container.clientName;
       if (!acc[key]) {
-        acc[key] = { count: 0, name: container.client, code: container.clientCode };
+        // Get client name from joined data if available, otherwise use client field
+        const clientName = container.clientName && container.clientName !== container.clientCode ? container.clientName : container.clientCode;
+        acc[key] = {
+          count: 0,
+          name: clientName,
+          code: container.clientCode || container.clientName
+        };
       }
       acc[key].count++;
       return acc;
@@ -234,9 +236,9 @@ export const DashboardOverview: React.FC = () => {
 
     // Total by type per customer
     const typeByCustomer = filteredContainers.reduce((acc, container) => {
-      const customerKey = container.clientCode || container.client;
+      const customerKey = container.clientCode || container.clientName;
       if (!acc[customerKey]) {
-        acc[customerKey] = { standard: 0, reefer: 0, tank: 0, flat_rack: 0, open_top: 0, clientName: container.client };
+        acc[customerKey] = { standard: 0, reefer: 0, tank: 0, flat_rack: 0, open_top: 0, clientName: container.clientName };
       }
       acc[customerKey][container.type] = (acc[customerKey][container.type] || 0) + 1;
       return acc;
@@ -266,7 +268,8 @@ export const DashboardOverview: React.FC = () => {
   // Chart data derivations (memoized)
   const customerBarData = useMemo(() => {
     return Object.entries(stats.customerStats).map(([key, v]: [string, { count: number; name: string; code: string }]) => ({
-      name: v.name || key,
+      name: key,
+      displayName: v.name || key,
       total: v.count
     }));
   }, [stats.customerStats]);
@@ -287,6 +290,24 @@ export const DashboardOverview: React.FC = () => {
     ];
   }, [stats.damagedStats]);
 
+  const quantityPieData = useMemo(() => {
+    const types = ['dry', 'reefer', 'tank', 'flat_rack', 'open_top'];
+    const typeLabels = ['Dry', 'Reefer', 'Tank', 'Flat Rack', 'Open Top'];
+
+    const result = types.map((type, index) => ({
+      type: typeLabels[index],
+      value: Number(Object.values(stats.typeByCustomer).reduce((sum, customerData: any) =>
+        sum + (Number(customerData[type]) || 0), 0
+      )),
+      color: pieColors[index % pieColors.length]
+    })).filter(item => item.value > 0);
+
+    console.log('quantityPieData:', result);
+    console.log('pieColors:', pieColors);
+
+    return result;
+  }, [stats.typeByCustomer, pieColors])
+
   // Handle clicking stat cards (keeps original behaviour)
   const getFilteredData = (): FilteredData | null => {
     if (!activeFilter) return null;
@@ -295,7 +316,7 @@ export const DashboardOverview: React.FC = () => {
       case 'customer':
         if (selectedCustomer) {
           const containers = filteredContainers.filter(c =>
-            (c.clientCode || c.client) === selectedCustomer
+            (c.clientCode || c.clientName) === selectedCustomer
           );
           const customerInfo = stats.customerStats[selectedCustomer];
           return {
@@ -373,7 +394,7 @@ export const DashboardOverview: React.FC = () => {
       const rows = (filteredData?.containers ?? filteredContainers).map((c) => ({
         id: c.id,
         number: c.number,
-        client: c.client,
+        client: c.clientName,
         clientCode: c.clientCode,
         type: c.type,
         size: c.size,
@@ -411,13 +432,6 @@ export const DashboardOverview: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XOF'
-    }).format(amount);
   };
 
   const getStatusBadge = (status: string) => {
@@ -489,9 +503,6 @@ export const DashboardOverview: React.FC = () => {
     );
   }
 
-  // Colors for pie chart
-  const pieColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#60A5FA'];
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -499,7 +510,6 @@ export const DashboardOverview: React.FC = () => {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Dashboard Overview</h1>
-            <p className="text-sm text-gray-500 mt-1">Vue synthétique des conteneurs et performances par dépôt</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -509,13 +519,15 @@ export const DashboardOverview: React.FC = () => {
                   onClick={() => setViewMode('current')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition ${viewMode === 'current' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
                 >
-                  <Building className="inline h-4 w-4 mr-2" /> Current Depot
+                  <Building className="inline h-4 w-4 mr-2" />
+                  <span className="hidden lg:inline">Current Depot</span>
                 </button>
                 <button
                   onClick={() => setViewMode('global')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition ${viewMode === 'global' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
                 >
-                  <Globe className="inline h-4 w-4 mr-2" /> All Depots
+                  <Globe className="inline h-4 w-4 mr-2" />
+                  <span className="hidden lg:inline">All Depots</span>
                 </button>
               </div>
             )}
@@ -526,7 +538,7 @@ export const DashboardOverview: React.FC = () => {
               title="Refresh data"
             >
               {isRefreshing ? <Spinner className="w-4 h-4" /> : <RefreshCw className="h-4 w-4 text-gray-600" />}
-              <span className="text-sm text-gray-700">Rafraîchir</span>
+              <span className="hidden lg:inline text-sm text-gray-700">Rafraîchir</span>
             </button>
 
             <button
@@ -535,7 +547,7 @@ export const DashboardOverview: React.FC = () => {
               title="Export filtered data to CSV"
             >
               {isExporting ? <Spinner className="w-4 h-4" /> : <DownloadCloud className="h-4 w-4 text-gray-600" />}
-              <span className="text-sm text-gray-700">Export CSV</span>
+              <span className="hidden lg:inline text-sm text-gray-700">Export CSV</span>
             </button>
           </div>
         </header>
@@ -639,7 +651,7 @@ export const DashboardOverview: React.FC = () => {
           {/* Customers bar chart */}
           <Card className="relative">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Total par Client</h3>
+              <h3 className="text-lg font-semibold">Client</h3>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -659,7 +671,7 @@ export const DashboardOverview: React.FC = () => {
              <ResponsiveContainer width="100%" height={240} minWidth={0}>
                <BarChart
                  data={customerBarData}
-                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                 margin={{ top: 30, right: 30, left: 20, bottom: 5 }}
                >
                  <XAxis
                    dataKey="name"
@@ -670,9 +682,11 @@ export const DashboardOverview: React.FC = () => {
                  <RechartsTooltip
                    content={({ active, payload, label }) => {
                      if (active && payload && payload.length) {
+                       const data = payload[0].payload;
+                       const displayName = data.displayName || label;
                        return (
                          <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-                           <p className="font-medium text-gray-900">{label}</p>
+                           <p className="font-medium text-gray-900">{displayName}</p>
                            <p className="text-sm text-blue-600">
                              Containers: <span className="font-bold">{payload[0].value}</span>
                            </p>
@@ -692,6 +706,7 @@ export const DashboardOverview: React.FC = () => {
                    }}
                    onMouseDown={(e: any) => e?.preventDefault?.()}
                    style={{ cursor: 'pointer' }}
+                   label={{ position: 'top', fill: '#374151', fontSize: 16, fontWeight: 'bold', formatter: (value: any) => `${value}` }}
                  />
                </BarChart>
              </ResponsiveContainer>
@@ -701,7 +716,7 @@ export const DashboardOverview: React.FC = () => {
           {/* Type Pie */}
           <Card className="relative">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Total par Type de Conteneur</h3>
+              <h3 className="text-lg font-semibold">Type de Conteneur</h3>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -716,28 +731,41 @@ export const DashboardOverview: React.FC = () => {
                 </button>
               </div>
             </div>
-            <div style={{ height: 240 }} className="flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={240} minWidth={0}>
+            <div style={{ height: 240 }} className="flex flex-col items-center justify-between">
+              <ResponsiveContainer width="100%" height={220} minWidth={0}>
                 <PieChart>
                   <Pie
-                    data={typePieData}
+                    data={quantityPieData}
                     dataKey="value"
                     nameKey="type"
                     innerRadius={40}
                     outerRadius={80}
                     paddingAngle={4}
                     labelLine={false}
-                    label={({ index }) => typePieData[index]?.type}
+                    label={({ index }) => `${quantityPieData[index]?.value}`}
                     onClick={(entry) => handleStatCardClick('type', entry.type)}
                     onMouseDown={(e: any) => e?.preventDefault?.()}
                   >
-                    {typePieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} stroke="transparent" />
+                    {quantityPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
                     ))}
                   </Pie>
                   <RechartsTooltip />
                 </PieChart>
               </ResponsiveContainer>
+
+              {/* Custom legend using quantityPieData */}
+              <div className="flex flex-wrap gap-3 mt-1">
+                {quantityPieData.map((entry, index) => (
+                  <div key={`legend-${index}`} className="flex items-center gap-2 text-sm">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <span className="capitalize">{String(entry.type)} ({entry.value})</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </Card>
 
@@ -967,7 +995,7 @@ export const DashboardOverview: React.FC = () => {
                           <div className="text-2xl">{getTypeIcon(container.type)}</div>
                           <div>
                             <div className="font-medium">{container.number}</div>
-                            <div className="text-xs text-gray-400">ID: {container.id}</div>
+                            <div className="text-xs text-gray-400">ID: {container.id.slice(-6).toUpperCase()}</div>
                           </div>
                         </div>
                       </td>
@@ -988,7 +1016,7 @@ export const DashboardOverview: React.FC = () => {
 
                       {canViewAllData() && (
                         <td className="p-3">
-                          <div className="font-medium">{container.client}</div>
+                          <div className="font-medium">{container.clientName}</div>
                           <div className="text-xs text-gray-400">{container.clientCode}</div>
                         </td>
                       )}
@@ -1060,7 +1088,7 @@ export const DashboardOverview: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.entries(stats.customerStats).map(([customerKey, customerData]: [string, { count: number; name: string; code: string }]) => {
                 const customerContainers = filteredContainers.filter(c =>
-                  (c.clientCode || c.client) === customerKey
+                  (c.clientCode || c.clientName) === customerKey
                 );
                 const damaged = customerContainers.filter(c => c.damage && c.damage.length > 0).length;
                 const undamaged = customerContainers.filter(c => !c.damage || c.damage.length === 0).length;

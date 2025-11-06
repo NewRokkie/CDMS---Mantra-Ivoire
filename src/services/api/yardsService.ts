@@ -48,10 +48,42 @@ export class YardsService {
         return [];
       }
 
-      // Charger les stacks pour chaque yard
+      // Charger les stacks pour chaque yard et récupérer les noms d'utilisateurs
       const yardsWithStacks = await Promise.all(
         data.map(async (yardData) => {
           const yard = this.mapToYard(yardData);
+
+          // Récupérer les noms des utilisateurs séparément
+          if (yard.createdBy && yard.createdBy !== 'Unknown') {
+            try {
+              const { data: createdUser } = await supabase
+                .from('users')
+                .select('name')
+                .eq('id', yard.createdBy)
+                .maybeSingle();
+              if (createdUser) {
+                yard.createdBy = createdUser.name;
+              }
+            } catch (error) {
+              console.warn('Could not fetch created_by user name:', error);
+            }
+          }
+
+          if (yard.updatedBy && yard.updatedBy !== 'Unknown') {
+            try {
+              const { data: updatedUser } = await supabase
+                .from('users')
+                .select('name')
+                .eq('id', yard.updatedBy)
+                .maybeSingle();
+              if (updatedUser) {
+                yard.updatedBy = updatedUser.name;
+              }
+            } catch (error) {
+              console.warn('Could not fetch updated_by user name:', error);
+            }
+          }
+
           await this.loadStacksForYard(yard);
           return yard;
         })
@@ -92,6 +124,38 @@ export class YardsService {
       if (!data) return null;
 
       const yard = this.mapToYard(data);
+
+      // Récupérer les noms des utilisateurs séparément
+      if (yard.createdBy && yard.createdBy !== 'Unknown') {
+        try {
+          const { data: createdUser } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', yard.createdBy)
+            .maybeSingle();
+          if (createdUser) {
+            yard.createdBy = createdUser.name;
+          }
+        } catch (error) {
+          console.warn('Could not fetch created_by user name:', error);
+        }
+      }
+
+      if (yard.updatedBy && yard.updatedBy !== 'Unknown') {
+        try {
+          const { data: updatedUser } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', yard.updatedBy)
+            .maybeSingle();
+          if (updatedUser) {
+            yard.updatedBy = updatedUser.name;
+          }
+        } catch (error) {
+          console.warn('Could not fetch updated_by user name:', error);
+        }
+      }
+
       await this.loadStacksForYard(yard);
 
       // Mettre à jour le cache
@@ -563,8 +627,8 @@ export class YardsService {
       sections: [], // Will be set to default sections
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
-      createdBy: data.created_by,
-      updatedBy: data.updated_by,
+      createdBy: data.created_by || 'Unknown',
+      updatedBy: data.updated_by || 'Unknown',
       timezone: data.timezone || 'Africa/Abidjan',
       contactInfo: data.contact_info || {
         manager: 'Unknown',

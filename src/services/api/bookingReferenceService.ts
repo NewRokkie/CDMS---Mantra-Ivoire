@@ -115,6 +115,23 @@ export class BookingReferenceService {
     if (error) throw error;
   }
 
+  async cancel(id: string, cancellationData: { reason: string; newBookingReference?: string }): Promise<BookingReference> {
+    const { data, error } = await supabase
+      .from('booking_references')
+      .update({
+        status: 'cancelled',
+        cancellation_reason: cancellationData.reason,
+        new_booking_reference: cancellationData.newBookingReference || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapToBookingReference(data);
+  }
+
   private mapToBookingReference(data: any): BookingReference {
     return {
       containers: data.containers || [],
@@ -132,8 +149,11 @@ export class BookingReferenceService {
       status: data.status,
       createdBy: data.created_by,
       createdAt: new Date(data.created_at),
+      updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
       completedAt: data.completed_at ? new Date(data.completed_at) : undefined,
-      notes: data.notes
+      notes: data.notes,
+      cancellationReason: data.cancellation_reason,
+      newBookingReference: data.new_booking_reference
     };
   }
 }

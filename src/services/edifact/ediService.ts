@@ -91,7 +91,7 @@ export class EDIService {
         operationType,
         transporter,
         vehicleNumber,
-        clientCode: container.clientCode || container.client,
+        clientCode: container.clientCode || container.clientName,
         userName,
         containerLoadStatus
       });
@@ -327,7 +327,7 @@ export class EDIService {
       'Hapag-Lloyd': 'HLCU'
     };
 
-    return clientPartnerMap[container.client] || 'DEFAULT';
+    return clientPartnerMap[container.clientName] || 'DEFAULT';
   }
 
   private async getContainerByNumber(containerNumber: string): Promise<Container> {
@@ -341,7 +341,7 @@ export class EDIService {
       status: 'in_depot',
       location: 'Block A-12',
       gateInDate: new Date(),
-      client: 'Maersk Line',
+      clientName: 'Maersk Line',
       createdBy: 'system'
     };
   }

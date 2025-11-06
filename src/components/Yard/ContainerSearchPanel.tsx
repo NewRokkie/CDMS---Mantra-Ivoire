@@ -34,11 +34,11 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
   // Search results
   const searchResults = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return [];
-    
+
     return containers
       .filter(container =>
         container.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        container.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        container.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         container.location.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .slice(0, 10);
@@ -62,8 +62,8 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -109,7 +109,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
                   <div>
                     <div className="font-medium text-gray-900">{container.number}</div>
                     <div className="text-sm text-gray-600">
-                      {canViewAllData ? container.client : 'Your Company'} • {container.location}
+                      {canViewAllData ? container.clientName : 'Your Company'} • {container.location}
                     </div>
                   </div>
                   {getStatusBadge(container.status)}
@@ -200,7 +200,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
                   <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">
                     <User className="h-3 w-3" />
                     <span className="truncate">
-                      {canViewAllData ? container.client : 'Your Company'}
+                      {canViewAllData ? container.clientName : 'Your Company'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">

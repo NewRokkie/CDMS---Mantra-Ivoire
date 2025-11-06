@@ -65,17 +65,17 @@ export const ContainerList: React.FC = () => {
 
   React.useEffect(() => {
     // Dev-time warning to help detect incomplete container records that may cause runtime errors
-    const incomplete = containers.filter(c => !c.number || !c.client || !c.location);
+    const incomplete = containers.filter(c => !c.number || !c.clientName || !c.location);
     if (incomplete.length > 0) {
-      console.warn('[ContainerList] Found containers with missing critical fields:', incomplete.map(c => ({ id: c.id, number: c.number, client: c.client, location: c.location })));
+      console.warn('[ContainerList] Found containers with missing critical fields:', incomplete.map(c => ({ id: c.id, number: c.number, clientName: c.clientName, location: c.location })));
     }
   }, [containers]);
 
   const clientOptions = React.useMemo(() => {
     const map = new Map<string, { id?: string; name: string; code?: string }>();
     containers.forEach(c => {
-      const key = c.clientCode || c.client || 'unknown';
-      if (!map.has(key)) map.set(key, { id: c.clientId, name: c.client, code: c.clientCode });
+      const key = c.clientCode || c.clientName || 'unknown';
+      if (!map.has(key)) map.set(key, { id: c.clientId, name: c.clientName, code: c.clientCode });
     });
     return Array.from(map.entries()).map(([key, v]) => ({ key, ...v }));
   }, [containers]);
@@ -142,7 +142,7 @@ export const ContainerList: React.FC = () => {
         }
 
         // Fallback to original filtering
-        const clientName = container.client ?? '';
+        const clientName = container.clientName ?? '';
         return container.clientCode === clientFilter ||
                clientName === user?.company ||
                clientName.toLowerCase().includes(clientFilter.toLowerCase());
@@ -153,9 +153,9 @@ export const ContainerList: React.FC = () => {
     filtered = filtered.filter(container => {
       const searchLower = searchTerm.toLowerCase();
       const number = container.number ?? '';
-      const clientName = container.client ?? '';
+      const clientName = container.clientName ?? '';
       const matchesSearch = number.toLowerCase().includes(searchLower) ||
-                           clientName.toLowerCase().includes(searchLower);
+                            clientName.toLowerCase().includes(searchLower);
       const matchesStatus = statusFilter === 'all' || container.status === statusFilter;
 
       // Date range filter (based on gateInDate / gateOutDate)
@@ -176,7 +176,7 @@ export const ContainerList: React.FC = () => {
       }
 
       // Client filter (for export/preview)
-      const matchesClient = clientExportFilter === 'all' || container.clientCode === clientExportFilter || container.client === clientExportFilter;
+      const matchesClient = clientExportFilter === 'all' || container.clientCode === clientExportFilter || container.clientName === clientExportFilter;
 
       return matchesSearch && matchesStatus && matchesDate && matchesClient;
     });
@@ -249,7 +249,7 @@ export const ContainerList: React.FC = () => {
       inOut: c.status === 'in_depot' ? 'In Depot' : (c.status === 'out_depot' ? 'Out Depot' : c.status.replace('_', ' ')),
       gateIn: c.gateInDate ? c.gateInDate.toISOString() : '',
       gateOut: c.gateOutDate ? c.gateOutDate.toISOString() : '',
-      client: c.client,
+      client: c.clientName,
       clientCode: c.clientCode || ''
     }));
   };
@@ -655,7 +655,7 @@ function filterTable(){
                   {canViewAllData() && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div>
-                        <div className="font-medium">{container.client}</div>
+                        <div className="font-medium">{container.clientName}</div>
                         {container.clientCode && (
                           <div className="text-xs text-gray-500">{container.clientCode}</div>
                         )}

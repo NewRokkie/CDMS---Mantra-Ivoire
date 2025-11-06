@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, User as UserIcon, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Eye, Trash2, User as UserIcon, Shield, Clock, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { User, ModuleAccess } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { userService } from '../../services/api';
 import { UserFormModal } from './UserFormModal';
+import { UserDetailsModal } from './UserDetailsModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
+import { ConfirmationDialog } from '../Common/ConfirmationDialog';
+import { NotificationProvider, useNotifications } from '../Common/NotificationSystem';
+import { ErrorBoundary } from '../Common/ErrorBoundary';
+import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
+import { useUserManagementRetry } from '../../hooks/useRetry';
 import { toDate } from '../../utils/dateHelpers';
 
 // Helper function to get module access based on role
@@ -63,6 +69,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         gateOut: true,
         releases: true,
         edi: true,
+        yard: true,
         reports: true,
         users: true,
         depotManagement: true,
@@ -95,49 +102,96 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
   }
 };
 
-// REMOVED: Mock data now managed by global store
 
-
-export const UserManagement: React.FC = () => {
+const UserManagementContent: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [operationLoading, setOperationLoading] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<Error | null>(null);
+  const { showSuccess, showError } = useNotifications();
+
+  // Use retry mechanism for loading users
+  const {
+    execute: loadUsersWithRetry,
+    isRetrying: isRetryingLoad,
+    retryCount: loadRetryCount,
+    lastError: loadLastError
+  } = useUserManagementRetry(async () => {
+    const data = await userService.getAll();
+    return data || [];
+  }, 'read');
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setLoadError(null);
+      const data = await loadUsersWithRetry();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      const errorInstance = error instanceof Error ? error : new Error('An unexpected error occurred while loading users');
+      setLoadError(errorInstance);
+      showError('Failed to load users', errorInstance.message);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadUsers() {
-      try {
-        setLoading(true);
-        const data = await userService.getAll().catch(err => { console.error('Error loading users:', err); return []; });
-        setUsers(data || []);
-      } catch (error) {
-        console.error('Error loading users:', error);
-        // Set empty array to prevent infinite loading
-        setUsers([]);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadUsers();
   }, []);
 
+  // Use retry mechanisms for user operations
+  const {
+    execute: createUserWithRetry
+  } = useUserManagementRetry(async (user: any) => {
+    return await userService.create(user);
+  }, 'write');
+
+  const {
+    execute: updateUserWithRetry
+  } = useUserManagementRetry(async (id: string, updates: any) => {
+    return await userService.update(id, updates);
+  }, 'write');
+
+  const {
+    execute: deleteUserWithRetry
+  } = useUserManagementRetry(async (id: string, deletedBy: string) => {
+    return await userService.softDelete(id, deletedBy);
+  }, 'delete');
+
   const addUser = async (user: any) => {
-    const newUser = await userService.create(user);
+    const newUser = await createUserWithRetry(user);
     setUsers(prev => [...prev, newUser]);
   };
 
   const updateUser = async (id: string, updates: any) => {
-    await userService.update(id, updates);
+    await updateUserWithRetry(id, updates);
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
   };
 
   const deleteUser = async (id: string) => {
-    await userService.delete(id);
-    setUsers(prev => prev.filter(u => u.id !== id));
+    try {
+      setOperationLoading(id);
+      await deleteUserWithRetry(id, currentUser?.id || 'system');
+      setUsers(prev => prev.filter(u => u.id !== id));
+      showSuccess('User deleted successfully', 'The user has been safely removed from the system.');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showError('Failed to delete user', error instanceof Error ? error.message : 'An unexpected error occurred');
+    } finally {
+      setOperationLoading(null);
+    }
   };
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { user: currentUser } = useAuth();
   const { currentYard } = useYard();
 
@@ -154,40 +208,51 @@ export const UserManagement: React.FC = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleSubmit = (userData: any) => {
-    if (selectedUser) {
-      // Edit existing user
-      updateUser(selectedUser.id, {
-        name: userData.name,
-        email: userData.email,
-        phone: userData.phone,
-        department: userData.department,
-        company: userData.company,
-        role: userData.role,
-        yardAssignments: userData.yardAssignments,
-        isActive: userData.isActive,
-        moduleAccess: getModuleAccessForRole(userData.role)
-      });
-    } else {
-      // Create new user
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: userData.name,
-        email: userData.email,
-        phone: userData.phone,
-        department: userData.department,
-        company: userData.company,
-        role: userData.role,
-        yardAssignments: userData.yardAssignments || [],
-        isActive: userData.isActive,
-        createdAt: new Date(),
-        createdBy: 'System',
-        moduleAccess: getModuleAccessForRole(userData.role)
-      };
-      addUser(newUser);
+  const handleSubmit = async (userData: any) => {
+    try {
+      setOperationLoading('form');
+      if (selectedUser) {
+        // Edit existing user
+        await updateUser(selectedUser.id, {
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          department: userData.department,
+          company: userData.company,
+          role: userData.role,
+          yardAssignments: userData.yardAssignments,
+          isActive: userData.isActive,
+          moduleAccess: getModuleAccessForRole(userData.role),
+          updatedBy: currentUser?.id
+        });
+        showSuccess('User updated successfully', 'The user information has been updated.');
+      } else {
+        // Create new user
+        const newUser: User = {
+          id: Date.now().toString(),
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          department: userData.department,
+          company: userData.company,
+          role: userData.role,
+          yardAssignments: userData.yardAssignments || [],
+          isActive: userData.isActive,
+          createdAt: new Date(),
+          createdBy: currentUser?.id || 'System',
+          moduleAccess: getModuleAccessForRole(userData.role)
+        };
+        await addUser(newUser);
+        showSuccess('User created successfully', 'The new user has been added to the system.');
+      }
+      setShowForm(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error saving user:', error);
+      showError('Failed to save user', error instanceof Error ? error.message : 'An unexpected error occurred');
+    } finally {
+      setOperationLoading(null);
     }
-    setShowForm(false);
-    setSelectedUser(null);
   };
 
   const handleEdit = (user: User) => {
@@ -197,20 +262,46 @@ export const UserManagement: React.FC = () => {
 
   const handleView = (user: User) => {
     setSelectedUser(user);
-    // In a real app, this would open a detailed view modal
-    alert(`Viewing details for ${user.name}`);
+    setShowDetails(true);
   };
 
-  const handleDelete = (userId: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      deleteUser(userId);
+  const handleDelete = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (userToDelete) {
+      await deleteUser(userToDelete.id);
+      setShowDeleteConfirm(false);
+      setUserToDelete(null);
     }
   };
 
-  const handleToggleStatus = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      updateUser(userId, { isActive: !user.isActive });
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setUserToDelete(null);
+  };
+
+  const handleToggleStatus = async (userId: string) => {
+    try {
+      setOperationLoading(userId);
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        await updateUser(userId, {
+          isActive: !user.isActive,
+          updatedBy: currentUser?.id
+        });
+        showSuccess(
+          `User ${!user.isActive ? 'activated' : 'deactivated'} successfully`,
+          `${user.name} has been ${!user.isActive ? 'activated' : 'deactivated'}.`
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      showError('Failed to update user status', error instanceof Error ? error.message : 'An unexpected error occurred');
+    } finally {
+      setOperationLoading(null);
     }
   };
 
@@ -394,8 +485,31 @@ export const UserManagement: React.FC = () => {
 
       {/* Users Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center space-x-3">
+              <Loader className="h-6 w-6 animate-spin text-blue-600" />
+              <span className="text-gray-600">
+                Loading users...
+                {isRetryingLoad && loadRetryCount > 0 && (
+                  <span className="text-orange-600 ml-2">
+                    (Retry {loadRetryCount}/3)
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        ) : loadError ? (
+          <div className="p-6">
+            <UserManagementErrorFallback
+              error={loadError}
+              onRetry={loadUsers}
+              operation="loading"
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -419,7 +533,36 @@ export const UserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center space-y-3">
+                      <UserIcon className="h-12 w-12 text-gray-400" />
+                      <div className="text-gray-500">
+                        <p className="text-lg font-medium">No users found</p>
+                        <p className="text-sm">
+                          {searchTerm || roleFilter !== 'all' || statusFilter !== 'all'
+                            ? 'Try adjusting your search or filters'
+                            : 'Get started by adding your first user'}
+                        </p>
+                      </div>
+                      {canManageUsers && !searchTerm && roleFilter === 'all' && statusFilter === 'all' && (
+                        <button
+                          onClick={() => {
+                            setSelectedUser(null);
+                            setShowForm(true);
+                          }}
+                          className="mt-4 flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Add First User</span>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -445,14 +588,21 @@ export const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => canManageUsers && handleToggleStatus(user.id)}
-                      disabled={!canManageUsers}
+                      disabled={!canManageUsers || operationLoading === user.id}
                       className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
                         user.isActive
                           ? 'bg-green-100 text-green-800 hover:bg-green-200'
                           : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      } ${canManageUsers ? 'cursor-pointer' : 'cursor-default'}`}
+                      } ${canManageUsers ? 'cursor-pointer' : 'cursor-default'} ${
+                        operationLoading === user.id ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                     >
-                      {user.isActive ? (
+                      {operationLoading === user.id ? (
+                        <>
+                          <Loader className="h-3 w-3 mr-1 animate-spin" />
+                          Processing...
+                        </>
+                      ) : user.isActive ? (
                         <>
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Active
@@ -482,20 +632,29 @@ export const UserManagement: React.FC = () => {
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(user.id)}
-                            className="text-red-600 hover:text-red-900 p-1 rounded"
+                            onClick={() => handleDelete(user)}
+                            disabled={operationLoading === user.id}
+                            className={`text-red-600 hover:text-red-900 p-1 rounded ${
+                              operationLoading === user.id ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {operationLoading === user.id ? (
+                              <Loader className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </button>
                         </>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* User Form Modal */}
@@ -504,6 +663,41 @@ export const UserManagement: React.FC = () => {
         onClose={() => setShowForm(false)}
         selectedUser={selectedUser}
         onSubmit={handleSubmit}
+        loading={operationLoading === 'form'}
+      />
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        isOpen={showDetails}
+        onClose={() => {
+          setShowDetails(false);
+          setSelectedUser(null);
+        }}
+        user={selectedUser}
+        onEdit={(user) => {
+          setShowDetails(false);
+          handleEdit(user);
+        }}
+        onDelete={(userId) => {
+          setShowDetails(false);
+          const user = users.find(u => u.id === userId);
+          if (user) {
+            handleDelete(user);
+          }
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message={`Are you sure you want to delete ${userToDelete?.name}? This action will safely remove the user from the system while preserving data integrity.`}
+        confirmText="Delete User"
+        cancelText="Cancel"
+        type="danger"
+        loading={operationLoading === userToDelete?.id}
       />
     </div>
   );
@@ -523,5 +717,24 @@ export const UserManagement: React.FC = () => {
         <DesktopContent />
       </div>
     </>
+  );
+};
+
+export const UserManagement: React.FC = () => {
+  return (
+    <ErrorBoundary
+      context="User Management Module"
+      onError={(error, errorInfo) => {
+        console.error('🚨 [USER_MANAGEMENT] Component error:', {
+          error: error.message,
+          componentStack: errorInfo.componentStack,
+          timestamp: new Date().toISOString()
+        });
+      }}
+    >
+      <NotificationProvider>
+        <UserManagementContent />
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 };

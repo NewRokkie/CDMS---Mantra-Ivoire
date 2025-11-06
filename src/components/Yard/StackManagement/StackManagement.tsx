@@ -3,18 +3,21 @@ import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
+import { clientPoolService } from '../../../services/api';
 import { StackManagementHeader } from './StackManagementHeader';
 import { StackManagementFilters } from './StackManagementFilters';
 import { StackConfigurationTable } from './StackConfigurationTable';
 import { StackFormModal } from './StackFormModal';
 import { StackConfigurationRules } from './StackConfigurationRules';
 import { StackPairingInfo } from './StackPairingInfo';
+import { StackClientAssignmentModal } from './StackClientAssignmentModal';
 
 export const StackManagement: React.FC = () => {
   const [stacks, setStacks] = useState<YardStack[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStack, setSelectedStack] = useState<YardStack | null>(null);
   const [showStackForm, setShowStackForm] = useState(false);
+  const [showClientAssignment, setShowClientAssignment] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [sectionFilter, setSectionFilter] = useState('all');
@@ -88,6 +91,11 @@ export const StackManagement: React.FC = () => {
     setShowStackForm(true);
   };
 
+  const handleAssignClient = (stack: YardStack) => {
+    setSelectedStack(stack);
+    setShowClientAssignment(true);
+  };
+
   const handleDeleteStack = async (stackId: string) => {
     if (!confirm('Are you sure you want to delete this stack?')) {
       return;
@@ -157,6 +165,58 @@ export const StackManagement: React.FC = () => {
     }
   };
 
+  const handleClientAssignment = async (
+    stackId: string,
+    clientPoolId: string | null,
+    clientCode: string | null
+  ) => {
+    try {
+      // Update the stack's assigned client code
+      await stackService.update(stackId, {
+        assignedClientCode: clientCode || undefined
+      }, user?.id || '');
+
+      // Update local state
+      setStacks(prev => prev.map(stack =>
+        stack.id === stackId
+          ? { ...stack, assignedClientCode: clientCode || undefined }
+          : stack
+      ));
+
+      // If assigning to a client pool, update the client pool's assigned stacks
+      if (clientPoolId && clientCode) {
+        // Add stack to client pool if not already assigned
+        const clientPools = await clientPoolService.getAll(currentYard?.id);
+        const targetPool = clientPools.find(pool => pool.id === clientPoolId);
+
+        if (targetPool && !targetPool.assignedStacks.includes(stackId)) {
+          const updatedAssignedStacks = [...targetPool.assignedStacks, stackId];
+          await clientPoolService.update(clientPoolId, {
+            assignedStacks: updatedAssignedStacks
+          }, user?.id || '');
+        }
+      } else if (!clientPoolId && !clientCode) {
+        // If unassigning, remove from all client pools
+        const clientPools = await clientPoolService.getAll(currentYard?.id);
+        for (const pool of clientPools) {
+          if (pool.assignedStacks.includes(stackId)) {
+            const updatedAssignedStacks = pool.assignedStacks.filter(id => id !== stackId);
+            await clientPoolService.update(pool.id, {
+              assignedStacks: updatedAssignedStacks
+            }, user?.id || '');
+          }
+        }
+      }
+
+      setShowClientAssignment(false);
+      setSelectedStack(null);
+      alert(clientCode ? `Stack assigned to client ${clientCode} successfully!` : 'Stack unassigned from client pool successfully!');
+    } catch (error) {
+      console.error('Error assigning client to stack:', error);
+      alert('Error assigning client to stack: ' + (error as Error).message);
+    }
+  };
+
   const filteredStacks = stacks.filter(stack => {
     const matchesSearch = stack.stackNumber.toString().includes(searchTerm) ||
                          (stack.sectionName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -208,6 +268,7 @@ export const StackManagement: React.FC = () => {
             onEditStack={handleEditStack}
             onDeleteStack={handleDeleteStack}
             onContainerSizeChange={handleContainerSizeChange}
+            onAssignClient={handleAssignClient}
           />
         </div>
 
@@ -227,6 +288,19 @@ export const StackManagement: React.FC = () => {
           selectedStack={selectedStack}
           onSubmit={handleSaveStack}
           yard={currentYard}
+        />
+      )}
+
+      {showClientAssignment && currentYard && (
+        <StackClientAssignmentModal
+          isOpen={showClientAssignment}
+          onClose={() => {
+            setShowClientAssignment(false);
+            setSelectedStack(null);
+          }}
+          selectedStack={selectedStack}
+          onAssign={handleClientAssignment}
+          yardId={currentYard.id}
         />
       )}
 

@@ -1,7 +1,7 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { Yard, type YardContext } from '../types/yard';
 import { useAuth } from './useAuth';
-import type { Yard as ApiYard } from '../types';
+
 import { yardsService } from '../services/api/yardsService';
 
 interface YardContextType extends YardContext {
@@ -31,22 +31,7 @@ export const useYardProvider = () => {
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    console.log('useYardProvider useEffect triggered with user:', user?.id);
-    if (user !== null) {
-      initializeYardContext();
-    } else {
-      // Reset yard context if user is null - no yards accessible
-      setYardContext({
-        currentYard: null,
-        availableYards: [],
-        isLoading: false,
-        error: null
-      });
-    }
-  }, [user]);
-
-  const initializeYardContext = async () => {
+  const initializeYardContext = useCallback(async () => {
     console.log('DEBUG: initializeYardContext called');
     try {
       setYardContext(prev => ({ ...prev, isLoading: true, error: null }));
@@ -117,7 +102,22 @@ export const useYardProvider = () => {
         error: error instanceof Error ? error.message : 'Failed to load yards'
       }));
     }
-  };
+  }, [user?.yardAssignments]); // Add user yard assignments as dependency
+
+  useEffect(() => {
+    console.log('useYardProvider useEffect triggered with user:', user?.id);
+    if (user !== null) {
+      initializeYardContext();
+    } else {
+      // Reset yard context if user is null - no yards accessible
+      setYardContext({
+        currentYard: null,
+        availableYards: [],
+        isLoading: false,
+        error: null
+      });
+    }
+  }, [user?.id, initializeYardContext]); // Include the memoized function
 
   const setCurrentYard = async (yardId: string): Promise<boolean> => {
     console.log('DEBUG: setCurrentYard called with yardId:', yardId);

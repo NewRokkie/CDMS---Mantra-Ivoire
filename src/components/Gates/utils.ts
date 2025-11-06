@@ -3,19 +3,22 @@ import { ContainerValidation, GateInFormData } from './types';
 // ========== CONTAINER UTILITIES ==========
 
 /**
- * Validates container number format (4 letters + 7 numbers)
+ * Validates container number format with auto-capitalization (4 letters + 7 numbers)
  */
 export const validateContainerNumber = (containerNumber: string): ContainerValidation => {
   if (!containerNumber) {
     return { isValid: false, message: 'Container number is required' };
   }
 
-  if (containerNumber.length !== 11) {
-    return { isValid: false, message: `${containerNumber.length}/11 characters` };
+  // Auto-capitalize and clean the input
+  const cleanNumber = containerNumber.trim().toUpperCase();
+
+  if (cleanNumber.length !== 11) {
+    return { isValid: false, message: `${cleanNumber.length}/11 characters` };
   }
 
-  const letters = containerNumber.substring(0, 4);
-  const numbers = containerNumber.substring(4, 11);
+  const letters = cleanNumber.substring(0, 4);
+  const numbers = cleanNumber.substring(4, 11);
 
   if (!/^[A-Z]{4}$/.test(letters)) {
     return { isValid: false, message: 'First 4 must be letters' };
@@ -42,20 +45,36 @@ export const formatContainerNumberForDisplay = (containerNumber: string): string
 };
 
 /**
- * Gets container validation status for display in UI
+ * Auto-capitalizes container number input (letters only)
+ */
+export const formatContainerNumberInput = (containerNumber: string): string => {
+  if (!containerNumber) return '';
+  
+  // Auto-capitalize and clean the input
+  const cleaned = containerNumber.trim().toUpperCase();
+  
+  // Ensure we don't exceed 11 characters
+  return cleaned.substring(0, 11);
+};
+
+/**
+ * Gets container validation status for display in UI with auto-capitalization
  */
 export const getContainerValidationStatus = (containerNumber: string) => {
   if (!containerNumber) return { isValid: false, message: '' };
 
-  if (containerNumber.length !== 11) {
+  // Auto-capitalize and clean the input
+  const cleanNumber = containerNumber.trim().toUpperCase();
+
+  if (cleanNumber.length !== 11) {
     return {
       isValid: false,
-      message: `${containerNumber.length}/11 characters`
+      message: `${cleanNumber.length}/11 characters`
     };
   }
 
-  const letters = containerNumber.substring(0, 4);
-  const numbers = containerNumber.substring(4, 11);
+  const letters = cleanNumber.substring(0, 4);
+  const numbers = cleanNumber.substring(4, 11);
 
   if (!/^[A-Z]{4}$/.test(letters)) {
     return { isValid: false, message: 'First 4 must be letters' };
@@ -78,11 +97,23 @@ export const validateGateInStep = (step: number, formData: GateInFormData): bool
     case 1:
       const hasContainerNumber = formData.containerNumber.trim() !== '';
       const isValidFirstContainer = hasContainerNumber && validateContainerNumber(formData.containerNumber).isValid;
+      const hasContainerConfirmation = formData.containerNumberConfirmation.trim() !== '';
+      const isValidFirstConfirmation = hasContainerConfirmation && validateContainerNumber(formData.containerNumberConfirmation).isValid;
+      const isFirstContainerMatching = formData.containerNumber.trim().toUpperCase() === formData.containerNumberConfirmation.trim().toUpperCase();
+      
       const hasSecondContainer = formData.containerQuantity === 1 || formData.secondContainerNumber.trim() !== '';
       const isValidSecondContainer = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumber).isValid;
+      const hasSecondContainerConfirmation = formData.containerQuantity === 1 || formData.secondContainerNumberConfirmation.trim() !== '';
+      const isValidSecondConfirmation = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumberConfirmation).isValid;
+      const isSecondContainerMatching = formData.containerQuantity === 1 || 
+        (formData.secondContainerNumber.trim().toUpperCase() === formData.secondContainerNumberConfirmation.trim().toUpperCase());
+      
       const hasClient = formData.clientId !== '';
       const hasBookingRef = formData.status === 'EMPTY' || formData.bookingReference.trim() !== '';
-      return isValidFirstContainer && hasSecondContainer && isValidSecondContainer && hasClient && hasBookingRef;
+      
+      return isValidFirstContainer && hasContainerConfirmation && isValidFirstConfirmation && isFirstContainerMatching &&
+             hasSecondContainer && isValidSecondContainer && hasSecondContainerConfirmation && isValidSecondConfirmation && isSecondContainerMatching &&
+             hasClient && hasBookingRef;
     case 2:
       return formData.driverName !== '' && formData.truckNumber !== '' && formData.transportCompany !== '';
     default:

@@ -56,7 +56,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
     yard.sections.forEach((section, sectionIndex) => {
       const sectionColors = ['#3b82f6', '#f59e0b', '#10b981']; // Blue, Orange, Green
       const sectionColor = sectionColors[sectionIndex % sectionColors.length];
-      
+
       section.stacks.forEach((stack, stackIndex) => {
         // Calculate base position for this stack
         const baseX = 100 + (stackIndex * stackSpacing) + (sectionIndex * 400);
@@ -73,8 +73,8 @@ export const YardGrid: React.FC<YardGridProps> = ({
               const locationMatch = c.location.match(/Stack S(\d+)-Row (\d+)-Tier (\d+)/);
               if (locationMatch) {
                 const [, stackNum, rowNum, tierNum] = locationMatch;
-                return parseInt(stackNum) === stack.stackNumber && 
-                       parseInt(rowNum) === row && 
+                return parseInt(stackNum) === stack.stackNumber &&
+                       parseInt(rowNum) === row &&
                        parseInt(tierNum) === tier;
               }
               return false;
@@ -130,7 +130,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
       yard.sections.forEach((section, index) => {
         const sectionColors = ['rgba(59, 130, 246, 0.1)', 'rgba(245, 158, 11, 0.1)', 'rgba(16, 185, 129, 0.1)'];
         ctx.fillStyle = sectionColors[index % sectionColors.length];
-        
+
         // Calculate section bounds
         const sectionSlots = slots.filter(slot => slot.sectionId === section.id);
         if (sectionSlots.length > 0) {
@@ -138,9 +138,9 @@ export const YardGrid: React.FC<YardGridProps> = ({
           const maxX = Math.max(...sectionSlots.map(s => s.x + s.width)) + 20;
           const minY = Math.min(...sectionSlots.map(s => s.y)) - 20;
           const maxY = Math.max(...sectionSlots.map(s => s.y + s.height)) + 20;
-          
+
           ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
-          
+
           // Draw section label
           ctx.fillStyle = '#374151';
           ctx.font = 'bold 14px Inter';
@@ -154,16 +154,16 @@ export const YardGrid: React.FC<YardGridProps> = ({
       // Skip if zone filter is active and slot doesn't match
       if (selectedZone !== 'all') {
         const stackNumber = slot.stackNumber;
-        const inZone = 
+        const inZone =
           (selectedZone === 'top' && stackNumber <= 31) ||
           (selectedZone === 'center' && stackNumber > 31 && stackNumber <= 55) ||
           (selectedZone === 'bottom' && stackNumber > 55);
-        
+
         if (!inZone) return;
       }
 
       ctx.save();
-      
+
       // Rotate for angled appearance (15 degrees)
       ctx.translate(slot.x + slot.width / 2, slot.y + slot.height / 2);
       ctx.rotate(15 * Math.PI / 180);
@@ -221,7 +221,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
         ctx.font = `${Math.max(8, 10 * zoomLevel)}px Inter`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         const text = slot.container.number.slice(-4);
         ctx.fillText(text, slot.width / 2, slot.height / 2);
       }
@@ -272,7 +272,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
       const centerY = slot.y + slot.height / 2;
       const dx = adjustedX - centerX;
       const dy = adjustedY - centerY;
-      
+
       // Simple bounding box check (could be improved for exact rotated rectangle)
       return Math.abs(dx) < slot.width / 2 + 10 && Math.abs(dy) < slot.height / 2 + 10;
     });
@@ -314,7 +314,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
       const centerY = slot.y + slot.height / 2;
       const dx = adjustedX - centerX;
       const dy = adjustedY - centerY;
-      
+
       return Math.abs(dx) < slot.width / 2 + 10 && Math.abs(dy) < slot.height / 2 + 10;
     });
 
@@ -329,14 +329,14 @@ export const YardGrid: React.FC<YardGridProps> = ({
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     const newZoom = Math.max(0.5, Math.min(3, zoomLevel + delta));
-    
+
     // Zoom towards mouse position
     const canvas = canvasRef.current;
     if (canvas) {
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       const zoomFactor = newZoom / zoomLevel;
       setPanOffset(prev => ({
         x: mouseX - (mouseX - prev.x) * zoomFactor,
@@ -386,7 +386,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
         >
           <div className="font-bold">{hoveredSlot.container.number}</div>
           <div className="text-gray-300">
-            {hoveredSlot.container.client} • {hoveredSlot.container.type} • {hoveredSlot.container.size}
+            {hoveredSlot.container.clientName} • {hoveredSlot.container.type} • {hoveredSlot.container.size}
           </div>
           <div className="text-gray-400">
             Stack S{hoveredSlot.stackNumber.toString().padStart(2, '0')} • Row {hoveredSlot.row} • Tier {hoveredSlot.tier}

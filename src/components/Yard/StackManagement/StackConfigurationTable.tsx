@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Shield, CreditCard as Edit, Trash2 } from 'lucide-react';
+import { Settings, Shield, Edit, Trash2, Users } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
 
@@ -8,13 +8,15 @@ interface StackConfigurationTableProps {
   onEditStack: (stack: YardStack) => void;
   onDeleteStack: (stackId: string) => void;
   onContainerSizeChange?: (stackId: string, yardId: string, stackNumber: number, newSize: '20feet' | '40feet') => void;
+  onAssignClient?: (stack: YardStack) => void;
 }
 
 export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = ({
   stacks = [],
   onEditStack,
   onDeleteStack,
-  onContainerSizeChange
+  onContainerSizeChange,
+  onAssignClient
 }) => {
   const getAdjacentStackNumber = (stackNumber: number): number | null => {
     return stackService.getAdjacentStackNumber(stackNumber);
@@ -88,7 +90,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                           Stack {stack.stackNumber.toString().padStart(2, '0')}
                         </span>
                         {isSpecialStack && (
-                          <Shield className="h-4 w-4 text-purple-600" title="Special Stack - Cannot be paired" />
+                          <Shield className="h-4 w-4 text-purple-600" />
                         )}
                         {!isSpecialStack && adjacentStack && !adjacentIsSpecial && (
                           <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
@@ -184,6 +186,15 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center space-x-2">
+                      {onAssignClient && (
+                        <button
+                          onClick={() => onAssignClient(stack)}
+                          className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
+                          title="Assign to Client Pool"
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => onEditStack(stack)}
                         className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"

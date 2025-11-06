@@ -10,15 +10,24 @@ export interface GateInOperation {
   driverName: string;
   truckNumber?: string; // Changed from vehicleNumber to truckNumber
   bookingNumber?: string;
+  classification?: 'divers' | 'alimentaire';
   damageReported: boolean;
   damageDescription?: string;
+  // New damage assessment structure - now occurs at assignment stage
+  damageAssessment?: {
+    hasDamage: boolean;
+    damageType?: string;
+    damageDescription?: string;
+    assessmentStage: 'assignment' | 'inspection'; // Removed 'gate_in' - damage assessment now happens during assignment
+    assessedBy: string;
+    assessedAt: Date;
+  };
   sealNumbers?: string[];
   weight?: number;
   temperature?: number;
   assignedLocation?: string;
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   operationStatus?: 'pending' | 'in_process' | 'completed' | 'cancelled'; // For filtering compatibility
-  isDamaged?: boolean; // For filtering compatibility
   operatorId: string;
   operatorName: string;
   createdAt: Date;

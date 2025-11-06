@@ -5,6 +5,8 @@ import { auditService } from './auditService';
 import { eventBus } from '../eventBus';
 import { Container } from '../../types';
 import { GateInOperation, GateOutOperation } from '../../types/operations';
+import { RetryManager, GateInError, handleAsyncOperation } from '../errorHandling';
+import { ValidationService } from '../validationService';
 
 export interface GateInData {
   containerNumber: string;
@@ -19,8 +21,18 @@ export interface GateInData {
   operatorId: string;
   operatorName: string;
   yardId: string;
-  damageReported?: boolean;
+  classification?: 'divers' | 'alimentaire';
+  damageReported?: boolean; // Keep for backward compatibility during migration
   damageDescription?: string;
+  // New damage assessment structure - now defaults to assignment stage
+  damageAssessment?: {
+    hasDamage: boolean;
+    damageType?: string;
+    damageDescription?: string;
+    assessmentStage: 'assignment' | 'inspection'; // Removed 'gate_in' as it's no longer used
+    assessedBy: string;
+    assessedAt: Date;
+  };
 }
 
 export interface GateOutData {
@@ -35,31 +47,181 @@ export interface GateOutData {
 }
 
 export class GateService {
-  async processGateIn(data: GateInData): Promise<{ success: boolean; containerId?: string; error?: string }> {
-    try {
-      // Get client info
+  /**
+   * Enhanced Gate In processing with robust error handling and validation
+   */
+  async processGateIn(data: GateInData): Promise<{ success: boolean; containerId?: string; error?: string; userMessage?: string }> {
+    console.log('🚀 Starting Gate In processing with enhanced error handling');
+
+    return await RetryManager.executeWithRetry(async () => {
+      // Pre-validation checks
+      await this.validateGateInData(data);
+
+      // Get client info with enhanced error handling
+      const client = await this.getClientWithValidation(data.clientCode);
+
+      // Check for duplicate containers
+      await this.checkDuplicateContainer(data.containerNumber);
+
+      // Create container with transaction safety
+      const newContainer = await this.createContainerSafely(data, client);
+
+      // Create gate in operation
+      const operation = await this.createGateInOperation(data, client, newContainer);
+
+      // Create audit log
+      await this.createAuditLog(data, newContainer);
+
+      // Emit success event
+      await this.emitGateInCompletedEvent(newContainer, operation);
+
+      console.log('✅ Gate In processing completed successfully');
+      return { success: true, containerId: newContainer.id };
+
+    }, { maxAttempts: 3, baseDelay: 1000 })
+    .catch((error: GateInError) => {
+      console.error('❌ Gate In processing failed after retries:', error);
+
+      // Emit failure event
+      eventBus.emitSync('GATE_IN_FAILED', {
+        containerNumber: data.containerNumber,
+        error: error.userMessage || error.message
+      });
+
+      return {
+        success: false,
+        error: error.message,
+        userMessage: error.userMessage
+      };
+    });
+  }
+
+  /**
+   * Validates Gate In data before processing
+   */
+  private async validateGateInData(data: GateInData): Promise<void> {
+    console.log('🔍 Validating Gate In data');
+
+    // Basic required field validation
+    const requiredFields = [
+      'containerNumber', 'clientCode', 'containerType', 'containerSize',
+      'transportCompany', 'driverName', 'truckNumber', 'operatorId', 'yardId'
+    ];
+
+    for (const field of requiredFields) {
+      if (!data[field as keyof GateInData] || String(data[field as keyof GateInData]).trim() === '') {
+        throw new GateInError({
+          code: 'MISSING_REQUIRED_FIELD',
+          message: `Required field ${field} is missing`,
+          severity: 'error',
+          retryable: false,
+          userMessage: `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`
+        });
+      }
+    }
+
+    // Container number format validation
+    const containerValidation = ValidationService.validateContainerNumber(data.containerNumber);
+    if (!containerValidation.isValid) {
+      const firstError = containerValidation.errors[0];
+      throw new GateInError({
+        code: firstError.code,
+        message: firstError.message,
+        severity: 'error',
+        retryable: false,
+        userMessage: firstError.userMessage
+      });
+    }
+
+    // Container size validation
+    if (!['20ft', '40ft'].includes(data.containerSize)) {
+      throw new GateInError({
+        code: 'INVALID_CONTAINER_SIZE',
+        message: `Invalid container size: ${data.containerSize}`,
+        severity: 'error',
+        retryable: false,
+        userMessage: 'Container size must be either 20ft or 40ft'
+      });
+    }
+
+    console.log('✅ Gate In data validation passed');
+  }
+
+  /**
+   * Gets client with enhanced validation and error handling
+   */
+  private async getClientWithValidation(clientCode: string): Promise<any> {
+    console.log('🔍 Fetching client information');
+
+    const result = await handleAsyncOperation(async () => {
       const { data: client, error: clientError } = await supabase
         .from('clients')
         .select('*')
-        .eq('code', data.clientCode)
+        .eq('code', clientCode)
         .maybeSingle();
 
-      if (clientError) throw clientError;
+      if (clientError) {
+        throw clientError;
+      }
+
       if (!client) {
-        return { success: false, error: 'Client not found' };
+        throw new GateInError({
+          code: 'CLIENT_NOT_FOUND',
+          message: `Client with code ${clientCode} not found`,
+          severity: 'error',
+          retryable: false,
+          userMessage: `Client '${clientCode}' could not be found. Please verify the client code.`
+        });
       }
 
-      // Check if container already exists
+      return client;
+    }, 'getClient');
+
+    if (!result.success) {
+      throw result.error;
+    }
+
+    console.log('✅ Client information retrieved successfully');
+    return result.data;
+  }
+
+  /**
+   * Checks for duplicate containers in the system
+   */
+  private async checkDuplicateContainer(containerNumber: string): Promise<void> {
+    console.log('🔍 Checking for duplicate containers');
+
+    const result = await handleAsyncOperation(async () => {
       const existing = await containerService.getAll();
-      const existingContainer = existing.find(c => c.number === data.containerNumber);
+      return existing.find(c => c.number === containerNumber.trim().toUpperCase());
+    }, 'checkDuplicateContainer');
 
-      if (existingContainer) {
-        return { success: false, error: 'Container already exists in system' };
-      }
+    if (!result.success) {
+      throw result.error;
+    }
 
-      // Create container
-      const newContainer = await containerService.create({
-        number: data.containerNumber,
+    if (result.data) {
+      throw new GateInError({
+        code: 'DUPLICATE_CONTAINER',
+        message: `Container ${containerNumber} already exists in system`,
+        severity: 'error',
+        retryable: false,
+        userMessage: `Container ${containerNumber} is already registered in the system`
+      });
+    }
+
+    console.log('✅ No duplicate containers found');
+  }
+
+  /**
+   * Creates container with transaction safety
+   */
+  private async createContainerSafely(data: GateInData, client: any): Promise<any> {
+    console.log('🔧 Creating container record');
+
+    const result = await handleAsyncOperation(async () => {
+      return await containerService.create({
+        number: data.containerNumber.trim().toUpperCase(),
         type: data.containerType as any,
         size: data.containerSize as any,
         status: 'in_depot',
@@ -70,18 +232,34 @@ export class GateService {
         clientCode: client.code,
         gateInDate: new Date(),
         weight: data.weight,
-        damage: data.damageReported && data.damageDescription
-          ? [data.damageDescription]
-          : [],
+        classification: data.classification || 'divers',
+        damage: data.damageAssessment?.hasDamage && data.damageAssessment.damageDescription
+          ? [data.damageAssessment.damageDescription]
+          : (data.damageReported && data.damageDescription ? [data.damageDescription] : []),
         createdBy: data.operatorName
       } as any);
+    }, 'createContainer');
 
-      // Create gate in operation
+    if (!result.success) {
+      throw result.error;
+    }
+
+    console.log('✅ Container record created successfully');
+    return result.data;
+  }
+
+  /**
+   * Creates Gate In operation record
+   */
+  private async createGateInOperation(data: GateInData, client: any, container: any): Promise<any> {
+    console.log('🔧 Creating Gate In operation record');
+
+    const result = await handleAsyncOperation(async () => {
       const { data: operation, error: opError } = await supabase
         .from('gate_in_operations')
         .insert({
-          container_id: newContainer.id,
-          container_number: data.containerNumber,
+          container_id: container.id,
+          container_number: data.containerNumber.trim().toUpperCase(),
           client_code: data.clientCode,
           client_name: client.name,
           container_type: data.containerType,
@@ -90,8 +268,13 @@ export class GateService {
           driver_name: data.driverName,
           vehicle_number: data.truckNumber,
           assigned_location: null,
-          damage_reported: data.damageReported || false,
-          damage_description: data.damageDescription,
+          classification: data.classification || 'divers',
+          damage_reported: data.damageAssessment?.hasDamage || data.damageReported || false,
+          damage_description: data.damageAssessment?.damageDescription || data.damageDescription,
+          damage_assessment_stage: data.damageAssessment?.assessmentStage || 'assignment',
+          damage_assessed_by: data.damageAssessment?.assessedBy,
+          damage_assessed_at: data.damageAssessment?.assessedAt?.toISOString(),
+          damage_type: data.damageAssessment?.damageType,
           weight: data.weight,
           status: 'pending',
           operator_id: data.operatorId,
@@ -103,38 +286,59 @@ export class GateService {
         .select()
         .single();
 
-      if (opError) throw opError;
+      if (opError) {
+        throw opError;
+      }
 
-      // Create audit log
+      return operation;
+    }, 'createGateInOperation');
+
+    if (!result.success) {
+      throw result.error;
+    }
+
+    console.log('✅ Gate In operation record created successfully');
+    return result.data;
+  }
+
+  /**
+   * Creates audit log entry
+   */
+  private async createAuditLog(data: GateInData, container: any): Promise<void> {
+    console.log('📝 Creating audit log entry');
+
+    try {
       await auditService.log({
         entityType: 'container',
-        entityId: newContainer.id,
+        entityId: container.id,
         action: 'create',
-        changes: { created: newContainer },
+        changes: { created: container },
         userId: data.operatorId,
         userName: data.operatorName
       });
+      console.log('✅ Audit log entry created successfully');
+    } catch (error) {
+      // Audit log failure shouldn't fail the entire operation
+      console.warn('⚠️ Failed to create audit log entry:', error);
+    }
+  }
 
-      // Map operation data to GateInOperation type
+  /**
+   * Emits Gate In completed event
+   */
+  private async emitGateInCompletedEvent(container: any, operation: any): Promise<void> {
+    console.log('📡 Emitting Gate In completed event');
+
+    try {
       const mappedOperation = this.mapToGateInOperation(operation);
-
-      // Emit GATE_IN_COMPLETED event
       await eventBus.emit('GATE_IN_COMPLETED', {
-        container: newContainer,
+        container: container,
         operation: mappedOperation
       });
-
-      return { success: true, containerId: newContainer.id };
-    } catch (error: any) {
-      console.error('Gate in error:', error);
-
-      // Emit GATE_IN_FAILED event
-      eventBus.emitSync('GATE_IN_FAILED', {
-        containerNumber: data.containerNumber,
-        error: error.message || 'Failed to process gate in'
-      });
-
-      return { success: false, error: error.message || 'Failed to process gate in' };
+      console.log('✅ Gate In completed event emitted successfully');
+    } catch (error) {
+      // Event emission failure shouldn't fail the entire operation
+      console.warn('⚠️ Failed to emit Gate In completed event:', error);
     }
   }
 
@@ -403,7 +607,7 @@ export class GateService {
       const remainingCount = currentOp.total_containers - processedCount;
       const newStatus = remainingCount === 0 ? 'completed' : 'in_process';
 
-      const { data: updated, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('gate_out_operations')
         .update({
           processed_containers: processedCount,
@@ -476,12 +680,20 @@ export class GateService {
       driverName: data.driver_name,
       truckNumber: data.vehicle_number, // Fix: map vehicle_number to truckNumber
       assignedLocation: data.assigned_location,
+      classification: data.classification || 'autres',
       damageReported: data.damage_reported,
       damageDescription: data.damage_description,
+      damageAssessment: data.damage_assessment_stage ? {
+        hasDamage: data.damage_reported || false,
+        damageType: data.damage_type,
+        damageDescription: data.damage_description,
+        assessmentStage: data.damage_assessment_stage as 'assignment' | 'inspection',
+        assessedBy: data.damage_assessed_by || 'Unknown',
+        assessedAt: data.damage_assessed_at ? new Date(data.damage_assessed_at) : new Date()
+      } : undefined,
       weight: data.weight,
       status: data.status,
       operationStatus: data.completed_at ? 'completed' : 'pending', // Map status based on completion
-      isDamaged: data.damage_reported || false, // Map damage_reported to isDamaged for filtering
       operatorId: data.operator_id,
       operatorName: data.operator_name,
       yardId: data.yard_id,

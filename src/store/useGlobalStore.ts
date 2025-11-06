@@ -65,6 +65,14 @@ interface GlobalStore {
     yardId: string;
     damageReported?: boolean;
     damageDescription?: string;
+    damageAssessment?: {
+      hasDamage: boolean;
+      damageType?: string;
+      damageDescription?: string;
+      assessmentStage: 'assignment' | 'inspection'; // Updated to reflect new workflow
+      assessedBy: string;
+      assessedAt: Date;
+    };
   }) => { success: boolean; containerId?: string; error?: string };
 
   processGateOut: (data: {
@@ -384,9 +392,9 @@ export const useGlobalStore = create<GlobalStore>()(
             createdBy: data.operatorName,
             createdAt: new Date(),
             updatedAt: new Date(),
-            damage: data.damageReported && data.damageDescription
-              ? [data.damageDescription]
-              : undefined
+            damage: data.damageAssessment?.hasDamage && data.damageAssessment.damageDescription
+              ? [data.damageAssessment.damageDescription]
+              : (data.damageReported && data.damageDescription ? [data.damageDescription] : undefined)
           };
 
           const gateInOperation: GateInOperation = {
@@ -401,8 +409,9 @@ export const useGlobalStore = create<GlobalStore>()(
             driverName: data.driverName,
             vehicleNumber: data.vehicleNumber,
             assignedLocation: data.location,
-            damageReported: data.damageReported || false,
-            damageDescription: data.damageDescription,
+            damageReported: data.damageAssessment?.hasDamage || data.damageReported || false,
+            damageDescription: data.damageAssessment?.damageDescription || data.damageDescription,
+            damageAssessment: data.damageAssessment,
             weight: data.weight,
             status: 'completed',
             operatorId: data.operatorId,

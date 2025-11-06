@@ -19,7 +19,7 @@ interface Operation {
   assignedLocation?: string;
   bookingReference?: string;
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
-  isDamaged: boolean;
+  classification?: 'divers' | 'alimentaire';
   completedAt?: Date;
 }
 
@@ -58,8 +58,11 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
         case 'completed':
           filtered = filtered.filter(op => op.status === 'completed');
           break;
-        case 'damaged':
-          filtered = filtered.filter(op => op.isDamaged);
+        case 'alimentaire':
+          filtered = filtered.filter(op => op.classification === 'alimentaire');
+          break;
+        case 'divers':
+          filtered = filtered.filter(op => op.classification === 'divers');
           break;
       }
     }
@@ -177,9 +180,14 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-wrap items-center gap-2">
                       {getStatusBadge(operation.status)}
-                      {operation.isDamaged && (
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                          Damaged
+                      {operation.classification === 'alimentaire' && (
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                          Alimentaire
+                        </span>
+                      )}
+                      {operation.classification === 'divers' && (
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          Divers
                         </span>
                       )}
                     </div>
@@ -226,10 +234,10 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {getStatusBadge(operation.status)}
-                      {operation.isDamaged && (
-                        <span className="flex items-center px-2.5 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                      {operation.classification === 'alimentaire' && (
+                        <span className="flex items-center px-2.5 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
                           <AlertTriangle className="h-3 w-3 mr-1" />
-                          Damaged
+                          Alimentaire
                         </span>
                       )}
                     </div>

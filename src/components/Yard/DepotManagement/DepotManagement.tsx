@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Building, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, TrendingUp, MapPin, Users, Clock, X, Loader, Calendar } from 'lucide-react';
-import { Yard } from '../../types';
-import { useAuth } from '../../hooks/useAuth';
-import { useYard } from '../../hooks/useYard';
-import { yardsService } from '../../services/api/yardsService';
+import { Building, Package, Plus, Search, Filter, Pencil as Edit, Trash2, Eye, AlertTriangle, CheckCircle, TrendingUp, MapPin, Users, Clock, X, Loader, Calendar } from 'lucide-react';
+import { Yard } from '../../../types';
+import { useAuth } from '../../../hooks/useAuth';
+import { useYard } from '../../../hooks/useYard';
+import { yardsService } from '../../../services/api/yardsService';
 import { DepotFormModal } from './DepotFormModal';
 import { DepotDetailModal } from './DepotDetailModal';
 import { DepotAssignmentModal } from './DepotAssignmentModal';
-import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
+import { DesktopOnlyMessage } from '../../Common/DesktopOnlyMessage';
 
 export const DepotManagement: React.FC = () => {
   const [depots, setDepots] = useState<Yard[]>([]);
@@ -23,7 +23,14 @@ export const DepotManagement: React.FC = () => {
   const { user } = useAuth();
   const { currentYard, refreshYards } = useYard();
 
-  // Mock stats for depots
+  useEffect(() => {
+    console.log('DepotManagement: showForm state changed to', showForm);
+  }, [showForm]);
+
+  useEffect(() => {
+    console.log('DepotManagement: selectedDepot state changed to', selectedDepot?.id);
+  }, [selectedDepot]);
+
   const [stats, setStats] = useState({
     totalDepots: 0,
     activeDepots: 0,
@@ -40,9 +47,7 @@ export const DepotManagement: React.FC = () => {
   const loadDepots = async () => {
     try {
       setIsLoading(true);
-      console.log('DepotManagement: Starting to load depots from yardsService');
       const availableDepots = await yardsService.getAll();
-      console.log('DepotManagement: Depots loaded successfully:', availableDepots);
 
       setDepots(availableDepots);
 
@@ -95,40 +100,52 @@ export const DepotManagement: React.FC = () => {
   };
 
   const handleCreateDepot = async (data: any) => {
+    console.log('DepotManagement: handleCreateDepot called with data:', data);
     try {
       setIsFormLoading(true);
       const newDepot = await yardsService.create(data, user?.id || 'unknown');
+      console.log('DepotManagement: Depot created successfully:', newDepot);
       await loadDepots();
       await refreshYards(); // Refresh yard context
       setShowForm(false);
       setSelectedDepot(null);
-      alert(`Depot "${newDepot.name}" created successfully!`);
+      // Success feedback is now handled in the modal
     } catch (error) {
-      alert(`Error creating depot: ${error}`);
+      console.error('DepotManagement: Error creating depot:', error);
+      throw error; // Let the modal handle error display
     } finally {
       setIsFormLoading(false);
+      console.log('DepotManagement: handleCreateDepot finished');
     }
   };
 
   const handleUpdateDepot = async (data: any) => {
-    if (!selectedDepot) return;
+    console.log('DepotManagement: handleUpdateDepot called with data:', data, 'for depot:', selectedDepot?.id);
+    if (!selectedDepot) {
+      console.log('DepotManagement: No selectedDepot for update');
+      return;
+    }
 
     try {
       setIsFormLoading(true);
       const updatedDepot = await yardsService.update(selectedDepot.id, data, user?.id || 'unknown');
       if (updatedDepot) {
+        console.log('DepotManagement: Depot updated successfully:', updatedDepot);
         await loadDepots();
         await refreshYards(); // Refresh yard context
+        // Fermer le modal immédiatement après la mise à jour réussie
         setShowForm(false);
         setSelectedDepot(null);
-        alert(`Depot "${updatedDepot.name}" updated successfully!`);
       } else {
-        alert('Error updating depot: Depot not found');
+        console.error('DepotManagement: Depot not found for update');
+        throw new Error('Depot not found');
       }
     } catch (error) {
-      alert(`Error updating depot: ${error}`);
+      console.error('DepotManagement: Error updating depot:', error);
+      throw error; // Laisser le modal gérer l'affichage de l'erreur
     } finally {
       setIsFormLoading(false);
+      console.log('DepotManagement: handleUpdateDepot finished');
     }
   };
 
@@ -178,7 +195,7 @@ export const DepotManagement: React.FC = () => {
       // This callback is just for UI feedback
       console.log(`Assigned users ${userIds.join(', ')} to depot ${selectedDepot.name}`);
 
-      alert(`Successfully assigned ${userIds.length} user(s) to ${selectedDepot.name}`);
+      alert(`Attribution réussie de ${userIds.length} utilisateur(s) au dépôt ${selectedDepot.name}`);
       setShowAssignment(false);
       setSelectedDepot(null);
     } catch (error) {
@@ -188,11 +205,11 @@ export const DepotManagement: React.FC = () => {
     }
   };
 
-  const handleFormSubmit = (data: any) => {
+  const handleFormSubmit = async (data: any) => {
     if (selectedDepot) {
-      handleUpdateDepot(data);
+      await handleUpdateDepot(data);
     } else {
-      handleCreateDepot(data);
+      await handleCreateDepot(data);
     }
   };
 
@@ -216,8 +233,8 @@ export const DepotManagement: React.FC = () => {
   }
 
   const DesktopContent = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Depot Management</h2>
           <p className="text-gray-600">Manage container depots and their configurations</p>
@@ -235,7 +252,7 @@ export const DepotManagement: React.FC = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -286,7 +303,7 @@ export const DepotManagement: React.FC = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -319,7 +336,7 @@ export const DepotManagement: React.FC = () => {
       </div>
 
       {/* Depots Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Depot Overview</h3>
         </div>
@@ -352,7 +369,10 @@ export const DepotManagement: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredDepots.map((depot) => {
-                const utilizationRate = (depot.currentOccupancy / depot.totalCapacity) * 100;
+
+                const utilizationRate = depot.totalCapacity === 0
+                    ? 0
+                    : (depot.currentOccupancy / depot.totalCapacity) * 100;
 
                 return (
                   <tr key={depot.id} className="hover:bg-gray-50 transition-colors">
