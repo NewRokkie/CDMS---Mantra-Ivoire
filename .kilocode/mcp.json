@@ -8,7 +8,9 @@
       ],
       "env": {
         "DEFAULT_MINIMUM_TOKENS": ""
-      }
+      },
+      "disabled": true,
+      "alwaysAllow": []
     },
     "filesystem": {
       "command": "npx",
@@ -16,7 +18,9 @@
         "-y",
         "@modelcontextprotocol/server-filesystem",
         "/Users/habib.sayegh/Downloads/Dev Project/CDMS"
-      ]
+      ],
+      "disabled": true,
+      "alwaysAllow": []
     },
     "sequentialthinking": {
       "command": "npx",
@@ -24,7 +28,8 @@
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
       ],
-      "alwaysAllow": []
+      "alwaysAllow": [],
+      "disabled": true
     }
   }
 }

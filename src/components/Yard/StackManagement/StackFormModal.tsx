@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader, Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings } from 'lucide-react';
+import { Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings } from 'lucide-react';
 import { Yard, YardStack } from '../../../types';
 import { yardsService } from '../../../services/api/yardsService';
+import { FormModal } from '../../Common/Modal/FormModal';
 
 interface StackFormModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     maxTiers: 5,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [autoSaving, setAutoSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Initialize form data
   useEffect(() => {
@@ -101,21 +102,26 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   const validateForm = () => {
     console.log('StackFormModal: Validating form data', formData);
     const newErrors: Record<string, string> = {};
+    const newValidationErrors: string[] = [];
 
     if (formData.stackNumber <= 0) {
       newErrors.stackNumber = 'Stack number must be greater than 0';
+      newValidationErrors.push('Stack number must be greater than 0');
     }
 
     if (!formData.sectionId) {
       newErrors.sectionId = 'Section is required';
+      newValidationErrors.push('Section is required');
     }
 
     if (formData.rows <= 0 || formData.rows > 10) {
       newErrors.rows = 'Rows must be between 1 and 10';
+      newValidationErrors.push('Rows must be between 1 and 10');
     }
 
-    if (formData.maxTiers <= 0 || formData.maxTiers > 8) {
+    if (formData.maxTiers <= 0 || formData.maxTiers > 5) {
       newErrors.maxTiers = 'Max tiers must be between 1 and 8';
+      newValidationErrors.push('Max tiers must be between 1 and 8');
     }
 
     // Auto-adjust rows and tiers based on container size
@@ -130,14 +136,16 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     // Special stacks can only be 20ft
     if (formData.stackType === 'special' && formData.containerSize === '40ft') {
       newErrors.containerSize = 'Special stacks can only accommodate 20ft containers';
+      newValidationErrors.push('Special stacks can only accommodate 20ft containers');
     }
 
     console.log('StackFormModal: Validation errors', newErrors);
     setErrors(newErrors);
+    setValidationErrors(newValidationErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: any, triggerAutoSave?: () => void) => {
     console.log('StackFormModal: Input change', field, value);
     setFormData(prev => ({
       ...prev,
@@ -187,21 +195,18 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
-    triggerAutoSave();
+    // Trigger auto-save if function is provided
+    if (triggerAutoSave) {
+      triggerAutoSave();
+    }
   };
 
-  const triggerAutoSave = () => {
-    setAutoSaving(true);
-    setTimeout(() => setAutoSaving(false), 1000);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     console.log('StackFormModal: Handling submit', formData);
 
     if (!validateForm()) {
       console.log('StackFormModal: Form validation failed');
-      return;
+      throw new Error('Form validation failed');
     }
 
     // Transform form data to match YardStack type
@@ -251,431 +256,377 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     };
   };
 
+  // Validate form on data changes
+  useEffect(() => {
+    validateForm();
+  }, [formData]);
+
   const suggestions = getLayoutSuggestions();
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      title={selectedStack ? 'Edit Stack' : 'Create New Stack'}
+      subtitle={`${yard?.name || 'Yard'} ${yard?.code ? `(${yard.code})` : ''} ${yard?.layout ? `- ${yard.layout} layout` : ''}`}
+      icon={Package}
+      size="lg"
+      submitLabel={selectedStack ? 'Update Stack' : 'Create Stack'}
+      isSubmitting={isLoading}
+      validationErrors={validationErrors}
+      autoSave={true}
+    >
+      <div className="depot-step-spacing">
+        {/* Layout Guidelines */}
+        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+          <h4 className="depot-section-header">
+            <Grid3X3 className="depot-section-icon text-blue-500" />
+            {yard?.layout === 'tantarelli' ? 'Tantarelli' : 'Yirima'} Layout Guidelines
+          </h4>
+          <div className="text-sm text-blue-800 space-y-1">
+            <div><strong>Stack Numbers:</strong> {suggestions.stackNumbers}</div>
+            <div><strong>Dimensions:</strong> {suggestions.dimensions}</div>
+            <div><strong>Positioning:</strong> {suggestions.positioning}</div>
+          </div>
+        </div>
 
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-green-600 text-white rounded-lg">
-                <Package className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  {selectedStack ? 'Edit Stack' : 'Create New Stack'}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {yard?.name || 'Yard'} {yard?.code ? `(${yard.code})` : ''} {yard?.layout ? `- ${yard.layout} layout` : ''}
+        {/* Basic Stack Information */}
+        <div className="depot-section">
+          <h4 className="depot-section-header">
+            <Package className="depot-section-icon text-blue-500" />
+            Stack Information
+          </h4>
+
+          <div className="depot-form-grid">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Stack Number *
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                max="999"
+                value={formData.stackNumber || ''}
+                onChange={(e) => handleInputChange('stackNumber', parseInt(e.target.value) || 0)}
+                className={`depot-input ${errors.stackNumber ? 'error' : ''}`}
+                placeholder="Enter stack number"
+                disabled={!!selectedStack} // Don't allow changing stack number when editing
+              />
+              {errors.stackNumber && <p className="mt-1 text-sm text-red-600">{errors.stackNumber}</p>}
+              {yard?.layout === 'tantarelli' && !selectedStack && (
+                <p className="mt-1 text-xs text-blue-600">
+                  Suggested: {yard?.id && formData.sectionId ? yardsService.getNextStackNumber(yard.id, formData.sectionId) : 'N/A'}
                 </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              {autoSaving && (
-                <div className="flex items-center space-x-2 text-green-600">
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span className="text-xs">Auto-saving...</span>
-                </div>
               )}
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-white/50 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Section *
+              </label>
+              {selectedStack ? (
+                <div className="form-input w-full bg-gray-100 text-gray-700 cursor-not-allowed">
+                  {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
+                </div>
+              ) : (
+                <select
+                  required
+                  value={formData.sectionId}
+                  onChange={(e) => {
+                    handleInputChange('sectionId', e.target.value);
+                    // Update suggested stack number when section changes
+                    if (e.target.value && yard?.id) {
+                      try {
+                        const suggested = yardsService.getNextStackNumber(yard.id, e.target.value);
+                        handleInputChange('stackNumber', suggested);
+                        console.log('StackFormModal: Updated stack number to', suggested);
+                      } catch (error) {
+                        console.error('StackFormModal: Error updating stack number', error);
+                      }
+                    }
+                  }}
+                  className={`depot-select ${errors.sectionId ? 'error' : ''}`}
+                >
+                  <option value="">Select section</option>
+                  {yard?.sections?.map(section => (
+                    <option key={section.id} value={section.id}>
+                      {section.name} ({section.stacks.length} stacks)
+                    </option>
+                  )) || (
+                    <option value="" disabled>No sections available</option>
+                  )}
+                </select>
+              )}
+              {errors.sectionId && <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>}
+              {selectedStack && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Section cannot be changed when editing an existing stack
+                </p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Modal Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Container Size Selection */}
+        <div className="depot-section">
+          <h4 className="depot-section-header">
+            <Package className="depot-section-icon text-green-500" />
+            Container Size Configuration
+          </h4>
 
-            {/* Layout Guidelines */}
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
-                <Grid3X3 className="h-5 w-5 mr-2" />
-                {yard?.layout === 'tantarelli' ? 'Tantarelli' : 'Yirima'} Layout Guidelines
-              </h4>
-              <div className="text-sm text-blue-800 space-y-1">
-                <div><strong>Stack Numbers:</strong> {suggestions.stackNumbers}</div>
-                <div><strong>Dimensions:</strong> {suggestions.dimensions}</div>
-                <div><strong>Positioning:</strong> {suggestions.positioning}</div>
-              </div>
-            </div>
-
-            {/* Basic Stack Information */}
-            <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
-                <Package className="h-5 w-5 mr-2" />
-                Stack Information
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-blue-800 mb-2">
-                    Stack Number *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max="999"
-                    value={formData.stackNumber || ''}
-                    onChange={(e) => handleInputChange('stackNumber', parseInt(e.target.value) || 0)}
-                    className={`form-input w-full ${errors.stackNumber ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                    placeholder="Enter stack number"
-                    disabled={!!selectedStack} // Don't allow changing stack number when editing
-                  />
-                  {errors.stackNumber && <p className="mt-1 text-sm text-red-600">{errors.stackNumber}</p>}
-                  {yard?.layout === 'tantarelli' && !selectedStack && (
-                    <p className="mt-1 text-xs text-blue-600">
-                      Suggested: {yard?.id && formData.sectionId ? yardsService.getNextStackNumber(yard.id, formData.sectionId) : 'N/A'}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-blue-800 mb-2">
-                    Section *
-                  </label>
-                  {selectedStack ? (
-                    <div className="form-input w-full bg-gray-100 text-gray-700 cursor-not-allowed">
-                      {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Container Size *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('containerSize', '20ft')}
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                    formData.containerSize === '20ft'
+                      ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">📦</div>
+                    <div className="font-bold text-lg text-gray-900">20ft</div>
+                    <div className="text-sm text-gray-600 mt-1">Standard Size</div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      {getContainerSizeDescription('20ft')}
                     </div>
-                  ) : (
-                    <select
-                      required
-                      value={formData.sectionId}
-                      onChange={(e) => {
-                        handleInputChange('sectionId', e.target.value);
-                        // Update suggested stack number when section changes
-                        if (e.target.value && yard?.id) {
-                          try {
-                            const suggested = yardsService.getNextStackNumber(yard.id, e.target.value);
-                            handleInputChange('stackNumber', suggested);
-                            console.log('StackFormModal: Updated stack number to', suggested);
-                          } catch (error) {
-                            console.error('StackFormModal: Error updating stack number', error);
-                          }
-                        }
-                      }}
-                      className={`form-input w-full ${errors.sectionId ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                    >
-                      <option value="">Select section</option>
-                      {yard?.sections?.map(section => (
-                        <option key={section.id} value={section.id}>
-                          {section.name} ({section.stacks.length} stacks)
-                        </option>
-                      )) || (
-                        <option value="" disabled>No sections available</option>
-                      )}
-                    </select>
+                  </div>
+                  {formData.containerSize === '20ft' && (
+                    <div className="mt-3 flex justify-center">
+                      <div className="bg-blue-500 text-white rounded-full p-1">
+                        <Package className="h-3 w-3" />
+                      </div>
+                    </div>
                   )}
-                  {errors.sectionId && <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>}
-                  {selectedStack && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      Section cannot be changed when editing an existing stack
-                    </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('containerSize', '40ft')}
+                  disabled={formData.stackType === 'special'}
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                    formData.containerSize === '40ft'
+                      ? 'border-orange-500 bg-orange-50 shadow-lg shadow-orange-500/20'
+                      : formData.stackType === 'special'
+                      ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
+                      : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">📦📦</div>
+                    <div className="font-bold text-lg text-gray-900">40ft</div>
+                    <div className="text-sm text-gray-600 mt-1">High Capacity</div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      {getContainerSizeDescription('40ft')}
+                    </div>
+                  </div>
+                  {formData.containerSize === '40ft' && (
+                    <div className="mt-3 flex justify-center">
+                      <div className="bg-orange-500 text-white rounded-full p-1">
+                        <Package className="h-3 w-3" />
+                      </div>
+                    </div>
                   )}
-                </div>
+                </button>
               </div>
+              {formData.stackType === 'special' && (
+                <p className="mt-2 text-xs text-gray-600">
+                  Special stacks are limited to 20ft containers only
+                </p>
+              )}
             </div>
+          </div>
+        </div>
 
-            {/* Container Size Selection */}
-            <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-              <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
-                <Package className="h-5 w-5 mr-2" />
-                Container Size Configuration
-              </h4>
+        {/* Stack Type Selection */}
+        <div className="depot-section">
+          <h4 className="depot-section-header">
+            <Shield className="depot-section-icon text-blue-500" />
+            Stack Type Configuration
+          </h4>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-purple-800 mb-3">
-                    Container Size *
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange('containerSize', '20ft')}
-                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                        formData.containerSize === '20ft'
-                          ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-3xl mb-2">📦</div>
-                        <div className="font-bold text-lg text-gray-900">20ft</div>
-                        <div className="text-sm text-gray-600 mt-1">Standard Size</div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          {getContainerSizeDescription('20ft')}
-                        </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Stack Type *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('stackType', 'regular')}
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                    formData.stackType === 'regular'
+                      ? 'border-green-500 bg-green-50 shadow-lg shadow-green-500/20'
+                      : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">⚙️</div>
+                    <div className="font-bold text-lg text-gray-900">Regular</div>
+                    <div className="text-sm text-gray-600 mt-1">Standard Operations</div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      {getStackTypeDescription('regular')}
+                    </div>
+                  </div>
+                  {formData.stackType === 'regular' && (
+                    <div className="mt-3 flex justify-center">
+                      <div className="bg-green-500 text-white rounded-full p-1">
+                        <Settings className="h-3 w-3" />
                       </div>
-                      {formData.containerSize === '20ft' && (
-                        <div className="mt-3 flex justify-center">
-                          <div className="bg-blue-500 text-white rounded-full p-1">
-                            <Package className="h-3 w-3" />
-                          </div>
-                        </div>
-                      )}
-                    </button>
+                    </div>
+                  )}
+                </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange('containerSize', '40ft')}
-                      disabled={formData.stackType === 'special'}
-                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                        formData.containerSize === '40ft'
-                          ? 'border-orange-500 bg-orange-50 shadow-lg shadow-orange-500/20'
-                          : formData.stackType === 'special'
-                          ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
-                          : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-3xl mb-2">📦📦</div>
-                        <div className="font-bold text-lg text-gray-900">40ft</div>
-                        <div className="text-sm text-gray-600 mt-1">High Capacity</div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          {getContainerSizeDescription('40ft')}
-                        </div>
-                      </div>
-                      {formData.containerSize === '40ft' && (
-                        <div className="mt-3 flex justify-center">
-                          <div className="bg-orange-500 text-white rounded-full p-1">
-                            <Package className="h-3 w-3" />
-                          </div>
-                        </div>
-                      )}
-                    </button>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('stackType', 'special')}
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
+                    formData.stackType === 'special'
+                      ? 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-500/20'
+                      : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">🛡️</div>
+                    <div className="font-bold text-lg text-gray-900">Special</div>
+                    <div className="text-sm text-gray-600 mt-1">Limited Operations</div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      {getStackTypeDescription('special')}
+                    </div>
                   </div>
                   {formData.stackType === 'special' && (
-                    <p className="mt-2 text-xs text-purple-600">
-                      Special stacks are limited to 20ft containers only
-                    </p>
+                    <div className="mt-3 flex justify-center">
+                      <div className="bg-purple-500 text-white rounded-full p-1">
+                        <Shield className="h-3 w-3" />
+                      </div>
+                    </div>
                   )}
-                </div>
+                </button>
               </div>
             </div>
-
-            {/* Stack Type Selection */}
-            <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-              <h4 className="font-semibold text-green-900 mb-4 flex items-center">
-                <Shield className="h-5 w-5 mr-2" />
-                Stack Type Configuration
-              </h4>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-green-800 mb-3">
-                    Stack Type *
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange('stackType', 'regular')}
-                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                        formData.stackType === 'regular'
-                          ? 'border-green-500 bg-green-50 shadow-lg shadow-green-500/20'
-                          : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-3xl mb-2">⚙️</div>
-                        <div className="font-bold text-lg text-gray-900">Regular</div>
-                        <div className="text-sm text-gray-600 mt-1">Standard Operations</div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          {getStackTypeDescription('regular')}
-                        </div>
-                      </div>
-                      {formData.stackType === 'regular' && (
-                        <div className="mt-3 flex justify-center">
-                          <div className="bg-green-500 text-white rounded-full p-1">
-                            <Settings className="h-3 w-3" />
-                          </div>
-                        </div>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange('stackType', 'special')}
-                      className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                        formData.stackType === 'special'
-                          ? 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-500/20'
-                          : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-3xl mb-2">🛡️</div>
-                        <div className="font-bold text-lg text-gray-900">Special</div>
-                        <div className="text-sm text-gray-600 mt-1">Limited Operations</div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          {getStackTypeDescription('special')}
-                        </div>
-                      </div>
-                      {formData.stackType === 'special' && (
-                        <div className="mt-3 flex justify-center">
-                          <div className="bg-purple-500 text-white rounded-full p-1">
-                            <Shield className="h-3 w-3" />
-                          </div>
-                        </div>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Capacity Configuration */}
-            <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
-              <h4 className="font-semibold text-orange-900 mb-4 flex items-center">
-                <Grid3X3 className="h-5 w-5 mr-2" />
-                Capacity Configuration
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                <div>
-                  <label className="block text-sm font-medium text-orange-800 mb-2">
-                    Rows *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max="10"
-                    value={formData.rows}
-                    onChange={(e) => handleInputChange('rows', parseInt(e.target.value) || 1)}
-                    className={`form-input w-full ${errors.rows ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                    placeholder="4"
-                  />
-                  {errors.rows && <p className="mt-1 text-sm text-red-600">{errors.rows}</p>}
-                  <p className="mt-1 text-xs text-orange-600">Number of container rows (depth)</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-orange-800 mb-2">
-                    Max Tiers *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max="8"
-                    value={formData.maxTiers}
-                    onChange={(e) => handleInputChange('maxTiers', parseInt(e.target.value) || 1)}
-                    className={`form-input w-full ${errors.maxTiers ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
-                    placeholder="5"
-                  />
-                  {errors.maxTiers && <p className="mt-1 text-sm text-red-600">{errors.maxTiers}</p>}
-                  <p className="mt-1 text-xs text-orange-600">Maximum stacking height</p>
-                </div>
-              </div>
-
-              {/* Capacity Display */}
-              <div className="mt-4 p-4 bg-white rounded-lg border border-orange-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-orange-800">Total Capacity:</span>
-                  <span className="text-lg font-bold text-orange-900">
-                    {calculateCapacity()} containers
-                  </span>
-                </div>
-                <div className="text-xs text-orange-600 mt-1">
-                  {formData.rows} rows × {formData.maxTiers} tiers = {calculateCapacity()} container positions
-                </div>
-              </div>
-            </div>
-
-            {/* Stack Preview */}
-            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4">Stack Preview</h4>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">Stack Number:</span>
-                  <div className="font-medium text-gray-900">S{formData.stackNumber.toString().padStart(2, '0')}</div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Section:</span>
-                  <div className="font-medium text-gray-900">
-                    {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Capacity:</span>
-                  <div className="font-medium text-gray-900">{calculateCapacity()} containers</div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Container Size:</span>
-                  <div className="font-medium text-gray-900">{formData.containerSize}</div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Type:</span>
-                  <div className="font-medium text-gray-900">
-                    {formData.stackType === 'special' ? 'Special' : 'Regular'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Configuration Warnings */}
-              {formData.stackType === 'special' && (
-                <div className="mt-4 flex items-start p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-yellow-800">
-                    <strong>Special Stack:</strong> This stack will be limited to 20ft containers only and cannot accommodate 40ft containers.
-                  </div>
-                </div>
-              )}
-
-              {formData.containerSize === '40ft' && formData.stackType === 'regular' && (
-                <div className="mt-4 flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <Package className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <strong>40ft Configuration:</strong> This stack will be configured for high-capacity 40ft containers and may require pairing with adjacent stacks.
-                  </div>
-                </div>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isLoading || Object.keys(errors).length > 0}
-              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              {isLoading ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span>{selectedStack ? 'Updating...' : 'Creating...'}</span>
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>{selectedStack ? 'Update Stack' : 'Create Stack'}</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
+
+        {/* Capacity Configuration */}
+        <div className="depot-section">
+          <h4 className="depot-section-header">
+            <Grid3X3 className="depot-section-icon text-green-500" />
+            Capacity Configuration
+          </h4>
+
+          <div className="depot-form-grid">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rows *
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                max="10"
+                value={formData.rows}
+                onChange={(e) => handleInputChange('rows', parseInt(e.target.value) || 1)}
+                className={`depot-input ${errors.rows ? 'error' : ''}`}
+                placeholder="4"
+              />
+              {errors.rows && <p className="mt-1 text-sm text-red-600">{errors.rows}</p>}
+              <p className="mt-1 text-xs text-gray-600">Number of container rows (depth)</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Max Tiers *
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                max="8"
+                value={formData.maxTiers}
+                onChange={(e) => handleInputChange('maxTiers', parseInt(e.target.value) || 1)}
+                className={`depot-input ${errors.maxTiers ? 'error' : ''}`}
+                placeholder="5"
+              />
+              {errors.maxTiers && <p className="mt-1 text-sm text-red-600">{errors.maxTiers}</p>}
+              <p className="mt-1 text-xs text-gray-600">Maximum stacking height</p>
+            </div>
+          </div>
+
+          {/* Capacity Display */}
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Total Capacity:</span>
+              <span className="text-lg font-bold text-gray-900">
+                {calculateCapacity()} containers
+              </span>
+            </div>
+            <div className="text-xs text-gray-600 mt-1">
+              {formData.rows} rows × {formData.maxTiers} tiers = {calculateCapacity()} container positions
+            </div>
+          </div>
+        </div>
+
+        {/* Stack Preview */}
+        <div className="depot-section">
+          <h4 className="depot-section-header">
+            <Package className="depot-section-icon text-blue-500" />
+            Stack Preview
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">Stack Number:</span>
+              <div className="font-medium text-gray-900">S{formData.stackNumber.toString().padStart(2, '0')}</div>
+            </div>
+            <div>
+              <span className="text-gray-600">Section:</span>
+              <div className="font-medium text-gray-900">
+                {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-600">Capacity:</span>
+              <div className="font-medium text-gray-900">{calculateCapacity()} containers</div>
+            </div>
+            <div>
+              <span className="text-gray-600">Container Size:</span>
+              <div className="font-medium text-gray-900">{formData.containerSize}</div>
+            </div>
+            <div>
+              <span className="text-gray-600">Type:</span>
+              <div className="font-medium text-gray-900">
+                {formData.stackType === 'special' ? 'Special' : 'Regular'}
+              </div>
+            </div>
+          </div>
+
+          {/* Configuration Warnings */}
+          {formData.stackType === 'special' && (
+            <div className="mt-4 flex items-start p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-yellow-800">
+                <strong>Special Stack:</strong> This stack will be limited to 20ft containers only and cannot accommodate 40ft containers.
+              </div>
+            </div>
+          )}
+
+          {formData.containerSize === '40ft' && formData.stackType === 'regular' && (
+            <div className="mt-4 flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <Package className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <strong>40ft Configuration:</strong> This stack will be configured for high-capacity 40ft containers and may require pairing with adjacent stacks.
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </FormModal>
   );
 };

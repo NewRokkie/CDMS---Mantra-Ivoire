@@ -4,7 +4,9 @@ import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { supabase } from '../../services/api/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/api';
+import { stackService } from '../../services/api';
 import { ClientPoolForm } from './ClientPoolForm';
+import { StackDetailsModal } from './StackDetailsModal';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 
@@ -15,6 +17,9 @@ export const ClientPoolManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [selectedPool, setSelectedPool] = useState<ClientPool | null>(null);
+  const [showStackDetails, setShowStackDetails] = useState(false);
+  const [selectedStack, setSelectedStack] = useState<any>(null);
+  const [assignedStacksData, setAssignedStacksData] = useState<Map<string, any>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { currentYard } = useYard();
@@ -124,6 +129,33 @@ export const ClientPoolManagement: React.FC = () => {
 
       setClientPools(pools || []);
       setStats(poolStats);
+
+      // Load stack details for all assigned stacks
+      if (pools && pools.length > 0 && currentYard?.id) {
+        const allAssignedStackIds = pools.flatMap(pool => pool.assignedStacks);
+        const uniqueStackIds = [...new Set(allAssignedStackIds)];
+
+        if (uniqueStackIds.length > 0) {
+          try {
+            const stacksData = await Promise.all(
+              uniqueStackIds.map(async (stackId) => {
+                try {
+                  const stack = await stackService.getById(stackId);
+                  return stack ? [stackId, stack] : null;
+                } catch (error) {
+                  console.warn(`Failed to load stack ${stackId}:`, error);
+                  return null;
+                }
+              })
+            );
+
+            const stacksMap = new Map(stacksData.filter(Boolean) as [string, any][]);
+            setAssignedStacksData(stacksMap);
+          } catch (error) {
+            console.error('Error loading assigned stacks:', error);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error loading client pools:', error);
       // Set empty arrays to prevent infinite loading
@@ -167,6 +199,33 @@ export const ClientPoolManagement: React.FC = () => {
         {label}
       </span>
     );
+  };
+
+  const handleViewStackDetails = async (stackId: string) => {
+    try {
+      // First check if we already have the stack data cached
+      const cachedStack = assignedStacksData.get(stackId);
+      if (cachedStack) {
+        setSelectedStack(cachedStack);
+        setShowStackDetails(true);
+        return;
+      }
+
+      // If not cached, fetch from the service
+      const stackDetails = await stackService.getById(stackId);
+      if (stackDetails) {
+        setSelectedStack(stackDetails);
+        setShowStackDetails(true);
+        // Cache the result
+        setAssignedStacksData(prev => new Map(prev.set(stackId, stackDetails)));
+      } else {
+        console.error('Stack not found:', stackId);
+        alert('Stack details not found');
+      }
+    } catch (error) {
+      console.error('Error fetching stack details:', error);
+      alert('Error loading stack details');
+    }
   };
 
   const handleCreatePool = async (data: any) => {
@@ -407,6 +466,14 @@ export const ClientPoolManagement: React.FC = () => {
                           `S${stackId.split('-').pop()?.toString().padStart(2, '0')}`
                         ).join(', ')} {pool.assignedStacks.length > 3 && ` +${pool.assignedStacks.length - 3} more`}
                       </div>
+                      {pool.assignedStacks.length > 0 && (
+                        <button
+                          onClick={() => handleViewStackDetails(pool.assignedStacks[0])}
+                          className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                        >
+                          View stack details →
+                        </button>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{pool.currentOccupancy} / {pool.maxCapacity}</div>
@@ -506,6 +573,18 @@ export const ClientPoolManagement: React.FC = () => {
           selectedPool={selectedPool}
           yard={mockYard}
           isLoading={false}
+        />
+      )}
+
+      {/* Stack Details Modal */}
+      {showStackDetails && (
+        <StackDetailsModal
+          isOpen={showStackDetails}
+          onClose={() => {
+            setShowStackDetails(false);
+            setSelectedStack(null);
+          }}
+          stack={selectedStack}
         />
       )}
 

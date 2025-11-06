@@ -2,6 +2,144 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+  .input {
+    @apply w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 outline-none transition;
+  }
+  .input-icon {
+    @apply absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400;
+  }
+  .error-text {
+    @apply mt-1 text-xs text-red-600;
+  }
+
+  /* DepotFormModal CSS Class Standards */
+  
+  /* Main section container */
+  .depot-section {
+    @apply bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition;
+  }
+
+  /* Section header */
+  .depot-section-header {
+    @apply font-semibold text-gray-800 mb-5 flex items-center;
+  }
+
+  /* Section icon */
+  .depot-section-icon {
+    @apply h-5 w-5 mr-2;
+  }
+
+  /* Form grid layout */
+  .depot-form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+
+  /* Field separator */
+  .depot-field-separator {
+    @apply md:col-span-2 pt-4 border-t border-gray-100;
+  }
+
+  /* Standard input with error state support */
+  .depot-input {
+    @apply input;
+  }
+
+  .depot-input.error {
+    @apply border-red-400 focus:ring-red-500;
+  }
+
+  /* Input with icon */
+  .depot-input-with-icon {
+    @apply input pl-10;
+  }
+
+  /* Input icon positioning */
+  .depot-input-icon {
+    @apply input-icon;
+  }
+
+  /* Select dropdown */
+  .depot-select {
+    @apply input appearance-none pr-10;
+  }
+
+  /* Select chevron icon */
+  .depot-select-chevron {
+    @apply absolute right-3 top-1/2 -translate-y-1/2 text-gray-400;
+  }
+
+  /* Toggle container */
+  .depot-toggle-container {
+    @apply flex items-center space-x-3 mt-1;
+  }
+
+  /* Toggle switch */
+  .depot-toggle {
+    @apply w-11 h-6 rounded-full flex items-center transition-colors;
+  }
+
+  .depot-toggle.active {
+    @apply bg-blue-600;
+  }
+
+  .depot-toggle.inactive {
+    @apply bg-gray-300;
+  }
+
+  /* Toggle thumb */
+  .depot-toggle-thumb {
+    @apply w-4 h-4 bg-white rounded-full transform transition-transform;
+  }
+
+  .depot-toggle-thumb.active {
+    @apply translate-x-6;
+  }
+
+  .depot-toggle-thumb.inactive {
+    @apply translate-x-1;
+  }
+
+  /* Toggle labels */
+  .depot-toggle-label {
+    @apply text-sm;
+  }
+
+  .depot-toggle-label.active {
+    @apply text-gray-800;
+  }
+
+  .depot-toggle-label.inactive {
+    @apply text-gray-400;
+  }
+
+  /* Step transition spacing */
+  .depot-step-spacing {
+    @apply space-y-8 transition-all duration-300;
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  @keyframes count-up {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  .animate-count {
+    animation: count-up 0.6s ease-out;
+  }
+}
+
 /* Custom Scrollbar Styles */
 @layer base {
   /* Transparent scrollbar for all elements */
@@ -530,6 +668,26 @@
   animation: loading 1.5s infinite;
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.card {
+  @apply bg-white rounded-xl p-5 shadow-sm border border-gray-200;
+}
+
+
 @keyframes loading {
   0% {
     background-position: 200% 0;
@@ -552,11 +710,11 @@
   .no-print {
     display: none !important;
   }
-  
+
   .print-break {
     page-break-after: always;
   }
-  
+
   .print-avoid-break {
     page-break-inside: avoid;
   }
@@ -567,7 +725,7 @@
   .form-input {
     border-width: 2px;
   }
-  
+
   .btn-primary,
   .btn-success,
   .btn-warning,
