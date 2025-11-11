@@ -17,7 +17,7 @@ interface StackConfiguration {
   stackNumber: number;
   sectionId: string;
   sectionName: string;
-  containerSize: '20feet' | '40feet';
+  containerSize: '20ft' | '40ft';
   isSpecialStack: boolean;
   lastModified: Date;
   modifiedBy: string;
@@ -49,7 +49,7 @@ export const StackManagement: React.FC<StackManagementProps> = ({
   // Use current yard from context, fallback to prop yard
   const activeYard = currentYard || propYard;
 
-  // Special stacks that are locked to 20feet only
+  // Special stacks that are locked to 20ft only
   const SPECIAL_STACKS = [1, 31, 101, 103];
 
   useEffect(() => {
@@ -91,7 +91,7 @@ export const StackManagement: React.FC<StackManagementProps> = ({
           stackNumber: stack.stackNumber,
           sectionId: stack.sectionId,
           sectionName: activeYard.sections.find(s => s.id === stack.sectionId)?.name || 'Unknown',
-          containerSize: '20feet', // Default to 20feet
+          containerSize: '20ft', // Default to 20ft
           isSpecialStack: isSpecial,
           lastModified: new Date(),
           modifiedBy: user?.name || 'System'
@@ -197,8 +197,8 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     return partnerConfig && !partnerConfig.isSpecialStack ? partnerNumber : null;
   };
 
-  // Check if a stack can be assigned 40feet containers
-  const canAssign40Feet = (stackNumber: number): boolean => {
+  // Check if a stack can be assigned 40ft containers
+  const canAssign40ft = (stackNumber: number): boolean => {
     const config = configurations.find(c => c.stackNumber === stackNumber);
     if (!config || config.isSpecialStack) return false;
 
@@ -206,22 +206,22 @@ export const StackManagement: React.FC<StackManagementProps> = ({
     return getAdjacentStackNumber(stackNumber) !== null;
   };
 
-  const handleContainerSizeChange = (stackId: string, newSize: '20feet' | '40feet') => {
+  const handleContainerSizeChange = (stackId: string, newSize: '20ft' | '40ft') => {
     if (!canManageStacks) return;
 
     const config = configurations.find(c => c.stackId === stackId);
     if (!config) return;
 
-    // Prevent modification of special stacks to 40feet
-    if (config.isSpecialStack && newSize === '40feet') {
-      alert('Special stacks can only be set to 20feet containers.');
+    // Prevent modification of special stacks to 40ft
+    if (config.isSpecialStack && newSize === '40ft') {
+      alert('Special stacks can only be set to 20ft containers.');
       return;
     }
 
-    // Validate 40feet assignment for regular stacks
-    if (newSize === '40feet' && !config.isSpecialStack) {
-      if (!canAssign40Feet(config.stackNumber)) {
-        alert(`Stack ${config.stackNumber.toString().padStart(2, '0')} cannot be assigned 40feet containers. No valid adjacent regular stack found for slot formation.`);
+    // Validate 40ft assignment for regular stacks
+    if (newSize === '40ft' && !config.isSpecialStack) {
+      if (!canAssign40ft(config.stackNumber)) {
+        alert(`Stack ${config.stackNumber.toString().padStart(2, '0')} cannot be assigned 40ft containers. No valid adjacent regular stack found for slot formation.`);
         return;
       }
     }
@@ -362,7 +362,7 @@ export const StackManagement: React.FC<StackManagementProps> = ({
             stackNumber: newStack.stackNumber,
             sectionId: newStack.sectionId,
             sectionName: activeYard.sections.find(s => s.id === newStack.sectionId)?.name || 'Unknown',
-            containerSize: data.containerSize === '40ft' ? '40feet' : '20feet',
+            containerSize: data.containerSize === '40ft' ? '40ft' : '20ft',
             isSpecialStack: data.stackType === 'special',
             lastModified: new Date(),
             modifiedBy: user?.name || 'System'
@@ -414,7 +414,7 @@ export const StackManagement: React.FC<StackManagementProps> = ({
 
       <StackConfigurationTable
         configurations={getFilteredConfigurations()}
-        canAssign40Feet={canAssign40Feet}
+        canAssign40ft={canAssign40ft}
         getAdjacentStackNumber={getAdjacentStackNumber}
         onContainerSizeChange={handleContainerSizeChange}
         onEditStack={handleEditStack}
@@ -425,7 +425,7 @@ export const StackManagement: React.FC<StackManagementProps> = ({
 
       <StackPairingInfo
         configurations={getFilteredConfigurations()}
-        canAssign40Feet={canAssign40Feet}
+        canAssign40ft={canAssign40ft}
         getAdjacentStackNumber={getAdjacentStackNumber}
       />
     </div>

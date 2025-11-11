@@ -11,12 +11,16 @@ import { ValidationService } from '../validationService';
 export interface GateInData {
   containerNumber: string;
   clientCode: string;
+  clientName?: string;
   containerType: string;
   containerSize: string;
+  fullEmpty?: 'FULL' | 'EMPTY'; // Full or Empty status
   transportCompany: string;
   driverName: string;
   truckNumber: string;
   location: string;
+  truckArrivalDate?: string;
+  truckArrivalTime?: string;
   weight?: number;
   operatorId: string;
   operatorName: string;
@@ -51,8 +55,6 @@ export class GateService {
    * Enhanced Gate In processing with robust error handling and validation
    */
   async processGateIn(data: GateInData): Promise<{ success: boolean; containerId?: string; error?: string; userMessage?: string }> {
-    console.log('🚀 Starting Gate In processing with enhanced error handling');
-
     return await RetryManager.executeWithRetry(async () => {
       // Pre-validation checks
       await this.validateGateInData(data);
@@ -75,13 +77,10 @@ export class GateService {
       // Emit success event
       await this.emitGateInCompletedEvent(newContainer, operation);
 
-      console.log('✅ Gate In processing completed successfully');
       return { success: true, containerId: newContainer.id };
 
     }, { maxAttempts: 3, baseDelay: 1000 })
     .catch((error: GateInError) => {
-      console.error('❌ Gate In processing failed after retries:', error);
-
       // Emit failure event
       eventBus.emitSync('GATE_IN_FAILED', {
         containerNumber: data.containerNumber,
@@ -100,8 +99,6 @@ export class GateService {
    * Validates Gate In data before processing
    */
   private async validateGateInData(data: GateInData): Promise<void> {
-    console.log('🔍 Validating Gate In data');
-
     // Basic required field validation
     const requiredFields = [
       'containerNumber', 'clientCode', 'containerType', 'containerSize',
@@ -143,16 +140,12 @@ export class GateService {
         userMessage: 'Container size must be either 20ft or 40ft'
       });
     }
-
-    console.log('✅ Gate In data validation passed');
   }
 
   /**
    * Gets client with enhanced validation and error handling
    */
   private async getClientWithValidation(clientCode: string): Promise<any> {
-    console.log('🔍 Fetching client information');
-
     const result = await handleAsyncOperation(async () => {
       const { data: client, error: clientError } = await supabase
         .from('clients')
@@ -181,7 +174,6 @@ export class GateService {
       throw result.error;
     }
 
-    console.log('✅ Client information retrieved successfully');
     return result.data;
   }
 
@@ -189,8 +181,6 @@ export class GateService {
    * Checks for duplicate containers in the system
    */
   private async checkDuplicateContainer(containerNumber: string): Promise<void> {
-    console.log('🔍 Checking for duplicate containers');
-
     const result = await handleAsyncOperation(async () => {
       const existing = await containerService.getAll();
       return existing.find(c => c.number === containerNumber.trim().toUpperCase());
@@ -209,28 +199,37 @@ export class GateService {
         userMessage: `Container ${containerNumber} is already registered in the system`
       });
     }
-
-    console.log('✅ No duplicate containers found');
   }
 
   /**
    * Creates container with transaction safety
    */
   private async createContainerSafely(data: GateInData, client: any): Promise<any> {
-    console.log('🔧 Creating container record');
-
     const result = await handleAsyncOperation(async () => {
+      // Calculate actual gate in date/time from truck arrival
+      let gateInDateTime: Date;
+      
+      if (data.truckArrivalDate && data.truckArrivalTime) {
+        // Use the truck arrival date/time from the form
+        const dateTimeString = `${data.truckArrivalDate}T${data.truckArrivalTime}:00`;
+        gateInDateTime = new Date(dateTimeString);
+      } else {
+        // Fallback to current system time
+        gateInDateTime = new Date();
+      }
+
       return await containerService.create({
         number: data.containerNumber.trim().toUpperCase(),
         type: data.containerType as any,
         size: data.containerSize as any,
-        status: 'in_depot',
+        status: 'gate_in', // Status 01: Gate In - pending location assignment
+        fullEmpty: data.fullEmpty || 'FULL', // Add full/empty status from form data, default to FULL
         location: data.location,
         yardId: data.yardId,
         clientId: client.id,
         client: client.name,
         clientCode: client.code,
-        gateInDate: new Date(),
+        gateInDate: gateInDateTime, // Use actual truck arrival date/time
         weight: data.weight,
         classification: data.classification || 'divers',
         damage: data.damageAssessment?.hasDamage && data.damageAssessment.damageDescription
@@ -244,7 +243,6 @@ export class GateService {
       throw result.error;
     }
 
-    console.log('✅ Container record created successfully');
     return result.data;
   }
 
@@ -252,8 +250,6 @@ export class GateService {
    * Creates Gate In operation record
    */
   private async createGateInOperation(data: GateInData, client: any, container: any): Promise<any> {
-    console.log('🔧 Creating Gate In operation record');
-
     const result = await handleAsyncOperation(async () => {
       const { data: operation, error: opError } = await supabase
         .from('gate_in_operations')
@@ -264,9 +260,12 @@ export class GateService {
           client_name: client.name,
           container_type: data.containerType,
           container_size: data.containerSize,
+          full_empty: data.fullEmpty || 'FULL', // Add full/empty status from form data
           transport_company: data.transportCompany,
           driver_name: data.driverName,
           vehicle_number: data.truckNumber,
+          truck_arrival_date: data.truckArrivalDate || new Date().toISOString().split('T')[0], // Store truck arrival date
+          truck_arrival_time: data.truckArrivalTime || new Date().toTimeString().slice(0, 5), // Store truck arrival time
           assigned_location: null,
           classification: data.classification || 'divers',
           damage_reported: data.damageAssessment?.hasDamage || data.damageReported || false,
@@ -297,7 +296,6 @@ export class GateService {
       throw result.error;
     }
 
-    console.log('✅ Gate In operation record created successfully');
     return result.data;
   }
 
@@ -305,8 +303,6 @@ export class GateService {
    * Creates audit log entry
    */
   private async createAuditLog(data: GateInData, container: any): Promise<void> {
-    console.log('📝 Creating audit log entry');
-
     try {
       await auditService.log({
         entityType: 'container',
@@ -316,10 +312,8 @@ export class GateService {
         userId: data.operatorId,
         userName: data.operatorName
       });
-      console.log('✅ Audit log entry created successfully');
     } catch (error) {
       // Audit log failure shouldn't fail the entire operation
-      console.warn('⚠️ Failed to create audit log entry:', error);
     }
   }
 
@@ -327,18 +321,14 @@ export class GateService {
    * Emits Gate In completed event
    */
   private async emitGateInCompletedEvent(container: any, operation: any): Promise<void> {
-    console.log('📡 Emitting Gate In completed event');
-
     try {
       const mappedOperation = this.mapToGateInOperation(operation);
       await eventBus.emit('GATE_IN_COMPLETED', {
         container: container,
         operation: mappedOperation
       });
-      console.log('✅ Gate In completed event emitted successfully');
     } catch (error) {
       // Event emission failure shouldn't fail the entire operation
-      console.warn('⚠️ Failed to emit Gate In completed event:', error);
     }
   }
 
@@ -363,7 +353,7 @@ export class GateService {
       const { data: operation, error: opError } = await supabase
         .from('gate_out_operations')
         .insert({
-          booking_reference_id: data.bookingReferenceId,
+          release_order_id: data.bookingReferenceId,
           booking_number: bookingReference.bookingNumber || '',
           client_code: bookingReference.clientCode,
           client_name: bookingReference.clientName,
@@ -398,7 +388,6 @@ export class GateService {
 
       return { success: true, operationId: operation.id };
     } catch (error: any) {
-      console.error('Create pending gate out error:', error);
       return { success: false, error: error.message || 'Failed to create pending gate out' };
     }
   }
@@ -421,7 +410,7 @@ export class GateService {
         return { success: false, error: 'One or more containers not found' };
       }
 
-      // Update containers
+      // Update containers - direct gate out means immediate completion (Status 04: Out Depot)
       for (const container of validContainers) {
         await containerService.update(container.id, {
           status: 'out_depot',
@@ -454,7 +443,7 @@ export class GateService {
       const { data: operation, error: opError } = await supabase
         .from('gate_out_operations')
         .insert({
-          booking_reference_id: data.bookingReferenceId,
+          release_order_id: data.bookingReferenceId,
           booking_number: bookingReference.bookingNumber || '',
           client_code: bookingReference.clientCode,
           client_name: bookingReference.clientName,
@@ -494,8 +483,6 @@ export class GateService {
 
       return { success: true };
     } catch (error: any) {
-      console.error('Gate out error:', error);
-
       // Emit GATE_OUT_FAILED event
       eventBus.emitSync('GATE_OUT_FAILED', {
         bookingReferenceId: data.bookingReferenceId,
@@ -511,39 +498,20 @@ export class GateService {
     status?: string;
     dateRange?: [Date, Date];
   }): Promise<GateInOperation[]> {
-    console.log('🔍 [GateService] getGateInOperations called with filters:', filters);
-
-    // First, let's check if there are ANY records in the table
-    const { data: allRecords, error: countError } = await supabase
-      .from('gate_in_operations')
-      .select('id, yard_id, created_at, status', { count: 'exact', head: true });
-
-    if (countError) {
-      console.error('❌ [GateService] Error counting gate_in_operations:', countError);
-    } else {
-      console.log('🔍 [GateService] Total gate_in_operations in database:', allRecords);
-      console.log('🔍 [GateService] Sample records:', allRecords?.slice(0, 5) || []);
-    }
-
     let query = supabase
       .from('gate_in_operations')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (filters?.yardId) {
-      console.log('🔍 [GateService] Filtering by yard_id:', filters.yardId);
       query = query.eq('yard_id', filters.yardId);
-    } else {
-      console.log('🔍 [GateService] No yard_id filter applied');
     }
 
     if (filters?.status) {
-      console.log('🔍 [GateService] Filtering by status:', filters.status);
       query = query.eq('status', filters.status);
     }
 
     if (filters?.dateRange) {
-      console.log('🔍 [GateService] Filtering by date range:', filters.dateRange);
       query = query
         .gte('created_at', filters.dateRange[0].toISOString())
         .lte('created_at', filters.dateRange[1].toISOString());
@@ -552,13 +520,8 @@ export class GateService {
     const { data, error } = await query;
 
     if (error) {
-      console.error('❌ [GateService] Error querying gate_in_operations:', error);
       throw error;
     }
-
-    console.log('🔍 [GateService] Query returned', data?.length || 0, 'records for yard', filters?.yardId);
-    console.log('🔍 [GateService] First few records:', data?.slice(0, 3) || []);
-    console.log('🔍 [GateService] All records:', data || []);
 
     return data?.map(this.mapToGateInOperation) || [];
   }
@@ -581,11 +544,20 @@ export class GateService {
         return { success: false, error: 'Operation not found' };
       }
 
-      // Process containers - update their status
+      // Calculate new counts
+      const existingContainerIds = currentOp.processed_container_ids || [];
+      const newContainerIds = [...existingContainerIds, ...data.containerIds];
+      const processedCount = newContainerIds.length;
+      const remainingCount = currentOp.total_containers - processedCount;
+      const newStatus = remainingCount === 0 ? 'completed' : 'in_process';
+
+      // Process containers - update their status based on operation completion
       for (const containerId of data.containerIds) {
+        const containerStatus = newStatus === 'completed' ? 'out_depot' : 'gate_out';
+        
         await containerService.update(containerId, {
-          status: 'out_depot',
-          gateOutDate: new Date(),
+          status: containerStatus, // Status 03: Gate Out (pending) or 04: Out Depot (completed)
+          gateOutDate: newStatus === 'completed' ? new Date() : undefined,
           updatedBy: data.operatorName
         });
 
@@ -594,18 +566,11 @@ export class GateService {
           entityType: 'container',
           entityId: containerId,
           action: 'update',
-          changes: { status: 'out_depot' },
+          changes: { status: containerStatus },
           userId: data.operatorId,
           userName: data.operatorName
         });
       }
-
-      // Update operation
-      const existingContainerIds = currentOp.processed_container_ids || [];
-      const newContainerIds = [...existingContainerIds, ...data.containerIds];
-      const processedCount = newContainerIds.length;
-      const remainingCount = currentOp.total_containers - processedCount;
-      const newStatus = remainingCount === 0 ? 'completed' : 'in_process';
 
       const { error: updateError } = await supabase
         .from('gate_out_operations')
@@ -622,17 +587,28 @@ export class GateService {
 
       if (updateError) throw updateError;
 
-      // Update booking reference if completed
+      // Update booking reference and all containers if completed
       if (newStatus === 'completed') {
-        await bookingReferenceService.update(currentOp.booking_reference_id, {
+        await bookingReferenceService.update(currentOp.release_order_id, {
           remainingContainers: 0,
           status: 'completed'
         });
+
+        // Update ALL containers in the operation to 'out_depot' status
+        for (const containerId of newContainerIds) {
+          const container = await containerService.getById(containerId);
+          if (container && container.status === 'gate_out') {
+            await containerService.update(containerId, {
+              status: 'out_depot',
+              gateOutDate: new Date(),
+              updatedBy: data.operatorName
+            });
+          }
+        }
       }
 
       return { success: true };
     } catch (error: any) {
-      console.error('Update gate out operation error:', error);
       return { success: false, error: error.message || 'Failed to update gate out operation' };
     }
   }
@@ -725,7 +701,7 @@ export class GateService {
       ediTransmitted: data.edi_transmitted,
       createdAt: new Date(data.created_at),
       completedAt: data.completed_at ? new Date(data.completed_at) : undefined,
-      bookingReferenceId: data.booking_reference_id
+      bookingReferenceId: data.release_order_id
     };
   }
 }

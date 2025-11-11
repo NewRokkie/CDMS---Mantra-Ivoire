@@ -23,6 +23,8 @@ import { userService } from '../../services/api';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useDatabaseRetry } from '../../hooks/useRetry';
+import { handleError } from '../../services/errorHandling';
+import { logger } from '../../utils/logger';
 
 interface UserDetailsModalProps {
   isOpen: boolean;
@@ -96,7 +98,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
       const details = await fetchUserDetailsWithRetry(user.id);
       setUserDetails(details);
     } catch (err) {
-      console.error('Error fetching user details:', err);
+      handleError(err, 'UserDetailsModal.fetchUserDetails');
       const errorInstance = err instanceof Error ? err : new Error('Failed to load user details');
       setError(errorInstance);
       
@@ -198,11 +200,10 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
     <ErrorBoundary
       context={`User Details Modal - ${user?.name || 'Unknown User'}`}
       onError={(error, errorInfo) => {
-        console.error('🚨 [USER_DETAILS_MODAL] Component error:', {
+        logger.error('User Details Modal component error', 'UserDetailsModal', {
           error: error.message,
           userId: user?.id,
-          componentStack: errorInfo.componentStack,
-          timestamp: new Date().toISOString()
+          componentStack: errorInfo.componentStack
         });
       }}
     >

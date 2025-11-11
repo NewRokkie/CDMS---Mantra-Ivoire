@@ -4,6 +4,7 @@ import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { bookingReferenceService, userService } from '../../services/api';
 import { DataDisplayModal } from '../Common/Modal/DataDisplayModal';
+import { handleError } from '../../services/errorHandling';
 
 interface BookingDetailsModalProps {
   booking: BookingReference | null;
@@ -43,7 +44,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
           const user = await userService.getById(booking.createdBy);
           setCreatedByName(user?.name || booking.createdBy);
         } catch (error) {
-          console.error('Error fetching user name:', error);
+          handleError(error, 'BookingDetailsModal.fetchCreatedByName');
           setCreatedByName(booking.createdBy);
         }
       }
@@ -99,7 +100,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
       setShowCancelForm(false);
       setCancellationData({ reason: '', newBookingReference: '' });
     } catch (error) {
-      console.error('Error cancelling booking:', error);
+      handleError(error, 'BookingDetailsModal.handleCancel');
       alert('Failed to cancel booking. Please try again.');
     } finally {
       setIsProcessing(false);

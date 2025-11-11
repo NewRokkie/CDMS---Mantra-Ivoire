@@ -171,7 +171,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
           <div className="space-y-8">
             {/* Pass step information and notification functions to children */}
             {React.Children.map(children, (child, index) => {
-              if (React.isValidElement(child)) {
+              if (React.isValidElement(child) && typeof child.type !== 'string') {
                 return React.cloneElement(child, {
                   currentStep,
                   totalSteps,

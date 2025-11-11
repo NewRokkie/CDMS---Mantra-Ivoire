@@ -138,7 +138,6 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
 
     // Provide fallback if status is not found
     if (!config) {
-      console.warn(`Unknown status: ${status}`);
       return (
         <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
           {status || 'Unknown'}

@@ -106,8 +106,6 @@ export const useRetry = <T extends any[], R>(
         const jitter = Math.random() * 0.1 * delay;
         const finalDelay = delay + jitter;
         
-        console.log(`🔄 [RETRY] Attempt ${attempt + 1}/${finalConfig.maxRetries + 1} failed, retrying in ${Math.round(finalDelay)}ms:`, lastError.message);
-        
         // Update state to show retry attempt
         setState(prev => ({
           ...prev,

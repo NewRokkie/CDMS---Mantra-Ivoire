@@ -28,7 +28,7 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
     op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+    op.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -126,7 +126,7 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {operation.vehicleNumber || '-'}
+                    {operation.truckNumber || '-'}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

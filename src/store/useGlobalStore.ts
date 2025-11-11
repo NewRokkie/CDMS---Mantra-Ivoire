@@ -382,7 +382,7 @@ export const useGlobalStore = create<GlobalStore>()(
             number: data.containerNumber,
             type: data.containerType as any,
             size: data.containerSize as any,
-            status: 'in_depot',
+            status: 'gate_in', // Status 01: Gate In - pending location assignment
             location: data.location,
             gateInDate: new Date(),
             clientName: client.name,

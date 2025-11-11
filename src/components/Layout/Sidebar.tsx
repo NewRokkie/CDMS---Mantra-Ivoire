@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { ModuleAccess } from '../../types';
 import { SyncStatusIndicator } from '../Sync';
+import { handleError } from '../../services/errorHandling';
 
 interface MenuItem {
   id: string;
@@ -45,9 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setIsRefreshing(true);
     try {
       await refreshModuleAccess();
-      console.log('🔄 [SIDEBAR] Manual refresh completed');
     } catch (error) {
-      console.error('🔄 [SIDEBAR] Manual refresh failed:', error);
+      handleError(error, 'Sidebar.handleManualRefresh');
     } finally {
       setIsRefreshing(false);
     }
@@ -66,7 +66,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Auto-open configurations dropdown if a configuration module is active
   React.useEffect(() => {
-    console.log('useEffect triggered: activeModule =', activeModule, 'isConfigurationActive =', isConfigurationActive);
     if (isConfigurationActive) {
       setIsConfigurationsOpen(true);
     }
@@ -140,15 +139,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const filteredMainMenuItems = getFilteredMenuItems(mainMenuItems);
   const filteredConfigurationItems = getFilteredMenuItems(configurationMenuItems);
-  console.log('🔄 [SIDEBAR] Filtered main menu items:', filteredMainMenuItems.map(item => item.id));
-  console.log('🔄 [SIDEBAR] Filtered configuration items:', filteredConfigurationItems.map(item => item.id));
-  console.log('🔄 [SIDEBAR] User module access:', user?.moduleAccess);
 
   // Check if user has access to any configuration modules
   const hasConfigurationAccess = filteredConfigurationItems.length > 0;
 
   const handleConfigurationToggle = () => {
-    console.log('Toggling configurations: current state =', isConfigurationsOpen);
     saveScrollPosition();
     setIsConfigurationsOpen(!isConfigurationsOpen);
   };
@@ -161,7 +156,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleMainMenuClick = (itemId: string) => {
-    console.log('Main menu clicked: itemId =', itemId);
     saveScrollPosition();
     setActiveModule(itemId);
     // Close mobile menu when an item is clicked
@@ -174,7 +168,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [localIsMobileMenuOpen, setLocalIsMobileMenuOpen] = useState(false);
   const isMobileMenuOpen = externalIsMobileMenuOpen !== undefined ? externalIsMobileMenuOpen : localIsMobileMenuOpen;
   const setIsMobileMenuOpen = externalSetIsMobileMenuOpen || setLocalIsMobileMenuOpen;
-  console.log('Mobile menu open state:', isMobileMenuOpen);
 
   return (
     <>

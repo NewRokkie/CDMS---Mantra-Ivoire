@@ -11,6 +11,7 @@ import { Yard } from '../../../types';
 import { useDepotForm } from './useDepotForm';
 import { MultiStepModal } from '../../Common/Modal/MultiStepModal';
 import { createPhoneChangeHandler } from '../../../utils/phoneUtils';
+import { handleError } from '../../../services/errorHandling';
 
 interface DepotFormModalProps {
     isOpen: boolean;
@@ -43,27 +44,22 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
     } = useDepotForm(selectedDepot, isOpen);
 
     useEffect(() => {
-        console.log('DepotFormModal: useEffect for Escape key setup');
         const handleEscapeKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
-                console.log('DepotFormModal: Escape key pressed, calling onClose');
                 onClose();
             }
         };
 
         document.addEventListener('keydown', handleEscapeKey);
         return () => {
-            console.log('DepotFormModal: Cleaning up Escape key listener');
             document.removeEventListener('keydown', handleEscapeKey);
         };
     }, [onClose]);
 
     useEffect(() => {
-        console.log('DepotFormModal: useEffect for isOpen triggered. isOpen:', isOpen, 'prevIsOpen:', prevIsOpenRef.current);
         // Reset state only when modal is truly opening (isOpen changes from false to true)
         if (isOpen && !prevIsOpenRef.current) {
             setCurrentStep(1);
-            console.log('DepotFormModal: State reset for new modal open');
         }
         prevIsOpenRef.current = isOpen; // Update the ref for the next render
     }, [isOpen]);
@@ -81,23 +77,17 @@ export const DepotFormModal: React.FC<DepotFormModalProps> = ({
     };
 
     const handleFinish = async () => {
-        console.log('DepotFormModal: handleFinish called');
-
         if (!validateForm()) {
-            console.log('DepotFormModal: Form validation failed');
             throw new Error('Please fix the validation errors before submitting.');
         }
 
         setIsSubmitting(true);
         try {
-            console.log('DepotFormModal: Form validation successful, attempting submission');
             const depotData = getFormDataForSubmission();
-            console.log('DepotFormModal: Submitting data:', depotData);
             await onSubmit(depotData);
-            console.log('DepotFormModal: onSubmit successful');
             // MultiStepModal will handle success notification and modal closing
         } catch (error) {
-            console.error('DepotFormModal: onSubmit failed:', error);
+            handleError(error, 'DepotFormModal.handleFinish');
             setIsSubmitting(false);
             throw error; // Re-throw to let MultiStepModal handle error display
         } finally {

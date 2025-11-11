@@ -6,6 +6,7 @@ import { clientPoolService } from '../../../services/clientPoolService';
 import { yardsService } from '../../../services/api/yardsService';
 import { containerService } from '../../../services/api/containerService';
 import { StandardModal } from '../../Common/Modal/StandardModal';
+import { handleError } from '../../../services/errorHandling';
 
 export interface StackLocation {
   id: string;
@@ -164,7 +165,7 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       
       setStacks(allLocations);
     } catch (err) {
-      console.error('Error loading stacks:', err);
+      handleError(err, 'StackSelectionModal.loadAvailableStacks');
       setError('Failed to load available stack locations');
     } finally {
       setLoading(false);
@@ -172,6 +173,8 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
   };
 
   // Helper function to check if stack is valid for 40ft containers
+  // 40ft containers can ONLY be placed on VIRTUAL (even-numbered) stacks
+  // that represent paired odd stacks (e.g., S04 = S03+S05, S24 = S23+S25)
   const isValidFortyFootStack = (stackNumber: number): boolean => {
     const specialStacks = [1, 31, 101, 103];
     if (specialStacks.includes(stackNumber)) return false;
@@ -184,6 +187,23 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     ];
 
     return validPairs.some(pair => pair.includes(stackNumber));
+  };
+
+  // Helper function to check if a stack number is a valid VIRTUAL stack for 40ft
+  // Virtual stacks are even numbers between paired odd stacks (e.g., 4, 8, 12, 24, 28)
+  const isVirtualFortyFootStack = (stackNumber: number): boolean => {
+    // Virtual stacks are always even numbers
+    if (stackNumber % 2 !== 0) return false;
+
+    // Check if this even number is between a valid pair
+    const validVirtualStacks = [
+      4, 8, 12, 16, 20, 24, 28,  // Zone A
+      34, 38, 42, 46, 50, 54,     // Zone B
+      62, 66, 70, 74, 78, 82,     // Zone C
+      86, 90, 94, 98              // Zone D
+    ];
+
+    return validVirtualStacks.includes(stackNumber);
   };
 
   // Get virtual stack positions for 40ft containers
@@ -259,7 +279,7 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
           height,
           isAvailable,
           section: stack.sectionName || 'Main',
-          containerSize: stack.containerSize === '20feet' ? '20ft' : '40ft',
+          containerSize: stack.containerSize === '20ft' ? '20ft' : '40ft',
           currentOccupancy: result.totalCapacity - result.availableSlots,
           capacity: result.totalCapacity
         });
@@ -281,7 +301,8 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     // For 20ft containers, any stack can accommodate
     if (reqSize === '20ft') return true;
 
-    // For 40ft containers, check if stack supports 40ft
+    // For 40ft containers, ONLY physical odd stacks that are part of valid pairs
+    // These will be converted to virtual stacks in getVirtualStackPositions
     if (reqSize === '40ft') {
       return isValidFortyFootStack(stack.stackNumber);
     }
@@ -355,6 +376,21 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     if (!validateStackFormat(stack.formattedId)) {
       setError('Invalid stack format');
       return;
+    }
+    
+    // Additional validation for 40ft containers
+    if (containerSize === '40ft') {
+      // Extract stack number from formatted ID (e.g., "S24R1H1" -> 24)
+      const stackNumberMatch = stack.formattedId.match(/^S(\d+)/);
+      if (stackNumberMatch) {
+        const stackNum = parseInt(stackNumberMatch[1]);
+        
+        // 40ft containers MUST be placed on virtual (even) stacks only
+        if (!isVirtualFortyFootStack(stackNum)) {
+          setError(`Invalid stack for 40ft container. Stack ${stackNum} is not a valid virtual stack. 40ft containers can only be placed on virtual stacks like S04, S08, S12, S24, S28, etc.`);
+          return;
+        }
+      }
     }
     
     onStackSelect(stack.id, stack.formattedId);

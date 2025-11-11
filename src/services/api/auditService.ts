@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { AuditLogEntry } from '../../types/operations';
+import { handleError } from '../errorHandling';
 
 export interface CreateAuditLogData {
   entityType: string;
@@ -28,7 +29,7 @@ export class AuditService {
       });
 
     if (error) {
-      console.error('Failed to create audit log:', error);
+      handleError(error, 'AuditService.log');
     }
   }
 

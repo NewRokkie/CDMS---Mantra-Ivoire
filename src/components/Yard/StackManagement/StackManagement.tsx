@@ -11,6 +11,8 @@ import { StackFormModal } from './StackFormModal';
 import { StackConfigurationRules } from './StackConfigurationRules';
 import { StackPairingInfo } from './StackPairingInfo';
 import { StackClientAssignmentModal } from './StackClientAssignmentModal';
+import { handleError } from '../../../services/errorHandling';
+import { LoadingSpinner } from '../../Common';
 
 export const StackManagement: React.FC = () => {
   const [stacks, setStacks] = useState<YardStack[]>([]);
@@ -31,32 +33,17 @@ export const StackManagement: React.FC = () => {
     }
   }, [currentYard]);
 
-  // Refresh the current yard sections when the component mounts or currentYard changes
-  useEffect(() => {
-    const refreshCurrentYardSections = async () => {
-      if (currentYard?.id) {
-        console.log('DEBUG: Refreshing current yard sections');
-        await refreshYards();
-      }
-    };
-    refreshCurrentYardSections();
-  }, [currentYard?.id, refreshYards]);
-
   const loadStacks = async () => {
     try {
       setLoading(true);
-      console.log('Loading stacks for yard:', currentYard?.id, 'currentYard:', currentYard);
       if (!currentYard?.id) {
-        console.log('No current yard selected, skipping stack load');
         setStacks([]);
         return;
       }
       const data = await stackService.getAll(currentYard.id);
-      console.log('Loaded stacks:', data.length, 'stacks for yard:', currentYard.id);
-      console.log('Stack data:', data);
       setStacks(data || []);
     } catch (error) {
-      console.error('Error loading stacks:', error);
+      handleError(error, 'StackManagement.loadStacks');
       // Set empty array to prevent infinite loading
       setStacks([]);
       alert('Error loading stacks: ' + (error as Error).message);
@@ -66,17 +53,12 @@ export const StackManagement: React.FC = () => {
   };
 
   const handleCreateStack = async () => {
-    console.log('DEBUG: handleCreateStack called, currentYard:', currentYard);
-    console.log('DEBUG: currentYard sections:', currentYard?.sections);
-
     // Ensure current yard has sections loaded
     if (currentYard && (!currentYard.sections || currentYard.sections.length === 0)) {
-      console.log('DEBUG: Refreshing yards to load sections');
       await refreshYards();
 
       // Wait a bit for the refresh to complete
       setTimeout(() => {
-        console.log('DEBUG: After refresh, currentYard sections:', currentYard?.sections);
         setSelectedStack(null);
         setShowStackForm(true);
       }, 100);
@@ -107,7 +89,7 @@ export const StackManagement: React.FC = () => {
       setStacks(prev => prev.filter(s => s.id !== stackId));
       alert('Stack deleted successfully!');
     } catch (error) {
-      console.error('Error deleting stack:', error);
+      handleError(error, 'StackManagement.handleDeleteStack');
       alert('Error deleting stack: ' + (error as Error).message);
     }
   };
@@ -129,7 +111,7 @@ export const StackManagement: React.FC = () => {
       setShowStackForm(false);
       setSelectedStack(null);
     } catch (error) {
-      console.error('Error saving stack:', error);
+      handleError(error, 'StackManagement.handleSaveStack');
       alert('Error saving stack: ' + (error as Error).message);
     }
   };
@@ -138,7 +120,7 @@ export const StackManagement: React.FC = () => {
     stackId: string,
     yardId: string,
     stackNumber: number,
-    newSize: '20feet' | '40feet'
+    newSize: '20ft' | '40ft'
   ) => {
     try {
       const updatedStacks = await stackService.updateContainerSize(
@@ -149,10 +131,8 @@ export const StackManagement: React.FC = () => {
         user?.id || ''
       );
 
-      setStacks(prev => prev.map(stack => {
-        const updated = updatedStacks.find(u => u.id === stack.id);
-        return updated || stack;
-      }));
+      // Reload all stacks to ensure consistency
+      await loadStacks();
 
       if (updatedStacks.length > 1) {
         alert(`Successfully updated ${updatedStacks.length} stacks to ${newSize}!`);
@@ -160,8 +140,18 @@ export const StackManagement: React.FC = () => {
         alert(`Stack updated to ${newSize} successfully!`);
       }
     } catch (error) {
-      console.error('Error updating container size:', error);
-      alert('Error updating container size: ' + (error as Error).message);
+      handleError(error, 'StackManagement.handleContainerSizeChange');
+      
+      // Reload stacks to revert any optimistic UI updates
+      await loadStacks();
+      
+      // Show user-friendly error message
+      const errorMessage = (error as any)?.message || String(error);
+      if (errorMessage.includes('OCCUPIED_VIRTUAL_LOCATIONS')) {
+        alert('Cannot change stack size: Virtual stack locations are occupied. Please relocate all containers from the paired stacks first.');
+      } else {
+        alert('Error updating container size: ' + errorMessage);
+      }
     }
   };
 
@@ -212,12 +202,18 @@ export const StackManagement: React.FC = () => {
       setSelectedStack(null);
       alert(clientCode ? `Stack assigned to client ${clientCode} successfully!` : 'Stack unassigned from client pool successfully!');
     } catch (error) {
-      console.error('Error assigning client to stack:', error);
+      handleError(error, 'StackManagement.handleClientAssignment');
       alert('Error assigning client to stack: ' + (error as Error).message);
     }
   };
 
   const filteredStacks = stacks.filter(stack => {
+    // Exclude virtual stacks - they are generated automatically and not managed directly
+    const isVirtualStack = (stack as any).isVirtual === true;
+    if (isVirtualStack) {
+      return false;
+    }
+
     const matchesSearch = stack.stackNumber.toString().includes(searchTerm) ||
                          (stack.sectionName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (stack.assignedClientCode || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -232,12 +228,21 @@ export const StackManagement: React.FC = () => {
     return matchesSearch && matchesStatus && matchesSection;
   });
 
-  const sections = Array.from(new Set(stacks.map(s => s.sectionName || 'Main Section')));
+  // Only show sections from physical stacks (exclude virtual stacks)
+  const sections = Array.from(new Set(
+    stacks
+      .filter(s => !(s as any).isVirtual) // Exclude virtual stacks
+      .map(s => s.sectionName || '-')
+  ));
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">Loading stacks...</div>
+        <LoadingSpinner 
+          fullScreen={false}
+          size='sm'
+          message="Loading Stacks..."
+        />
       </div>
     );
   }
@@ -308,8 +313,11 @@ export const StackManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-strong p-6">
             <div className="text-center">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Loading Yard Sections...</h3>
-              <p className="text-gray-600">Please wait while we load the yard configuration.</p>
+              <LoadingSpinner
+                fullScreen={false}
+                size='sm'
+                message="Please wait while we load the yard configuration."
+              />
               <button
                 onClick={() => setShowStackForm(false)}
                 className="mt-4 btn-secondary"
@@ -318,26 +326,6 @@ export const StackManagement: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Debug: Show current yard info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-black text-white p-2 text-xs rounded z-50 max-w-xs">
-          <div>Current Yard: {currentYard?.name || 'None'}</div>
-          <div>ID: {currentYard?.id || 'None'}</div>
-          <div>Sections: {currentYard?.sections?.length || 0}</div>
-          <div>Layout: {currentYard?.layout || 'None'}</div>
-          <div>Show Form: {showStackForm ? 'true' : 'false'}</div>
-          <div>Can Show Modal: {(showStackForm && currentYard) ? 'true' : 'false'}</div>
-          {currentYard?.sections && currentYard.sections.length > 0 && (
-            <div className="mt-1 border-t border-gray-600 pt-1">
-              <div>Sections:</div>
-              {currentYard.sections.map((s, i) => (
-                <div key={i} className="ml-2">• {s.name}</div>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>

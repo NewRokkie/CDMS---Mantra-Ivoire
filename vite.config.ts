@@ -18,6 +18,10 @@ export default defineConfig({
       timers: path.resolve(__dirname, 'node_modules/timers-browserify'),
       events: path.resolve(__dirname, 'node_modules/events'),
       util: path.resolve(__dirname, 'node_modules/util'),
+      // Ensure React is resolved from a single location
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom'],
   },
 });

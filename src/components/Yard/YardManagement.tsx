@@ -6,6 +6,7 @@ import { yardsService } from '../../services/api/yardsService';
 import { YardLiveMap } from './YardLiveMap';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { Container } from '../../types';
+import { handleError } from '../../services/errorHandling';
 
 export const YardManagement: React.FC = () => {
   const { currentYard } = useYard();
@@ -27,10 +28,8 @@ export const YardManagement: React.FC = () => {
         setAllContainers(containers);
 
         await yardsService.refreshYardData(currentYard.id);
-
-        console.log(`✅ Loaded ${stacks.length} stacks and ${containers.length} containers`);
       } catch (error) {
-        console.error('Error loading yard data:', error);
+        handleError(error, 'YardManagement.loadData');
       } finally {
         setLoading(false);
       }
@@ -42,13 +41,9 @@ export const YardManagement: React.FC = () => {
   useEffect(() => {
     if (!currentYard) return;
 
-    console.log(`🔌 Setting up real-time subscriptions for yard: ${currentYard.id}`);
-
     const unsubscribeStacks = realtimeService.subscribeToStacks(
       currentYard.id,
       async (payload) => {
-        console.log(`📡 Stack ${payload.eventType}:`, payload.new);
-
         const stacks = await stackService.getByYardId(currentYard.id);
         await yardsService.refreshYardData(currentYard.id);
       }
@@ -56,8 +51,6 @@ export const YardManagement: React.FC = () => {
 
     const unsubscribeContainers = realtimeService.subscribeToContainers(
       async (payload) => {
-        console.log(`📡 Container ${payload.eventType}:`, payload.new);
-
         const containers = await containerService.getAll();
         setAllContainers(containers);
       }
@@ -66,7 +59,6 @@ export const YardManagement: React.FC = () => {
     return () => {
       unsubscribeStacks();
       unsubscribeContainers();
-      console.log(`🔌 Cleaned up real-time subscriptions for yard: ${currentYard.id}`);
     };
   }, [currentYard?.id]);
 

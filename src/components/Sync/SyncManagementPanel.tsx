@@ -15,6 +15,8 @@ import { syncManager } from '../../services/sync/SyncManager';
 import { moduleAccessService } from '../../services/api/moduleAccessService';
 import type { SyncResult, SyncMetrics } from '../../services/sync/SyncManager';
 import type { ValidationReport } from '../../services/api/moduleAccessService';
+import { handleError } from '../../services/errorHandling';
+import { logger } from '../../utils/logger';
 
 interface SyncManagementPanelProps {
   className?: string;
@@ -41,7 +43,7 @@ export const SyncManagementPanel: React.FC<SyncManagementPanelProps> = ({
       const metrics = syncManager.getSyncMetrics();
       setSyncMetrics(metrics);
     } catch (error) {
-      console.error('Failed to load sync metrics:', error);
+      handleError(error, 'SyncManagementPanel.loadSyncMetrics');
     }
   };
 
@@ -51,7 +53,7 @@ export const SyncManagementPanel: React.FC<SyncManagementPanelProps> = ({
       const report = await moduleAccessService.validateDataConsistency();
       setValidationReport(report);
     } catch (error) {
-      console.error('Failed to load validation report:', error);
+      handleError(error, 'SyncManagementPanel.loadValidationReport');
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +67,7 @@ export const SyncManagementPanel: React.FC<SyncManagementPanelProps> = ({
       await loadSyncMetrics();
       await loadValidationReport();
     } catch (error) {
-      console.error('Force sync failed:', error);
+      handleError(error, 'SyncManagementPanel.handleForceSyncAll');
     } finally {
       setIsLoading(false);
     }
@@ -85,10 +87,10 @@ export const SyncManagementPanel: React.FC<SyncManagementPanelProps> = ({
     try {
       setIsLoading(true);
       const healthResult = await syncManager.performHealthCheck();
-      console.log('Health check result:', healthResult);
+      logger.info('Health check completed', 'SyncManagementPanel', healthResult);
       await loadSyncMetrics();
     } catch (error) {
-      console.error('Health check failed:', error);
+      handleError(error, 'SyncManagementPanel.handlePerformHealthCheck');
     } finally {
       setIsLoading(false);
     }

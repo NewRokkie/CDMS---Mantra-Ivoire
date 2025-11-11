@@ -8,6 +8,7 @@ import { DepotFormModal } from './DepotFormModal';
 import { DepotDetailModal } from './DepotDetailModal';
 import { DepotAssignmentModal } from './DepotAssignmentModal';
 import { DesktopOnlyMessage } from '../../Common/DesktopOnlyMessage';
+import { handleError } from '../../../services/errorHandling';
 
 export const DepotManagement: React.FC = () => {
   const [depots, setDepots] = useState<Yard[]>([]);
@@ -23,13 +24,7 @@ export const DepotManagement: React.FC = () => {
   const { user } = useAuth();
   const { currentYard, refreshYards } = useYard();
 
-  useEffect(() => {
-    console.log('DepotManagement: showForm state changed to', showForm);
-  }, [showForm]);
 
-  useEffect(() => {
-    console.log('DepotManagement: selectedDepot state changed to', selectedDepot?.id);
-  }, [selectedDepot]);
 
   const [stats, setStats] = useState({
     totalDepots: 0,
@@ -63,7 +58,7 @@ export const DepotManagement: React.FC = () => {
         totalOccupancy
       });
     } catch (error) {
-      console.error('Error loading depots:', error);
+      handleError(error, 'DepotManagement.loadDepots');
     } finally {
       setIsLoading(false);
     }
@@ -100,29 +95,24 @@ export const DepotManagement: React.FC = () => {
   };
 
   const handleCreateDepot = async (data: any) => {
-    console.log('DepotManagement: handleCreateDepot called with data:', data);
     try {
       setIsFormLoading(true);
       const newDepot = await yardsService.create(data, user?.id || 'unknown');
-      console.log('DepotManagement: Depot created successfully:', newDepot);
       await loadDepots();
       await refreshYards(); // Refresh yard context
       setShowForm(false);
       setSelectedDepot(null);
       // Success feedback is now handled in the modal
     } catch (error) {
-      console.error('DepotManagement: Error creating depot:', error);
+      handleError(error, 'DepotManagement.handleCreateDepot');
       throw error; // Let the modal handle error display
     } finally {
       setIsFormLoading(false);
-      console.log('DepotManagement: handleCreateDepot finished');
     }
   };
 
   const handleUpdateDepot = async (data: any) => {
-    console.log('DepotManagement: handleUpdateDepot called with data:', data, 'for depot:', selectedDepot?.id);
     if (!selectedDepot) {
-      console.log('DepotManagement: No selectedDepot for update');
       return;
     }
 
@@ -130,22 +120,19 @@ export const DepotManagement: React.FC = () => {
       setIsFormLoading(true);
       const updatedDepot = await yardsService.update(selectedDepot.id, data, user?.id || 'unknown');
       if (updatedDepot) {
-        console.log('DepotManagement: Depot updated successfully:', updatedDepot);
         await loadDepots();
         await refreshYards(); // Refresh yard context
         // Fermer le modal immédiatement après la mise à jour réussie
         setShowForm(false);
         setSelectedDepot(null);
       } else {
-        console.error('DepotManagement: Depot not found for update');
         throw new Error('Depot not found');
       }
     } catch (error) {
-      console.error('DepotManagement: Error updating depot:', error);
+      handleError(error, 'DepotManagement.handleUpdateDepot');
       throw error; // Laisser le modal gérer l'affichage de l'erreur
     } finally {
       setIsFormLoading(false);
-      console.log('DepotManagement: handleUpdateDepot finished');
     }
   };
 
@@ -193,8 +180,6 @@ export const DepotManagement: React.FC = () => {
       setIsAssignmentLoading(true);
       // The actual assignment is now handled in DepotAssignmentModal
       // This callback is just for UI feedback
-      console.log(`Assigned users ${userIds.join(', ')} to depot ${selectedDepot.name}`);
-
       alert(`Attribution réussie de ${userIds.length} utilisateur(s) au dépôt ${selectedDepot.name}`);
       setShowAssignment(false);
       setSelectedDepot(null);

@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { ModuleAccess } from '../../types';
 import { toDate } from '../../utils/dateHelpers';
+import { logger } from '../../utils/logger';
 
 // Enhanced types for validation and error handling
 export interface ValidationReport {
@@ -806,19 +807,19 @@ class ModuleAccessService {
 
     switch (level) {
       case 'error':
-        console.error(`🔴 [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.error(`🔴 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
         break;
       case 'warn':
-        console.warn(`🟡 [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.warn(`🟡 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
         break;
       case 'audit':
-        console.log(`📋 [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.info(`📋 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
         break;
       case 'debug':
-        console.debug(`🔍 [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.debug(`🔍 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', { logEntry });
         break;
       default:
-        console.log(`ℹ️ [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.info(`ℹ️ [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
     }
   }
 

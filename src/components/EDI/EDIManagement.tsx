@@ -15,6 +15,7 @@ import { EDITransmissionLog, EDITransmissionConfig } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
+import { handleError } from '../../services/errorHandling';
 
 const EDIManagement: React.FC = () => {
   const [transmissionLogs, setTransmissionLogs] = useState<EDITransmissionLog[]>([]);
@@ -45,7 +46,7 @@ const EDIManagement: React.FC = () => {
       await ediService.checkPendingAcknowledgments();
       loadTransmissionLogs();
     } catch (error) {
-      console.error('Error checking acknowledgments:', error);
+      handleError(error, 'EDIManagement.checkAcknowledgments');
     }
   };
 

@@ -5,6 +5,7 @@ import { useYard } from '../../hooks/useYard';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { useUserManagementRetry } from '../../hooks/useRetry';
 import { FormModal } from '../Common/Modal/FormModal';
+import { logger } from '../../utils/logger';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -274,12 +275,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     <ErrorBoundary
       context={`User Form Modal - ${selectedUser ? 'Edit' : 'Create'} User`}
       onError={(error, errorInfo) => {
-        console.error('🚨 [USER_FORM_MODAL] Component error:', {
+        logger.error('User Form Modal component error', 'UserFormModal', {
           error: error.message,
           isEditing: !!selectedUser,
           userId: selectedUser?.id,
-          componentStack: errorInfo.componentStack,
-          timestamp: new Date().toISOString()
+          componentStack: errorInfo.componentStack
         });
       }}
     >

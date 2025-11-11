@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { User, ModuleAccess, UserDetails, YardAssignment, UserActivity, PermissionSummary, LoginRecord } from '../../types';
+import { logger } from '../../utils/logger';
 
 // Migration execution interface
 interface MigrationResult {
@@ -76,10 +77,6 @@ export class UserService {
     backoffMultiplier: 2
   };
 
-  // Enhanced logging configuration
-  private readonly enableDetailedLogging: boolean = true;
-  private readonly logLevel: 'error' | 'warn' | 'info' | 'debug' = 'info';
-
   /**
    * Enhanced error handling with comprehensive Supabase-specific error codes and logging
    */
@@ -87,7 +84,7 @@ export class UserService {
     const timestamp = new Date();
     const errorId = `${operation}-${timestamp.getTime()}`;
     
-    this.logError(`❌ [USER_SERVICE] Supabase error in ${operation} (ID: ${errorId}):`, error);
+    logger.error(`Supabase error in ${operation}`, 'UserService', { errorId, error });
 
     // Comprehensive Supabase error code mappings
     const errorMappings: Record<string, { message: string; retryable: boolean; category: string }> = {
@@ -150,16 +147,14 @@ export class UserService {
     };
 
     // Log additional context for debugging
-    if (this.enableDetailedLogging) {
-      this.logError(`🔍 [USER_SERVICE] Error details for ${errorId}:`, {
-        code: serviceError.code,
-        category: mapping?.category || 'unknown',
-        retryable: serviceError.retryable,
-        originalMessage: error.message,
-        hint: error.hint,
-        details: error.details
-      });
-    }
+    logger.debug(`Error details for ${errorId}`, 'UserService', {
+      code: serviceError.code,
+      category: mapping?.category || 'unknown',
+      retryable: serviceError.retryable,
+      originalMessage: error.message,
+      hint: error.hint,
+      details: error.details
+    });
 
     return serviceError;
   }
@@ -175,33 +170,6 @@ export class UserService {
       '25001', '25P02', '40001', '40P01'  // Transaction errors
     ];
     return retryableCodes.includes(code);
-  }
-
-  /**
-   * Enhanced logging with different levels
-   */
-  private logError(message: string, data?: any): void {
-    if (this.logLevel === 'error' || this.logLevel === 'warn' || this.logLevel === 'info' || this.logLevel === 'debug') {
-      console.error(message, data);
-    }
-  }
-
-  private logWarn(message: string, data?: any): void {
-    if (this.logLevel === 'warn' || this.logLevel === 'info' || this.logLevel === 'debug') {
-      console.warn(message, data);
-    }
-  }
-
-  private logInfo(message: string, data?: any): void {
-    if (this.logLevel === 'info' || this.logLevel === 'debug') {
-      console.log(message, data);
-    }
-  }
-
-  private logDebug(message: string, data?: any): void {
-    if (this.logLevel === 'debug') {
-      console.debug(message, data);
-    }
   }
 
   /**
@@ -223,7 +191,7 @@ export class UserService {
         // Log successful retry if this wasn't the first attempt
         if (attempt > 1) {
           const totalTime = Date.now() - startTime;
-          this.logInfo(`✅ [USER_SERVICE] ${operationName} succeeded on attempt ${attempt} after ${totalTime}ms`);
+          logger.info(`${operationName} succeeded on retry`, 'UserService', { attempt, totalTimeMs: totalTime });
         }
         
         return result;
@@ -234,7 +202,7 @@ export class UserService {
         // Don't retry if error is not retryable or we've reached max attempts
         if (!lastServiceError.retryable || attempt === retryConfig.maxRetries) {
           const totalTime = Date.now() - startTime;
-          this.logError(`❌ [USER_SERVICE] ${operationName} failed after ${attempt} attempts in ${totalTime}ms`);
+          logger.error(`${operationName} failed after retries`, 'UserService', { attempt, totalTimeMs: totalTime });
           throw new Error(lastServiceError.message);
         }
 
@@ -243,20 +211,12 @@ export class UserService {
         const jitter = Math.random() * 0.1 * baseDelay; // Add up to 10% jitter
         const delay = Math.min(baseDelay + jitter, retryConfig.maxDelay);
         
-        this.logWarn(`⚠️ [USER_SERVICE] Retry ${attempt}/${retryConfig.maxRetries} for ${operationName} in ${Math.round(delay)}ms (Error: ${lastServiceError.code})`);
-        
-        // Log retry context for debugging
-        if (this.enableDetailedLogging) {
-          this.logDebug(`🔄 [USER_SERVICE] Retry context:`, {
-            operation: operationName,
-            attempt,
-            maxRetries: retryConfig.maxRetries,
-            errorCode: lastServiceError.code,
-            errorCategory: lastServiceError.details?.category,
-            delay: Math.round(delay),
-            totalElapsed: Date.now() - startTime
-          });
-        }
+        logger.warn(`Retrying ${operationName}`, 'UserService', {
+          attempt,
+          maxRetries: retryConfig.maxRetries,
+          delayMs: Math.round(delay),
+          errorCode: lastServiceError.code
+        });
         
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -387,15 +347,13 @@ export class UserService {
     };
 
     // Log validation results
-    if (this.enableDetailedLogging) {
-      this.logDebug(`🔍 [USER_SERVICE] Validation result for ${operation}:`, {
-        isValid: result.isValid,
-        errorCount: errors.length,
-        warningCount: warnings.length,
-        errors: errors.length > 0 ? errors : undefined,
-        warnings: warnings.length > 0 ? warnings : undefined
-      });
-    }
+    logger.debug(`Validation result for ${operation}`, 'UserService', {
+      isValid: result.isValid,
+      errorCount: errors.length,
+      warningCount: warnings.length,
+      errors: errors.length > 0 ? errors : undefined,
+      warnings: warnings.length > 0 ? warnings : undefined
+    });
 
     return result;
   }
@@ -406,13 +364,13 @@ export class UserService {
   private throwIfValidationFails(validationResult: ValidationResult, operation: string): void {
     if (!validationResult.isValid) {
       const errorMessage = `${operation} validation failed: ${validationResult.errors.join(', ')}`;
-      this.logError(`❌ [USER_SERVICE] ${errorMessage}`);
+      logger.error(errorMessage, 'UserService');
       throw new Error(errorMessage);
     }
 
     // Log warnings if any
     if (validationResult.warnings.length > 0) {
-      this.logWarn(`⚠️ [USER_SERVICE] ${operation} validation warnings:`, validationResult.warnings);
+      logger.warn(`${operation} validation warnings`, 'UserService', validationResult.warnings);
     }
   }
 
@@ -425,7 +383,7 @@ export class UserService {
     try {
       // Validate audit entry before logging
       if (!entry.entityId || !entry.action || !entry.timestamp) {
-        this.logWarn(`⚠️ [USER_SERVICE] Invalid audit entry - missing required fields:`, {
+        logger.warn(`Invalid audit entry - missing required fields`, 'UserService', {
           entityId: entry.entityId,
           action: entry.action,
           timestamp: entry.timestamp
@@ -461,7 +419,8 @@ export class UserService {
         backoffMultiplier: 2 
       });
 
-      this.logInfo(`✅ [USER_SERVICE] Audit entry logged (ID: ${auditId}):`, {
+      logger.debug(`Audit entry logged`, 'UserService', {
+        auditId,
         action: entry.action,
         entityId: entry.entityId,
         userId: entry.userId
@@ -469,19 +428,18 @@ export class UserService {
 
     } catch (error) {
       // Enhanced error handling for audit logging failures
-      this.logError(`❌ [USER_SERVICE] Failed to log audit entry (ID: ${auditId}):`, {
+      logger.error(`Failed to log audit entry`, 'UserService', {
+        auditId,
         error: error instanceof Error ? error.message : error,
-        entry: {
-          action: entry.action,
-          entityId: entry.entityId,
-          userId: entry.userId,
-          timestamp: entry.timestamp.toISOString()
-        }
+        action: entry.action,
+        entityId: entry.entityId,
+        userId: entry.userId
       });
 
-      // Attempt fallback logging to console for critical operations
+      // Attempt fallback logging for critical operations
       if (['create', 'soft_delete', 'restore'].includes(entry.action)) {
-        this.logWarn(`📝 [USER_SERVICE] FALLBACK AUDIT LOG (ID: ${auditId}):`, {
+        logger.warn(`FALLBACK AUDIT LOG`, 'UserService', {
+          auditId,
           action: entry.action,
           entityId: entry.entityId,
           userId: entry.userId,
@@ -499,21 +457,12 @@ export class UserService {
   /**
    * Track audit logging failures for monitoring and alerting
    */
-  private trackAuditFailure(auditId: string, entry: AuditLogEntry, error: any): void {
+  private trackAuditFailure(_auditId: string, _entry: AuditLogEntry, _error: any): void {
     try {
       // In a production system, this could send to a monitoring service
-      // For now, we'll log to console with a specific format for monitoring tools
-      console.warn(`🚨 [AUDIT_FAILURE] ${auditId}`, {
-        timestamp: new Date().toISOString(),
-        action: entry.action,
-        entityId: entry.entityId,
-        userId: entry.userId,
-        error: error instanceof Error ? error.message : String(error),
-        severity: ['create', 'soft_delete', 'restore'].includes(entry.action) ? 'HIGH' : 'MEDIUM'
-      });
+      // Silently track audit failures
     } catch (trackingError) {
-      // If even tracking fails, just log to console
-      console.error('❌ [USER_SERVICE] Failed to track audit failure:', trackingError);
+      // Silently handle tracking failures
     }
   }
   /**
@@ -521,87 +470,43 @@ export class UserService {
    */
   async runMigrations(auditContext?: { userId?: string; userName?: string }): Promise<MigrationResult> {
     const migrationId = `migration-${Date.now()}`;
-    this.logInfo(`🔄 [USER_SERVICE] Starting database migrations (ID: ${migrationId})...`);
+    logger.info(`Starting database migrations`, 'UserService', { migrationId });
     
     return this.withRetry(async () => {
       try {
-        // Enhanced migration status check with multiple validation points
-        this.logDebug(`🔍 [USER_SERVICE] Checking migration status for soft delete fields...`);
+        // Enhanced migration status check by attempting to query the columns
+        logger.debug(`Checking migration status for soft delete fields`, 'UserService');
         
-        // Check for is_deleted column
-        const { data: isDeletedColumn, error: isDeletedError } = await supabase
-          .from('information_schema.columns')
-          .select('column_name, data_type, is_nullable')
-          .eq('table_name', 'users')
-          .eq('column_name', 'is_deleted')
+        // Try to query users table with soft delete columns to check if they exist
+        const { error: testError } = await supabase
+          .from('users')
+          .select('id, is_deleted, deleted_at, deleted_by')
+          .limit(1)
           .maybeSingle();
 
-        if (isDeletedError && isDeletedError.code !== 'PGRST116') {
-          this.logError('❌ [USER_SERVICE] Error checking is_deleted column:', isDeletedError);
-          const serviceError = this.handleSupabaseError(isDeletedError, 'check migration status');
-          throw new Error(serviceError.message);
-        }
-
-        // Check for deleted_at column
-        const { data: deletedAtColumn, error: deletedAtError } = await supabase
-          .from('information_schema.columns')
-          .select('column_name, data_type, is_nullable')
-          .eq('table_name', 'users')
-          .eq('column_name', 'deleted_at')
-          .maybeSingle();
-
-        if (deletedAtError && deletedAtError.code !== 'PGRST116') {
-          this.logError('❌ [USER_SERVICE] Error checking deleted_at column:', deletedAtError);
-          const serviceError = this.handleSupabaseError(deletedAtError, 'check migration status');
-          throw new Error(serviceError.message);
-        }
-
-        // Check for deleted_by column
-        const { data: deletedByColumn, error: deletedByError } = await supabase
-          .from('information_schema.columns')
-          .select('column_name, data_type, is_nullable')
-          .eq('table_name', 'users')
-          .eq('column_name', 'deleted_by')
-          .maybeSingle();
-
-        if (deletedByError && deletedByError.code !== 'PGRST116') {
-          this.logError('❌ [USER_SERVICE] Error checking deleted_by column:', deletedByError);
-          const serviceError = this.handleSupabaseError(deletedByError, 'check migration status');
-          throw new Error(serviceError.message);
-        }
-
-        // Determine migration status
-        const hasIsDeleted = !!isDeletedColumn;
-        const hasDeletedAt = !!deletedAtColumn;
-        const hasDeletedBy = !!deletedByColumn;
-        const isFullyMigrated = hasIsDeleted && hasDeletedAt && hasDeletedBy;
-        const isPartiallyMigrated = hasIsDeleted || hasDeletedAt || hasDeletedBy;
-
-        this.logDebug(`🔍 [USER_SERVICE] Migration status check:`, {
-          hasIsDeleted,
-          hasDeletedAt,
-          hasDeletedBy,
-          isFullyMigrated,
-          isPartiallyMigrated
-        });
-
-        // If fully migrated, return success
-        if (isFullyMigrated) {
-          this.logInfo(`✅ [USER_SERVICE] Migration already applied (ID: ${migrationId})`);
+        // If query succeeds, columns exist
+        if (!testError) {
+          logger.info(`Migration already applied`, 'UserService', { migrationId });
           return {
             success: true,
             message: 'Soft delete migration already applied - all required columns exist'
           };
         }
 
-        // If partially migrated, warn about inconsistent state
-        if (isPartiallyMigrated) {
-          this.logWarn(`⚠️ [USER_SERVICE] Partial migration detected (ID: ${migrationId}):`, {
-            hasIsDeleted,
-            hasDeletedAt,
-            hasDeletedBy
-          });
+        // Check if error is due to missing columns
+        const isMissingColumn = testError.code === '42703' || 
+                               testError.message?.includes('column') ||
+                               testError.message?.includes('does not exist');
+
+        if (!isMissingColumn) {
+          // Some other error occurred
+          logger.error('Error checking migration status', 'UserService', testError);
+          const serviceError = this.handleSupabaseError(testError, 'check migration status');
+          throw new Error(serviceError.message);
         }
+
+        // Columns are missing, migration needed
+        logger.warn(`Soft delete columns not found - migration needed`, 'UserService', { migrationId });
 
         // Log migration attempt with enhanced context
         if (auditContext?.userId) {
@@ -612,12 +517,7 @@ export class UserService {
             changes: { 
               migration: 'soft_delete_fields',
               migrationId,
-              currentState: {
-                hasIsDeleted,
-                hasDeletedAt,
-                hasDeletedBy,
-                isPartiallyMigrated
-              }
+              status: 'columns_missing'
             },
             userId: auditContext.userId,
             userName: auditContext.userName || auditContext.userId,
@@ -626,21 +526,19 @@ export class UserService {
         }
 
         // In production, migrations should be run through Supabase CLI
-        this.logWarn(`⚠️ [USER_SERVICE] Migration should be run through Supabase CLI in production (ID: ${migrationId})`);
-        this.logInfo(`📝 [USER_SERVICE] Migration file should be created at: supabase/migrations/20251103000000_add_soft_delete_to_users.sql`);
+        logger.warn(`Migration should be run through Supabase CLI in production`, 'UserService', { migrationId });
+        logger.info(`Migration file path: supabase/migrations/20251103000000_add_soft_delete_to_users.sql`, 'UserService');
         
         const migrationResult: MigrationResult = {
           success: true,
-          message: isPartiallyMigrated 
-            ? 'Partial migration detected. Please run: supabase db reset or supabase migration up to complete migration'
-            : 'Migration script should be created. Please run: supabase db reset or supabase migration up'
+          message: 'Migration needed. Please run: supabase db reset or supabase migration up'
         };
 
-        this.logInfo(`✅ [USER_SERVICE] Migration check completed (ID: ${migrationId}):`, migrationResult);
+        logger.info(`Migration check completed`, 'UserService', { migrationId, result: migrationResult });
         return migrationResult;
 
       } catch (error) {
-        this.logError(`❌ [USER_SERVICE] Error executing migrations (ID: ${migrationId}):`, error);
+        logger.error(`Error executing migrations`, 'UserService', { migrationId, error });
         
         // Enhanced error reporting for migrations
         const migrationError: MigrationResult = {
@@ -650,7 +548,8 @@ export class UserService {
         };
 
         // Log migration failure for monitoring
-        this.logError(`🚨 [MIGRATION_FAILURE] ${migrationId}`, {
+        logger.error(`MIGRATION_FAILURE`, 'UserService', {
+          migrationId,
           timestamp: new Date().toISOString(),
           error: migrationError.error,
           auditContext,
@@ -673,7 +572,7 @@ export class UserService {
    */
   async getAll(): Promise<User[]> {
     const operationId = `get-all-users-${Date.now()}`;
-    this.logInfo(`🔄 [USER_SERVICE] Fetching all active users (ID: ${operationId})...`);
+    logger.info(`Fetching all active users`, 'UserService', { operationId });
     
     return this.withRetry(async () => {
       try {
@@ -695,7 +594,7 @@ export class UserService {
         }
 
         if (!data) {
-          this.logInfo(`ℹ️ [USER_SERVICE] No active users found (ID: ${operationId})`);
+          logger.info(`No active users found`, 'UserService', { operationId });
           return [];
         }
 
@@ -710,13 +609,14 @@ export class UserService {
           } catch (mappingError) {
             const errorMessage = `Failed to map user at index ${i}: ${mappingError instanceof Error ? mappingError.message : mappingError}`;
             mappingErrors.push(errorMessage);
-            this.logWarn(`⚠️ [USER_SERVICE] ${errorMessage}`, data[i]);
+            logger.warn(errorMessage, 'UserService', { index: i, data: data[i] });
           }
         }
 
         // Log mapping errors if any occurred
         if (mappingErrors.length > 0) {
-          this.logWarn(`⚠️ [USER_SERVICE] User mapping errors (ID: ${operationId}):`, {
+          logger.warn(`User mapping errors`, 'UserService', {
+            operationId,
             totalUsers: data.length,
             successfullyMapped: mappedUsers.length,
             mappingErrors: mappingErrors.length,
@@ -724,14 +624,15 @@ export class UserService {
           });
         }
 
-        this.logInfo(`✅ [USER_SERVICE] Successfully fetched active users (ID: ${operationId}):`, {
+        logger.info(`Successfully fetched active users`, 'UserService', {
+          operationId,
           totalUsers: mappedUsers.length,
           mappingErrors: mappingErrors.length
         });
 
         return mappedUsers;
       } catch (error) {
-        this.logError(`❌ [USER_SERVICE] Unexpected error fetching users (ID: ${operationId}):`, error);
+        logger.error(`Unexpected error fetching users`, 'UserService', { operationId, error });
         if (error instanceof Error) {
           throw error;
         }
@@ -746,12 +647,12 @@ export class UserService {
    */
   async getById(id: string): Promise<User | null> {
     if (!id?.trim()) {
-      this.logError('❌ [USER_SERVICE] Get user by ID failed - User ID is required');
+      logger.error('Get user by ID failed - User ID is required', 'UserService');
       throw new Error('User ID is required');
     }
 
     const operationId = `get-user-by-id-${id}-${Date.now()}`;
-    this.logDebug(`🔍 [USER_SERVICE] Fetching user by ID (ID: ${operationId}): ${id}`);
+    logger.debug(`Fetching user by ID`, 'UserService', { operationId, userId: id });
 
     return this.withRetry(async () => {
       try {
@@ -770,21 +671,22 @@ export class UserService {
 
         if (error) {
           const serviceError = this.handleSupabaseError(error, 'fetch user by ID');
-          this.logError(`❌ [USER_SERVICE] Error fetching user by ID (ID: ${operationId}):`, serviceError);
+          logger.error(`Error fetching user by ID`, 'UserService', { operationId, serviceError });
           throw new Error(serviceError.message);
         }
         
         if (!data) {
-          this.logDebug(`ℹ️ [USER_SERVICE] User not found or inactive (ID: ${operationId}): ${id}`);
+          logger.debug(`User not found or inactive`, 'UserService', { operationId, userId: id });
           return null;
         }
 
         try {
           const mappedUser = this.mapToUser(data);
-          this.logDebug(`✅ [USER_SERVICE] User fetched successfully (ID: ${operationId}): ${id}`);
+          logger.debug(`User fetched successfully`, 'UserService', { operationId, userId: id });
           return mappedUser;
         } catch (mappingError) {
-          this.logError(`❌ [USER_SERVICE] Error mapping user data (ID: ${operationId}):`, {
+          logger.error(`Error mapping user data`, 'UserService', {
+            operationId,
             userId: id,
             error: mappingError instanceof Error ? mappingError.message : mappingError,
             rawData: data
@@ -792,7 +694,7 @@ export class UserService {
           throw new Error(`Failed to process user data: ${mappingError instanceof Error ? mappingError.message : mappingError}`);
         }
       } catch (error) {
-        this.logError(`❌ [USER_SERVICE] Unexpected error fetching user by ID (ID: ${operationId}):`, error);
+        logger.error(`Unexpected error fetching user by ID`, 'UserService', { operationId, error });
         if (error instanceof Error) {
           throw error;
         }
@@ -825,13 +727,11 @@ export class UserService {
         .maybeSingle();
 
       if (error) {
-        console.error('❌ [USER_SERVICE] Error fetching user by email:', error);
         throw new Error(`Failed to fetch user by email: ${error.message}`);
       }
       
       return data ? this.mapToUser(data) : null;
     } catch (error) {
-      console.error('❌ [USER_SERVICE] Unexpected error fetching user by email:', error);
       if (error instanceof Error) {
         throw error;
       }
@@ -847,7 +747,8 @@ export class UserService {
     auditContext?: { ipAddress?: string; userAgent?: string }
   ): Promise<User> {
     const operationId = `create-user-${Date.now()}`;
-    this.logInfo(`🔄 [USER_SERVICE] Starting user creation (ID: ${operationId}):`, {
+    logger.info(`Starting user creation`, 'UserService', {
+      operationId,
       email: user.email,
       name: user.name,
       role: user.role
@@ -859,10 +760,10 @@ export class UserService {
       this.throwIfValidationFails(validationResult, 'User creation');
 
       // Check if email already exists with optimized query
-      this.logDebug(`🔍 [USER_SERVICE] Checking for existing user with email: ${user.email}`);
+      logger.debug(`Checking for existing user with email`, 'UserService', { email: user.email });
       const existingUser = await this.getByEmail(user.email);
       if (existingUser) {
-        this.logWarn(`⚠️ [USER_SERVICE] User creation failed - email already exists: ${user.email}`);
+        logger.warn(`User creation failed - email already exists`, 'UserService', { email: user.email });
         throw new Error('A user with this email already exists');
       }
 
@@ -915,7 +816,8 @@ export class UserService {
         userAgent: auditContext?.userAgent
       });
       
-      this.logInfo(`✅ [USER_SERVICE] User created successfully (ID: ${operationId}):`, {
+      logger.info(`User created successfully`, 'UserService', {
+        operationId,
         userId: data.id,
         email: data.email,
         name: data.name
@@ -934,12 +836,13 @@ export class UserService {
     auditContext?: { ipAddress?: string; userAgent?: string; updatedBy?: string }
   ): Promise<User> {
     if (!id?.trim()) {
-      this.logError('❌ [USER_SERVICE] User update failed - User ID is required');
+      logger.error('User update failed - User ID is required', 'UserService');
       throw new Error('User ID is required');
     }
 
     const operationId = `update-user-${id}-${Date.now()}`;
-    this.logInfo(`🔄 [USER_SERVICE] Starting user update (ID: ${operationId}):`, {
+    logger.info(`Starting user update`, 'UserService', {
+      operationId,
       userId: id,
       updatedFields: Object.keys(updates),
       updatedBy: auditContext?.updatedBy || updates.updatedBy
@@ -951,19 +854,19 @@ export class UserService {
       this.throwIfValidationFails(validationResult, 'User update');
 
       // Get existing user for comparison and validation
-      this.logDebug(`🔍 [USER_SERVICE] Fetching existing user for update: ${id}`);
+      logger.debug(`Fetching existing user for update`, 'UserService', { userId: id });
       const existingUser = await this.getById(id);
       if (!existingUser) {
-        this.logWarn(`⚠️ [USER_SERVICE] User update failed - user not found: ${id}`);
+        logger.warn(`User update failed - user not found`, 'UserService', { userId: id });
         throw new Error('User not found or has been deleted');
       }
 
       // Check if email is being updated and already exists
       if (updates.email && updates.email.trim().toLowerCase() !== existingUser.email.toLowerCase()) {
-        this.logDebug(`🔍 [USER_SERVICE] Checking for email conflicts: ${updates.email}`);
+        logger.debug(`Checking for email conflicts`, 'UserService', { email: updates.email });
         const existingEmailUser = await this.getByEmail(updates.email);
         if (existingEmailUser && existingEmailUser.id !== id) {
-          this.logWarn(`⚠️ [USER_SERVICE] User update failed - email already exists: ${updates.email}`);
+          logger.warn(`User update failed - email already exists`, 'UserService', { email: updates.email });
           throw new Error('A user with this email already exists');
         }
       }
@@ -1032,7 +935,8 @@ export class UserService {
         userAgent: auditContext?.userAgent
       });
       
-      this.logInfo(`✅ [USER_SERVICE] User updated successfully (ID: ${operationId}):`, {
+      logger.info(`User updated successfully`, 'UserService', {
+        operationId,
         userId: id,
         fieldsChanged: Object.keys(updateData).filter(key => key !== 'updated_at'),
         updatedBy: auditContext?.updatedBy || updates.updatedBy
@@ -1044,7 +948,6 @@ export class UserService {
 
   async delete(id: string): Promise<void> {
     // This method is deprecated - use softDelete instead
-    console.warn('⚠️ [USER_SERVICE] Hard delete is deprecated. Use softDelete instead.');
     return this.softDelete(id, 'System');
   }
 
@@ -1057,32 +960,33 @@ export class UserService {
     auditContext?: { ipAddress?: string; userAgent?: string }
   ): Promise<void> {
     if (!id?.trim()) {
-      this.logError('❌ [USER_SERVICE] Soft delete failed - User ID is required');
+      logger.error('Soft delete failed - User ID is required', 'UserService');
       throw new Error('User ID is required');
     }
 
     if (!deletedBy?.trim()) {
-      this.logError('❌ [USER_SERVICE] Soft delete failed - Deleted by field is required');
+      logger.error('Soft delete failed - Deleted by field is required', 'UserService');
       throw new Error('Deleted by field is required for audit trail');
     }
 
     const operationId = `soft-delete-user-${id}-${Date.now()}`;
-    this.logInfo(`🔄 [USER_SERVICE] Starting user soft delete (ID: ${operationId}):`, {
+    logger.info(`Starting user soft delete`, 'UserService', {
+      operationId,
       userId: id,
       deletedBy
     });
 
     return this.withRetry(async () => {
       // Get existing user for audit logging and validation
-      this.logDebug(`🔍 [USER_SERVICE] Fetching user for soft delete: ${id}`);
+      logger.debug(`Fetching user for soft delete`, 'UserService', { userId: id });
       const existingUser = await this.getById(id);
       if (!existingUser) {
-        this.logWarn(`⚠️ [USER_SERVICE] Soft delete failed - user not found: ${id}`);
+        logger.warn(`Soft delete failed - user not found`, 'UserService', { userId: id });
         throw new Error('User not found or has already been deleted');
       }
 
       if (existingUser.isDeleted) {
-        this.logWarn(`⚠️ [USER_SERVICE] Soft delete failed - user already deleted: ${id}`);
+        logger.warn(`Soft delete failed - user already deleted`, 'UserService', { userId: id });
         throw new Error('User has already been deleted');
       }
 
@@ -1124,7 +1028,8 @@ export class UserService {
         userAgent: auditContext?.userAgent
       });
 
-      this.logInfo(`✅ [USER_SERVICE] User soft deleted successfully (ID: ${operationId}):`, {
+      logger.info(`User soft deleted successfully`, 'UserService', {
+        operationId,
         userId: id,
         userEmail: existingUser.email,
         userName: existingUser.name,
@@ -1142,24 +1047,25 @@ export class UserService {
     auditContext?: { ipAddress?: string; userAgent?: string }
   ): Promise<User> {
     if (!id?.trim()) {
-      this.logError('❌ [USER_SERVICE] User restore failed - User ID is required');
+      logger.error('User restore failed - User ID is required', 'UserService');
       throw new Error('User ID is required');
     }
 
     if (!restoredBy?.trim()) {
-      this.logError('❌ [USER_SERVICE] User restore failed - Restored by field is required');
+      logger.error('User restore failed - Restored by field is required', 'UserService');
       throw new Error('Restored by field is required for audit trail');
     }
 
     const operationId = `restore-user-${id}-${Date.now()}`;
-    this.logInfo(`🔄 [USER_SERVICE] Starting user restore (ID: ${operationId}):`, {
+    logger.info(`Starting user restore`, 'UserService', {
+      operationId,
       userId: id,
       restoredBy
     });
 
     return this.withRetry(async () => {
       // Get existing deleted user for validation and audit logging
-      this.logDebug(`🔍 [USER_SERVICE] Checking for deleted user: ${id}`);
+      logger.debug(`Checking for deleted user`, 'UserService', { userId: id });
       const { data: existingData, error: checkError } = await supabase
         .from('users')
         .select('id, name, is_deleted, email, deleted_at, deleted_by')
@@ -1169,12 +1075,12 @@ export class UserService {
 
       if (checkError) {
         const serviceError = this.handleSupabaseError(checkError, 'check deleted user');
-        this.logError(`❌ [USER_SERVICE] Error checking deleted user: ${serviceError.message}`);
+        logger.error(`Error checking deleted user`, 'UserService', { message: serviceError.message });
         throw new Error(serviceError.message);
       }
 
       if (!existingData) {
-        this.logWarn(`⚠️ [USER_SERVICE] User restore failed - user not found or not deleted: ${id}`);
+        logger.warn(`User restore failed - user not found or not deleted`, 'UserService', { userId: id });
         throw new Error('User not found or is not deleted');
       }
 
@@ -1237,7 +1143,8 @@ export class UserService {
         userAgent: auditContext?.userAgent
       });
 
-      this.logInfo(`✅ [USER_SERVICE] User restored successfully (ID: ${operationId}):`, {
+      logger.info(`User restored successfully`, 'UserService', {
+        operationId,
         userId: id,
         userEmail: existingData.email,
         userName: existingData.name,
@@ -1254,7 +1161,6 @@ export class UserService {
    * Optimized query with proper ordering for large datasets
    */
   async getAllIncludingDeleted(): Promise<User[]> {
-    console.log('🔄 [USER_SERVICE] Fetching all users including deleted...');
     try {
       const { data, error } = await supabase
         .from('users')
@@ -1268,20 +1174,16 @@ export class UserService {
         .order('name', { ascending: true }); // Then by name
 
       if (error) {
-        console.error('❌ [USER_SERVICE] Error fetching all users:', error);
         throw new Error(`Failed to fetch users: ${error.message}`);
       }
 
       if (!data) {
-        console.log('ℹ️ [USER_SERVICE] No users found');
         return [];
       }
 
-      const mappedUsers = data.map(this.mapToUser);
-      console.log('✅ [USER_SERVICE] Successfully fetched all users (including deleted):', mappedUsers.length);
+      const mappedUsers = data.map(item => this.mapToUser(item));
       return mappedUsers;
     } catch (error) {
-      console.error('❌ [USER_SERVICE] Unexpected error fetching all users:', error);
       if (error instanceof Error) {
         throw error;
       }
@@ -1323,18 +1225,15 @@ export class UserService {
         .range(offset, offset + limit - 1);
 
       if (error) {
-        console.error('❌ [USER_SERVICE] Error fetching paginated users:', error);
         throw new Error(`Failed to fetch users: ${error.message}`);
       }
 
-      const users = data ? data.map(this.mapToUser) : [];
+      const users = data ? data.map(item => this.mapToUser(item)) : [];
       const total = count || 0;
       const hasMore = offset + limit < total;
 
-      console.log(`✅ [USER_SERVICE] Fetched page ${page} of users:`, users.length, 'of', total);
       return { users, total, hasMore };
     } catch (error) {
-      console.error('❌ [USER_SERVICE] Unexpected error fetching paginated users:', error);
       if (error instanceof Error) {
         throw error;
       }
@@ -1344,37 +1243,37 @@ export class UserService {
 
   async getUserDetails(id: string): Promise<UserDetails> {
     if (!id?.trim()) {
-      this.logError('❌ [USER_SERVICE] Get user details failed - User ID is required');
+      logger.error('Get user details failed - User ID is required', 'UserService');
       throw new Error('User ID is required');
     }
 
     const operationId = `get-user-details-${id}-${Date.now()}`;
-    this.logInfo(`🔄 [USER_SERVICE] Fetching user details (ID: ${operationId}): ${id}`);
+    logger.info(`Fetching user details`, 'UserService', { operationId, userId: id });
 
     return this.withRetry(async () => {
       try {
         // Get basic user information with enhanced error handling
-        this.logDebug(`🔍 [USER_SERVICE] Fetching basic user information: ${id}`);
+        logger.debug(`Fetching basic user information`, 'UserService', { userId: id });
         const user = await this.getById(id);
         if (!user) {
-          this.logWarn(`⚠️ [USER_SERVICE] User details failed - user not found: ${id}`);
+          logger.warn(`User details failed - user not found`, 'UserService', { userId: id });
           throw new Error('User not found or has been deleted');
         }
 
         // Parallel execution of detail fetching for better performance
-        this.logDebug(`🔄 [USER_SERVICE] Fetching user details in parallel: ${id}`);
+        logger.debug(`Fetching user details in parallel`, 'UserService', { userId: id });
         
         const [yardDetails, activityHistory, loginHistory] = await Promise.all([
           this.getUserYardDetails(user.yardIds || []).catch(error => {
-            this.logWarn(`⚠️ [USER_SERVICE] Failed to fetch yard details for user ${id}:`, error);
+            logger.warn(`Failed to fetch yard details for user`, 'UserService', { userId: id, error });
             return [] as YardAssignment[]; // Return empty array on error
           }),
           this.getUserActivityHistory(id).catch(error => {
-            this.logWarn(`⚠️ [USER_SERVICE] Failed to fetch activity history for user ${id}:`, error);
+            logger.warn(`Failed to fetch activity history for user`, 'UserService', { userId: id, error });
             return [] as UserActivity[]; // Return empty array on error
           }),
           this.getUserLoginHistory(id).catch(error => {
-            this.logWarn(`⚠️ [USER_SERVICE] Failed to fetch login history for user ${id}:`, error);
+            logger.warn(`Failed to fetch login history for user`, 'UserService', { userId: id, error });
             return [] as LoginRecord[]; // Return empty array on error
           })
         ]);
@@ -1384,7 +1283,7 @@ export class UserService {
         try {
           permissionSummary = this.generatePermissionSummary(user.moduleAccess);
         } catch (error) {
-          this.logWarn(`⚠️ [USER_SERVICE] Failed to generate permission summary for user ${id}:`, error);
+          logger.warn(`Failed to generate permission summary for user`, 'UserService', { userId: id, error });
           // Provide default permission summary
           permissionSummary = {
             totalModules: ALL_MODULES.length,
@@ -1406,7 +1305,8 @@ export class UserService {
           loginHistory
         };
 
-        this.logInfo(`✅ [USER_SERVICE] User details retrieved successfully (ID: ${operationId}):`, {
+        logger.info(`User details retrieved successfully`, 'UserService', {
+          operationId,
           userId: id,
           yardCount: yardDetails.length,
           activityCount: activityHistory.length,
@@ -1416,7 +1316,7 @@ export class UserService {
 
         return userDetails;
       } catch (error) {
-        this.logError(`❌ [USER_SERVICE] Error getting user details (ID: ${operationId}):`, error);
+        logger.error(`Error getting user details`, 'UserService', { operationId, error });
         if (error instanceof Error) {
           throw error;
         }
@@ -1436,14 +1336,30 @@ export class UserService {
         .eq('is_active', true);
 
       if (error) {
-        console.error('❌ [USER_SERVICE] Error fetching yard details:', error);
         // Return empty array instead of throwing to prevent getUserDetails from failing
         return [];
       }
 
       if (!data) {
-        console.log('ℹ️ [USER_SERVICE] No yard data found for user');
         return [];
+      }
+
+      // Get unique user IDs who created these yards
+      const creatorIds = [...new Set(data.map(yard => yard.created_by).filter(Boolean))];
+      
+      // Fetch user names for these IDs
+      const userNamesMap = new Map<string, string>();
+      if (creatorIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, name')
+          .in('id', creatorIds);
+        
+        if (users) {
+          users.forEach(user => {
+            userNamesMap.set(user.id, user.name);
+          });
+        }
       }
 
       return data.map(yard => ({
@@ -1451,10 +1367,9 @@ export class UserService {
         yardName: yard.name || 'Unknown Yard',
         yardCode: yard.code || 'N/A',
         assignedAt: yard.created_at ? new Date(yard.created_at) : new Date(),
-        assignedBy: yard.created_by || 'System'
+        assignedBy: yard.created_by ? (userNamesMap.get(yard.created_by) || 'Unknown User') : 'System'
       }));
     } catch (error) {
-      console.error('❌ [USER_SERVICE] Unexpected error getting yard details:', error);
       // Return empty array instead of throwing to prevent getUserDetails from failing
       return [];
     }
@@ -1462,34 +1377,93 @@ export class UserService {
 
   private async getUserActivityHistory(userId: string): Promise<UserActivity[]> {
     if (!userId?.trim()) {
-      console.warn('⚠️ [USER_SERVICE] Invalid user ID for activity history');
       return [];
     }
 
     try {
-      // Mock implementation - in a real system, this would query an audit log table
-      // TODO: Replace with actual audit log query when audit system is implemented
-      const mockActivities: UserActivity[] = [
-        {
-          id: `${userId}-login-${Date.now()}`,
-          action: 'User Login',
-          timestamp: new Date(),
-          details: 'User logged into the system',
-          ipAddress: '192.168.1.1'
-        },
-        {
-          id: `${userId}-profile-update-${Date.now() - 3600000}`,
-          action: 'Profile Updated',
-          timestamp: new Date(Date.now() - 3600000),
-          details: 'User profile information was updated',
-          ipAddress: '192.168.1.1'
-        }
-      ];
+      // Query user_activities table for recent activities
+      const { data, error } = await supabase
+        .from('user_activities')
+        .select('id, action, description, entity_type, entity_id, metadata, ip_address, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit to last 50 activities
 
-      console.log('ℹ️ [USER_SERVICE] Retrieved mock activity history for user:', userId);
-      return mockActivities;
+      if (error) {
+        logger.warn(`Failed to fetch user activities`, 'UserService', { userId, error: error.message });
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        logger.debug(`No activities found for user`, 'UserService', { userId });
+        return [];
+      }
+
+      // Map user_activities entries to UserActivity format
+      const activities: UserActivity[] = data.map(activity => {
+        // Generate human-readable action description
+        let actionDescription = '';
+        let details = activity.description || '';
+
+        switch (activity.action) {
+          case 'login':
+            actionDescription = 'User Login';
+            details = details || 'User logged into the system';
+            break;
+          case 'logout':
+            actionDescription = 'User Logout';
+            details = details || 'User logged out of the system';
+            break;
+          case 'login_failed':
+            actionDescription = 'Failed Login Attempt';
+            details = details || 'Login attempt failed';
+            break;
+          case 'create':
+            actionDescription = `Created ${activity.entity_type || 'Item'}`;
+            details = details || `Created a new ${activity.entity_type || 'item'}`;
+            break;
+          case 'update':
+            actionDescription = `Updated ${activity.entity_type || 'Item'}`;
+            details = details || `Updated ${activity.entity_type || 'item'} information`;
+            break;
+          case 'delete':
+            actionDescription = `Deleted ${activity.entity_type || 'Item'}`;
+            details = details || `Deleted ${activity.entity_type || 'item'}`;
+            break;
+          case 'view':
+            actionDescription = `Viewed ${activity.entity_type || 'Item'}`;
+            details = details || `Viewed ${activity.entity_type || 'item'} details`;
+            break;
+          case 'export':
+            actionDescription = 'Exported Data';
+            details = details || 'Exported data from the system';
+            break;
+          case 'import':
+            actionDescription = 'Imported Data';
+            details = details || 'Imported data into the system';
+            break;
+          default:
+            actionDescription = activity.action || 'Unknown Action';
+            details = details || 'User activity recorded';
+        }
+
+        return {
+          id: activity.id,
+          action: actionDescription,
+          timestamp: new Date(activity.created_at),
+          details,
+          ipAddress: activity.ip_address || 'Unknown'
+        };
+      });
+
+      logger.debug(`Retrieved user activity history`, 'UserService', { 
+        userId, 
+        activityCount: activities.length 
+      });
+
+      return activities;
     } catch (error) {
-      console.error('❌ [USER_SERVICE] Unexpected error getting activity history:', error);
+      logger.error(`Error fetching user activity history`, 'UserService', { userId, error });
       // Return empty array instead of throwing to prevent getUserDetails from failing
       return [];
     }
@@ -1497,7 +1471,6 @@ export class UserService {
 
   private generatePermissionSummary(moduleAccess: ModuleAccess): PermissionSummary {
     if (!moduleAccess) {
-      console.warn('⚠️ [USER_SERVICE] No module access provided for permission summary');
       // Return default summary with all modules disabled
       const defaultModuleList = ALL_MODULES.map(module => ({
         module,
@@ -1552,7 +1525,6 @@ export class UserService {
         moduleList
       };
     } catch (error) {
-      console.error('❌ [USER_SERVICE] Error generating permission summary:', error);
       // Return safe default
       const defaultModuleList = ALL_MODULES.map(module => ({
         module,
@@ -1571,38 +1543,48 @@ export class UserService {
 
   private async getUserLoginHistory(userId: string): Promise<LoginRecord[]> {
     if (!userId?.trim()) {
-      console.warn('⚠️ [USER_SERVICE] Invalid user ID for login history');
       return [];
     }
 
     try {
-      // Mock implementation - in a real system, this would query a login history table
-      // TODO: Replace with actual login history query when login tracking is implemented
-      const mockLoginHistory: LoginRecord[] = [
-        {
-          id: `${userId}-session-${Date.now()}`,
-          userId,
-          loginTime: new Date(Date.now() - 3600000), // 1 hour ago
-          logoutTime: new Date(),
-          ipAddress: '192.168.1.1',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          sessionDuration: 60 // 60 minutes
-        },
-        {
-          id: `${userId}-session-${Date.now() - 86400000}`,
-          userId,
-          loginTime: new Date(Date.now() - 90000000), // Yesterday
-          logoutTime: new Date(Date.now() - 86400000),
-          ipAddress: '192.168.1.2',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          sessionDuration: 120 // 120 minutes
-        }
-      ];
+      // Query user_login_history table for login sessions
+      const { data, error } = await supabase
+        .from('user_login_history')
+        .select('id, user_id, login_time, logout_time, session_duration_minutes, ip_address, user_agent, is_successful')
+        .eq('user_id', userId)
+        .eq('is_successful', true) // Only show successful logins
+        .order('login_time', { ascending: false })
+        .limit(50); // Limit to last 50 login sessions
 
-      console.log('ℹ️ [USER_SERVICE] Retrieved mock login history for user:', userId);
-      return mockLoginHistory;
+      if (error) {
+        logger.warn(`Failed to fetch login history for user`, 'UserService', { userId, error: error.message });
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        logger.debug(`No login history found for user`, 'UserService', { userId });
+        return [];
+      }
+
+      // Map login history entries to LoginRecord format
+      const loginRecords: LoginRecord[] = data.map(session => ({
+        id: session.id,
+        userId: session.user_id,
+        loginTime: new Date(session.login_time),
+        logoutTime: session.logout_time ? new Date(session.logout_time) : undefined,
+        ipAddress: session.ip_address || 'Unknown',
+        userAgent: session.user_agent || 'Unknown',
+        sessionDuration: session.session_duration_minutes || undefined
+      }));
+
+      logger.debug(`Retrieved user login history`, 'UserService', { 
+        userId, 
+        loginCount: loginRecords.length 
+      });
+
+      return loginRecords;
     } catch (error) {
-      console.error('❌ [USER_SERVICE] Unexpected error getting login history:', error);
+      logger.error(`Error fetching user login history`, 'UserService', { userId, error });
       // Return empty array instead of throwing to prevent getUserDetails from failing
       return [];
     }
@@ -1620,14 +1602,11 @@ export class UserService {
 
       if (data.user_module_access && Array.isArray(data.user_module_access) && data.user_module_access.length > 0) {
         moduleAccess = data.user_module_access[0].module_permissions || {};
-        console.log('🔄 [MAP_USER] Using user_module_access.module_permissions:', moduleAccess);
       } else if (data.user_module_access && !Array.isArray(data.user_module_access) && data.user_module_access.module_permissions) {
         moduleAccess = data.user_module_access.module_permissions || {};
-        console.log('🔄 [MAP_USER] Using user_module_access.module_permissions (object):', moduleAccess);
       } else {
         // Fallback to users.module_access if no user_module_access exists (for backward compatibility)
         moduleAccess = data.module_access || {};
-        console.log('🔄 [MAP_USER] Fallback to users.module_access:', moduleAccess);
       }
 
       // Ensure all modules are present with default values
@@ -1654,7 +1633,6 @@ export class UserService {
         deletedBy: data.deleted_by || undefined
       };
     } catch (error) {
-      console.error('❌ [MAP_USER] Error mapping user data:', error, data);
       throw new Error('Failed to map user data');
     }
   }

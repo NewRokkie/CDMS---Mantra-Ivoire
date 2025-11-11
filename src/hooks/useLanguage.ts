@@ -213,10 +213,10 @@ const translations = {
     'stack.shared': 'Shared',
     'stack.saveChanges': 'Save Changes',
     'stack.resetChanges': 'Reset',
-    'stack.rules.special': 'Special Stacks (01, 31, 101, 103): Can only be set to 20feet containers.',
-    'stack.rules.regular': 'Regular Stacks: Can be set to either 20feet or 40feet containers.',
-    'stack.rules.pairing': '40feet Assignment: Only available for regular stacks that have an adjacent regular stack to form valid pairs.',
-    'stack.rules.updates': 'Paired Updates: When changing a regular stack to 40feet, its adjacent pair will automatically be updated to match.',
+    'stack.rules.special': 'Special Stacks (01, 31, 101, 103): Can only be set to 20ft containers.',
+    'stack.rules.regular': 'Regular Stacks: Can be set to either 20ft or 40ft containers.',
+    'stack.rules.pairing': '40ft Assignment: Only available for regular stacks that have an adjacent regular stack to form valid pairs.',
+    'stack.rules.updates': 'Paired Updates: When changing a regular stack to 40ft, its adjacent pair will automatically be updated to match.',
 
     // Client Pools
     'clientPools.title': 'Client Pool Management',

@@ -3,6 +3,7 @@ import type {
   SyncError
 } from '../api/moduleAccessService';
 import type { ModuleAccess } from '../../types';
+import { logger } from '../../utils/logger';
 
 // Sync-specific interfaces
 export interface SyncResult {
@@ -1497,16 +1498,16 @@ export class SyncManager {
 
     switch (level) {
       case 'error':
-        console.error(`🔴 [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.error(`🔴 [${logEntry.level}] ${logEntry.message}`, 'SyncManager.ts', logEntry)
         break;
       case 'warn':
-        console.warn(`🟡 [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.warn(`🟡 [${logEntry.level}] ${logEntry.message}`, 'SyncManager.ts', logEntry);
         break;
       case 'debug':
-        console.debug(`🔍 [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.debug(`🔍 [${logEntry.level}] ${logEntry.message}`, 'SyncManager.ts', logEntry);
         break;
       default:
-        console.log(`ℹ️ [${logEntry.level}] ${logEntry.message}`, logEntry);
+        logger.info(`ℹ️ [${logEntry.level}] ${logEntry.message}`, 'SyncManager.ts', logEntry);
     }
   }
 }

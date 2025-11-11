@@ -62,7 +62,6 @@ export const getAvailableStackPositions = async (
     });
     
   } catch (error) {
-    console.error('Error getting available stack positions:', error);
     throw new Error('Failed to load available stack positions');
   }
 };
@@ -101,7 +100,7 @@ const generateStackPositions = (
           height,
           isAvailable: availability.isAvailable,
           section: stack.sectionName || 'Main',
-          containerSize: stack.containerSize === '20feet' ? '20ft' : '40ft',
+          containerSize: stack.containerSize === '20ft' ? '20ft' : '40ft',
           currentOccupancy: stack.currentOccupancy,
           capacity: stack.capacity,
           stack
@@ -150,7 +149,6 @@ export const checkPositionAvailability = async (
     };
     
   } catch (error) {
-    console.error('Error checking position availability:', error);
     return { isAvailable: false, reason: 'Failed to check availability' };
   }
 };
@@ -166,8 +164,6 @@ export const reserveStackPosition = async (
 ): Promise<{ success: boolean; reservationId?: string; error?: string }> => {
   // This would implement position reservation logic
   // For now, we'll just return success
-  console.log('Reserving position:', formattedPosition, 'for container:', containerNumber);
-  
   return {
     success: true,
     reservationId: `res_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -181,8 +177,6 @@ export const releaseStackReservation = async (
   reservationId: string
 ): Promise<{ success: boolean; error?: string }> => {
   // This would implement reservation release logic
-  console.log('Releasing reservation:', reservationId);
-  
   return { success: true };
 };
 
@@ -205,8 +199,8 @@ export const getStackStatistics = async (yardId: string): Promise<{
     const occupancyRate = totalCapacity > 0 ? (totalOccupancy / totalCapacity) * 100 : 0;
     
     const stacksBySize = {
-      '20ft': stacks.filter(s => s.containerSize === '20feet').length,
-      '40ft': stacks.filter(s => s.containerSize === '40feet').length
+      '20ft': stacks.filter(s => s.containerSize === '20ft').length,
+      '40ft': stacks.filter(s => s.containerSize === '40ft').length
     };
     
     return {
@@ -217,7 +211,6 @@ export const getStackStatistics = async (yardId: string): Promise<{
     };
     
   } catch (error) {
-    console.error('Error getting stack statistics:', error);
     throw new Error('Failed to load stack statistics');
   }
 };

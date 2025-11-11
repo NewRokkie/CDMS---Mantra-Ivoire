@@ -146,16 +146,22 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
         {sections.map(renderDataSection)}
 
         {/* Render custom children */}
-        {React.Children.map(children, (child) => {
-          if (React.isValidElement(child)) {
-            return React.cloneElement(child, {
-              data,
-              showNotification,
-              hideNotification
-            } as any);
-          }
-          return child;
-        })}
+        {typeof children === 'function' 
+          ? children({ showNotification, hideNotification })
+          : React.Children.map(children, (child) => {
+              if (React.isValidElement(child)) {
+                // Only pass props to custom components, not DOM elements
+                if (typeof child.type === 'function') {
+                  return React.cloneElement(child, {
+                    data,
+                    showNotification,
+                    hideNotification
+                  } as any);
+                }
+              }
+              return child;
+            })
+        }
       </div>
 
       {/* Actions Footer */}

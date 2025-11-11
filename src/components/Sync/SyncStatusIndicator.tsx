@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth, SyncStatus } from '../../hooks/useAuth';
+import { handleError } from '../../services/errorHandling';
 
 interface SyncStatusIndicatorProps {
   showDetails?: boolean;
@@ -47,7 +48,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
         await refreshModuleAccess();
       }
     } catch (error) {
-      console.error('🔄 [SYNC_STATUS] Manual refresh failed:', error);
+      handleError(error, 'SyncStatusIndicator.handleRefresh');
     } finally {
       setIsRefreshing(false);
     }

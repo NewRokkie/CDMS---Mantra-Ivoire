@@ -1,5 +1,6 @@
 import { Container, BookingReference } from '../types';
 import { GateInOperation, GateOutOperation } from '../types/operations';
+import { logger } from '../utils/logger';
 
 export type EventType =
   | 'CONTAINER_ADDED'
@@ -126,18 +127,18 @@ class EventBus {
     // Get handlers for this event
     const handlers = this.listeners.get(eventType);
     if (!handlers || handlers.size === 0) {
-      console.log(`[EventBus] No listeners for event: ${eventType}`);
+      logger.debug(`No listeners for event: ${eventType}`, 'EventBus');
       return;
     }
 
-    console.log(`[EventBus] Emitting ${eventType} to ${handlers.size} listeners`);
+    logger.debug(`Emitting ${eventType} to ${handlers.size} listeners`, 'EventBus');
 
     // Execute all handlers (in parallel for performance)
     const promises = Array.from(handlers).map(async (handler) => {
       try {
         await handler(payload);
       } catch (error) {
-        console.error(`[EventBus] Error in handler for ${eventType}:`, error);
+        logger.error(`Error in handler for ${eventType}`, 'EventBus', error);
       }
     });
 
@@ -149,7 +150,7 @@ class EventBus {
    */
   emitSync<T extends EventType>(eventType: T, payload: EventPayload[T]): void {
     this.emit(eventType, payload).catch((error) => {
-      console.error(`[EventBus] Error emitting ${eventType}:`, error);
+      logger.error(`[EventBus] Error emitting ${eventType}:`, error);
     });
   }
 

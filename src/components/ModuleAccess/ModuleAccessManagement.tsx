@@ -3,6 +3,7 @@ import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, 
 import type { ModuleAccess, ModulePermission, User } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { userService, moduleAccessService } from '../../services/api';
+import { handleError } from '../../services/errorHandling';
 
 // Enhanced module configuration with beautiful icons and colors
 const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
@@ -314,19 +315,12 @@ export const ModuleAccessManagement: React.FC = () => {
   }, []);
 
   const loadUsers = async () => {
-    console.log('🔄 [LOAD_USERS] Starting to load users...');
     try {
       setIsLoading(true);
-      const allUsers = await userService.getAll().catch(err => { console.error('Error loading users:', err); return []; });
-      console.log('🔄 [LOAD_USERS] Loaded users:', allUsers?.map(u => ({
-        id: u.id,
-        name: u.name,
-        moduleAccess: u.moduleAccess
-      })));
+      const allUsers = await userService.getAll().catch(err => { handleError(err, 'ModuleAccessManagement.loadUsers'); return []; });
       setUsers(allUsers || []);
     } catch (error) {
-      console.error('❌ [LOAD_USERS] Error loading users:', error);
-      // Set empty array to prevent infinite loading
+      handleError(error, 'ModuleAccessManagement.loadUsers');
       setUsers([]);
     } finally {
       setIsLoading(false);
@@ -432,9 +426,7 @@ export const ModuleAccessManagement: React.FC = () => {
   };
 
   const handleModuleToggle = async (moduleKey: keyof ModuleAccess) => {
-    console.log('🔄 [TOGGLE] Starting toggle for module:', moduleKey);
     if (!currentUser) {
-      console.log('❌ [TOGGLE] No current user');
       return;
     }
 
@@ -442,21 +434,17 @@ export const ModuleAccessManagement: React.FC = () => {
       ? (selectedUserId ? [selectedUserId] : [])
       : bulkSelectedUserIds;
 
-    console.log('🔄 [TOGGLE] Target user IDs:', targetUserIds);
     if (targetUserIds.length === 0) {
-      console.log('❌ [TOGGLE] No target users selected');
       return;
     }
 
     // Get current access states for target users
     const targetUsers = users.filter(user => targetUserIds.includes(user.id));
     const currentAccessStates = targetUsers.map(user => user.moduleAccess[moduleKey]);
-    console.log('🔄 [TOGGLE] Current access states:', currentAccessStates);
 
     // Determine new state: if all are enabled, disable; otherwise enable
     const allEnabled = currentAccessStates.every(state => state === true);
     const newState = !allEnabled;
-    console.log('🔄 [TOGGLE] All enabled:', allEnabled, 'New state:', newState);
 
     // Optimistic update
     setUsers(prevUsers =>
@@ -485,37 +473,23 @@ export const ModuleAccessManagement: React.FC = () => {
       for (const userId of targetUserIds) {
         const user = users.find(u => u.id === userId);
         if (user) {
-          console.log('🔄 [TOGGLE] Processing user:', userId, 'current module access:', user.moduleAccess[moduleKey]);
-
           const completeAccess: ModuleAccess = allModules.reduce((acc, key) => {
             acc[key] = key === moduleKey ? newState : user.moduleAccess[key] || false;
             return acc;
           }, {} as ModuleAccess);
 
-          console.log('🔄 [TOGGLE] Complete access for save:', completeAccess);
           await moduleAccessService.setUserModuleAccess(userId, completeAccess, currentUser.id);
         }
       }
 
-      console.log('✅ [TOGGLE] Successfully saved, reloading users...');
       await loadUsers();
 
-      // Always refresh the current user if they were affected, even if not in targetUserIds
-      // This ensures the sidebar updates immediately
-      console.log('🔄 [TOGGLE] Checking if current user needs refresh...');
-      console.log('🔄 [TOGGLE] Current user ID:', currentUser.id);
-      console.log('🔄 [TOGGLE] Target user IDs:', targetUserIds);
-      console.log('🔄 [TOGGLE] Should refresh current user:', targetUserIds.includes(currentUser.id));
-
       if (targetUserIds.includes(currentUser.id)) {
-        console.log('🔄 [TOGGLE] Refreshing current user...');
         await refreshUser();
       }
     } catch (error) {
-      console.error('❌ [TOGGLE] Error saving module access:', error);
+      handleError(error, 'ModuleAccessManagement.handleModuleToggle');
       alert('Error saving module access changes');
-
-      // Revert optimistic update on error
       await loadUsers();
     }
   };
@@ -648,7 +622,7 @@ export const ModuleAccessManagement: React.FC = () => {
 
       alert(`Applied ${action} to ${bulkSelectedUserIds.length} users`);
     } catch (error) {
-      console.error('Error applying bulk action:', error);
+      handleError(error, 'ModuleAccessManagement.handleBulkAction');
       alert('Error applying bulk action');
     }
   };

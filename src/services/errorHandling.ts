@@ -3,6 +3,8 @@
  * Provides robust error classification, retry mechanisms, and user-friendly messages
  */
 
+import { logger } from '../utils/logger';
+
 export interface ErrorDetails {
   code: string;
   message: string;
@@ -215,13 +217,13 @@ export class ErrorHandler {
 
     switch (error.severity) {
       case 'error':
-        console.error('🚨 Gate In Error:', logData);
+        logger.error('🚨 Gate In Error:', 'errorHandling.ts', logData);
         break;
       case 'warning':
-        console.warn('⚠️ Gate In Warning:', logData);
+        logger.warn('⚠️ Gate In Warning:', 'errorHandling.ts', logData);
         break;
       case 'info':
-        console.info('ℹ️ Gate In Info:', logData);
+        logger.info('ℹ️ Gate In Info:', 'errorHandling.ts', logData);
         break;
     }
   }
@@ -247,7 +249,7 @@ export class RetryManager {
 
     for (let attempt = 1; attempt <= finalConfig.maxAttempts; attempt++) {
       try {
-        console.log(`🔄 Attempting operation (${attempt}/${finalConfig.maxAttempts})`);
+        logger.debug(`Attempting operation (${attempt}/${finalConfig.maxAttempts})`, 'RetryManager');
         return await operation();
       } catch (error) {
         lastError = error;
@@ -257,13 +259,13 @@ export class RetryManager {
 
         // Don't retry if error is not retryable
         if (!errorDetails.retryable) {
-          console.log('❌ Error is not retryable, stopping attempts');
+          logger.info('Error is not retryable, stopping attempts', 'RetryManager');
           throw ErrorHandler.createGateInError(error);
         }
 
         // Don't retry on last attempt
         if (attempt === finalConfig.maxAttempts) {
-          console.log('❌ Max attempts reached, failing');
+          logger.warn('Max attempts reached, operation failed', 'RetryManager');
           break;
         }
 
@@ -273,7 +275,7 @@ export class RetryManager {
           finalConfig.maxDelay
         );
 
-        console.log(`⏳ Waiting ${delay}ms before retry...`);
+        logger.debug(`Waiting ${delay}ms before retry...`, 'RetryManager');
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -313,4 +315,15 @@ export async function handleAsyncOperation<T>(
     
     return { success: false, error: gateInError };
   }
+}
+
+/**
+ * Simple error handler for logging errors with context
+ */
+export function handleError(error: any, context: string): void {
+  const errorDetails = ErrorHandler.classifyError(error);
+  logger.error(errorDetails.userMessage, context, {
+    code: errorDetails.code,
+    technicalDetails: errorDetails.technicalDetails
+  });
 }

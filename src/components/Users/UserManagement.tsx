@@ -13,6 +13,8 @@ import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useUserManagementRetry } from '../../hooks/useRetry';
 import { toDate } from '../../utils/dateHelpers';
+import { handleError } from '../../services/errorHandling';
+import { logger } from '../../utils/logger';
 
 // Helper function to get module access based on role
 const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
@@ -128,7 +130,7 @@ const UserManagementContent: React.FC = () => {
       const data = await loadUsersWithRetry();
       setUsers(data);
     } catch (error) {
-      console.error('Error loading users:', error);
+      handleError(error, 'UserManagement.loadUsers');
       const errorInstance = error instanceof Error ? error : new Error('An unexpected error occurred while loading users');
       setLoadError(errorInstance);
       showError('Failed to load users', errorInstance.message);
@@ -178,7 +180,7 @@ const UserManagementContent: React.FC = () => {
       setUsers(prev => prev.filter(u => u.id !== id));
       showSuccess('User deleted successfully', 'The user has been safely removed from the system.');
     } catch (error) {
-      console.error('Error deleting user:', error);
+      handleError(error, 'UserManagement.deleteUser');
       showError('Failed to delete user', error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setOperationLoading(null);
@@ -248,7 +250,7 @@ const UserManagementContent: React.FC = () => {
       setShowForm(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error('Error saving user:', error);
+      handleError(error, 'UserManagement.handleSubmit');
       showError('Failed to save user', error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setOperationLoading(null);
@@ -298,7 +300,7 @@ const UserManagementContent: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error('Error toggling user status:', error);
+      handleError(error, 'UserManagement.handleToggleStatus');
       showError('Failed to update user status', error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setOperationLoading(null);
@@ -725,10 +727,9 @@ export const UserManagement: React.FC = () => {
     <ErrorBoundary
       context="User Management Module"
       onError={(error, errorInfo) => {
-        console.error('🚨 [USER_MANAGEMENT] Component error:', {
+        logger.error('User Management component error', 'UserManagement', {
           error: error.message,
-          componentStack: errorInfo.componentStack,
-          timestamp: new Date().toISOString()
+          componentStack: errorInfo.componentStack
         });
       }}
     >

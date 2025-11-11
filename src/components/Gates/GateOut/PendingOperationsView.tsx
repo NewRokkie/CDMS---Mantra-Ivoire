@@ -29,7 +29,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
     const searchTermLower = searchTerm.toLowerCase();
     const matchesSearch = (operation.bookingNumber?.toLowerCase().includes(searchTermLower) || false) ||
                          (operation.driverName?.toLowerCase().includes(searchTermLower) || false) ||
-                         (operation.vehicleNumber?.toLowerCase().includes(searchTermLower) || false) ||
+                         (operation.truckNumber?.toLowerCase().includes(searchTermLower) || false) ||
                          (operation.clientName?.toLowerCase().includes(searchTermLower) || false);
     const matchesType = typeFilter === 'all' || operation.bookingType === typeFilter;
     return matchesSearch && matchesType;
@@ -276,7 +276,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{operation.driverName}</div>
-                    <div className="text-sm text-gray-500">{operation.vehicleNumber} • {operation.transportCompany}</div>
+                    <div className="text-sm text-gray-500">{operation.truckNumber} • {operation.transportCompany}</div>
                   </div>
                 </div>
 
@@ -381,7 +381,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {operation.vehicleNumber || '-'}
+                      {operation.truckNumber || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">

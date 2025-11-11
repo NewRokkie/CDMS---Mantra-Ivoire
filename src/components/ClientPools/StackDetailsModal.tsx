@@ -68,7 +68,7 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Container Size</span>
-                  <div className="font-medium text-gray-900">{stack.containerSize || '20feet'}</div>
+                  <div className="font-medium text-gray-900">{stack.containerSize || '20ft'}</div>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Stack Type</span>

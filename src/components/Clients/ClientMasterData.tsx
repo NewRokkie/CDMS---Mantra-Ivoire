@@ -6,8 +6,7 @@ import { clientService } from '../../services/api';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
-
-// REMOVED: Mock data now managed by global store
+import { handleError } from '../../services/errorHandling';
 
 export const ClientMasterData: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -17,11 +16,13 @@ export const ClientMasterData: React.FC = () => {
     async function loadClients() {
       try {
         setLoading(true);
-        const data = await clientService.getAll().catch(err => { console.error('Error loading clients:', err); return []; });
+        const data = await clientService.getAll().catch(err => { 
+          handleError(err, 'ClientMasterData.loadClients');
+          return []; 
+        });
         setClients(data || []);
       } catch (error) {
-        console.error('Error loading clients:', error);
-        // Set empty array to prevent infinite loading
+        handleError(error, 'ClientMasterData.loadClients');
         setClients([]);
       } finally {
         setLoading(false);

@@ -44,7 +44,11 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
   }
   
   const sortedLogs = auditLogs
-    ? [...auditLogs].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    ? [...auditLogs].sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime();
+        const timeB = new Date(b.timestamp).getTime();
+        return timeB - timeA;
+      })
     : [];
 
   const getActionColor = (action: string) => {
@@ -65,10 +69,10 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
       totalEntries: sortedLogs.length.toString(),
       containerNumber: containerNumber,
       dateRange: sortedLogs.length > 0 
-        ? `${sortedLogs[sortedLogs.length - 1].timestamp.toLocaleDateString()} - ${sortedLogs[0].timestamp.toLocaleDateString()}`
+        ? `${new Date(sortedLogs[sortedLogs.length - 1].timestamp).toLocaleDateString()} - ${new Date(sortedLogs[0].timestamp).toLocaleDateString()}`
         : 'N/A',
       lastActivity: sortedLogs.length > 0 
-        ? sortedLogs[0].timestamp.toLocaleString()
+        ? new Date(sortedLogs[0].timestamp).toLocaleString()
         : 'N/A'
     },
     layout: 'grid' as const
@@ -114,11 +118,11 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
                     <div className="text-xs text-gray-500 mb-2 flex items-center space-x-3">
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
-                        <span>{log.timestamp.toLocaleDateString()}</span>
+                        <span>{new Date(log.timestamp).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
-                        <span>{log.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        <span>{new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                       </div>
                     </div>
                     {log.details && (

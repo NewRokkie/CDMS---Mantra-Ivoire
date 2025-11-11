@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Building, X, Loader, Calendar } from 'lucide-react';
+import { Users, Package, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Building } from 'lucide-react';
 import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { supabase } from '../../services/api/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,8 +7,10 @@ import { clientPoolService } from '../../services/api';
 import { stackService } from '../../services/api';
 import { ClientPoolForm } from './ClientPoolForm';
 import { StackDetailsModal } from './StackDetailsModal';
+import { ClientPoolViewModal } from './ClientPoolViewModal';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
+import { handleError } from '../../services/errorHandling';
 
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
@@ -19,6 +21,7 @@ export const ClientPoolManagement: React.FC = () => {
   const [selectedPool, setSelectedPool] = useState<ClientPool | null>(null);
   const [showStackDetails, setShowStackDetails] = useState(false);
   const [selectedStack, setSelectedStack] = useState<any>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [assignedStacksData, setAssignedStacksData] = useState<Map<string, any>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -107,7 +110,7 @@ export const ClientPoolManagement: React.FC = () => {
   const canManageClientPools = async () => {
     if (!user) return false;
 
-    const { data: userProfile, error } = await supabase
+    const { data: userProfile } = await supabase
       .from('users')
       .select('role')
       .eq('auth_user_id', user.id)
@@ -124,8 +127,14 @@ export const ClientPoolManagement: React.FC = () => {
     try {
       setIsLoading(true);
 
-      const pools = await clientPoolService.getAll(currentYard?.id).catch(err => { console.error('Error loading client pools:', err); return []; });
-      const poolStats = await clientPoolService.getStats(currentYard?.id).catch(err => { console.error('Error loading pool stats:', err); return null; });
+      const pools = await clientPoolService.getAll(currentYard?.id).catch(err => { 
+        handleError(err, 'ClientPoolManagement.loadClientPools');
+        return []; 
+      });
+      const poolStats = await clientPoolService.getStats(currentYard?.id).catch(err => { 
+        handleError(err, 'ClientPoolManagement.loadPoolStats');
+        return null; 
+      });
 
       setClientPools(pools || []);
       setStats(poolStats);
@@ -142,8 +151,7 @@ export const ClientPoolManagement: React.FC = () => {
                 try {
                   const stack = await stackService.getById(stackId);
                   return stack ? [stackId, stack] : null;
-                } catch (error) {
-                  console.warn(`Failed to load stack ${stackId}:`, error);
+                } catch {
                   return null;
                 }
               })
@@ -152,13 +160,12 @@ export const ClientPoolManagement: React.FC = () => {
             const stacksMap = new Map(stacksData.filter(Boolean) as [string, any][]);
             setAssignedStacksData(stacksMap);
           } catch (error) {
-            console.error('Error loading assigned stacks:', error);
+            handleError(error, 'ClientPoolManagement.loadAssignedStacks');
           }
         }
       }
     } catch (error) {
-      console.error('Error loading client pools:', error);
-      // Set empty arrays to prevent infinite loading
+      handleError(error, 'ClientPoolManagement.loadClientPools');
       setClientPools([]);
       setStats(null);
     } finally {
@@ -203,7 +210,6 @@ export const ClientPoolManagement: React.FC = () => {
 
   const handleViewStackDetails = async (stackId: string) => {
     try {
-      // First check if we already have the stack data cached
       const cachedStack = assignedStacksData.get(stackId);
       if (cachedStack) {
         setSelectedStack(cachedStack);
@@ -211,19 +217,16 @@ export const ClientPoolManagement: React.FC = () => {
         return;
       }
 
-      // If not cached, fetch from the service
       const stackDetails = await stackService.getById(stackId);
       if (stackDetails) {
         setSelectedStack(stackDetails);
         setShowStackDetails(true);
-        // Cache the result
         setAssignedStacksData(prev => new Map(prev.set(stackId, stackDetails)));
       } else {
-        console.error('Stack not found:', stackId);
         alert('Stack details not found');
       }
     } catch (error) {
-      console.error('Error fetching stack details:', error);
+      handleError(error, 'ClientPoolManagement.handleViewStackDetails');
       alert('Error loading stack details');
     }
   };
@@ -264,7 +267,7 @@ export const ClientPoolManagement: React.FC = () => {
       setSelectedPool(null);
       alert(`Client pool created successfully for ${data.clientName}!`);
     } catch (error) {
-      console.error('Error creating client pool:', error);
+      handleError(error, 'ClientPoolManagement.handleCreatePool');
       alert(`Error creating client pool: ${error}`);
     }
   };
@@ -287,7 +290,7 @@ export const ClientPoolManagement: React.FC = () => {
       setSelectedPool(null);
       alert(`Client pool updated successfully for ${data.clientName}!`);
     } catch (error) {
-      console.error('Error updating client pool:', error);
+      handleError(error, 'ClientPoolManagement.handleUpdatePool');
       alert(`Error updating client pool: ${error}`);
     }
   };
@@ -510,8 +513,12 @@ export const ClientPoolManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => setSelectedPool(pool)}
+                          onClick={() => {
+                            setSelectedPool(pool);
+                            setShowViewModal(true);
+                          }}
                           className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                          title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -521,6 +528,7 @@ export const ClientPoolManagement: React.FC = () => {
                             setShowForm(true);
                           }}
                           className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                          title="Edit Pool"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -529,15 +537,16 @@ export const ClientPoolManagement: React.FC = () => {
                             if (confirm(`Are you sure you want to delete the pool for ${pool.clientName}?`)) {
                               try {
                                 await clientPoolService.delete(pool.id);
-                                await loadClientPools(); // Reload pools after deletion
+                                await loadClientPools();
                                 alert(`Client pool for ${pool.clientName} deleted successfully!`);
                               } catch (error) {
-                                console.error('Error deleting client pool:', error);
+                                handleError(error, 'ClientPoolManagement.deletePool');
                                 alert(`Error deleting client pool: ${error}`);
                               }
                             }
                           }}
                           className="text-red-600 hover:text-red-900 p-1 rounded"
+                          title="Delete Pool"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -585,6 +594,36 @@ export const ClientPoolManagement: React.FC = () => {
             setSelectedStack(null);
           }}
           stack={selectedStack}
+        />
+      )}
+
+      {/* Client Pool View Modal */}
+      {showViewModal && (
+        <ClientPoolViewModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedPool(null);
+          }}
+          clientPool={selectedPool}
+          onEdit={() => {
+            setShowViewModal(false);
+            setShowForm(true);
+          }}
+          onDelete={async (pool) => {
+            if (confirm(`Are you sure you want to delete the pool for ${pool.clientName}?`)) {
+              try {
+                await clientPoolService.delete(pool.id);
+                setShowViewModal(false);
+                setSelectedPool(null);
+                await loadClientPools();
+                alert(`Client pool for ${pool.clientName} deleted successfully!`);
+              } catch (error) {
+                handleError(error, 'ClientPoolManagement.deletePoolFromModal');
+                alert(`Error deleting client pool: ${error}`);
+              }
+            }
+          }}
         />
       )}
 

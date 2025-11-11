@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYardProvider, YardContext } from '../../hooks/useYard';
 import { useModuleAccessSync } from '../../hooks/useModuleAccessSync';
 import { useGlobalStore } from '../../store/useGlobalStore';
+import { FullScreenLoader } from '../Common/FullScreenLoader';
+import { logger } from '../../utils/logger';
 
 // Lazy load components for better performance
 const DashboardOverview = React.lazy(() => import('../Dashboard/DashboardOverview').then(module => ({ default: module.DashboardOverview })));
@@ -16,7 +18,7 @@ const YardManagement = React.lazy(() => import('../Yard/YardManagement').then(mo
 const ClientMasterData = React.lazy(() => import('../Clients/ClientMasterData').then(module => ({ default: module.ClientMasterData })));
 const UserManagement = React.lazy(() => import('../Users/UserManagement').then(module => ({ default: module.UserManagement })));
 const DepotManagement = React.lazy(() => import('../Yard/DepotManagement/DepotManagement').then(module => ({ default: module.DepotManagement })));
-const StackManagement = React.lazy(() => import('../Yard/StackManagement').then(module => ({ default: module.StackManagement })));
+const StackManagement = React.lazy(() => import('../Yard/StackManagement/StackManagement').then(module => ({ default: module.StackManagement })));
 const ClientPoolManagement = React.lazy(() => import('../ClientPools/ClientPoolManagement').then(module => ({ default: module.ClientPoolManagement })));
 const ModuleAccessManagement = React.lazy(() => import('../ModuleAccess/ModuleAccessManagement').then(module => ({ default: module.ModuleAccessManagement })));
 const ReportsModule = React.lazy(() => import('../Reports/ReportsModule').then(module => ({ default: module.ReportsModule })));
@@ -41,28 +43,17 @@ const AccessDenied: React.FC = () => (
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoading, isAuthenticated, user } = useAuth();
 
-  console.log('🛡️ [PROTECTED] isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user?.email);
-
   // Show loading spinner while checking authentication
   if (isLoading) {
-    console.log('🛡️ [PROTECTED] Showing loading spinner');
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm">Loading...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader message="Authenticating..." submessage="Please wait" />;
   }
 
   // Redirect to login if not authenticated or if authentication failed
   if (!isAuthenticated || !user) {
-    console.log('🛡️ [PROTECTED] Not authenticated, redirecting to login');
+    logger.info('User not authenticated, redirecting to login', 'ProtectedRoute');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('🛡️ [PROTECTED] ✅ Authenticated, rendering children');
   return <>{children}</>;
 };
 
@@ -79,16 +70,23 @@ const ProtectedApp: React.FC = () => {
     if (user?.id) {
       initializeStore();
     }
-  }, [user?.id]); // Only depend on user ID, not the entire user object or initializeStore function
+  }, [user?.id]);
 
-  console.log('App render - user:', user?.name, 'activeModule:', activeModule);
+  // Show full screen loader while yard context is loading
+  if (yardProvider.isLoading) {
+    return <FullScreenLoader message="Loading Yard..." submessage="Initializing your workspace" />;
+  }
+
+  // Show error if yard loading failed
+  if (yardProvider.error) {
+    logger.error('Yard loading failed', 'ProtectedApp', { error: yardProvider.error });
+  }
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   const renderModule = () => {
-    console.log('Rendering module:', activeModule);
     // Check module access before rendering
     switch (activeModule) {
       case 'dashboard':

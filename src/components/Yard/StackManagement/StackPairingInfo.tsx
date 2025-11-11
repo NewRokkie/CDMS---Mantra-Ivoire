@@ -8,12 +8,15 @@ interface StackPairingInfoProps {
 }
 
 export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) => {
-  const twentyFootCount = stacks.filter(s => s.containerSize === '20feet').length;
-  const fortyFootCount = stacks.filter(s => s.containerSize === '40feet').length;
-  const specialStackCount = stacks.filter(s => s.isSpecialStack).length;
-  const activeCount = stacks.filter(s => s.isActive).length;
+  // Filter out virtual stacks from the summary
+  const physicalStacks = stacks.filter(s => !(s as any).isVirtual);
+  
+  const twentyFootCount = physicalStacks.filter(s => s.containerSize === '20ft').length;
+  const fortyFootCount = physicalStacks.filter(s => s.containerSize === '40ft').length;
+  const specialStackCount = physicalStacks.filter(s => s.isSpecialStack).length;
+  const activeCount = physicalStacks.filter(s => s.isActive).length;
 
-  const sections = Array.from(new Set(stacks.map(s => s.sectionName || 'Main Section')));
+  const sections = Array.from(new Set(physicalStacks.map(s => s.sectionName || 'Main Section')));
 
   const generatePairs = () => {
     const pairs: Array<{
@@ -27,7 +30,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
 
     const processed = new Set<number>();
 
-    stacks
+    physicalStacks
       .filter(s => !s.isSpecialStack && s.isActive)
       .sort((a, b) => a.stackNumber - b.stackNumber)
       .forEach(stack => {
@@ -36,7 +39,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
         const adjacentNumber = stackService.getAdjacentStackNumber(stack.stackNumber);
         if (!adjacentNumber) return;
 
-        const adjacentStack = stacks.find(s => s.stackNumber === adjacentNumber);
+        const adjacentStack = physicalStacks.find(s => s.stackNumber === adjacentNumber);
         if (!adjacentStack || adjacentStack.isSpecialStack) return;
 
         const stack1 = Math.min(stack.stackNumber, adjacentNumber);
@@ -44,7 +47,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
         const virtualStack = stackService.getVirtualStackNumber(stack1, stack2);
 
         const bothMatch = stack.containerSize === adjacentStack.containerSize;
-        const both40ft = stack.containerSize === '40feet' && adjacentStack.containerSize === '40feet';
+        const both40ft = stack.containerSize === '40ft' && adjacentStack.containerSize === '40ft';
 
         pairs.push({
           stack1,
@@ -159,9 +162,9 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
           <h4 className="text-sm font-medium text-gray-700 mb-2">Sections</h4>
           <div className="space-y-2">
             {sections.map((section, index) => {
-              const sectionStacks = stacks.filter(s => (s.sectionName || 'Main Section') === section);
-              const section20ft = sectionStacks.filter(s => s.containerSize === '20feet').length;
-              const section40ft = sectionStacks.filter(s => s.containerSize === '40feet').length;
+              const sectionStacks = physicalStacks.filter(s => (s.sectionName || 'Main Section') === section);
+              const section20ft = sectionStacks.filter(s => s.containerSize === '20ft').length;
+              const section40ft = sectionStacks.filter(s => s.containerSize === '40ft').length;
               const sectionSpecial = sectionStacks.filter(s => s.isSpecialStack).length;
 
               return (

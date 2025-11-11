@@ -20,7 +20,6 @@ export const useModuleAccessSync = () => {
           filter: `user_id=eq.${user.id}`
         },
         async (payload) => {
-          console.log('🔔 [PERMISSION_UPDATE] Your permissions have been updated:', payload);
           setHasPermissionUpdate(true);
 
           await refreshUser();

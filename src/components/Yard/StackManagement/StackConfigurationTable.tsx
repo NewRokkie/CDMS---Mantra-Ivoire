@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Shield, Edit, Trash2, Users } from 'lucide-react';
+import { Settings, Shield, Trash2, Users } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
 
@@ -7,7 +7,7 @@ interface StackConfigurationTableProps {
   stacks: YardStack[];
   onEditStack: (stack: YardStack) => void;
   onDeleteStack: (stackId: string) => void;
-  onContainerSizeChange?: (stackId: string, yardId: string, stackNumber: number, newSize: '20feet' | '40feet') => void;
+  onContainerSizeChange?: (stackId: string, yardId: string, stackNumber: number, newSize: '20ft' | '40ft') => void;
   onAssignClient?: (stack: YardStack) => void;
 }
 
@@ -22,8 +22,8 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
     return stackService.getAdjacentStackNumber(stackNumber);
   };
 
-  const canAssign40Feet = (stack: YardStack): boolean => {
-    return stackService.canAssign40Feet(stack);
+  const canAssign40ft = (stack: YardStack): boolean => {
+    return stackService.canAssign40ft(stack);
   };
 
   if (!stacks || stacks.length === 0) {
@@ -76,11 +76,11 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
           <tbody className="bg-white divide-y divide-gray-200">
             {stacks.map((stack) => {
               const isSpecialStack = stack.isSpecialStack || false;
-              const can40Feet = canAssign40Feet(stack);
+              const can40ft = canAssign40ft(stack);
               const adjacentStack = !isSpecialStack ? getAdjacentStackNumber(stack.stackNumber) : null;
               const adjacentConfig = adjacentStack ? stacks.find(s => s.stackNumber === adjacentStack) : null;
               const adjacentIsSpecial = adjacentConfig?.isSpecialStack || false;
-
+              
               return (
                 <tr key={stack.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -115,11 +115,11 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-lg ${
-                      stack.containerSize === '20feet'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-orange-100 text-orange-800'
+                      stack.containerSize === '40ft'
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-blue-100 text-blue-800'
                     }`}>
-                      {stack.containerSize || '20feet'}
+                      {stack.containerSize || '20ft'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -145,26 +145,26 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                     {onContainerSizeChange && (
                       <div className="relative inline-flex items-center bg-gray-200 rounded-full p-1">
                         <button
-                          onClick={() => onContainerSizeChange(stack.id, stack.yardId || '', stack.stackNumber, '20feet')}
-                          disabled={stack.containerSize === '20feet'}
+                          onClick={() => onContainerSizeChange(stack.id, stack.yardId || '', stack.stackNumber, '20ft')}
+                          disabled={stack.containerSize === '20ft'}
                           className={`relative px-4 py-1 text-sm rounded-full transition-all duration-200 ${
-                            stack.containerSize === '20feet'
-                              ? 'bg-white text-gray-800 shadow-sm font-medium'
+                            stack.containerSize === '20ft'
+                              ? 'bg-blue-200 text-blue-800 shadow-sm shadow-blue-500/50 font-medium'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                           }`}
                         >
                           20ft
-                          {stack.containerSize === '20feet' && (
+                          {stack.containerSize === '20ft' && (
                             <span className="absolute inset-x-0 -bottom-1.5 mx-auto h-0.5 w-5 bg-blue-500"></span>
                           )}
                         </button>
                         <button
-                          onClick={() => onContainerSizeChange(stack.id, stack.yardId || '', stack.stackNumber, '40feet')}
-                          disabled={stack.containerSize === '40feet' || isSpecialStack || !can40Feet}
+                          onClick={() => onContainerSizeChange(stack.id, stack.yardId || '', stack.stackNumber, '40ft')}
+                          disabled={stack.containerSize === '40ft' || isSpecialStack || !can40ft}
                           className={`relative px-4 py-1 text-sm rounded-full transition-all duration-200 ${
-                            stack.containerSize === '40feet'
-                              ? 'bg-white text-gray-800 shadow-sm font-medium'
-                              : isSpecialStack || !can40Feet
+                            stack.containerSize === '40ft'
+                              ? 'bg-orange-200 text-orange-800 shadow-sm shadow-orange-500/50 font-medium'
+                              : isSpecialStack || !can40ft
                               ? 'text-gray-400 cursor-not-allowed'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                           }`}
@@ -177,7 +177,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                           }
                         >
                           40ft
-                          {stack.containerSize === '40feet' && (
+                          {stack.containerSize === '40ft' && (
                             <span className="absolute inset-x-0 -bottom-1.5 mx-auto h-0.5 w-5 bg-orange-500"></span>
                           )}
                         </button>

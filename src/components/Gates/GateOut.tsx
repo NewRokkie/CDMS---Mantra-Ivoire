@@ -10,8 +10,7 @@ import { MobileGateOutOperationsTable } from './GateOut/MobileGateOutOperationsT
 import { PendingOperationsView } from './GateOut/PendingOperationsView';
 import { GateOutCompletionModal } from './GateOut/GateOutCompletionModal';
 import { PendingGateOut } from './types';
-
-// Import centralized mock data
+import { handleError } from '../../services/errorHandling';
 
 interface GateOutFormData {
   booking?: {
@@ -52,16 +51,15 @@ export const GateOut: React.FC = () => {
       try {
         setLoading(true);
         const [ordersData, containersData, operationsData] = await Promise.all([
-          bookingReferenceService.getAll().catch(err => { console.error('Error loading orders:', err); return []; }),
-          containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; }),
-          gateService.getGateOutOperations().catch(err => { console.error('Error loading operations:', err); return []; })
+          bookingReferenceService.getAll().catch(err => { handleError(err, 'GateOut.loadOrders'); return []; }),
+          containerService.getAll().catch(err => { handleError(err, 'GateOut.loadContainers'); return []; }),
+          gateService.getGateOutOperations().catch(err => { handleError(err, 'GateOut.loadOperations'); return []; })
         ]);
         setReleaseOrders(ordersData || []);
         setContainers(containersData || []);
         setGateOutOperations(operationsData || []);
       } catch (error) {
-        console.error('Error loading gate out data:', error);
-        // Set empty arrays to prevent infinite loading
+        handleError(error, 'GateOut.loadData');
         setReleaseOrders([]);
         setContainers([]);
         setGateOutOperations([]);
@@ -75,12 +73,9 @@ export const GateOut: React.FC = () => {
   useEffect(() => {
     if (!currentYard) return;
 
-    console.log(`🔌 Setting up Gate Out real-time subscriptions for yard: ${currentYard.id}`);
-
     const unsubscribeGateOut = realtimeService.subscribeToGateOutOperations(
       currentYard.id,
       async (payload) => {
-        console.log(`📡 Gate Out ${payload.eventType}:`, payload.new);
         const operations = await gateService.getGateOutOperations();
         setGateOutOperations(operations);
       }
@@ -88,7 +83,6 @@ export const GateOut: React.FC = () => {
 
     const unsubscribeBookingReferences = realtimeService.subscribeToBookingReferences(
       async (payload) => {
-        console.log(`📡 Booking Reference ${payload.eventType}:`, payload.new);
         const orders = await bookingReferenceService.getAll();
         setReleaseOrders(orders);
       }
@@ -96,7 +90,6 @@ export const GateOut: React.FC = () => {
 
     const unsubscribeContainers = realtimeService.subscribeToContainers(
       async (payload) => {
-        console.log(`📡 Container ${payload.eventType}:`, payload.new);
         const containers = await containerService.getAll();
         setContainers(containers);
       }
@@ -106,7 +99,6 @@ export const GateOut: React.FC = () => {
       unsubscribeGateOut();
       unsubscribeBookingReferences();
       unsubscribeContainers();
-      console.log(`🔌 Cleaned up Gate Out real-time subscriptions`);
     };
   }, [currentYard?.id]);
 

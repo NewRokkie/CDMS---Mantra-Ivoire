@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Eye, Edit, CreditCard, AlertTriangle, Package } from 'lucide-react';
+import { Search, Download, Eye, Edit, CreditCard, AlertTriangle, FileText } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { containerService, reportService } from '../../services/api';
+import { containerService } from '../../services/api';
 import { clientPoolService } from '../../services/clientPoolService';
 import { ContainerViewModal } from './ContainerViewModal';
 import { ContainerEditModal } from './ContainerEditModal';
+import { AuditLogModal } from './AuditLogModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { DatePicker } from '../Common/DatePicker';
 import { ClientSearchField } from '../Common/ClientSearchField';
+import { TableSkeleton } from '../Common/TableSkeleton';
+import { handleError } from '../../services/errorHandling';
 
 // Helper function to format container number for display (adds hyphens)
 const formatContainerNumberForDisplay = (containerNumber?: string | null): string => {
@@ -27,7 +30,6 @@ const formatContainerNumberForDisplay = (containerNumber?: string | null): strin
 // REMOVED: Mock data now managed by global store
 
 export const ContainerList: React.FC = () => {
-  const [allContainers, setAllContainers] = useState<Container[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,13 +37,13 @@ export const ContainerList: React.FC = () => {
     async function loadContainers() {
       try {
         setLoading(true);
-        const data = await containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; });
-        setAllContainers(data || []);
+        const data = await containerService.getAll().catch(err => { 
+          handleError(err, 'ContainerList.loadContainers');
+          return []; 
+        });
         setContainers(data || []);
       } catch (error) {
-        console.error('Error loading containers:', error);
-        // Set empty arrays to prevent infinite loading
-        setAllContainers([]);
+        handleError(error, 'ContainerList.loadContainers');
         setContainers([]);
       } finally {
         setLoading(false);
@@ -58,18 +60,13 @@ export const ContainerList: React.FC = () => {
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
   const { t } = useLanguage();
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
 
-  React.useEffect(() => {
-    // Dev-time warning to help detect incomplete container records that may cause runtime errors
-    const incomplete = containers.filter(c => !c.number || !c.clientName || !c.location);
-    if (incomplete.length > 0) {
-      console.warn('[ContainerList] Found containers with missing critical fields:', incomplete.map(c => ({ id: c.id, number: c.number, clientName: c.clientName, location: c.location })));
-    }
-  }, [containers]);
+
 
   const clientOptions = React.useMemo(() => {
     const map = new Map<string, { id?: string; name: string; code?: string }>();
@@ -89,10 +86,11 @@ export const ContainerList: React.FC = () => {
 
   const getStatusBadge = (status: Container['status']) => {
     const statusConfig = {
+      gate_in: { color: 'bg-blue-100 text-blue-800', label: 'Gate In' },
       in_depot: { color: 'bg-green-100 text-green-800', label: 'In Depot' },
-      out_depot: { color: 'bg-blue-100 text-blue-800', label: 'Out Depot' },
-      in_service: { color: 'bg-yellow-100 text-yellow-800', label: 'In Service' },
-      maintenance: { color: 'bg-red-100 text-red-800', label: 'Maintenance' },
+      gate_out: { color: 'bg-orange-100 text-orange-800', label: 'Gate Out' },
+      out_depot: { color: 'bg-gray-100 text-gray-800', label: 'Out Depot' },
+      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
       cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' }
     };
 
@@ -111,15 +109,7 @@ export const ContainerList: React.FC = () => {
 
     // Filter by current yard first
     if (currentYard) {
-      console.log('[ContainerList] Filtering by yard:', currentYard.id, 'Containers before filter:', filtered.length);
-      filtered = filtered.filter(container => {
-        const matches = container.yardId === currentYard.id;
-        console.log('[ContainerList] Container', container.id, 'yardId:', container.yardId, 'matches:', matches);
-        return matches;
-      });
-      console.log('[ContainerList] Containers after yard filter:', filtered.length);
-    } else {
-      console.log('[ContainerList] No current yard, showing all containers:', filtered.length);
+      filtered = filtered.filter(container => container.yardId === currentYard.id);
     }
 
     // Apply client filter for client users (internal permission)
@@ -128,7 +118,6 @@ export const ContainerList: React.FC = () => {
       // Use client pool service to filter containers by assigned stacks
       let clientStacks = clientPoolService.getClientStacks(clientFilter);
       if (!Array.isArray(clientStacks)) {
-        console.warn('[ContainerList] clientPoolService.getClientStacks returned non-array for', clientFilter, clientStacks);
         clientStacks = [];
       }
       filtered = filtered.filter(container => {
@@ -184,9 +173,7 @@ export const ContainerList: React.FC = () => {
     return filtered;
   };
 
-  console.log('[ContainerList] Current yard:', currentYard?.id, 'Total containers:', containers.length);
   const filteredContainers = getFilteredContainers();
-  console.log('[ContainerList] Filtered containers:', filteredContainers.length);
   const canEditContainers = user?.role === 'admin' || user?.role === 'supervisor';
   const canAccessEDI = hasModuleAccess('edi');
 
@@ -223,23 +210,60 @@ export const ContainerList: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleUpdateContainer = (updatedContainer: Container) => {
-    // Update the container in state
-    setContainers(prevContainers =>
-      prevContainers.map(c => c.id === updatedContainer.id ? updatedContainer : c)
-    );
+  const handleViewAuditLog = (container: Container) => {
+    addAuditLog(container.id, 'audit_log_viewed', 'Audit log accessed');
+    setSelectedContainer(container);
+    setShowAuditModal(true);
+  };
+
+  const refreshContainers = async () => {
+    try {
+      setLoading(true);
+      const data = await containerService.getAll().catch(err => { 
+        handleError(err, 'ContainerList.refreshContainers');
+        return []; 
+      });
+      setContainers(data || []);
+    } catch (error) {
+      handleError(error, 'ContainerList.refreshContainers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateContainer = async (updatedContainer: Container) => {
     // Add audit log for edit
     addAuditLog(updatedContainer.id, 'edited', 'Container information updated');
     setShowEditModal(false);
     setSelectedContainer(null);
+    
+    // Refresh the container list from database
+    await refreshContainers();
+    
     alert('Container updated successfully!');
+  };
+
+  const handleDeleteContainer = async (containerId: string) => {
+    if (!window.confirm('Are you sure you want to delete this container?')) {
+      return;
+    }
+
+    try {
+      await containerService.delete(containerId);
+      
+      // Refresh the container list from database
+      await refreshContainers();
+      
+      alert('Container deleted successfully!');
+    } catch (error) {
+      handleError(error, 'ContainerList.handleDeleteContainer');
+      alert('Failed to delete container. Please try again.');
+    }
   };
 
   // --------------------------
   // Export helpers
   // --------------------------
-  const formatDate = (d?: Date) => (d ? new Date(d).toLocaleString() : '');
-
   const generateExportRows = (rows: Container[]) => {
     return rows.map(c => ({
       number: c.number,
@@ -324,10 +348,6 @@ export const ContainerList: React.FC = () => {
 
   const exportHTML = (rows: Container[]) => {
     const data = generateExportRows(rows);
-    const stats = {
-      total: rows.length,
-      inDepot: rows.filter(r => r.status === 'in_depot').length
-    };
     const html = `<!doctype html>
 <html>
 <head>
@@ -437,6 +457,7 @@ function filterTable(){
       {showViewModal && selectedContainer && (
         <ContainerViewModal
           container={selectedContainer}
+          isOpen={showViewModal}
           onClose={() => {
             setShowViewModal(false);
             setSelectedContainer(null);
@@ -448,11 +469,25 @@ function filterTable(){
       {showEditModal && selectedContainer && (
         <ContainerEditModal
           container={selectedContainer}
+          isOpen={showEditModal}
           onClose={() => {
             setShowEditModal(false);
             setSelectedContainer(null);
           }}
           onSave={handleUpdateContainer}
+        />
+      )}
+
+      {/* Audit Log Modal */}
+      {showAuditModal && selectedContainer && (
+        <AuditLogModal
+          auditLogs={selectedContainer.auditLogs || []}
+          containerNumber={selectedContainer.number}
+          isOpen={showAuditModal}
+          onClose={() => {
+            setShowAuditModal(false);
+            setSelectedContainer(null);
+          }}
         />
       )}
 
@@ -492,9 +527,9 @@ function filterTable(){
               <span className="text-lg">🔧</span>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">In Service</p>
+              <p className="text-sm font-medium text-gray-500">Maintenance</p>
               <p className="text-lg font-semibold text-gray-900">
-                {filteredContainers.filter(c => c.status === 'in_service' || c.status === 'maintenance').length}
+                {filteredContainers.filter(c => c.status === 'maintenance').length}
               </p>
             </div>
           </div>
@@ -536,11 +571,10 @@ function filterTable(){
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Status</option>
+              <option value="gate_in">Gate In</option>
               <option value="in_depot">In Depot</option>
+              <option value="gate_out">Gate Out</option>
               <option value="out_depot">Out Depot</option>
-              <option value="in_service">In Service</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="cleaning">Cleaning</option>
             </select>
           </div>
 
@@ -606,9 +640,6 @@ function filterTable(){
                   Container
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type & Size
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
@@ -623,7 +654,11 @@ function filterTable(){
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredContainers.map((container) => (
-                <tr key={container.id} className="hover:bg-gray-50 transition-colors">
+                <tr 
+                  key={container.id} 
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleViewContainer(container)}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-blue-100 rounded-lg">
@@ -631,8 +666,11 @@ function filterTable(){
                       </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">{formatContainerNumberForDisplay(container.number)}</div>
+                        <div className="text-xs text-gray-500">
+                          {container.type ? container.type.charAt(0).toUpperCase() + container.type.slice(1) : '-'} • {container.size}
+                        </div>
                         {container.damage && container.damage.length > 0 && (
-                          <div className="text-xs text-red-600 flex items-center">
+                          <div className="text-xs text-red-600 flex items-center mt-1">
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             {container.damage.length} damage(s) reported
                           </div>
@@ -641,16 +679,10 @@ function filterTable(){
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {container.type ? container.type.charAt(0).toUpperCase() + container.type.slice(1) : '-'}
-                    </div>
-                    <div className="text-sm text-gray-500">{container.size}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(container.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <strong>{container.location}</strong>
+                    <strong>{container.location || '-'}</strong>
                   </td>
                   {canViewAllData() && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -663,36 +695,60 @@ function filterTable(){
                     </td>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {container.gateInDate ? new Date(container.gateInDate).toLocaleDateString() : '-'}
+                    {container.location && container.location.includes('Stack') ? (
+                      container.gateInDate ? new Date(container.gateInDate).toLocaleDateString() : '-'
+                    ) : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {container.gateOutDate ? new Date(container.gateOutDate).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {container.status === 'in_depot' ? 'FULL' : (container.status === 'out_depot' ? 'EMPTY' : '-')}
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' : 
+                      container.fullEmpty === 'EMPTY' ? 'bg-gray-100 text-gray-800' : 
+                      'bg-gray-50 text-gray-500'
+                    }`}>
+                      {container.fullEmpty || '-'}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleViewContainer(container)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
                         title="View Details"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
                       {canEditContainers && (
                         <button
-                          onClick={() => handleEditContainer(container)}
-                          className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditContainer(container);
+                          }}
+                          className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100 transition-colors"
                           title="Edit Container"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewAuditLog(container);
+                        }}
+                        className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 transition-colors"
+                        title={`View Audit Log${container.auditLogs && container.auditLogs.length > 0 ? ` (${container.auditLogs.length})` : ''}`}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </button>
                       {canAccessEDI && (
                         <button
-                          onClick={() => regenerateEDI(container)}
-                          className="text-purple-600 hover:text-purple-900 p-1 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            regenerateEDI(container);
+                          }}
+                          className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50 transition-colors"
                           title="Regenerate EDI for this container"
                         >
                           <CreditCard className="h-4 w-4" />
@@ -727,11 +783,12 @@ function filterTable(){
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading containers...</p>
+      <div className="p-6">
+        <div className="mb-6">
+          <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
         </div>
+        <TableSkeleton rows={10} columns={8} />
       </div>
     );
   }

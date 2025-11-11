@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { X, Save, Loader, Package, CheckCircle, AlertTriangle, Plus, Trash2, Calendar, Clock } from 'lucide-react';
+import { X, Save, Loader, Package, CheckCircle, AlertTriangle, Plus, Trash2, Calendar } from 'lucide-react';
 import { PendingGateOut } from '../types';
-import { validateContainerNumber, formatContainerNumberForDisplay, getStatusBadgeConfig } from '../utils';
+import { validateContainerNumber, formatContainerNumberForDisplay } from '../utils';
+import { useGlobalStore } from '../../../store/useGlobalStore';
+import { Container } from '../../../types';
 
 // Local interface for ContainerInput since it's GateOut-specific
 interface ContainerInput {
@@ -9,31 +11,16 @@ interface ContainerInput {
   confirmContainerNumber: string;
   isValid: boolean;
   validationMessage: string;
+  containerData?: Container | null;
+  isValidating?: boolean;
 }
 import { DatePicker } from '../../Common/DatePicker';
 import { TimePicker } from '../../Common/TimePicker';
 import { useAuth } from '../../../hooks/useAuth';
 
-// Mock container data to check container sizes
-const mockContainerData = [
-  { number: 'MSKU1234567', size: '40ft', type: 'dry', client: 'Maersk Line' },
-  { number: 'TCLU9876543', size: '20ft', type: 'reefer', client: 'MSC' },
-  { number: 'GESU4567891', size: '40ft', type: 'dry', client: 'CMA CGM' },
-  { number: 'SHIP1112228', size: '20ft', type: 'dry', client: 'Shipping Solutions Inc' },
-  { number: 'SHIP3334449', size: '40ft', type: 'reefer', client: 'Shipping Solutions Inc' },
-  { number: 'MAEU5556664', size: '40ft', type: 'reefer', client: 'Maersk Line' },
-  { number: 'CMDU7890125', size: '40ft', type: 'dry', client: 'CMA CGM' },
-  { number: 'HLCU3456789', size: '20ft', type: 'dry', client: 'Hapag-Lloyd' },
-  { number: 'SNFW2940740', size: '40ft', type: 'reefer', client: 'Shipping Network' },
-  { number: 'MAEU7778881', size: '20ft', type: 'tank', client: 'Maersk Line' },
-  { number: 'MSCU9990002', size: '40ft', type: 'flat_rack', client: 'MSC Mediterranean Shipping' },
-  { number: 'CMDU1113335', size: '20ft', type: 'open_top', client: 'CMA CGM' }
-];
-
-// Helper function to get container size from container number
-const getContainerSize = (containerNumber: string): '20ft' | '40ft' | null => {
-  const container = mockContainerData.find(c => c.number === containerNumber);
-  return container ? container.size as '20ft' | '40ft' : null;
+// Helper function to get container size from container data
+const getContainerSize = (containerData: Container | null | undefined): '20ft' | '40ft' | null => {
+  return containerData?.size || null;
 };
 
 interface GateOutCompletionModalProps {
@@ -53,20 +40,62 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 }) => {
   const { hasModuleAccess } = useAuth();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
+  const { containers } = useGlobalStore();
 
   const [containerInputs, setContainerInputs] = useState<ContainerInput[]>([
-    { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
+    { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '', containerData: null, isValidating: false }
   ]);
   const [gateOutDate, setGateOutDate] = useState('');
   const [gateOutTime, setGateOutTime] = useState('');
   const [inConfirmation, setInConfirmation] = useState(false);
   const [error, setError] = useState<string>('');
- const [truckCapacityError, setTruckCapacityError] = useState<string>('');
+  const [truckCapacityError, setTruckCapacityError] = useState<string>('');
+
+  // Validate container against yard inventory
+  const validateContainerInYard = (containerNumber: string): { isValid: boolean; message: string; container: Container | null } => {
+    if (!containerNumber || containerNumber.length !== 11) {
+      return { isValid: false, message: 'Invalid format', container: null };
+    }
+
+    // Find container in yard with matching number
+    const container = containers.find(c => c.number === containerNumber);
+
+    if (!container) {
+      return { 
+        isValid: false, 
+        message: 'Container not found in yard', 
+        container: null 
+      };
+    }
+
+    // Check if container has 'in_depot' status
+    if (container.status !== 'in_depot') {
+      const statusLabels: Record<Container['status'], string> = {
+        'gate_in': 'Gate In (not yet placed)',
+        'in_depot': 'In Depot',
+        'gate_out': 'Gate Out Pending',
+        'out_depot': 'Already out of depot',
+        'maintenance': 'In Maintenance',
+        'cleaning': 'In Cleaning'
+      };
+      return { 
+        isValid: false, 
+        message: `Invalid status: ${statusLabels[container.status]}`, 
+        container 
+      };
+    }
+
+    return { 
+      isValid: true, 
+      message: 'Valid', 
+      container 
+    };
+  };
 
   // Reset form when modal closes or operation changes
   const resetForm = () => {
     setContainerInputs([
-      { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
+      { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '', containerData: null, isValidating: false }
     ]);
     // Set default system date and time
     const now = new Date();
@@ -74,7 +103,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
     setGateOutTime(now.toTimeString().slice(0, 5));
     setInConfirmation(false);
     setError('');
-   setTruckCapacityError('');
+    setTruckCapacityError('');
   };
 
   // Reset form when modal opens with new operation or closes
@@ -104,7 +133,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
    if (validInputs.length === 1) return { isValid: true };
 
    // Check first container size
-   const firstContainerSize = getContainerSize(validInputs[0].containerNumber);
+   const firstContainerSize = getContainerSize(validInputs[0].containerData);
    if (!firstContainerSize) return { isValid: true }; // Skip validation if size unknown
 
    // If first container is 40ft, no second container allowed
@@ -117,7 +146,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
    // If first container is 20ft, check second container
    if (firstContainerSize === '20ft' && validInputs.length === 2) {
-     const secondContainerSize = getContainerSize(validInputs[1].containerNumber);
+     const secondContainerSize = getContainerSize(validInputs[1].containerData);
      if (!secondContainerSize) return { isValid: true }; // Skip validation if size unknown
 
      if (secondContainerSize === '40ft') {
@@ -138,7 +167,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
    const firstInput = containerInputs[0];
    if (!firstInput.isValid) return false;
 
-   const firstContainerSize = getContainerSize(firstInput.containerNumber);
+   const firstContainerSize = getContainerSize(firstInput.containerData);
    // Only enable second field if first container is 20ft
    return firstContainerSize === '20ft';
  };
@@ -147,7 +176,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
  const getMaxContainers = (): number => {
    if (containerInputs.length === 0 || !containerInputs[0].isValid) return 2;
 
-   const firstContainerSize = getContainerSize(containerInputs[0].containerNumber);
+   const firstContainerSize = getContainerSize(containerInputs[0].containerData);
    return firstContainerSize === '40ft' ? 1 : 2;
  };
   if (!isOpen || !operation) return null;
@@ -169,15 +198,31 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
           containerNumber: validValue,
           confirmContainerNumber: '',
           isValid: false,
-          validationMessage: ''
+          validationMessage: '',
+          containerData: null,
+          isValidating: false
         };
 
-        const validation = validateContainerNumber(validValue);
-        newInputs[index].validationMessage = validation.message || '';
+        // First validate format
+        const formatValidation = validateContainerNumber(validValue);
+        
+        if (validValue.length === 11 && formatValidation.isValid) {
+          // Then validate against yard inventory
+          const yardValidation = validateContainerInYard(validValue);
+          newInputs[index].validationMessage = yardValidation.message;
+          newInputs[index].containerData = yardValidation.container;
+          
+          // Don't mark as valid yet - need confirmation
+          if (!yardValidation.isValid) {
+            newInputs[index].isValid = false;
+          }
+        } else {
+          newInputs[index].validationMessage = formatValidation.message || '';
+        }
 
-       // Check truck capacity after updating
-       const capacityCheck = checkTruckCapacity(newInputs);
-       setTruckCapacityError(capacityCheck.error || '');
+        // Check truck capacity after updating
+        const capacityCheck = checkTruckCapacity(newInputs);
+        setTruckCapacityError(capacityCheck.error || '');
 
         return newInputs;
       });
@@ -201,13 +246,16 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
           confirmContainerNumber: validValue
         };
 
-        const validation = validateContainerNumber(newInputs[index].containerNumber);
+        const formatValidation = validateContainerNumber(newInputs[index].containerNumber);
+        const yardValidation = validateContainerInYard(newInputs[index].containerNumber);
         const matches = newInputs[index].containerNumber === validValue;
-        newInputs[index].isValid = validation.isValid && matches;
+        
+        // Container is valid only if: format is valid, exists in yard with 'in_depot' status, and confirmation matches
+        newInputs[index].isValid = formatValidation.isValid && yardValidation.isValid && matches;
 
-       // Check truck capacity after updating
-       const capacityCheck = checkTruckCapacity(newInputs);
-       setTruckCapacityError(capacityCheck.error || '');
+        // Check truck capacity after updating
+        const capacityCheck = checkTruckCapacity(newInputs);
+        setTruckCapacityError(capacityCheck.error || '');
 
         return newInputs;
       });
@@ -219,7 +267,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
     if (containerInputs.length < maxContainers) {
        setContainerInputs(prev => [
          ...prev,
-         { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '' }
+         { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '', containerData: null, isValidating: false }
        ]);
      }
    };
@@ -257,10 +305,6 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
      setError('Truck capacity exceeded: Maximum 2 containers per truck.');
      return;
    }
-
-    // Use current system time if not manually set
-    const finalGateOutDate = gateOutDate || new Date().toISOString().split('T')[0];
-    const finalGateOutTime = gateOutTime || new Date().toTimeString().slice(0, 5);
 
     const containerNumbers = validContainers.map(input => input.containerNumber);
     onComplete(operation, containerNumbers);
@@ -324,7 +368,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                 </div>
                 <div>
                   <span className="text-blue-700">Vehicle:</span>
-                  <div className="font-medium break-all">{operation.vehicleNumber || 'N/A'}</div>
+                  <div className="font-medium break-all">{operation.truckNumber || 'N/A'}</div>
                 </div>
               </div>
             </div>
@@ -379,13 +423,13 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                   <div className="flex items-center justify-between">
                    <div className="flex items-center space-x-2">
                      <h5 className="font-medium text-gray-900 text-sm sm:text-base">Container {index + 1}</h5>
-                     {index === 0 && containerInputs[0].isValid && (
+                     {index === 0 && containerInputs[0].isValid && containerInputs[0].containerData && (
                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                         getContainerSize(containerInputs[0].containerNumber) === '40ft'
+                         getContainerSize(containerInputs[0].containerData) === '40ft'
                            ? 'bg-orange-100 text-orange-800'
                            : 'bg-blue-100 text-blue-800'
                        }`}>
-                         {getContainerSize(containerInputs[0].containerNumber)}
+                         {getContainerSize(containerInputs[0].containerData)}
                        </span>
                      )}
                      {index === 1 && !shouldEnableSecondField() && (
@@ -432,22 +476,13 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                          placeholder={index === 0 ? "e.g., MSKU1234567" : "Second container (20ft only)"}
                           maxLength={11}
                         />
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                          {input.containerNumber && !(index === 1 && !shouldEnableSecondField()) && (
-                            <>
-                              {validateContainerNumber(input.containerNumber).isValid ? (
-                                <CheckCircle className="h-5 w-5 sm:h-4 sm:w-4 text-green-500" />
-                              ) : (
-                                <AlertTriangle className="h-5 w-5 sm:h-4 sm:w-4 text-red-500" />
-                              )}
-                              <span className={`hidden sm:inline text-xs font-medium ${
-                                validateContainerNumber(input.containerNumber).isValid
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}>
-                                {input.validationMessage}
-                              </span>
-                            </>
+                            validateContainerNumber(input.containerNumber).isValid ? (
+                              <CheckCircle className="h-5 w-5 sm:h-4 sm:w-4 text-green-500" />
+                            ) : (
+                              <AlertTriangle className="h-5 w-5 sm:h-4 sm:w-4 text-red-500" />
+                            )
                           )}
                         </div>
                       </div>
@@ -496,13 +531,68 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                     </div>
                   </div>
 
-                  {input.isValid && (
-                    <div className="flex items-center p-2 bg-green-50 border border-green-200 rounded">
-                      <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
-                      <span className="text-xs sm:text-sm text-green-800 break-all">
-                       Container {formatContainerNumberForDisplay(input.containerNumber)} validated
-                       ({getContainerSize(input.containerNumber) || 'Unknown size'})
-                      </span>
+                  {/* Error message for invalid container */}
+                  {input.containerNumber.length === 11 && !input.isValid && input.validationMessage && (
+                    <div className="flex items-start p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-red-800">
+                          {input.validationMessage}
+                        </p>
+                        {input.validationMessage.includes('not found') && (
+                          <p className="text-xs text-red-700 mt-1">
+                            Please verify the container number is correct and the container is currently in the depot with 'In Depot' status.
+                          </p>
+                        )}
+                        {input.validationMessage.includes('Invalid status') && (
+                          <p className="text-xs text-red-700 mt-1">
+                            This container cannot be processed for gate out at this time.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {input.isValid && input.containerData && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm font-medium text-green-800">
+                          Container Validated
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-green-700">Number:</span>
+                          <div className="font-medium text-green-900 break-all">
+                            {formatContainerNumberForDisplay(input.containerNumber)}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-green-700">Size:</span>
+                          <div className="font-medium text-green-900">
+                            {input.containerData.size}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-green-700">Type:</span>
+                          <div className="font-medium text-green-900 capitalize">
+                            {input.containerData.type.replace('_', ' ')}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-green-700">Location:</span>
+                          <div className="font-medium text-green-900">
+                            {input.containerData.location}
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-green-700">Client:</span>
+                          <div className="font-medium text-green-900">
+                            {input.containerData.clientName}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -1,5 +1,6 @@
 import { clientPoolService } from './api';
 import { ClientPool } from '../types/clientPool';
+import { logger } from '../utils/logger';
 
 export interface StackRecommendation {
   stackId: string;
@@ -53,7 +54,7 @@ class ClientPoolRecommendations {
 
       return recommendations.sort((a, b) => b.priority - a.priority);
     } catch (error) {
-      console.error('Error getting stack recommendations:', error);
+      logger.error('Error getting stack recommendations:', 'clientPoolRecommendations.ts', error);
       return [];
     }
   }
@@ -114,7 +115,7 @@ class ClientPoolRecommendations {
         await clientPoolService.updateOccupancy(pool.id, totalContainers);
       }
     } catch (error) {
-      console.error('Error updating pool occupancy:', error);
+      logger.error('Error updating pool occupancy:', 'clientPoolRecommendations.ts', error);
     }
   }
 }

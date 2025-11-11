@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug, Mail } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -42,14 +43,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error details
-    console.error('🚨 [ERROR_BOUNDARY] Component error caught:', {
+    logger.error('Component error caught', 'ErrorBoundary', {
       error: error.message,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
       context: this.props.context,
-      errorId: this.state.errorId,
-      timestamp: new Date().toISOString()
+      errorId: this.state.errorId
     });
 
     this.setState({
@@ -57,17 +56,14 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo
     });
 
-    // Call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
-    // In production, you might want to send this to an error reporting service
     this.reportError(error, errorInfo);
   }
 
   private reportError = (error: Error, errorInfo: ErrorInfo) => {
-    // This would typically send to an error reporting service like Sentry
     const errorReport = {
       message: error.message,
       stack: error.stack,
@@ -79,16 +75,14 @@ export class ErrorBoundary extends Component<Props, State> {
       url: window.location.href
     };
 
-    // For now, just log to console
-    console.error('📊 [ERROR_REPORTING] Error report:', errorReport);
+    logger.error('Error report generated', 'ErrorBoundary', errorReport);
     
-    // In production, uncomment and configure your error reporting service:
+    // In production, configure your error reporting service:
     // Sentry.captureException(error, { extra: errorReport });
   };
 
   private handleRetry = () => {
     if (this.state.retryCount < this.maxRetries) {
-      console.log(`🔄 [ERROR_BOUNDARY] Retrying... (${this.state.retryCount + 1}/${this.maxRetries})`);
       this.setState(prevState => ({
         hasError: false,
         error: null,
@@ -100,12 +94,10 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleReload = () => {
-    console.log('🔄 [ERROR_BOUNDARY] Reloading page...');
     window.location.reload();
   };
 
   private handleGoHome = () => {
-    console.log('🏠 [ERROR_BOUNDARY] Navigating to home...');
     window.location.href = '/';
   };
 
@@ -328,12 +320,7 @@ export const withErrorBoundary = <P extends object>(
 // Hook for manual error reporting
 export const useErrorHandler = () => {
   const reportError = (error: Error, context?: string) => {
-    console.error('🚨 [ERROR_HANDLER] Manual error report:', {
-      error: error.message,
-      stack: error.stack,
-      context,
-      timestamp: new Date().toISOString()
-    });
+    logger.error('Manual error report', context || 'useErrorHandler', error);
     
     // In production, send to error reporting service
     // Sentry.captureException(error, { extra: { context } });

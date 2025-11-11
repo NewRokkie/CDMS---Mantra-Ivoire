@@ -4,6 +4,7 @@ import { ClientPool } from '../../../types/clientPool';
 import { clientPoolService } from '../../../services/api';
 import { YardStack } from '../../../types/yard';
 import { FormModal } from '../../Common/Modal/FormModal';
+import { handleError } from '../../../services/errorHandling';
 
 interface StackClientAssignmentModalProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ export const StackClientAssignmentModal: React.FC<StackClientAssignmentModalProp
       const pools = await clientPoolService.getAll(yardId);
       setClientPools(pools.filter(pool => pool.isActive));
     } catch (error) {
-      console.error('Error loading client pools:', error);
+      handleError(error, 'StackClientAssignmentModal.loadClientPools');
     } finally {
       setLoading(false);
     }

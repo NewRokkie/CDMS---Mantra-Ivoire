@@ -8,6 +8,8 @@ import { BookingDetailsModal } from './BookingDetailsModal';
 import { MobileReleaseOrderStats } from './MobileReleaseOrderStats';
 import { MobileReleaseOrderTable } from './MobileReleaseOrderTable';
 import { Search, X, FileText } from 'lucide-react';
+import { handleError } from '../../services/errorHandling';
+import { logger } from '../../utils/logger';
 
 // REMOVED: Mock data now managed by global store
 
@@ -18,12 +20,12 @@ export const ReleaseOrderList: React.FC = () => {
     async function loadData() {
       try {
         const ordersData = await bookingReferenceService.getAll().catch(err => {
-          console.error('Error loading orders:', err);
+          handleError(err, 'ReleaseOrderList.loadData');
           return [];
         });
         setReleaseOrders(ordersData || []);
       } catch (error) {
-        console.error('Error loading release orders:', error);
+        handleError(error, 'ReleaseOrderList.loadData');
         setReleaseOrders([]);
       }
     }
@@ -44,11 +46,6 @@ export const ReleaseOrderList: React.FC = () => {
   // Filter release orders based on user permissions and search/status filters
   const getFilteredOrders = () => {
     let orders = releaseOrders;
-
-    // Filter by current yard
-    if (currentYard) {
-      console.log(`Filtering orders for yard: ${currentYard.name}`);
-    }
 
     // Apply client filter for client users
     const clientFilter = getClientFilter();
@@ -217,7 +214,6 @@ export const ReleaseOrderList: React.FC = () => {
             setSelectedOrder(null);
           }}
           onSubmit={(order) => {
-            console.log('Saving release order:', order);
             setShowForm(false);
             setSelectedOrder(null);
           }}

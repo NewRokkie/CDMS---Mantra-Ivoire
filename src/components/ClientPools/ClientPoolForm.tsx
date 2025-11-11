@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Loader, Building, Package, Calendar, Search, Check, ChevronDown, Grid3X3 } from 'lucide-react';
 import { DatePicker } from '../Common/DatePicker';
 import { ClientPool } from '../../types/clientPool';
 import { Yard, YardStack } from '../../types';
 import { clientPoolService, clientService } from '../../services/api';
 import { useYard } from '../../hooks/useYard';
+import { handleError } from '../../services/errorHandling';
 
 interface ClientPoolFormProps {
   isOpen: boolean;
@@ -86,7 +87,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
         const fetchedClients = await clientService.getAll();
         setClients(fetchedClients);
       } catch (error) {
-        console.error("Error fetching clients:", error);
+        handleError(error, 'ClientPoolForm.fetchClients');
       }
     };
     fetchClients();
@@ -110,7 +111,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
         );
         setAvailableStacks(allStacks.filter(stack => !assignedStackIds.has(stack.id)));
       } catch (error) {
-        console.error("Failed to get available stacks:", error);
+        handleError(error, 'ClientPoolForm.fetchAvailableStacks');
         setAvailableStacks(allStacks); // Fallback to all stacks on error
       }
     };
@@ -212,7 +213,6 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   );
 
   // Group stacks by section for better organization
-  const targetYard = currentYard;
   const stacksBySection = (currentYard?.sections || []).map(section => ({
     section,
     stacks: filteredStacks.filter(stack => stack.sectionId === section.id)

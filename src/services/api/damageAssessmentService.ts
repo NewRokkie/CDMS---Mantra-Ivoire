@@ -78,7 +78,6 @@ export class DamageAssessmentService {
 
       return { success: true, assessmentId: gateInOperationId };
     } catch (error: any) {
-      console.error('Error recording damage assessment:', error);
       return { success: false, error: error.message || 'Failed to record damage assessment' };
     }
   }

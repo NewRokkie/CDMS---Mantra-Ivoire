@@ -12,6 +12,7 @@ import { Yard, User } from '../../../types';
 import { useYard } from '../../../hooks/useYard';
 import { userService } from '../../../services/api/userService';
 import { FormModal } from '../../Common/Modal/FormModal';
+import { handleError } from '../../../services/errorHandling';
 
 interface DepotAssignmentModalProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         usersWithAssignments.filter((u) => u.isAssigned).map((u) => u.id)
       );
     } catch (error) {
-      console.error('Error loading users:', error);
+      handleError(error, 'DepotAssignmentModal.loadUsers');
       setUsers([]);
       setSelectedUserIds([]);
     } finally {
@@ -137,7 +138,7 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
       await Promise.all([...updatePromises, ...removePromises]);
       await onAssign(selectedUserIds);
     } catch (error) {
-      console.error('Error assigning depot to users:', error);
+      handleError(error, 'DepotAssignmentModal.handleSubmit');
       throw error;
     } finally {
       setIsSubmitting(false);

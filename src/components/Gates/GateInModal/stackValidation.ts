@@ -112,7 +112,7 @@ export const checkStackAvailability = (
   }
   
   // Check container size compatibility
-  const stackSize = stack.containerSize === '20feet' ? '20ft' : '40ft';
+  const stackSize = stack.containerSize === '20ft' ? '20ft' : '40ft';
   if (containerSize === '40ft' && stackSize === '20ft') {
     return {
       isAvailable: false,
@@ -191,7 +191,7 @@ export const filterCompatibleStacks = (
     }
     
     // Size compatibility
-    const stackSize = stack.containerSize === '20feet' ? '20ft' : '40ft';
+    const stackSize = stack.containerSize === '20ft' ? '20ft' : '40ft';
     if (containerSize === '40ft' && stackSize === '20ft') {
       return false;
     }

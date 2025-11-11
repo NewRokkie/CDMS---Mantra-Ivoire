@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, ChevronDown, Check, Building, AlertTriangle, Loader } from 'lucide-react';
 import { useYard } from '../../hooks/useYard';
 import { useAuth } from '../../hooks/useAuth';
+import { handleError } from '../../services/errorHandling';
 
 export const YardSelector: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,16 +32,11 @@ export const YardSelector: React.FC = () => {
       const success = await setCurrentYard(yardId);
       if (success) {
         setIsOpen(false);
-        // Show success feedback
-        const selectedYard = availableYards.find(y => y.id === yardId);
-        if (selectedYard) {
-          // You could add a toast notification here
-          console.log(`Switched to ${selectedYard.name}`);
-        }
       } else {
         alert('Failed to switch yard. Please try again.');
       }
     } catch (error) {
+      handleError(error, 'YardSelector.handleYardChange');
       alert(`Error switching yard: ${error}`);
     } finally {
       setIsChanging(false);

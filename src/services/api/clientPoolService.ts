@@ -1,6 +1,8 @@
 import { supabase } from './supabaseClient';
 import { ClientPool, StackAssignment, ClientPoolStats } from '../../types/clientPool';
 import { toDate } from '../../utils/dateHelpers';
+import { ErrorHandler } from '../errorHandling';
+import { logger } from '../../utils/logger';
 
 class ClientPoolService {
   async getAll(yardId?: string): Promise<ClientPool[]> {
@@ -222,58 +224,89 @@ class ClientPoolService {
   }
 
   async assignStack(assignment: Partial<StackAssignment>, userId: string): Promise<StackAssignment> {
-    // Server-side role check
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (!user || authError) throw new Error('Authentication required');
+    try {
+      // Server-side role check
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (!user || authError) throw new Error('Authentication required');
 
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('auth_user_id', user.id)
-      .single();
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('auth_user_id', user.id)
+        .single();
 
-    if (!userProfile || !['admin','supervisor'].includes(userProfile.role)) {
-      throw new Error('Insufficient permissions');
+      if (!userProfile || !['admin','supervisor'].includes(userProfile.role)) {
+        throw new Error('Insufficient permissions');
+      }
+
+      const { data, error } = await supabase
+        .from('stack_assignments')
+        .insert({
+          yard_id: assignment.yardId,
+          stack_id: assignment.stackId,
+          stack_number: assignment.stackNumber,
+          client_pool_id: assignment.clientPoolId,
+          client_code: assignment.clientCode,
+          is_exclusive: assignment.isExclusive || false,
+          priority: assignment.priority || 1,
+          notes: assignment.notes,
+          assigned_by: userId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update location access permissions for this stack
+      // Requirements: 6.2 - Update location access when client pool assignments change
+      if (assignment.stackId && assignment.clientPoolId) {
+        await this.updateLocationAccessForStack(assignment.stackId, assignment.clientPoolId);
+      }
+
+      return {
+        id: data.id,
+        stackId: data.stack_id,
+        stackNumber: data.stack_number,
+        clientPoolId: data.client_pool_id,
+        clientCode: data.client_code,
+        assignedAt: toDate(data.assigned_at) ?? new Date(),
+        assignedBy: data.assigned_by,
+        isExclusive: data.is_exclusive,
+        priority: data.priority,
+        notes: data.notes
+      };
+    } catch (error) {
+      logger.error('ClientPoolService.assignStack error', 'ComponentName', error);
+      throw ErrorHandler.createGateInError(error);
     }
-    const { data, error } = await supabase
-      .from('stack_assignments')
-      .insert({
-        yard_id: assignment.yardId,
-        stack_id: assignment.stackId,
-        stack_number: assignment.stackNumber,
-        client_pool_id: assignment.clientPoolId,
-        client_code: assignment.clientCode,
-        is_exclusive: assignment.isExclusive || false,
-        priority: assignment.priority || 1,
-        notes: assignment.notes,
-        assigned_by: userId
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return {
-      id: data.id,
-      stackId: data.stack_id,
-      stackNumber: data.stack_number,
-      clientPoolId: data.client_pool_id,
-      clientCode: data.client_code,
-      assignedAt: toDate(data.assigned_at) ?? new Date(), // Ensure assignedAt is always a Date
-      assignedBy: data.assigned_by,
-      isExclusive: data.is_exclusive,
-      priority: data.priority,
-      notes: data.notes
-    };
   }
 
   async unassignStack(assignmentId: string): Promise<void> {
-    const { error } = await supabase
-      .from('stack_assignments')
-      .delete()
-      .eq('id', assignmentId);
+    try {
+      // Get assignment details before deleting
+      const { data: assignment, error: fetchError } = await supabase
+        .from('stack_assignments')
+        .select('stack_id')
+        .eq('id', assignmentId)
+        .maybeSingle();
 
-    if (error) throw error;
+      if (fetchError) throw fetchError;
+
+      const { error } = await supabase
+        .from('stack_assignments')
+        .delete()
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+
+      // Clear location access permissions for this stack
+      // Requirements: 6.2 - Update location access when client pool assignments change
+      if (assignment?.stack_id) {
+        await this.clearLocationAccessForStack(assignment.stack_id);
+      }
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
   }
 
   async updateOccupancy(clientPoolId: string, occupancy: number): Promise<void> {
@@ -308,6 +341,219 @@ class ClientPoolService {
     if (!data) return [];
 
     return data.assigned_stacks || [];
+  }
+
+  // ============================================================================
+  // LOCATION MANAGEMENT INTEGRATION METHODS
+  // Requirements: 6.2, 6.4, 6.5 - Integration with location management system
+  // ============================================================================
+
+  /**
+   * Update location access permissions when a stack is assigned to a client pool
+   * Requirements: 6.2 - Update location access when client pool assignments change
+   */
+  private async updateLocationAccessForStack(stackId: string, clientPoolId: string): Promise<void> {
+    try {
+      // Update all unoccupied locations in this stack to have the client pool ID
+      const { error } = await supabase
+        .from('locations')
+        .update({
+          client_pool_id: clientPoolId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('stack_id', stackId)
+        .eq('is_occupied', false)
+        .eq('is_active', true);
+
+      if (error) throw error;
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Clear location access permissions when a stack is unassigned from a client pool
+   * Requirements: 6.2 - Update location access when client pool assignments change
+   */
+  private async clearLocationAccessForStack(stackId: string): Promise<void> {
+    try {
+      // Clear client pool ID from all unoccupied locations in this stack
+      const { error } = await supabase
+        .from('locations')
+        .update({
+          client_pool_id: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('stack_id', stackId)
+        .eq('is_occupied', false)
+        .eq('is_active', true);
+
+      if (error) throw error;
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Update location access for all stacks assigned to a client pool
+   * Requirements: 6.2 - Ensure location access permissions are updated
+   */
+  async updateLocationAccessForClientPool(clientPoolId: string): Promise<void> {
+    try {
+      // Get all stack assignments for this client pool
+      const assignments = await this.getStackAssignments(clientPoolId);
+
+      // Update location access for each assigned stack
+      for (const assignment of assignments) {
+        await this.updateLocationAccessForStack(assignment.stackId, clientPoolId);
+      }
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Get available locations for a client based on their pool assignment
+   * Requirements: 6.4, 6.5 - Handle location access for clients with no pool configuration
+   */
+  async getAvailableLocationsForClient(
+    clientPoolId: string | null,
+    yardId: string,
+    containerSize?: '20ft' | '40ft',
+    limit?: number
+  ): Promise<any[]> {
+    try {
+      let query = supabase
+        .from('locations')
+        .select('*')
+        .eq('yard_id', yardId)
+        .eq('is_occupied', false)
+        .eq('is_active', true);
+
+      // Filter by client pool access
+      // Requirements: 6.4 - Show all unassigned locations for clients with no pool
+      if (clientPoolId) {
+        query = query.eq('client_pool_id', clientPoolId);
+      } else {
+        query = query.is('client_pool_id', null);
+      }
+
+      // Apply container size filter if specified
+      if (containerSize) {
+        query = query.eq('container_size', containerSize);
+      }
+
+      // Order by location_id for consistent results
+      query = query.order('location_id', { ascending: true });
+
+      // Apply limit
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Validate if a client has access to a specific location
+   * Requirements: 6.5 - Enforce location access restrictions
+   */
+  async validateClientLocationAccess(
+    clientPoolId: string | null,
+    locationId: string
+  ): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('client_pool_id')
+        .eq('id', locationId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return false;
+
+      // If location has a pool assignment
+      if (data.client_pool_id) {
+        // Client must have matching pool ID
+        return clientPoolId === data.client_pool_id;
+      } else {
+        // Location is unassigned - only unpooled clients can access
+        return clientPoolId === null;
+      }
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get location statistics for a client pool
+   * Requirements: 6.1 - Track location availability by client pool
+   */
+  async getClientPoolLocationStats(clientPoolId: string): Promise<{
+    totalLocations: number;
+    availableLocations: number;
+    occupiedLocations: number;
+    occupancyRate: number;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('is_occupied')
+        .eq('client_pool_id', clientPoolId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      const locations = data || [];
+      const totalLocations = locations.length;
+      const occupiedLocations = locations.filter(l => l.is_occupied).length;
+      const availableLocations = totalLocations - occupiedLocations;
+      const occupancyRate = totalLocations > 0 
+        ? (occupiedLocations / totalLocations) * 100 
+        : 0;
+
+      return {
+        totalLocations,
+        availableLocations,
+        occupiedLocations,
+        occupancyRate: Math.round(occupancyRate * 100) / 100
+      };
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Bulk update location access for multiple stacks
+   * Requirements: 6.2 - Efficient bulk updates when assignments change
+   */
+  async bulkUpdateLocationAccess(
+    stackIds: string[],
+    clientPoolId: string | null
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('locations')
+        .update({
+          client_pool_id: clientPoolId,
+          updated_at: new Date().toISOString()
+        })
+        .in('stack_id', stackIds)
+        .eq('is_occupied', false)
+        .eq('is_active', true);
+
+      if (error) throw error;
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
   }
 }
 

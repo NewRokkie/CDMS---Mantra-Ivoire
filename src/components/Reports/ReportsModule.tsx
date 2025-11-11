@@ -26,6 +26,8 @@ import { yardsService } from '../../services/api/yardsService';
 import { DatePicker } from '../Common/DatePicker';
 import { AnalyticsTab } from './AnalyticsTab';
 import { OperationsTab } from './OperationsTab';
+import { handleError } from '../../services/errorHandling';
+import { logger } from '../../utils/logger';
 
 // Constants
 const REPORT_TABS = [
@@ -170,7 +172,6 @@ const generateBillingDataFromStore = (storeContainers: any[], storeClients: any[
     return storeContainers.map((container, index) => {
       const client = storeClients.find(c => c.code === container.clientCode);
       if (!client) {
-        console.warn(`No client found for code: ${container.clientCode}`);
         return null;
       }
 
@@ -213,7 +214,6 @@ const generateBillingDataFromStore = (storeContainers: any[], storeClients: any[
       };
     }).filter(Boolean) as ContainerBilling[];
   } catch (error) {
-    console.error('Error generating mock billing data:', error);
     throw new Error('Failed to generate billing data');
   }
 };
@@ -233,7 +233,7 @@ class ReportsErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Reports module error:', error, errorInfo);
+    logger.error('Reports module error', 'ReportsErrorBoundary', { error, errorInfo });
   }
 
   resetError = () => {
@@ -305,7 +305,7 @@ export const ReportsModule: React.FC = () => {
         setContainerStats(stats);
         setRevenueReport(revenue);
       } catch (error) {
-        console.error('Error loading reports data:', error);
+        handleError(error, 'ReportsModule.loadReportsData');
       } finally {
         setLoading(false);
       }
@@ -317,7 +317,7 @@ export const ReportsModule: React.FC = () => {
     try {
       return generateBillingDataFromStore(containers, clients);
     } catch (err) {
-      console.error('Error generating billing data:', err);
+      handleError(err, 'ReportsModule.generateBillingData');
       setError('Failed to load billing data');
       return [];
     }

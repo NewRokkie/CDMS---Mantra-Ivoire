@@ -128,6 +128,11 @@ export interface YardSection {
   color?: string; // For visual distinction
 }
 
+export interface RowTierConfig {
+  row: number;
+  maxTiers: number;
+}
+
 export interface YardStack {
   id: string;
   yardId?: string;
@@ -136,9 +141,10 @@ export interface YardStack {
   sectionName?: string;
   rows: number;
   maxTiers: number;
+  rowTierConfig?: RowTierConfig[]; // Per-row tier configuration
   currentOccupancy: number;
   capacity: number;
-  containerSize?: '20feet' | '40feet';
+  containerSize?: '20ft' | '40ft';
   position: {
     x: number;
     y: number;
@@ -206,7 +212,8 @@ export interface Container {
   number: string;
   type: 'dry' | 'high_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   size: '20ft' | '40ft';
-  status: 'in_depot' | 'out_depot' | 'in_service' | 'maintenance' | 'cleaning';
+  status: 'gate_in' | 'in_depot' | 'gate_out' | 'out_depot' | 'maintenance' | 'cleaning';
+  fullEmpty?: 'FULL' | 'EMPTY'; // Full or Empty status
   location: string;
   yardId?: string; // Add yard ID for direct relations
   yardPosition?: YardPosition;
@@ -434,3 +441,7 @@ export interface LoginRecord {
   userAgent?: string;
   sessionDuration?: number; // in minutes
 }
+
+// Location Management Types
+export * from './location';
+export * from './yard';

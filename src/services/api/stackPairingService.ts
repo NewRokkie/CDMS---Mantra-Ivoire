@@ -1,4 +1,6 @@
+import { logger } from '../../utils/logger';
 import { supabase } from './supabaseClient';
+import { virtualLocationCalculatorService } from './virtualLocationCalculatorService';
 
 export interface StackPairing {
   id: string;
@@ -114,6 +116,77 @@ class StackPairingService {
     });
 
     return map;
+  }
+
+  /**
+   * Ensure virtual locations exist for a stack pairing
+   * Requirements: 3.3 - Automatic virtual location generation for stack pairings
+   * 
+   * @param pairing - Stack pairing to ensure virtual locations for
+   * @param rows - Number of rows
+   * @param tiers - Number of tiers
+   */
+  async ensureVirtualLocations(
+    pairing: StackPairing,
+    rows: number,
+    tiers: number
+  ): Promise<void> {
+    try {
+      if (!pairing.firstStackId || !pairing.secondStackId) {
+        logger.warn('Stack pairing missing stack IDs, cannot create virtual locations', 'ComponentName');
+        return;
+      }
+
+      // Check if virtual locations already exist
+      const existingPair = await virtualLocationCalculatorService.getVirtualStackPairByStacks(
+        pairing.yardId,
+        pairing.firstStackId,
+        pairing.secondStackId
+      );
+
+      if (!existingPair) {
+        // Create virtual locations
+        await virtualLocationCalculatorService.createVirtualLocations({
+          yardId: pairing.yardId,
+          stack1Id: pairing.firstStackId,
+          stack2Id: pairing.secondStackId,
+          stack1Number: pairing.firstStackNumber,
+          stack2Number: pairing.secondStackNumber,
+          rows,
+          tiers
+        });
+        logger.info('Information', 'ComponentName', `✅ Created virtual locations for pairing S${String(pairing.firstStackNumber).padStart(2, '0')} + S${String(pairing.secondStackNumber).padStart(2, '0')}`);
+      }
+    } catch (error) {
+      logger.error('Failed to ensure virtual locations:', 'ComponentName', error)
+    }
+  }
+
+  /**
+   * Sync all virtual locations for a yard
+   * Requirements: 3.3 - Ensure all pairings have virtual locations
+   * 
+   * @param yardId - Yard ID
+   * @param defaultRows - Default number of rows (if not specified per stack)
+   * @param defaultTiers - Default number of tiers (if not specified per stack)
+   */
+  async syncAllVirtualLocations(
+    yardId: string,
+    defaultRows: number = 6,
+    defaultTiers: number = 4
+  ): Promise<void> {
+    try {
+      const pairings = await this.getAll(yardId);
+      logger.info('Information', 'ComponentName', `🔄 Syncing virtual locations for ${pairings.length} pairings in yard ${yardId}`)
+
+      for (const pairing of pairings) {
+        await this.ensureVirtualLocations(pairing, defaultRows, defaultTiers);
+      }
+      logger.info('Information', 'ComponentName', `✅ Completed virtual location sync for yard ${yardId}`)
+    } catch (error) {
+      logger.error('Failed to sync virtual locations:', 'ComponentName', error)
+      throw error;
+    }
   }
 }
 

@@ -33,6 +33,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { reportService, containerService } from '../../services/api';
 import type { ContainerStats, GateStats } from '../../services/api/reportService';
+import { handleError } from '../../services/errorHandling';
 
 type FilterType = 'customer' | 'yard' | 'type' | 'damage' | null;
 
@@ -85,17 +86,14 @@ export const DashboardOverview: React.FC = () => {
 
   // loadDashboardData extracted so we can re-use for refresh button
   const loadDashboardData = useCallback(async () => {
-    console.log('DashboardOverview: Starting loadDashboardData');
     try {
       setLoading(true);
 
       // Récupérer les conteneurs selon le mode
       let allContainersData;
       if (viewMode === 'global') {
-        console.log('DashboardOverview: Fetching all containers for global view');
         allContainersData = await containerService.getAll();
       } else {
-        console.log('DashboardOverview: Fetching containers for current yard', { currentYardId: currentYard?.id });
         allContainersData = await containerService.getByYardId(currentYard?.id || '');
       }
 
@@ -110,31 +108,24 @@ export const DashboardOverview: React.FC = () => {
       let gateStats;
 
       if (viewMode === 'global') {
-        // Pour la vue globale, récupérer toutes les statistiques
-        console.log('DashboardOverview: Fetching global stats from API');
         [containerStats, gateStats] = await Promise.all([
           reportService.getContainerStats(undefined),
           reportService.getGateStats(undefined)
         ]);
       } else {
-        // Pour la vue d'un dépôt spécifique, récupérer les statistiques pour ce yard
-        console.log('DashboardOverview: Fetching yard-specific stats from API', { currentYardId: currentYard?.id });
         [containerStats, gateStats] = await Promise.all([
           reportService.getContainerStats(currentYard?.id),
           reportService.getGateStats(currentYard?.id)
         ]);
       }
 
-      // Stocker les conteneurs et les statistiques
-      console.log('DashboardOverview: Setting state with data', { allContainersLength: allContainersData.length, filteredContainersLength: filteredContainers.length });
       setAllContainers(filteredContainers);
       setAllContainersForMultiDepot(allContainersForMultiDepot);
       setContainerStats(containerStats);
       setGateStats(gateStats);
     } catch (error) {
-      console.error('DashboardOverview: Error loading dashboard data:', error);
+      handleError(error, 'DashboardOverview.loadDashboardData');
     } finally {
-      console.log('DashboardOverview: Finished loadDashboardData');
       setLoading(false);
     }
   }, [currentYard?.id, viewMode]);
@@ -302,9 +293,6 @@ export const DashboardOverview: React.FC = () => {
       color: pieColors[index % pieColors.length]
     })).filter(item => item.value > 0);
 
-    console.log('quantityPieData:', result);
-    console.log('pieColors:', pieColors);
-
     return result;
   }, [stats.typeByCustomer, pieColors])
 
@@ -418,7 +406,7 @@ export const DashboardOverview: React.FC = () => {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Export CSV failed', err);
+      handleError(err, 'DashboardOverview.exportCSV');
     } finally {
       setIsExporting(false);
     }

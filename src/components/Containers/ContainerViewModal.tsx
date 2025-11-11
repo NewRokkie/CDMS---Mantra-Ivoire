@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { Package, Truck, FileText, AlertTriangle, CheckCircle, Clock, Building, Eye } from 'lucide-react';
+import React from 'react';
+import { Package, Truck, FileText, AlertTriangle, CheckCircle, Clock, Building } from 'lucide-react';
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { AuditLogModal } from './AuditLogModal';
 import { getDaysBetween } from '../../utils/dateHelpers';
 import { formatContainerNumberForDisplay } from '../Gates/utils';
 import { DataDisplayModal } from '../Common/Modal/DataDisplayModal';
@@ -18,21 +17,20 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
   onClose,
   isOpen
 }) => {
-  const { canViewAllData, hasModuleAccess } = useAuth();
-  const [showAuditModal, setShowAuditModal] = useState(false);
-
-  const canViewAuditLogs = hasModuleAccess('auditLogs');
+  const { canViewAllData } = useAuth();
 
   const getStatusIcon = (status: Container['status']) => {
     switch (status) {
+      case 'gate_in':
+        return <Clock className="h-5 w-5 text-blue-600" />;
       case 'in_depot':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'gate_out':
+        return <Truck className="h-5 w-5 text-orange-600" />;
       case 'out_depot':
-        return <Truck className="h-5 w-5 text-blue-600" />;
-      case 'in_service':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
+        return <Truck className="h-5 w-5 text-gray-600" />;
       case 'maintenance':
-        return <AlertTriangle className="h-5 w-5 text-red-600" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
       case 'cleaning':
         return <Package className="h-5 w-5 text-purple-600" />;
       default:
@@ -42,14 +40,15 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
 
   const getStatusBadge = (status: Container['status']) => {
     const statusConfig = {
+      gate_in: { color: 'bg-blue-100 text-blue-800', label: 'Gate In' },
       in_depot: { color: 'bg-green-100 text-green-800', label: 'In Depot' },
-      out_depot: { color: 'bg-blue-100 text-blue-800', label: 'Out Depot' },
-      in_service: { color: 'bg-yellow-100 text-yellow-800', label: 'In Service' },
-      maintenance: { color: 'bg-red-100 text-red-800', label: 'Maintenance' },
+      gate_out: { color: 'bg-orange-100 text-orange-800', label: 'Gate Out' },
+      out_depot: { color: 'bg-gray-100 text-gray-800', label: 'Out Depot' },
+      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
       cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' }
     };
 
-    const config = statusConfig[status];
+    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
     return (
       <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${config.color}`}>
         {getStatusIcon(status)}
@@ -95,7 +94,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     icon: Building,
     data: {
       clientName: canViewAllData() ? container.clientName : 'Your Company',
-      clientCode: container.clientCode || 'N/A'
+      clientCode: container.clientCode || '-'
     },
     layout: 'grid' as const
   };
@@ -141,8 +140,8 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     title: 'Additional Information',
     icon: FileText,
     data: {
-      containerId: container.id,
-      releaseOrderId: container.releaseOrderId || 'N/A'
+      containerId: container.id.slice(0, 8).toLocaleUpperCase(),
+      bookingReference: container.releaseOrderId || '-'
     },
     layout: 'grid' as const
   };
@@ -154,41 +153,20 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     statusTypeSection,
     damageSection,
     additionalInfoSection
-  ].filter(Boolean);
-
-  // Prepare actions
-  const actions = [];
-  if (canViewAuditLogs && container.auditLogs && container.auditLogs.length > 0) {
-    actions.push({
-      label: `View Audit Log (${container.auditLogs.length} entries)`,
-      onClick: () => setShowAuditModal(true),
-      variant: 'secondary' as const,
-      icon: Eye
-    });
-  }
+  ].filter((section): section is NonNullable<typeof section> => section !== null);
 
   return (
-    <>
-      <DataDisplayModal
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Container Details"
-        subtitle={formatContainerNumberForDisplay(container.number)}
-        icon={Package}
-        size="lg"
-        sections={sections}
-        actions={actions}
-      />
-
-      {/* Audit Log Modal */}
-      {showAuditModal && (
-        <AuditLogModal
-          auditLogs={container.auditLogs}
-          onClose={() => setShowAuditModal(false)}
-          containerNumber={container.number}
-          isOpen={showAuditModal}
-        />
-      )}
-    </>
+    <DataDisplayModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Container Details"
+      subtitle={formatContainerNumberForDisplay(container.number)}
+      icon={Package}
+      size="lg"
+      sections={sections}
+      actions={[]}
+    >
+      {null}
+    </DataDisplayModal>
   );
 };

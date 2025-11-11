@@ -154,7 +154,7 @@ export interface PendingGateOut {
   remainingContainers: number;
   transportCompany: string;
   driverName: string;
-  vehicleNumber: string;
+  truckNumber: string;
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   createdBy: string;
   createdAt: Date;

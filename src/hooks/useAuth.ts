@@ -5,6 +5,8 @@ import { userService } from '../services/api';
 import { moduleAccessService } from '../services/api/moduleAccessService';
 import { syncManager } from '../services/sync/SyncManager';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { handleError } from '../services/errorHandling';
+import { logger } from '../utils/logger';
 
 export interface SyncStatus {
   isHealthy: boolean;
@@ -78,47 +80,35 @@ export const useAuthProvider = () => {
 
   // Load user profile with enhanced module access handling
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
-    console.log('📋 [LOAD_PROFILE] Loading profile for:', authUser.email, 'auth_uid:', authUser.id);
-
     try {
-      console.log('📋 [LOAD_PROFILE] Querying users table by auth_user_id...');
-
       const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
         .maybeSingle();
 
-      console.log('📋 [LOAD_PROFILE] Query result - data:', users, 'error:', error);
-
       if (error) {
-        console.error('📋 [LOAD_PROFILE] Error loading user profile:', error);
+        handleError(error, 'useAuth.loadUserProfile');
         return null;
       }
 
       if (!users) {
-        console.warn('📋 [LOAD_PROFILE] User not found in database for auth_user_id:', authUser.id);
         return null;
       }
 
       // Map database user to app user
-      console.log('📋 [LOAD_PROFILE] Mapping user data to AppUser...');
-
       // Use the enhanced ModuleAccessService with fallback mechanism
       let modulePermissions: ModuleAccess | null = null;
       
       try {
-        console.log('📋 [LOAD_PROFILE] Using getUserModuleAccessWithFallback for unified data access');
         modulePermissions = await moduleAccessService.getUserModuleAccessWithFallback(users.id);
-        console.log('📋 [LOAD_PROFILE] Module permissions from unified service:', modulePermissions);
       } catch (error) {
-        console.error('📋 [LOAD_PROFILE] Error loading module access with fallback:', error);
+        handleError(error, 'useAuth.loadUserProfile.getModuleAccess');
         // Continue with default permissions if service fails
       }
 
       // Fallback to default permissions if no data found
       if (!modulePermissions) {
-        console.log('📋 [LOAD_PROFILE] Using default module permissions');
         modulePermissions = {
           dashboard: true,
           containers: false,
@@ -160,28 +150,25 @@ export const useAuthProvider = () => {
         moduleAccess: modulePermissions
       };
 
-      console.log('📋 [LOAD_PROFILE] ✅ Profile mapped successfully:', appUser.email);
       return appUser;
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+      handleError(error, 'useAuth.loadUserProfile');
       return null;
     }
   };
 
   // Version stable de checkSession
   const checkSession = useCallback(async () => {
-    console.log('🔐 [SESSION] Checking session...');
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
-        console.error('🔐 [SESSION] Session error:', error);
+        handleError(error, 'useAuth.checkSession');
         setAuthState(null, false, false);
         return;
       }
 
       if (session?.user) {
-        console.log('🔐 [SESSION] Session found for:', session.user.email);
 
         // Vérifier si l'utilisateur a vraiment changé
         const profile = await loadUserProfile(session.user);
@@ -190,28 +177,23 @@ export const useAuthProvider = () => {
           // Comparaison intelligente pour éviter les re-renders inutiles
           if (userRef.current?.id !== profile.id ||
               userRef.current?.email !== profile.email) {
-            console.log('🔐 [SESSION] User changed, updating state');
             setAuthState(profile, false, true);
 
             // Update last login (non-blocking)
             userService.update(profile.id, {
               last_login: new Date().toISOString()
             }).catch(err => {
-              console.warn('🔐 [SESSION] Could not update last login:', err);
+              // Silently handle - not critical
             });
-          } else {
-            console.log('🔐 [SESSION] User unchanged, skipping state update');
           }
         } else {
-          console.warn('🔐 [SESSION] Could not load user profile');
           setAuthState(null, false, false);
         }
       } else {
-        console.log('🔐 [SESSION] No active session');
         setAuthState(null, false, false);
       }
     } catch (error) {
-      console.error('🔐 [SESSION] Error checking session:', error);
+      handleError(error, 'useAuth.checkSession');
       setAuthState(null, false, false);
     }
   }, [setAuthState]);
@@ -249,14 +231,13 @@ export const useAuthProvider = () => {
               updateSyncStatus(newStatus);
             }
           } catch (error) {
-            console.error('🔄 [SYNC_STATUS] Failed to update sync status:', error);
+            handleError(error, 'useAuth.syncStatusMonitoring');
           }
         }
       }, 30000); // 30 seconds
 
       // Set up sync error callback
       const handleSyncError = (error: any) => {
-        console.warn('🔄 [SYNC_ERROR] Sync error detected:', error);
         if (mounted) {
           const metrics = syncManager.getSyncMetrics();
           const newStatus: SyncStatus = {
@@ -282,14 +263,11 @@ export const useAuthProvider = () => {
 
     // Écouteur DÉBONCÉ et FILTRÉ
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      console.log('🔄 [AUTH_CHANGE] Event:', event);
-
       if (!mounted) return;
 
       // FILTRER les événements non critiques
       const criticalEvents = ['SIGNED_IN', 'SIGNED_OUT', 'USER_DELETED'];
       if (!criticalEvents.includes(event)) {
-        console.log('🔄 [AUTH_CHANGE] Ignoring non-critical event:', event);
         return;
       }
 
@@ -297,7 +275,6 @@ export const useAuthProvider = () => {
       clearTimeout(sessionCheckTimeout);
       sessionCheckTimeout = setTimeout(() => {
         if (mounted) {
-          console.log('🔄 [AUTH_CHANGE] Processing critical event:', event);
           checkSession();
         }
       }, 1000); // 1 seconde de debounce
@@ -314,8 +291,6 @@ export const useAuthProvider = () => {
 
   // login optimisé
   const login = async (email: string, password: string) => {
-    console.log('🔑 [LOGIN] Starting login attempt for:', email);
-
     try {
       setAuthState(userRef.current, true, isAuthenticatedRef.current);
 
@@ -327,10 +302,7 @@ export const useAuthProvider = () => {
       if (error) throw new Error(error.message || 'Invalid credentials');
       if (!data.user) throw new Error('No user returned from authentication');
 
-      console.log('🔑 [LOGIN] Authentication successful for:', data.user.email);
-
       const profile = await loadUserProfile(data.user);
-      console.log('🔑 [LOGIN] Profile loaded:', profile);
 
       if (!profile) {
         await supabase.auth.signOut();
@@ -349,12 +321,10 @@ export const useAuthProvider = () => {
       userService.update(profile.id, {
         last_login: new Date().toISOString()
       }).catch(err => {
-        console.warn('🔑 [LOGIN] Could not update last login:', err);
+        // Silently handle - not critical
       });
-
-      console.log('🔑 [LOGIN] ✅ Login complete!');
     } catch (error: any) {
-      console.error('🔑 [LOGIN] ❌ Login error:', error);
+      handleError(error, 'useAuth.login');
       setAuthState(null, false, false);
       throw error;
     }
@@ -362,38 +332,31 @@ export const useAuthProvider = () => {
 
   const logout = async () => {
     try {
-      console.log('Logging out...');
       await supabase.auth.signOut();
       setAuthState(null, false, false);
 
       // Clear local storage
       localStorage.removeItem('depot_preferences');
       localStorage.removeItem('language');
-      console.log('Logout complete');
     } catch (error) {
-      console.error('Error during logout:', error);
+      handleError(error, 'useAuth.logout');
     }
   };
 
   const refreshUser = async () => {
-    console.log('🔄 [REFRESH_USER] Refreshing user profile...');
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session?.user) {
       const profile = await loadUserProfile(session.user);
       if (profile) {
         setAuthState(profile, false, true);
-        console.log('🔄 [REFRESH_USER] ✅ User profile refreshed');
       }
     }
   };
 
   // New method to refresh only module access permissions
   const refreshModuleAccess = async () => {
-    console.log('🔄 [REFRESH_MODULE_ACCESS] Refreshing module access permissions...');
-    
     if (!userRef.current) {
-      console.warn('🔄 [REFRESH_MODULE_ACCESS] No user available for refresh');
       return;
     }
 
@@ -407,10 +370,9 @@ export const useAuthProvider = () => {
         };
         
         setAuthState(updatedUser, false, true);
-        console.log('🔄 [REFRESH_MODULE_ACCESS] ✅ Module access refreshed');
       }
     } catch (error) {
-      console.error('🔄 [REFRESH_MODULE_ACCESS] ❌ Failed to refresh module access:', error);
+      handleError(error, 'useAuth.refreshModuleAccess');
     }
   };
 
@@ -457,7 +419,7 @@ export const useAuthProvider = () => {
       try {
         callback(newStatus);
       } catch (error) {
-        console.error('🔄 [SYNC_STATUS] Callback error:', error);
+        handleError(error, 'useAuth.onSyncStatusChange.callback');
       }
     });
   }, []);
