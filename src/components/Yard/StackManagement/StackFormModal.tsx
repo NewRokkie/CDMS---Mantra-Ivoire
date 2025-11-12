@@ -3,6 +3,7 @@ import { Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings } from 'lu
 import { Yard, YardStack } from '../../../types';
 import { yardsService } from '../../../services/api/yardsService';
 import { FormModal } from '../../Common/Modal/FormModal';
+import { handleError } from '../../../services/errorHandling';
 
 interface StackFormModalProps {
   isOpen: boolean;
@@ -28,29 +29,22 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     stackType: 'regular' as 'regular' | 'special',
     rows: 4,
     maxTiers: 5,
+    useCustomRowTiers: false,
+    rowTierConfig: [] as Array<{ row: number; maxTiers: number }>
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [rowValidationWarning, setRowValidationWarning] = useState<string | null>(null);
 
   // Initialize form data
   useEffect(() => {
-    console.log('StackFormModal: Initializing form data', {
-      selectedStack: !!selectedStack,
-      yardId: yard?.id,
-      yardName: yard?.name,
-      sectionsCount: yard?.sections?.length,
-      sections: yard?.sections,
-      isOpen
-    });
-
     if (selectedStack) {
       // Load existing stack data
-      console.log('StackFormModal: Loading existing stack data', selectedStack);
-      const containerSize = selectedStack.containerSize === '40feet' ? '40ft' : '20ft';
+      const containerSize = selectedStack.containerSize === '40ft' ? '40ft' : '20ft';
       const stackType = selectedStack.isSpecialStack ? 'special' : 'regular';
 
-      console.log('StackFormModal: Mapped containerSize and stackType', { containerSize, stackType });
-
+      const hasCustomRowTiers = !!(selectedStack.rowTierConfig && selectedStack.rowTierConfig.length > 0);
+      
       setFormData({
         stackNumber: selectedStack.stackNumber,
         sectionId: selectedStack.sectionId || '',
@@ -58,21 +52,20 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         stackType,
         rows: selectedStack.rows,
         maxTiers: selectedStack.maxTiers,
+        useCustomRowTiers: hasCustomRowTiers,
+        rowTierConfig: hasCustomRowTiers && selectedStack.rowTierConfig ? selectedStack.rowTierConfig : []
       });
     } else if (yard?.sections && yard.sections.length > 0) {
       // Reset for new stack
-      console.log('StackFormModal: Resetting for new stack');
       const firstSection = yard.sections[0];
-      console.log('StackFormModal: First section', firstSection);
 
       let suggestedNumber = 1;
       try {
         if (firstSection && yard.id) {
           suggestedNumber = yardsService.getNextStackNumber(yard.id, firstSection.id);
-          console.log('StackFormModal: Suggested stack number', suggestedNumber);
         }
       } catch (error) {
-        console.error('StackFormModal: Error getting next stack number', error);
+        handleError(error, 'StackFormModal.getNextStackNumber');
         suggestedNumber = 1;
       }
 
@@ -83,9 +76,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         stackType: 'regular',
         rows: 4,
         maxTiers: 5,
+        useCustomRowTiers: false,
+        rowTierConfig: []
       });
     } else {
-      console.warn('StackFormModal: No sections available in yard', yard);
       // Provide default values even if no sections are available
       setFormData({
         stackNumber: 1,
@@ -94,15 +88,23 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         stackType: 'regular',
         rows: 4,
         maxTiers: 5,
+        useCustomRowTiers: false,
+        rowTierConfig: []
       });
     }
     setErrors({});
   }, [selectedStack, yard, isOpen]);
 
   const validateForm = () => {
-    console.log('StackFormModal: Validating form data', formData);
     const newErrors: Record<string, string> = {};
     const newValidationErrors: string[] = [];
+
+    // Skip validation if form is not yet initialized (stackNumber is 0 and no selectedStack)
+    if (formData.stackNumber === 0 && !selectedStack) {
+      setErrors({});
+      setValidationErrors([]);
+      return true;
+    }
 
     if (formData.stackNumber <= 0) {
       newErrors.stackNumber = 'Stack number must be greater than 0';
@@ -128,7 +130,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     if (formData.containerSize === '40ft') {
       // 40ft containers typically need more space
       if (formData.rows < 4) {
-        console.log('StackFormModal: Auto-adjusting rows to 4 for 40ft containers');
         setFormData(prev => ({ ...prev, rows: 4 }));
       }
     }
@@ -139,14 +140,39 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       newValidationErrors.push('Special stacks can only accommodate 20ft containers');
     }
 
-    console.log('StackFormModal: Validation errors', newErrors);
     setErrors(newErrors);
     setValidationErrors(newValidationErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: string, value: any, triggerAutoSave?: () => void) => {
-    console.log('StackFormModal: Input change', field, value);
+  const handleInputChange = async (field: string, value: any, triggerAutoSave?: () => void) => {
+    // Validate row reduction if editing existing stack
+    if (field === 'rows' && selectedStack && value < formData.rows) {
+      try {
+        const { supabase } = await import('../../../services/api/supabaseClient');
+        const { data, error } = await supabase.rpc('validate_row_config_change', {
+          p_stack_id: selectedStack.id,
+          p_new_rows: value
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const validation = data[0];
+          if (!validation.can_change) {
+            setRowValidationWarning(validation.reason);
+            // Don't update the value
+            return;
+          }
+        }
+        setRowValidationWarning(null);
+      } catch (error) {
+        console.error('Row validation error:', error);
+        setRowValidationWarning('Unable to validate row change. Please try again.');
+        return;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -155,7 +181,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     // Auto-adjust settings based on container size
     if (field === 'containerSize') {
       if (value === '40ft') {
-        console.log('StackFormModal: Auto-adjusting for 40ft container size');
         setFormData(prev => ({
           ...prev,
           containerSize: value,
@@ -163,7 +188,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
           stackType: 'regular' // Force regular for 40ft
         }));
       } else {
-        console.log('StackFormModal: Setting container size to 20ft');
         setFormData(prev => ({
           ...prev,
           containerSize: value
@@ -174,14 +198,12 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     // Auto-adjust container size based on stack type
     if (field === 'stackType') {
       if (value === 'special') {
-        console.log('StackFormModal: Auto-adjusting for special stack type');
         setFormData(prev => ({
           ...prev,
           stackType: value,
           containerSize: '20ft' // Force 20ft for special stacks
         }));
       } else {
-        console.log('StackFormModal: Setting stack type to regular');
         setFormData(prev => ({
           ...prev,
           stackType: value
@@ -191,7 +213,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
     // Clear error for this field
     if (errors[field]) {
-      console.log('StackFormModal: Clearing error for field', field);
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
@@ -202,10 +223,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    console.log('StackFormModal: Handling submit', formData);
-
     if (!validateForm()) {
-      console.log('StackFormModal: Form validation failed');
       throw new Error('Form validation failed');
     }
 
@@ -213,20 +231,46 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     const stackData: Partial<YardStack> = {
       stackNumber: formData.stackNumber,
       sectionId: formData.sectionId,
-      containerSize: formData.containerSize === '40ft' ? '40feet' : '20feet',
+      containerSize: formData.containerSize === '40ft' ? '40ft' : '20ft',
       isSpecialStack: formData.stackType === 'special',
       rows: formData.rows,
       maxTiers: formData.maxTiers,
+      rowTierConfig: formData.useCustomRowTiers ? formData.rowTierConfig : undefined,
       capacity: calculateCapacity(),
       isActive: true,
     };
 
-    console.log('StackFormModal: Submitting stack data', stackData);
     onSubmit(stackData);
   };
 
   const calculateCapacity = () => {
+    if (formData.useCustomRowTiers && formData.rowTierConfig.length > 0) {
+      // Calculate from custom row-tier config
+      return formData.rowTierConfig.reduce((sum, config) => sum + config.maxTiers, 0);
+    }
     return formData.rows * formData.maxTiers;
+  };
+
+  const generateDefaultRowTierConfig = () => {
+    const config = [];
+    for (let i = 1; i <= formData.rows; i++) {
+      config.push({ row: i, maxTiers: formData.maxTiers });
+    }
+    return config;
+  };
+
+  const updateRowTierConfig = (row: number, maxTiers: number) => {
+    const newConfig = [...formData.rowTierConfig];
+    const existingIndex = newConfig.findIndex(c => c.row === row);
+    
+    if (existingIndex >= 0) {
+      newConfig[existingIndex] = { row, maxTiers };
+    } else {
+      newConfig.push({ row, maxTiers });
+      newConfig.sort((a, b) => a.row - b.row);
+    }
+    
+    setFormData(prev => ({ ...prev, rowTierConfig: newConfig }));
   };
 
   const getContainerSizeDescription = (size: '20ft' | '40ft') => {
@@ -256,9 +300,12 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     };
   };
 
-  // Validate form on data changes
+  // Validate form on data changes (skip initial validation when form is being initialized)
   useEffect(() => {
-    validateForm();
+    // Only validate if we have a valid stack number (form has been initialized)
+    if (formData.stackNumber > 0) {
+      validateForm();
+    }
   }, [formData]);
 
   const suggestions = getLayoutSuggestions();
@@ -341,9 +388,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       try {
                         const suggested = yardsService.getNextStackNumber(yard.id, e.target.value);
                         handleInputChange('stackNumber', suggested);
-                        console.log('StackFormModal: Updated stack number to', suggested);
                       } catch (error) {
-                        console.error('StackFormModal: Error updating stack number', error);
+                        handleError(error, 'StackFormModal.updateStackNumber');
                       }
                     }
                   }}
@@ -534,11 +580,22 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 max="10"
                 value={formData.rows}
                 onChange={(e) => handleInputChange('rows', parseInt(e.target.value) || 1)}
-                className={`depot-input ${errors.rows ? 'error' : ''}`}
+                className={`depot-input ${errors.rows || rowValidationWarning ? 'error' : ''}`}
                 placeholder="4"
               />
               {errors.rows && <p className="mt-1 text-sm text-red-600">{errors.rows}</p>}
+              {rowValidationWarning && (
+                <div className="mt-2 flex items-start p-2 bg-red-50 border border-red-200 rounded">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700">{rowValidationWarning}</p>
+                </div>
+              )}
               <p className="mt-1 text-xs text-gray-600">Number of container rows (depth)</p>
+              {selectedStack && (
+                <p className="mt-1 text-xs text-blue-600">
+                  Current: {selectedStack.rows} rows. Reducing rows will be validated against existing containers.
+                </p>
+              )}
             </div>
 
             <div>
@@ -560,6 +617,64 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             </div>
           </div>
 
+          {/* Custom Row-Tier Configuration Toggle */}
+          <div className="mt-4">
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.useCustomRowTiers}
+                onChange={(e) => {
+                  const useCustom = e.target.checked;
+                  setFormData(prev => ({
+                    ...prev,
+                    useCustomRowTiers: useCustom,
+                    rowTierConfig: useCustom ? generateDefaultRowTierConfig() : []
+                  }));
+                }}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Use custom tier heights per row
+              </span>
+            </label>
+            <p className="mt-1 ml-7 text-xs text-gray-600">
+              Configure different maximum tier heights for each row (e.g., Row 1: 5 tiers, Row 2: 4 tiers)
+            </p>
+          </div>
+
+          {/* Custom Row-Tier Configuration Grid */}
+          {formData.useCustomRowTiers && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h5 className="text-sm font-semibold text-blue-900 mb-3">Per-Row Tier Configuration</h5>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Array.from({ length: formData.rows }, (_, i) => i + 1).map(rowNum => {
+                  const rowConfig = formData.rowTierConfig.find(c => c.row === rowNum);
+                  const currentTiers = rowConfig?.maxTiers || formData.maxTiers;
+                  
+                  return (
+                    <div key={rowNum} className="bg-white p-3 rounded-lg border border-blue-300">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Row {rowNum}
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="8"
+                        value={currentTiers}
+                        onChange={(e) => updateRowTierConfig(rowNum, parseInt(e.target.value) || 1)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">{currentTiers} tiers</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 text-xs text-blue-800">
+                💡 Tip: Different rows can have different heights based on ground conditions or equipment reach
+              </div>
+            </div>
+          )}
+
           {/* Capacity Display */}
           <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex items-center justify-between">
@@ -569,7 +684,11 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
               </span>
             </div>
             <div className="text-xs text-gray-600 mt-1">
-              {formData.rows} rows × {formData.maxTiers} tiers = {calculateCapacity()} container positions
+              {formData.useCustomRowTiers ? (
+                <>Custom configuration: {formData.rowTierConfig.map(c => `R${c.row}:${c.maxTiers}`).join(', ')}</>
+              ) : (
+                <>{formData.rows} rows × {formData.maxTiers} tiers = {calculateCapacity()} container positions</>
+              )}
             </div>
           </div>
         </div>
