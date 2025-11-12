@@ -4,8 +4,8 @@ import { DatePicker } from '../Common/DatePicker';
 import { ClientPool } from '../../types/clientPool';
 import { Yard, YardStack } from '../../types';
 import { clientPoolService, clientService } from '../../services/api';
-import { useYard } from '../../hooks/useYard';
 import { handleError } from '../../services/errorHandling';
+import { StackSelectionModal } from './StackSelectionModal';
 
 interface ClientPoolFormProps {
   isOpen: boolean;
@@ -42,7 +42,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   yard,
   isLoading = false
 }) => {
-  const { currentYard } = useYard();
+
 
   const [formData, setFormData] = useState<ClientPoolFormData>({
     clientId: '',
@@ -60,8 +60,9 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set());
   const [availableStacks, setAvailableStacks] = useState<YardStack[]>([]);
-  const [stackSearchTerm, setStackSearchTerm] = useState('');
   const [autoSaving, setAutoSaving] = useState(false);
+  const [showStackSelectionModal, setShowStackSelectionModal] = useState(false);
+  const [excludedStackIds, setExcludedStackIds] = useState<string[]>([]);
 
   // Initialize form data when editing
   useEffect(() => {
@@ -104,15 +105,17 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
       const allStacks = yard.sections.flatMap(section => section.stacks);
       try {
         const allPools = await clientPoolService.getAll(yard.id);
-        const assignedStackIds = new Set(
+        const assignedStackIds = Array.from(new Set(
           allPools
             .filter(pool => pool.id !== selectedPool?.id)
             .flatMap(pool => pool.assignedStacks)
-        );
-        setAvailableStacks(allStacks.filter(stack => !assignedStackIds.has(stack.id)));
+        ));
+        setExcludedStackIds(assignedStackIds);
+        setAvailableStacks(allStacks.filter(stack => !assignedStackIds.includes(stack.id)));
       } catch (error) {
         handleError(error, 'ClientPoolForm.fetchAvailableStacks');
         setAvailableStacks(allStacks); // Fallback to all stacks on error
+        setExcludedStackIds([]);
       }
     };
 
@@ -156,25 +159,8 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
     triggerAutoSave();
   };
 
-  const handleStackToggle = (stackId: string) => {
-    setSelectedStacks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(stackId)) {
-        newSet.delete(stackId);
-      } else {
-        newSet.add(stackId);
-      }
-      return newSet;
-    });
-    triggerAutoSave();
-  };
-
-  const handleSelectAllStacks = () => {
-    if (selectedStacks.size === availableStacks.length) {
-      setSelectedStacks(new Set());
-    } else {
-      setSelectedStacks(new Set(availableStacks.map(s => s.id)));
-    }
+  const handleStackSelectionConfirm = (stackIds: string[]) => {
+    setSelectedStacks(new Set(stackIds));
     triggerAutoSave();
   };
 
@@ -204,19 +190,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                      selectedStacks.size > 0 &&
                      formData.contractStartDate;
 
-  const filteredStacks = availableStacks.filter(stack =>
-    stackSearchTerm === '' ||
-    stack.stackNumber.toString().includes(stackSearchTerm) ||
-    `s${stack.stackNumber}`.toLowerCase().includes(stackSearchTerm.toLowerCase()) ||
-    `stack ${stack.stackNumber}`.toLowerCase().includes(stackSearchTerm.toLowerCase()) ||
-    yard.sections.find(s => s.id === stack.sectionId)?.name.toLowerCase().includes(stackSearchTerm.toLowerCase())
-  );
 
-  // Group stacks by section for better organization
-  const stacksBySection = (currentYard?.sections || []).map(section => ({
-    section,
-    stacks: filteredStacks.filter(stack => stack.sectionId === section.id)
-  })).filter(group => group.stacks.length > 0);
 
   if (!isOpen) return null;
 
@@ -411,120 +385,72 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={handleSelectAllStacks}
-                  className="text-sm font-medium text-[#A0C800] hover:text-[#8bb400] px-3 py-1 hover:bg-[#A0C800]/10 rounded-md transition-colors"
+                  onClick={() => setShowStackSelectionModal(true)}
+                  className="px-4 py-2 bg-[#A0C800] text-white rounded-lg hover:bg-[#8bb400] transition-colors font-medium flex items-center space-x-2"
                 >
-                  {selectedStacks.size === availableStacks.length ? 'Deselect All' : 'Select All'}
+                  <Grid3X3 className="h-4 w-4" />
+                  <span>Select Stacks</span>
                 </button>
               </div>
 
-              {/* Stack Search */}
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
-                    placeholder="Search stacks by number or section..."
-                    value={stackSearchTerm}
-                    onChange={(e) => setStackSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A0C800] focus:border-[#A0C800]"
-                  />
-                </div>
-              </div>
-
-              {/* Modern Stack Selection Grid */}
-              <div className="space-y-6">
-                {stacksBySection.map(({ section, stacks }) => (
-                  <div key={section.id} className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                          <Grid3X3 className="h-4 w-4 text-[#A0C800]" />
-                          <h5 className="font-medium text-gray-800">{section.name}</h5>
-                          <span className="text-xs text-[#A0C800] bg-[#A0C800]/10 px-2 py-1 rounded-full">
-                            {stacks.filter(s => selectedStacks.has(s.id)).length}/{stacks.length} selected
-                          </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sectionStackIds = stacks.map(s => s.id);
-                          const allSelected = sectionStackIds.every(id => selectedStacks.has(id));
-                          setSelectedStacks(prev => {
-                            const newSet = new Set(prev);
-                            if (allSelected) {
-                              sectionStackIds.forEach(id => newSet.delete(id));
-                            } else {
-                              sectionStackIds.forEach(id => newSet.add(id));
-                            }
-                            return newSet;
-                          });
-                          triggerAutoSave();
-                        }}
-                        className="text-xs font-medium text-[#A0C800] hover:text-[#8bb400] px-2 py-1 hover:bg-[#A0C800]/10 rounded-md transition-colors"
-                      >
-                        {stacks.every(s => selectedStacks.has(s.id)) ? 'Deselect Section' : 'Select Section'}
-                      </button>
-                    </div>
-
-                    {/* Responsive Grid with Optimal Spacing */}
-                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-9 lg:grid-cols-12 gap-4">
-                      {stacks.map((stack) => {
-                        const isSelected = selectedStacks.has(stack.id);
-                        const capacity = stack.rows * stack.maxTiers;
-
-                        return (
-                          <button
-                            key={stack.id}
-                            type="button"
-                            onClick={() => handleStackToggle(stack.id)}
-                            className={`relative group w-full aspect-square rounded-lg border-2 transition-all transform hover:scale-105 hover:shadow-lg ${
-                              isSelected
-                                ? 'border-[#A0C800] bg-[#A0C800]/10 shadow-lg shadow-[#A0C800]/20'
-                                : 'border-gray-200 bg-white hover:border-[#A0C800] hover:bg-[#A0C800]/5 shadow-sm hover:shadow-md'
-                            }`}
-                            title={`Stack ${stack.stackNumber} - ${stack.rows} Rows × ${stack.maxTiers} Tiers (${capacity} containers)`}
-                          >
-                            {/* Simplified Content - Only Stack Number */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className={`font-bold text-lg ${
-                                isSelected ? 'text-[#A0C800]' : 'text-gray-700 group-hover:text-[#A0C800]'
-                              }`}>
-                                {stack.stackNumber.toString().padStart(2, '0')}
-                              </div>
-                            </div>
-
-                            {/* Selection Indicator */}
-                            {isSelected && (
-                              <div className="absolute -top-1 -right-1 bg-[#A0C800] text-white rounded-full p-1 shadow-md">
-                                <Check className="h-3 w-3" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               {/* Selection Summary */}
-              {selectedStacks.size > 0 && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
+              {selectedStacks.size > 0 ? (
+                <div className="p-6 bg-gradient-to-br from-[#A0C800]/5 to-[#A0C800]/10 rounded-lg border-2 border-[#A0C800]/20">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className="text-sm font-medium text-gray-800">Selected Stacks Summary</div>
-                      <span className="text-xs text-[#A0C800] bg-[#A0C800]/10 px-2 py-1 rounded-full">
-                        {selectedStacks.size} stacks
-                      </span>
+                      <div className="p-2 bg-[#A0C800] text-white rounded-lg">
+                        <Check className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {selectedStacks.size} Stack{selectedStacks.size !== 1 ? 's' : ''} Selected
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Total capacity: {formData.maxCapacity} containers
+                        </div>
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowStackSelectionModal(true)}
+                      className="text-sm font-medium text-[#A0C800] hover:text-[#8bb400] px-3 py-2 hover:bg-white/50 rounded-md transition-colors"
+                    >
+                      Modify Selection
+                    </button>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {Array.from(selectedStacks).slice(0, 5).map(stackId => {
+                  
+                  {/* Stack Numbers Display */}
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(selectedStacks).map(stackId => {
                       const stack = getAllStacks().find(s => s.id === stackId);
-                      return stack ? `S${stack.stackNumber.toString().padStart(2, '0')} ` : '';
-                    }).join('• ')}
-                    {selectedStacks.size > 5 && ` • +${selectedStacks.size - 5} more`}
+                      if (!stack) return null;
+                      return (
+                        <div
+                          key={stackId}
+                          className="px-3 py-1.5 bg-white border border-[#A0C800]/30 rounded-lg text-sm font-medium text-gray-700 flex items-center space-x-2"
+                        >
+                          <span>S{stack.stackNumber.toString().padStart(2, '0')}</span>
+                          <span className="text-xs text-gray-500">({stack.rows}×{stack.maxTiers})</span>
+                        </div>
+                      );
+                    })}
                   </div>
+                </div>
+              ) : (
+                <div className="p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                  <Package className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Stacks Selected</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Click the button above to select stacks for this client pool
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowStackSelectionModal(true)}
+                    className="px-4 py-2 bg-[#A0C800] text-white rounded-lg hover:bg-[#8bb400] transition-colors font-medium inline-flex items-center space-x-2"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                    <span>Select Stacks</span>
+                  </button>
                 </div>
               )}
 
@@ -621,6 +547,33 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Stack Selection Modal */}
+      <StackSelectionModal
+        isOpen={showStackSelectionModal}
+        onClose={() => setShowStackSelectionModal(false)}
+        onConfirm={handleStackSelectionConfirm}
+        yardId={yard.id}
+        availableStacks={availableStacks
+          .filter(stack => stack.stackNumber % 2 !== 0) // Only show physical stacks (odd numbers)
+          .map(stack => ({
+            id: stack.id,
+            stackNumber: stack.stackNumber,
+            sectionId: stack.sectionId || '',
+            sectionName: yard.sections.find(s => s.id === stack.sectionId)?.name || 'Unknown Section',
+            rows: stack.rows || 6,
+            maxTiers: stack.maxTiers || 4,
+            containerSize: (stack.containerSize as '20ft' | '40ft') || '20ft',
+            isSpecialStack: stack.isSpecialStack || false,
+            isVirtual: false, // All shown stacks are physical
+            currentOccupancy: stack.currentOccupancy || 0,
+            maxCapacity: (stack.rows || 6) * (stack.maxTiers || 4)
+          }))}
+        initialSelectedStacks={Array.from(selectedStacks)}
+        excludeStackIds={excludedStackIds}
+        title="Select Stacks for Client Pool"
+        subtitle={`Choose stacks to assign to ${formData.clientName || 'this client'} (Physical stacks only - virtual stacks assigned automatically)`}
+      />
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Search, Check, ChevronDown, Loader, AlertTriangle } from 'lucide-react';
 import { ContainerFormData } from '../ContainerEditModal';
 import { useYard } from '../../../hooks/useYard';
-import { locationManagementService, stackService } from '../../../services/api';
+import { locationManagementService } from '../../../services/api';
 import { handleError } from '../../../services/errorHandling';
 
 interface LocationAssignmentStepProps {
@@ -31,6 +31,9 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
   const [locationSearch, setLocationSearch] = useState('');
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasClientPool, setHasClientPool] = useState(false);
+  const [clientPoolStacks, setClientPoolStacks] = useState<string[]>([]);
+  const [otherClientsStacks, setOtherClientsStacks] = useState<Set<string>>(new Set());
   const { currentYard } = useYard();
   
   // Check if location assignment is restricted for this container
@@ -48,6 +51,42 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
       try {
         setLoading(true);
         
+        // Get client pool assignments for filtering
+        const { clientPoolService } = await import('../../../services/api/clientPoolService');
+        let poolStacks: string[] = [];
+        let hasPool = false;
+        let otherStacks: Set<string> = new Set();
+        
+        if (formData.clientCode) {
+          try {
+            const clientPools = await clientPoolService.getAll(currentYard.id);
+            
+            // Find this client's pool
+            const clientPool = clientPools.find(pool => 
+              pool.clientCode === formData.clientCode && pool.isActive
+            );
+            
+            if (clientPool && clientPool.assignedStacks.length > 0) {
+              poolStacks = clientPool.assignedStacks;
+              hasPool = true;
+            }
+            
+            // Get all stacks assigned to OTHER clients
+            clientPools.forEach(pool => {
+              if (pool.clientCode !== formData.clientCode && pool.isActive) {
+                pool.assignedStacks.forEach(stackId => otherStacks.add(stackId));
+              }
+            });
+          } catch (poolError) {
+            console.warn('Could not load client pools:', poolError);
+          }
+        }
+        
+        // Update state with pool information
+        setHasClientPool(hasPool);
+        setClientPoolStacks(poolStacks);
+        setOtherClientsStacks(otherStacks);
+        
         // Fetch all individual locations for the current yard
         const dbLocations = await locationManagementService.getAll({
           yardId: currentYard.id,
@@ -58,6 +97,7 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
         // Each location represents a specific Row×Height position
         // ONLY show available locations (not occupied)
         // Filter by container size: 40ft -> virtual stacks (even numbers), 20ft -> physical stacks (odd numbers or special)
+        // Filter by client pool: if client has a pool, only show their assigned stacks
         const locationOptions: LocationOption[] = dbLocations
           .filter(loc => {
             // Must be active
@@ -70,6 +110,22 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
             
             // If there's a container assigned, it's not available
             if (loc.containerId) return false;
+            
+            // CLIENT POOL FILTERING
+            // If client has a pool with assigned stacks, only show locations from those stacks
+            if (hasPool && poolStacks.length > 0) {
+              if (!loc.stackId || !poolStacks.includes(loc.stackId)) {
+                return false; // Not in client's assigned stacks
+              }
+            }
+            // If client has no pool, only show locations from unassigned stacks
+            // (This prevents showing locations from other clients' pools)
+            else if (formData.clientCode && loc.stackId) {
+              // Don't show locations from stacks assigned to other clients
+              if (otherStacks.has(loc.stackId)) {
+                return false;
+              }
+            }
             
             // Filter by container size
             const stackNumber = parseInt(loc.locationId.match(/S(\d+)/)?.[1] || '0');
@@ -388,6 +444,20 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
                   ) : (
                     <>Container size: {formData.size}</>
                   )}
+                </p>
+              </div>
+            )}
+            {hasClientPool && clientPoolStacks.length > 0 && (
+              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-300">
+                <p className="text-xs font-medium text-blue-800">
+                  <span className="font-semibold">Client Pool:</span> Showing locations from your assigned stacks only ({clientPoolStacks.length} stacks)
+                </p>
+              </div>
+            )}
+            {!hasClientPool && formData.clientCode && otherClientsStacks.size > 0 && (
+              <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-300">
+                <p className="text-xs font-medium text-orange-800">
+                  <span className="font-semibold">No pool configured:</span> Showing all unassigned stacks (stacks assigned to other clients are hidden)
                 </p>
               </div>
             )}

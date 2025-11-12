@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 
-import { clientPoolService } from '../../../services/clientPoolService';
+import { clientPoolService } from '../../../services/api/clientPoolService';
 import { yardsService } from '../../../services/api/yardsService';
 import { containerService } from '../../../services/api/containerService';
 import { StandardModal } from '../../Common/Modal/StandardModal';
@@ -48,6 +48,8 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [selectedHeight, setSelectedHeight] = useState<number | null>(null);
+  const [hasClientPool, setHasClientPool] = useState(false);
+  const [clientPoolStackCount, setClientPoolStackCount] = useState(0);
 
   // Load available stacks
   useEffect(() => {
@@ -72,73 +74,81 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       
       // Get available stacks based on client pool assignments
       let availableStackResults = [];
+      let clientPoolStacks: string[] = [];
+      let hasClientPool = false;
+      let otherClientsStacks: Set<string> = new Set();
       
       if (clientCode) {
-        // Check if client has a pool configuration
-        const clientPool = clientPoolService.getClientPool(clientCode);
+        // Get all client pools for this yard
+        const clientPools = await clientPoolService.getAll(yardId);
         
-        if (clientPool && clientPool.isActive) {
-          // Client has an active pool - get their assigned stacks only
-          availableStackResults = clientPoolService.getAvailableStacksForClientInYard(
-            clientCode,
-            containerSize,
-            yardId,
-            yardContainers
-          );
-        } else {
-          // Client doesn't have a pool configuration - show unassigned stacks
-          const unassignedStacks = clientPoolService.getUnassignedStacks(yard);
-          availableStackResults = unassignedStacks
-            .filter(stack => isStackCompatible(stack, containerSize))
-            .map(stack => {
-              const stackContainers = yardContainers.filter((c: any) => {
-                const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-                return match && parseInt(match[1]) === stack.stackNumber;
-              });
-              const currentOccupancy = stackContainers.length;
-              const availableSlots = stack.capacity - currentOccupancy;
-              
-              const section = yard.sections.find(s => s.id === stack.sectionId);
-              
-              return {
-                stackId: stack.id,
-                stackNumber: stack.stackNumber,
-                sectionName: section?.name || 'Unknown',
-                availableSlots,
-                totalCapacity: stack.capacity,
-                isRecommended: availableSlots > 0,
-                distance: 0
-              };
-            })
-            .filter(result => result.availableSlots > 0);
+        // Find this client's pool
+        const clientPool = clientPools.find(pool => 
+          pool.clientCode === clientCode && pool.isActive
+        );
+        
+        if (clientPool && clientPool.assignedStacks.length > 0) {
+          clientPoolStacks = clientPool.assignedStacks;
+          hasClientPool = true;
         }
-      } else {
-        // No client code provided - show unassigned stacks
-        const unassignedStacks = clientPoolService.getUnassignedStacks(yard);
-        availableStackResults = unassignedStacks
-          .filter(stack => isStackCompatible(stack, containerSize))
-          .map(stack => {
-            const stackContainers = yardContainers.filter((c: any) => {
-              const match = c.location.match(/S(\d+)-R\d+-H\d+/);
-              return match && parseInt(match[1]) === stack.stackNumber;
-            });
-            const currentOccupancy = stackContainers.length;
-            const availableSlots = stack.capacity - currentOccupancy;
-            
-            const section = yard.sections.find(s => s.id === stack.sectionId);
-            
-            return {
-              stackId: stack.id,
-              stackNumber: stack.stackNumber,
-              sectionName: section?.name || 'Unknown',
-              availableSlots,
-              totalCapacity: stack.capacity,
-              isRecommended: availableSlots > 0,
-              distance: 0
-            };
-          })
-          .filter(result => result.availableSlots > 0);
+        
+        // Get all stacks assigned to OTHER clients
+        clientPools.forEach(pool => {
+          if (pool.clientCode !== clientCode && pool.isActive) {
+            pool.assignedStacks.forEach(stackId => otherClientsStacks.add(stackId));
+          }
+        });
       }
+      
+      // Get all stacks from the yard
+      const allStacks = yard.sections.flatMap(section => section.stacks);
+      
+      // Filter stacks based on client pool assignments
+      const filteredStacks = allStacks.filter(stack => {
+        // Filter by container size compatibility
+        if (!isStackCompatible(stack, containerSize)) {
+          return false;
+        }
+        
+        // If client has a pool, only show their assigned stacks
+        if (hasClientPool && clientPoolStacks.length > 0) {
+          return clientPoolStacks.includes(stack.id);
+        }
+        
+        // If client has no pool, hide stacks assigned to other clients
+        if (clientCode) {
+          return !otherClientsStacks.has(stack.id);
+        }
+        
+        // No client code - show all compatible stacks
+        return true;
+      });
+      
+      // Calculate availability for filtered stacks
+      availableStackResults = filteredStacks.map(stack => {
+        const stackContainers = yardContainers.filter((c: any) => {
+          const match = c.location.match(/S(\d+)-R\d+-H\d+/);
+          return match && parseInt(match[1]) === stack.stackNumber;
+        });
+        const currentOccupancy = stackContainers.length;
+        const availableSlots = stack.capacity - currentOccupancy;
+        
+        const section = yard.sections.find(s => s.id === stack.sectionId);
+        
+        return {
+          stackId: stack.id,
+          stackNumber: stack.stackNumber,
+          sectionName: section?.name || 'Unknown',
+          availableSlots,
+          totalCapacity: stack.capacity,
+          isRecommended: availableSlots > 0,
+          distance: 0
+        };
+      }).filter(result => result.availableSlots > 0);
+      
+      // Update state with pool information
+      setHasClientPool(hasClientPool);
+      setClientPoolStackCount(clientPoolStacks.length);
 
       // Convert to StackLocation format and handle virtual stacks for 40ft
       const stackLocations = await Promise.all(
@@ -364,8 +374,7 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       return ' (Unassigned stacks)';
     }
     
-    const clientPool = clientPoolService.getClientPool(clientCode);
-    if (clientPool && clientPool.isActive) {
+    if (hasClientPool && clientPoolStackCount > 0) {
       return ` (Client: ${clientCode} - Pool assigned stacks)`;
     } else {
       return ` (Client: ${clientCode} - No pool config, showing unassigned stacks)`;
@@ -484,14 +493,11 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
               </div>
               {clientCode && (
                 <div className="text-xs text-blue-600">
-                  {(() => {
-                    const clientPool = clientPoolService.getClientPool(clientCode);
-                    if (clientPool && clientPool.isActive) {
-                      return `📋 Showing stacks assigned to ${clientCode} pool`;
-                    } else {
-                      return `🔓 No pool configured for ${clientCode} - showing all unassigned stacks`;
-                    }
-                  })()}
+                  {hasClientPool && clientPoolStackCount > 0 ? (
+                    `📋 Showing stacks assigned to ${clientCode} pool (${clientPoolStackCount} stacks)`
+                  ) : (
+                    `🔓 No pool configured for ${clientCode} - showing all unassigned stacks`
+                  )}
                 </div>
               )}
             </div>

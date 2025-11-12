@@ -10,6 +10,8 @@ import { ValidationService } from '../validationService';
 
 export interface GateInData {
   containerNumber: string;
+  containerQuantity?: 1 | 2; // Number of containers (1 or 2 for 20ft)
+  secondContainerNumber?: string; // Second container number when quantity is 2
   clientCode: string;
   clientName?: string;
   containerType: string;
@@ -256,6 +258,8 @@ export class GateService {
         .insert({
           container_id: container.id,
           container_number: data.containerNumber.trim().toUpperCase(),
+          container_quantity: data.containerQuantity || 1, // Default to 1 if not specified
+          second_container_number: data.secondContainerNumber?.trim().toUpperCase(),
           client_code: data.clientCode,
           client_name: client.name,
           container_type: data.containerType,
@@ -652,11 +656,13 @@ export class GateService {
       clientName: data.client_name,
       containerType: data.container_type,
       containerSize: data.container_size,
+      containerQuantity: data.container_quantity || 1, // Default to 1 if not set
+      secondContainerNumber: data.second_container_number,
       transportCompany: data.transport_company,
       driverName: data.driver_name,
       truckNumber: data.vehicle_number, // Fix: map vehicle_number to truckNumber
       assignedLocation: data.assigned_location,
-      classification: data.classification || 'autres',
+      classification: data.classification || 'divers', // Fix: default to 'divers' not 'autres'
       damageReported: data.damage_reported,
       damageDescription: data.damage_description,
       damageAssessment: data.damage_assessment_stage ? {

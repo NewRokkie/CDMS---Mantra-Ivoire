@@ -12,6 +12,10 @@ interface Props {
   clientPool: ClientPool | null;
   onEdit?: (pool: ClientPool) => void;
   onDelete?: (pool: ClientPool) => void;
+  stacksData?: Map<string, any>; // Map of stackId -> stack data with stackNumber
+  createdByName?: string; // User name who created the pool
+  updatedByName?: string; // User name who last updated the pool
+  yardName?: string; // Current yard name
 }
 
 export const ClientPoolViewModal: React.FC<Props> = ({ 
@@ -19,7 +23,11 @@ export const ClientPoolViewModal: React.FC<Props> = ({
   onClose, 
   clientPool,
   onEdit,
-  onDelete 
+  onDelete,
+  stacksData,
+  createdByName,
+  updatedByName,
+  yardName
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'stacks' | 'contract' | 'metadata'>('overview');
 
@@ -45,15 +53,27 @@ export const ClientPoolViewModal: React.FC<Props> = ({
     layout: 'grid'
   };
 
+  // Format stack list with actual stack numbers
+  const formatStackList = () => {
+    if (!stacksData || stacksData.size === 0) {
+      return clientPool.assignedStacks.join(', ');
+    }
+    
+    return clientPool.assignedStacks
+      .map(stackId => {
+        const stack = stacksData.get(stackId);
+        return stack ? `S${stack.stackNumber.toString().padStart(2, '0')}` : stackId;
+      })
+      .join(', ');
+  };
+
   const stacksSection: DataSection = {
     id: 'stacks',
     title: 'Stack Assignments',
     icon: Package,
     data: {
       totalStacks: clientPool.assignedStacks.length.toString(),
-      stackList: clientPool.assignedStacks.map(stackId => 
-        `S${stackId.split('-').pop()?.toString().padStart(2, '0')}`
-      ).join(', '),
+      stackList: formatStackList(),
       maxCapacity: clientPool.maxCapacity?.toLocaleString() || '0',
       currentOccupancy: clientPool.currentOccupancy?.toLocaleString() || '0',
       availableSpace: (clientPool.maxCapacity - clientPool.currentOccupancy).toLocaleString()
@@ -81,10 +101,10 @@ export const ClientPoolViewModal: React.FC<Props> = ({
     data: {
       createdAt: clientPool.createdAt ? new Date(clientPool.createdAt).toLocaleDateString() : '-',
       updatedAt: clientPool.updatedAt ? new Date(clientPool.updatedAt).toLocaleDateString() : '-',
-      createdBy: clientPool.createdBy || '-',
-      lastModifiedBy: clientPool.updatedBy || '-',
+      createdBy: createdByName || clientPool.createdBy || '-',
+      lastModifiedBy: updatedByName || clientPool.updatedBy || '-',
       poolId: clientPool.id || '-',
-      yardId: clientPool.yardId || '-'
+      yardId: yardName || clientPool.yardId || '-'
     },
     layout: 'list'
   };
@@ -228,7 +248,8 @@ export const ClientPoolViewModal: React.FC<Props> = ({
             </h3>
             <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 gap-2">
               {clientPool.assignedStacks.map((stackId) => {
-                const stackNumber = stackId.split('-').pop();
+                const stack = stacksData?.get(stackId);
+                const stackNumber = stack?.stackNumber || stackId.split('-').pop();
                 return (
                   <div
                     key={stackId}

@@ -432,6 +432,8 @@ useEffect(() => {
       // Process Gate In through enhanced API service
       const gateInData = {
         containerNumber: formData.containerNumber.trim().toUpperCase(),
+        containerQuantity: formData.containerQuantity,
+        secondContainerNumber: formData.secondContainerNumber?.trim().toUpperCase(),
         clientName: formData.clientName,
         clientCode: formData.clientCode,
         containerType: formData.containerType,

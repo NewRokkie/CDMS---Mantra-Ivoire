@@ -6,6 +6,8 @@ export interface GateInOperation {
   clientName: string;
   containerType: string;
   containerSize: string;
+  containerQuantity: 1 | 2; // Number of containers in this operation (1 or 2 for 20ft)
+  secondContainerNumber?: string; // Second container number when containerQuantity is 2
   transportCompany: string;
   driverName: string;
   truckNumber?: string; // Changed from vehicleNumber to truckNumber
