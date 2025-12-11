@@ -1,5 +1,6 @@
 import React from 'react';
 import { List, AlertTriangle, CheckCircle, Package, RefreshCcw } from 'lucide-react';
+import { CardSkeleton } from '../Common/CardSkeleton';
 
 interface ReleaseOrderStats {
   total: number;
@@ -12,9 +13,26 @@ interface ReleaseOrderStats {
 
 interface MobileReleaseOrderStatsProps {
   stats: ReleaseOrderStats;
+  loading?: boolean;
 }
 
-export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = ({ stats }) => {
+export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = ({ stats, loading = false }) => {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4 sm:hidden">
+          <CardSkeleton count={2} />
+        </div>
+        <div className="hidden sm:grid lg:hidden grid-cols-4 gap-4">
+          <CardSkeleton count={3} />
+        </div>
+        <div className="hidden lg:grid grid-cols-4 gap-6">
+          <CardSkeleton count={4} />
+        </div>
+      </div>
+    );
+  }
+
   const statsList = [
     {
       icon: List,

@@ -15,7 +15,9 @@ export interface DamageAssessment {
 export interface GateInFormData {
   // Step 1: Container Information
   containerSize: '20ft' | '40ft';
-  containerType: 'dry' | 'high_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  containerType: 'dry' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  isHighCube: boolean;
+  containerIsoCode?: string;
   containerQuantity: 1 | 2;
   status: 'FULL' | 'EMPTY';
   clientId: string;
@@ -84,6 +86,7 @@ export interface GateInModalProps {
   handlePrevStep: () => void;
   handleInputChange: (field: keyof GateInFormData, value: any) => void;
   handleContainerSizeChange: (size: '20ft' | '40ft') => void;
+  handleHighCubeChange: (isHighCube: boolean) => void;
   handleQuantityChange: (quantity: 1 | 2) => void;
   handleStatusChange: (isFullStatus: boolean) => void;
   handleClientChange: (clientId: string) => void;
@@ -187,7 +190,8 @@ export interface ContainerValidation {
 
 export interface ContainerTypeSelectProps {
   value: string;
-  onChange: (value: string) => void;
+  selectedIso?: string;
+  onChange: (value: string, iso?: string) => void;
   containerSize: '20ft' | '40ft';
 }
 

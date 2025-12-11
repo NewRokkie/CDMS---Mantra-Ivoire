@@ -9,6 +9,8 @@ import { DepotDetailModal } from './DepotDetailModal';
 import { DepotAssignmentModal } from './DepotAssignmentModal';
 import { DesktopOnlyMessage } from '../../Common/DesktopOnlyMessage';
 import { handleError } from '../../../services/errorHandling';
+import { useToast } from '../../../hooks/useToast';
+import { useConfirm } from '../../../hooks/useConfirm';
 
 export const DepotManagement: React.FC = () => {
   const [depots, setDepots] = useState<Yard[]>([]);
@@ -23,6 +25,8 @@ export const DepotManagement: React.FC = () => {
   const [isAssignmentLoading, setIsAssignmentLoading] = useState(false);
   const { user } = useAuth();
   const { currentYard, refreshYards } = useYard();
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
 
 
@@ -138,24 +142,31 @@ export const DepotManagement: React.FC = () => {
 
   const handleDeleteDepot = async (depot: Yard) => {
     if (depot.id === currentYard?.id) {
-      alert('Cannot delete the currently selected depot. Please switch to another depot first.');
+      toast.warning('Cannot delete the currently selected depot. Please switch to another depot first.');
       return;
     }
 
-    if (confirm(`Are you sure you want to delete the depot "${depot.name}"? This action cannot be undone.`)) {
-      try {
-        const success = await yardsService.delete(depot.id, user?.id || 'unknown');
-        if (success) {
-          await loadDepots();
-          await refreshYards(); // Refresh yard context
-          alert(`Depot "${depot.name}" deleted successfully!`);
-        } else {
-          alert('Error deleting depot: Depot not found or cannot be deleted');
+    confirm({
+      title: 'Delete Depot',
+      message: `Are you sure you want to delete the depot "${depot.name}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const success = await yardsService.delete(depot.id, user?.id || 'unknown');
+          if (success) {
+            await loadDepots();
+            await refreshYards();
+            toast.success(`Depot "${depot.name}" deleted successfully!`);
+          } else {
+            toast.error('Error deleting depot: Depot not found or cannot be deleted');
+          }
+        } catch (error) {
+          toast.error(`Error deleting depot: ${error}`);
         }
-      } catch (error) {
-        alert(`Error deleting depot: ${error}`);
       }
-    }
+    });
   };
 
   const handleViewDepot = (depot: Yard) => {
@@ -180,11 +191,11 @@ export const DepotManagement: React.FC = () => {
       setIsAssignmentLoading(true);
       // The actual assignment is now handled in DepotAssignmentModal
       // This callback is just for UI feedback
-      alert(`Attribution réussie de ${userIds.length} utilisateur(s) au dépôt ${selectedDepot.name}`);
+      toast.success(`Attribution réussie de ${userIds.length} utilisateur(s) au dépôt ${selectedDepot.name}`);
       setShowAssignment(false);
       setSelectedDepot(null);
     } catch (error) {
-      alert(`Error assigning users: ${error}`);
+      toast.error(`Error assigning users: ${error}`);
     } finally {
       setIsAssignmentLoading(false);
     }

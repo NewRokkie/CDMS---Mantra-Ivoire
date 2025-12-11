@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
+import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { clientService } from '../../services/api';
@@ -7,10 +7,14 @@ import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { handleError } from '../../services/errorHandling';
+import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
 
 export const ClientMasterData: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
   useEffect(() => {
     async function loadClients() {
@@ -71,21 +75,25 @@ export const ClientMasterData: React.FC = () => {
   const handleView = (client: Client) => {
     setSelectedClient(client);
     // In a real app, this would open a detailed view modal
-    alert(`Viewing details for ${client.name}`);
+    toast.info(`Viewing details for ${client.name}`);
   };
 
   const handleDelete = (clientId: string) => {
-    if (confirm('Are you sure you want to delete this client?')) {
-      deleteClient(clientId);
-    }
+    const client = clients.find(c => c.id === clientId);
+    confirm({
+      title: 'Delete Client',
+      message: `Are you sure you want to delete ${client?.name}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        await deleteClient(clientId);
+        toast.success('Client deleted successfully!');
+      }
+    });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+
 
   const DesktopContent = () => (
     <div className="space-y-6">
@@ -106,7 +114,7 @@ export const ClientMasterData: React.FC = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -128,34 +136,6 @@ export const ClientMasterData: React.FC = () => {
               <p className="text-sm font-medium text-gray-500">Active Clients</p>
               <p className="text-lg font-semibold text-gray-900">
                 {clients.filter(c => c.isActive).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <CreditCard className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Total Credit Limit</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatCurrency(clients.reduce((sum, c) => sum + c.creditLimit, 0))}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Mail className="h-5 w-5 text-purple-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Avg Payment Terms</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {Math.round(clients.reduce((sum, c) => sum + c.paymentTerms, 0) / clients.length)} days
               </p>
             </div>
           </div>
@@ -211,18 +191,6 @@ export const ClientMasterData: React.FC = () => {
                   Location
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Credit Limit
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment Terms
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Free Days
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Daily Rate
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -253,20 +221,6 @@ export const ClientMasterData: React.FC = () => {
                       {client.address ? `${client.address.city}, ${client.address.state}` : '-'}
                     </div>
                     <div className="text-sm text-gray-500">{client.address?.country || '-'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(client.creditLimit)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {client.paymentTerms} days
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                      {client.freeDaysAllowed} days
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(client.dailyStorageRate)}/day
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -323,15 +277,15 @@ export const ClientMasterData: React.FC = () => {
             try {
               if (selectedClient) {
                 await updateClient(selectedClient.id, clientData);
-                alert('Client updated successfully!');
+                toast.success('Client updated successfully!');
               } else {
                 await addClient(clientData);
-                alert('Client created successfully!');
+                toast.success('Client created successfully!');
               }
               setShowForm(false);
               setSelectedClient(null);
             } catch (error) {
-              alert('Error saving client: ' + (error as Error).message);
+              toast.error('Error saving client: ' + (error as Error).message);
             }
           }}
         />

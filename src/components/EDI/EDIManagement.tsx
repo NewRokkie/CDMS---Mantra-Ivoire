@@ -16,6 +16,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { handleError } from '../../services/errorHandling';
+import { useToast } from '../../hooks/useToast';
 
 const EDIManagement: React.FC = () => {
   const [transmissionLogs, setTransmissionLogs] = useState<EDITransmissionLog[]>([]);
@@ -26,6 +27,7 @@ const EDIManagement: React.FC = () => {
   const [showConfig, setShowConfig] = useState(false);
   const { user } = useAuth();
   const { currentYard } = useYard();
+  const toast = useToast();
 
   const ediService = new EDIService();
 
@@ -67,9 +69,9 @@ const EDIManagement: React.FC = () => {
       setTransmissionLogs(prev => [log, ...prev]);
       setSelectedFile(null);
 
-      alert('EDI file processed and transmitted successfully!');
+      toast.success('EDI file processed and transmitted successfully!');
     } catch (error) {
-      alert(`Error processing file: ${error}`);
+      toast.error(`Error processing file: ${error}`);
     } finally {
       setIsLoading(false);
     }
@@ -82,9 +84,9 @@ const EDIManagement: React.FC = () => {
       setTransmissionLogs(prev =>
         prev.map(log => log.id === logId ? updatedLog : log)
       );
-      alert('Transmission retry successful!');
+      toast.success('Transmission retry successful!');
     } catch (error) {
-      alert(`Retry failed: ${error}`);
+      toast.error(`Retry failed: ${error}`);
     } finally {
       setIsLoading(false);
     }
@@ -98,10 +100,10 @@ const EDIManagement: React.FC = () => {
         id: 'mock-container-' + Date.now(),
         number: 'PCIU9507070',
         size: '40ft' as const,
-        type: 'standard' as const,
+        type: 'dry' as const,
         status: 'in_depot' as const,
         location: 'A-01-01',
-        client: 'Maersk Line',
+        clientName: 'Maersk Line',
         clientId: 'client-001',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -129,9 +131,9 @@ const EDIManagement: React.FC = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      alert('SAP XML file generated and downloaded successfully!');
+      toast.success('SAP XML file generated and downloaded successfully!');
     } catch (error) {
-      alert(`Error generating SAP XML: ${error}`);
+      toast.error(`Error generating SAP XML: ${error}`);
     } finally {
       setIsLoading(false);
     }

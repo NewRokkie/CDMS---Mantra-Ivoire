@@ -69,7 +69,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
       announce('Please complete all required fields before proceeding.', 'assertive');
       return;
     }
-    
+
     hideNotification();
     if (onNextStep) {
       onNextStep();
@@ -137,7 +137,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
       <div
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-4xl h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl text-gray-900 overflow-hidden ${className}`}
+        className={`w-full max-w-3xl h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl text-gray-900 overflow-hidden ${className}`}
       >
         {/* Modal Header with Integrated Progress Bar */}
         <ModalHeader
@@ -169,20 +169,13 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
 
           {/* Step Content */}
           <div className="space-y-8">
-            {/* Pass step information and notification functions to children */}
-            {React.Children.map(children, (child, index) => {
-              if (React.isValidElement(child) && typeof child.type !== 'string') {
-                return React.cloneElement(child, {
-                  currentStep,
-                  totalSteps,
-                  isStepValid,
+            {/* Render children - handle both function and element children */}
+            {typeof children === 'function'
+              ? children({
                   showNotification,
-                  hideNotification,
-                  stepIndex: index
-                } as any);
-              }
-              return child;
-            })}
+                  hideNotification
+                })
+              : children}
           </div>
         </ModalBody>
 
@@ -212,8 +205,8 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
               onClick={handleNextStep}
               disabled={!isStepValid}
               className={`px-4 py-2 text-white rounded-lg transition flex items-center space-x-2 disabled:opacity-50 ${
-                isLastStep 
-                  ? 'bg-green-600 hover:bg-green-700' 
+                isLastStep
+                  ? 'bg-green-600 hover:bg-green-700'
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >

@@ -4,6 +4,7 @@ import type { ModuleAccess, ModulePermission, User } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { userService, moduleAccessService } from '../../services/api';
 import { handleError } from '../../services/errorHandling';
+import { useToast } from '../../hooks/useToast';
 
 // Enhanced module configuration with beautiful icons and colors
 const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
@@ -157,146 +158,6 @@ const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
   }
 };
 
-// Mock users data
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'John Administrator',
-    email: 'admin@depot.com',
-    role: 'admin',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1001',
-    department: 'Administration',
-    isActive: true,
-    lastLogin: new Date('2025-01-11T08:30:00'),
-    createdAt: new Date('2024-01-01'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: true,
-      gateOut: true,
-      releases: true,
-      edi: true,
-      yard: true,
-      clients: true,
-      users: true,
-      moduleAccess: true,
-      reports: true,
-      depotManagement: true,
-      timeTracking: true,
-      analytics: true,
-      clientPools: true,
-      stackManagement: true,
-      auditLogs: true,
-      billingReports: true,
-      operationsReports: true
-    }
-  },
-  {
-    id: '2',
-    name: 'Jane Operator',
-    email: 'operator@depot.com',
-    role: 'operator',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1002',
-    department: 'Operations',
-    isActive: true,
-    lastLogin: new Date('2025-01-11T07:15:00'),
-    createdAt: new Date('2024-02-15'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: true,
-      gateOut: true,
-      releases: true,
-      edi: false,
-      yard: true,
-      clients: false,
-      users: false,
-      moduleAccess: false,
-      reports: false,
-      depotManagement: false,
-      timeTracking: false,
-      analytics: false,
-      clientPools: false,
-      stackManagement: false,
-      auditLogs: true,
-      billingReports: false,
-      operationsReports: false
-    }
-  },
-  {
-    id: '3',
-    name: 'Mike Supervisor',
-    email: 'supervisor@depot.com',
-    role: 'supervisor',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1003',
-    department: 'Operations',
-    isActive: true,
-    lastLogin: new Date('2025-01-10T16:45:00'),
-    createdAt: new Date('2024-01-20'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: true,
-      gateOut: true,
-      releases: true,
-      edi: true,
-      yard: true,
-      clients: true,
-      users: false,
-      moduleAccess: false,
-      reports: true,
-      depotManagement: true,
-      timeTracking: true,
-      analytics: true,
-      clientPools: true,
-      stackManagement: true,
-      auditLogs: true,
-      billingReports: true,
-      operationsReports: true
-    }
-  },
-  {
-    id: '4',
-    name: 'Sarah Client',
-    email: 'client@shipping.com',
-    role: 'client',
-    company: 'Shipping Solutions Inc',
-    phone: '+1-555-2001',
-    department: 'Logistics',
-    isActive: true,
-    lastLogin: new Date('2025-01-09T14:20:00'),
-    createdAt: new Date('2024-03-10'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: false,
-      gateOut: false,
-      releases: true,
-      edi: false,
-      yard: true,
-      clients: false,
-      users: false,
-      moduleAccess: false,
-      reports: false,
-      depotManagement: false,
-      timeTracking: false,
-      analytics: false,
-      clientPools: false,
-      stackManagement: false,
-      auditLogs: false,
-      billingReports: false,
-      operationsReports: false
-    }
-  }
-];
-
 export const ModuleAccessManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -307,6 +168,7 @@ export const ModuleAccessManagement: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const { user: currentUser, refreshUser } = useAuth();
+  const toast = useToast();
 
   const canManageModuleAccess = currentUser?.role === 'admin';
 
@@ -489,7 +351,7 @@ export const ModuleAccessManagement: React.FC = () => {
       }
     } catch (error) {
       handleError(error, 'ModuleAccessManagement.handleModuleToggle');
-      alert('Error saving module access changes');
+      toast.error('Error saving module access changes');
       await loadUsers();
     }
   };
@@ -608,7 +470,7 @@ export const ModuleAccessManagement: React.FC = () => {
           break;
 
         default:
-          alert('Action not implemented yet');
+          toast.info('Action not implemented yet');
           return;
       }
 
@@ -620,10 +482,10 @@ export const ModuleAccessManagement: React.FC = () => {
         await refreshUser();
       }
 
-      alert(`Applied ${action} to ${bulkSelectedUserIds.length} users`);
+      toast.success(`Applied ${action} to ${bulkSelectedUserIds.length} users`);
     } catch (error) {
       handleError(error, 'ModuleAccessManagement.handleBulkAction');
-      alert('Error applying bulk action');
+      toast.error('Error applying bulk action');
     }
   };
 

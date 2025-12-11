@@ -1,19 +1,37 @@
 import React from 'react';
 import { Truck, Clock, Container as ContainerIcon, AlertTriangle } from 'lucide-react';
+import { CardSkeleton } from '../../Common/CardSkeleton';
 
 interface MobileGateInStatsProps {
   todayGateIns: number;
   pendingOperations: number;
   containersProcessed: number;
   damagedContainers: number;
+  loading?: boolean;
 }
 
 export const MobileGateInStats: React.FC<MobileGateInStatsProps> = ({
   todayGateIns,
   pendingOperations,
   containersProcessed,
-  damagedContainers
+  damagedContainers,
+  loading = false
 }) => {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4 sm:hidden">
+          <CardSkeleton count={2} />
+        </div>
+        <div className="hidden sm:grid lg:hidden grid-cols-4 gap-4">
+          <CardSkeleton count={3} />
+        </div>
+        <div className="hidden lg:grid grid-cols-4 gap-6">
+          <CardSkeleton count={4} />
+        </div>
+      </div>
+    );
+  }
   const stats = [
     {
       icon: Truck,
@@ -124,5 +142,6 @@ export const MobileGateInStats: React.FC<MobileGateInStatsProps> = ({
         })}
       </div>
     </div>
+
   );
-};
+}

@@ -13,6 +13,8 @@ import { StackPairingInfo } from './StackPairingInfo';
 import { StackClientAssignmentModal } from './StackClientAssignmentModal';
 import { handleError } from '../../../services/errorHandling';
 import { LoadingSpinner } from '../../Common';
+import { useToast } from '../../../hooks/useToast';
+import { useConfirm } from '../../../hooks/useConfirm';
 
 export const StackManagement: React.FC = () => {
   const [stacks, setStacks] = useState<YardStack[]>([]);
@@ -26,6 +28,8 @@ export const StackManagement: React.FC = () => {
 
   const { user } = useAuth();
   const { currentYard, refreshYards } = useYard();
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
   useEffect(() => {
     if (currentYard?.id) {
@@ -46,7 +50,7 @@ export const StackManagement: React.FC = () => {
       handleError(error, 'StackManagement.loadStacks');
       // Set empty array to prevent infinite loading
       setStacks([]);
-      alert('Error loading stacks: ' + (error as Error).message);
+      toast.error('Error loading stacks: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -79,19 +83,24 @@ export const StackManagement: React.FC = () => {
   };
 
   const handleDeleteStack = async (stackId: string) => {
-    if (!confirm('Are you sure you want to delete this stack?')) {
-      return;
-    }
-
-    try {
-      await stackService.delete(stackId);
-      // Remove from local state to update UI immediately
-      setStacks(prev => prev.filter(s => s.id !== stackId));
-      alert('Stack deleted successfully!');
-    } catch (error) {
-      handleError(error, 'StackManagement.handleDeleteStack');
-      alert('Error deleting stack: ' + (error as Error).message);
-    }
+    confirm({
+      title: 'Delete Stack',
+      message: 'Are you sure you want to delete this stack? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await stackService.delete(stackId);
+          // Remove from local state to update UI immediately
+          setStacks(prev => prev.filter(s => s.id !== stackId));
+          toast.success('Stack deleted successfully!');
+        } catch (error) {
+          handleError(error, 'StackManagement.handleDeleteStack');
+          toast.error('Error deleting stack: ' + (error as Error).message);
+        }
+      }
+    });
   };
 
   const handleSaveStack = async (stackData: Partial<YardStack>) => {
@@ -99,20 +108,20 @@ export const StackManagement: React.FC = () => {
       if (selectedStack) {
         const updated = await stackService.update(selectedStack.id, stackData, user?.id || '');
         setStacks(prev => prev.map(s => s.id === updated.id ? updated : s));
-        alert('Stack updated successfully!');
+        toast.success('Stack updated successfully!');
       } else {
         const newStack = await stackService.create({
           ...stackData,
           yardId: currentYard?.id
         }, user?.id || '');
         setStacks(prev => [...prev, newStack]);
-        alert('Stack created successfully!');
+        toast.success('Stack created successfully!');
       }
       setShowStackForm(false);
       setSelectedStack(null);
     } catch (error) {
       handleError(error, 'StackManagement.handleSaveStack');
-      alert('Error saving stack: ' + (error as Error).message);
+      toast.error('Error saving stack: ' + (error as Error).message);
     }
   };
 
@@ -135,9 +144,9 @@ export const StackManagement: React.FC = () => {
       await loadStacks();
 
       if (updatedStacks.length > 1) {
-        alert(`Successfully updated ${updatedStacks.length} stacks to ${newSize}!`);
+        toast.success(`Successfully updated ${updatedStacks.length} stacks to ${newSize}!`);
       } else {
-        alert(`Stack updated to ${newSize} successfully!`);
+        toast.success(`Stack updated to ${newSize} successfully!`);
       }
     } catch (error) {
       handleError(error, 'StackManagement.handleContainerSizeChange');
@@ -148,9 +157,9 @@ export const StackManagement: React.FC = () => {
       // Show user-friendly error message
       const errorMessage = (error as any)?.message || String(error);
       if (errorMessage.includes('OCCUPIED_VIRTUAL_LOCATIONS')) {
-        alert('Cannot change stack size: Virtual stack locations are occupied. Please relocate all containers from the paired stacks first.');
+        toast.error('Cannot change stack size: Virtual stack locations are occupied. Please relocate all containers from the paired stacks first.');
       } else {
-        alert('Error updating container size: ' + errorMessage);
+        toast.error('Error updating container size: ' + errorMessage);
       }
     }
   };
@@ -200,10 +209,10 @@ export const StackManagement: React.FC = () => {
 
       setShowClientAssignment(false);
       setSelectedStack(null);
-      alert(clientCode ? `Stack assigned to client ${clientCode} successfully!` : 'Stack unassigned from client pool successfully!');
+      toast.success(clientCode ? `Stack assigned to client ${clientCode} successfully!` : 'Stack unassigned from client pool successfully!');
     } catch (error) {
       handleError(error, 'StackManagement.handleClientAssignment');
-      alert('Error assigning client to stack: ' + (error as Error).message);
+      toast.error('Error assigning client to stack: ' + (error as Error).message);
     }
   };
 

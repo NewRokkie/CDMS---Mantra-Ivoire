@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  User as UserIcon, 
-  Mail, 
-  Phone, 
-  Building, 
-  Shield, 
-  MapPin, 
-  Clock, 
-  Activity, 
-  CheckCircle, 
+import {
+  X,
+  User as UserIcon,
+  Mail,
+  Phone,
+  Building,
+  Shield,
+  MapPin,
+  Clock,
+  Activity,
+  CheckCircle,
   XCircle,
   Calendar,
   Monitor,
@@ -93,7 +93,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
       permissionSummary: true,
       loginHistory: true
     });
-    
+
     try {
       const details = await fetchUserDetailsWithRetry(user.id);
       setUserDetails(details);
@@ -101,7 +101,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
       handleError(err, 'UserDetailsModal.fetchUserDetails');
       const errorInstance = err instanceof Error ? err : new Error('Failed to load user details');
       setError(errorInstance);
-      
+
       // Set fallback user details with proper error handling
       setUserDetails({
         ...user,
@@ -208,8 +208,8 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
       }}
     >
       <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl w-full max-w-4xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
-        
+        <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -224,8 +224,8 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
               <div className="flex items-center space-x-2">
                 {getRoleBadge(user.role)}
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                  user.isActive 
-                    ? 'bg-green-100 text-green-800' 
+                  user.isActive
+                    ? 'bg-green-100 text-green-800'
                     : 'bg-red-100 text-red-800'
                 }`}>
                   {user.isActive ? (
@@ -298,17 +298,17 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             {/* Left Column - User Profile */}
             <div className="lg:col-span-1 space-y-6">
-              
+
               {/* Basic Information */}
               <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
                 <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                   <UserIcon className="h-5 w-5 mr-2" />
                   Profile Information
                 </h4>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-blue-600" />
@@ -317,7 +317,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                       <p className="text-sm text-blue-700">{user.email}</p>
                     </div>
                   </div>
-                  
+
                   {user.phone && (
                     <div className="flex items-center space-x-3">
                       <Phone className="h-4 w-4 text-blue-600" />
@@ -327,7 +327,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                       </div>
                     </div>
                   )}
-                  
+
                   {user.department && (
                     <div className="flex items-center space-x-3">
                       <Building className="h-4 w-4 text-blue-600" />
@@ -337,7 +337,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                       </div>
                     </div>
                   )}
-                  
+
                   {user.company && (
                     <div className="flex items-center space-x-3">
                       <Building className="h-4 w-4 text-blue-600" />
@@ -347,7 +347,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center space-x-3">
                     <Calendar className="h-4 w-4 text-blue-600" />
                     <div>
@@ -356,7 +356,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                       <p className="text-xs text-blue-600">by {user.createdBy}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-3">
                     <Clock className="h-4 w-4 text-blue-600" />
                     <div>
@@ -373,7 +373,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                   <Settings className="h-5 w-5 mr-2" />
                   Permissions Overview
                 </h4>
-                
+
                 {dataLoadingStates.permissionSummary ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader className="h-5 w-5 animate-spin text-purple-600" />
@@ -417,7 +417,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                         {userDetails.permissionSummary.enabledModules} of {userDetails.permissionSummary.totalModules} modules enabled
                       </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="bg-white rounded p-2 border border-purple-200">
                         <p className="font-medium text-purple-800">Enabled</p>
@@ -434,7 +434,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                       {['core', 'operations', 'management', 'admin'].map(category => {
                         const categoryModules = userDetails.permissionSummary.moduleList.filter(m => m.category === category);
                         const enabledInCategory = categoryModules.filter(m => m.enabled).length;
-                        
+
                         return (
                           <div key={category} className="bg-white rounded p-2 border border-purple-200">
                             <div className="flex justify-between items-center">
@@ -468,7 +468,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
 
             {/* Right Column - Yard Assignments and Activity */}
             <div className="lg:col-span-2 space-y-6">
-              
+
               {/* Yard Assignments */}
               <div className="bg-green-50 rounded-xl p-6 border border-green-200">
                 <h4 className="font-semibold text-green-900 mb-4 flex items-center">
@@ -480,7 +480,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     </span>
                   )}
                 </h4>
-                
+
                 {dataLoadingStates.yardDetails ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader className="h-5 w-5 animate-spin text-green-600" />
@@ -537,8 +537,8 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <MapPin className="h-8 w-8 mx-auto mb-2 text-green-400" />
                     <p className="text-sm font-medium">No yard assignments</p>
                     <p className="text-xs text-green-500 mt-1">
-                      {user.yardIds && user.yardIds.length > 0 
-                        ? 'Yard assignment details are not available' 
+                      {user.yardIds && user.yardIds.length > 0
+                        ? 'Yard assignment details are not available'
                         : 'User has not been assigned to any yards'
                       }
                     </p>
@@ -561,7 +561,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                   Recent Activity
                   <span className="ml-2 text-xs text-orange-600">(Last 30 days)</span>
                 </h4>
-                
+
                 {dataLoadingStates.activityHistory ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader className="h-5 w-5 animate-spin text-orange-600" />
@@ -614,8 +614,8 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <Activity className="h-8 w-8 mx-auto mb-2 text-orange-400" />
                     <p className="text-sm font-medium">No recent activity</p>
                     <p className="text-xs text-orange-500 mt-1">
-                      {error 
-                        ? 'Activity tracking is currently unavailable' 
+                      {error
+                        ? 'Activity tracking is currently unavailable'
                         : 'User activity will appear here when available'
                       }
                     </p>
@@ -638,7 +638,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                   Login History
                   <span className="ml-2 text-xs text-gray-600">(Recent sessions)</span>
                 </h4>
-                
+
                 {dataLoadingStates.loginHistory ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader className="h-5 w-5 animate-spin text-gray-600" />
@@ -710,8 +710,8 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <Globe className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                     <p className="text-sm font-medium">No login history available</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {error 
-                        ? 'Session tracking is currently unavailable' 
+                      {error
+                        ? 'Session tracking is currently unavailable'
                         : 'Login sessions will appear here when available'
                       }
                     </p>

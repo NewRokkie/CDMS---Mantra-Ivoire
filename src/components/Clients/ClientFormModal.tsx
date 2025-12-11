@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Building, Mail, Phone, MapPin, Calendar, DollarSign, Clock, User, FileText, Calculator } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,7 +20,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
@@ -36,12 +36,6 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       zipCode: '',
       country: 'Côte d\'Ivoire'
     },
-    contactPerson: {
-      name: '',
-      email: '',
-      phone: '',
-      position: ''
-    },
     billingAddress: {
       street: '',
       city: '',
@@ -49,11 +43,17 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       zipCode: '',
       country: 'Côte d\'Ivoire'
     },
+    contactPerson: {
+      name: '',
+      email: '',
+      phone: '',
+      position: ''
+    },
     taxId: '',
+    currency: 'FCFA',
     paymentTerms: 30,
     freeDaysAllowed: 3,
     dailyStorageRate: 15000,
-    currency: 'FCFA',
     isActive: true,
     notes: ''
   });
@@ -72,13 +72,19 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
           email: selectedClient.email,
           phone: selectedClient.phone,
           address: selectedClient.address,
+          billingAddress: selectedClient.billingAddress || {
+            street: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            country: 'Côte d\'Ivoire'
+          },
           contactPerson: selectedClient.contactPerson,
-          billingAddress: selectedClient.billingAddress || selectedClient.address,
           taxId: selectedClient.taxId || '',
-          paymentTerms: selectedClient.paymentTerms,
-          freeDaysAllowed: selectedClient.freeDaysAllowed,
-          dailyStorageRate: selectedClient.dailyStorageRate,
           currency: selectedClient.currency,
+          paymentTerms: selectedClient.paymentTerms || 30,
+          freeDaysAllowed: selectedClient.freeDaysAllowed || 3,
+          dailyStorageRate: selectedClient.dailyStorageRate || 15000,
           isActive: selectedClient.isActive,
           notes: selectedClient.notes || ''
         });
@@ -129,9 +135,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
         if (!formData.contactPerson.email) errors.push('Email de contact requis');
         break;
       case 3:
-        if (formData.paymentTerms <= 0) errors.push('Conditions de paiement invalides');
-        if (formData.freeDaysAllowed < 0) errors.push('Jours gratuits invalides');
-        if (formData.dailyStorageRate <= 0) errors.push('Tarif journalier invalide');
+        // No billing validations needed
         break;
     }
 
@@ -144,19 +148,13 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       throw new Error('Validation failed');
     }
 
-    setIsSubmitting(true);
-    try {
-      const clientData = {
-        ...formData,
-        billingAddress: useSameAddress ? formData.address : formData.billingAddress,
-        createdBy: user?.name || 'System',
-        updatedBy: user?.name || 'System'
-      };
+    const clientData = {
+      ...formData,
+      createdBy: user?.name || 'System',
+      updatedBy: user?.name || 'System'
+    };
 
-      await onSubmit(clientData);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await onSubmit(clientData);
   };
 
   const handleNextStep = () => {
@@ -180,7 +178,32 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
   // Validate current step when data changes
   useEffect(() => {
     validateStep(currentStep);
-  }, [currentStep]); // Remove formData from dependencies to prevent infinite loop
+  }, [currentStep, formData]); // Include formData to validate when form changes
+
+  // Memoize the validation result to prevent infinite re-renders
+  const isCurrentStepValid = useMemo(() => {
+    const errors: string[] = [];
+
+    switch (currentStep) {
+      case 1:
+        if (!formData.name) errors.push('Nom de l\'entreprise requis');
+        if (!formData.code) errors.push('Code client requis');
+        if (!formData.email) errors.push('Email principal requis');
+        if (!formData.phone) errors.push('Téléphone principal requis');
+        break;
+      case 2:
+        if (!formData.address.street) errors.push('Adresse complète requise');
+        if (!formData.address.city) errors.push('Ville requise');
+        if (!formData.contactPerson.name) errors.push('Nom de contact requis');
+        if (!formData.contactPerson.email) errors.push('Email de contact requis');
+        break;
+      case 3:
+        // No billing validations needed
+        break;
+    }
+
+    return errors.length === 0;
+  }, [currentStep, formData]);
 
   return (
     <MultiStepModal
@@ -195,7 +218,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       stepLabels={['Informations de base', 'Adresse & Contact', 'Configuration']}
       onNextStep={handleNextStep}
       onPrevStep={handlePrevStep}
-      isStepValid={validateStep(currentStep)}
+      isStepValid={isCurrentStepValid}
     >
       {/* Loading Overlay */}
       <LoadingOverlay
@@ -229,7 +252,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     required
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className={`form-input w-full ${validationErrors.includes('Nom de l\'entreprise requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    className={`input ${validationErrors.includes('Nom de l\'entreprise requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                     placeholder="Ex: Maersk Line Côte d'Ivoire"
                   />
                   {validationErrors.includes('Nom de l\'entreprise requis') && (
@@ -246,7 +269,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     required
                     value={formData.code}
                     onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
-                    className={`form-input w-full ${validationErrors.includes('Code client requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    className={`input ${validationErrors.includes('Code client requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                     placeholder="Ex: MAEU, MSCU, CMDU"
                     maxLength={10}
                   />
@@ -260,13 +283,13 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     Email Principal *
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+                    <Mail className="input-icon text-blue-500" />
                     <input
                       type="email"
                       required
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className={`form-input w-full pl-12 ${validationErrors.includes('Email principal requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                      className={`input pl-10 ${validationErrors.includes('Email principal requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                       placeholder="contact@entreprise.ci"
                     />
                   </div>
@@ -280,13 +303,13 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     Téléphone Principal *
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+                    <Phone className="input-icon text-blue-500" />
                     <input
                       type="tel"
                       required
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className={`form-input w-full pl-12 ${validationErrors.includes('Téléphone principal requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                      className={`input pl-10 ${validationErrors.includes('Téléphone principal requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                       placeholder="+225 XX XX XX XX XX"
                     />
                   </div>
@@ -300,12 +323,12 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     Numéro d'Identification Fiscale
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+                    <FileText className="input-icon text-blue-500" />
                     <input
                       type="text"
                       value={formData.taxId}
                       onChange={(e) => handleInputChange('taxId', e.target.value)}
-                      className="form-input w-full pl-12"
+                      className="input pl-10"
                       placeholder="CI-XXXXXXXXX"
                     />
                   </div>
@@ -339,7 +362,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       required
                       value={formData.address.street}
                       onChange={(e) => handleNestedInputChange('address', 'street', e.target.value)}
-                      className={`form-input w-full ${validationErrors.includes('Adresse complète requise') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                      className={`input ${validationErrors.includes('Adresse complète requise') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                       placeholder="Ex: Rue du Commerce, Zone Portuaire"
                     />
                     {validationErrors.includes('Adresse complète requise') && (
@@ -356,7 +379,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       required
                       value={formData.address.city}
                       onChange={(e) => handleNestedInputChange('address', 'city', e.target.value)}
-                      className={`form-input w-full ${validationErrors.includes('Ville requise') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                      className={`input ${validationErrors.includes('Ville requise') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                       placeholder="Ex: Abidjan, San-Pédro"
                     />
                     {validationErrors.includes('Ville requise') && (
@@ -373,7 +396,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       required
                       value={formData.address.state}
                       onChange={(e) => handleNestedInputChange('address', 'state', e.target.value)}
-                      className="form-input w-full"
+                      className="input"
                       placeholder="Ex: Plateau, Treichville, Koumassi"
                     />
                   </div>
@@ -386,7 +409,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       type="text"
                       value={formData.address.zipCode}
                       onChange={(e) => handleNestedInputChange('address', 'zipCode', e.target.value)}
-                      className="form-input w-full"
+                      className="input"
                       placeholder="Ex: 01 BP 1234"
                     />
                   </div>
@@ -400,7 +423,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       value="Côte d'Ivoire"
                       readOnly
                       disabled
-                      className="form-input w-full bg-gray-100 text-gray-600"
+                      className="input bg-gray-100 text-gray-600"
                     />
                   </div>
                 </div>
@@ -428,7 +451,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       required
                       value={formData.contactPerson.name}
                       onChange={(e) => handleNestedInputChange('contactPerson', 'name', e.target.value)}
-                      className={`form-input w-full ${validationErrors.includes('Nom de contact requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                      className={`input ${validationErrors.includes('Nom de contact requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                       placeholder="Ex: Jean-Baptiste Kouassi"
                     />
                     {validationErrors.includes('Nom de contact requis') && (
@@ -445,7 +468,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       required
                       value={formData.contactPerson.position}
                       onChange={(e) => handleNestedInputChange('contactPerson', 'position', e.target.value)}
-                      className="form-input w-full"
+                      className="input"
                       placeholder="Ex: Directeur des Opérations"
                     />
                   </div>
@@ -455,13 +478,13 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       Email de Contact *
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 h-5 w-5" />
+                      <Mail className="input-icon text-purple-500" />
                       <input
                         type="email"
                         required
                         value={formData.contactPerson.email}
                         onChange={(e) => handleNestedInputChange('contactPerson', 'email', e.target.value)}
-                        className={`form-input w-full pl-12 ${validationErrors.includes('Email de contact requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                        className={`input pl-10 ${validationErrors.includes('Email de contact requis') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="jean.kouassi@entreprise.ci"
                       />
                     </div>
@@ -475,13 +498,13 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       Téléphone de Contact *
                     </label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 h-5 w-5" />
+                      <Phone className="input-icon text-purple-500" />
                       <input
                         type="tel"
                         required
                         value={formData.contactPerson.phone}
                         onChange={(e) => handleNestedInputChange('contactPerson', 'phone', e.target.value)}
-                        className="form-input w-full pl-12"
+                        className="input pl-10"
                         placeholder="+225 XX XX XX XX XX"
                       />
                     </div>
@@ -522,7 +545,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         type="text"
                         value={formData.billingAddress.street}
                         onChange={(e) => handleNestedInputChange('billingAddress', 'street', e.target.value)}
-                        className="form-input w-full"
+                        className="input"
                         placeholder="Adresse différente pour la facturation"
                       />
                     </div>
@@ -535,7 +558,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         type="text"
                         value={formData.billingAddress.city}
                         onChange={(e) => handleNestedInputChange('billingAddress', 'city', e.target.value)}
-                        className="form-input w-full"
+                        className="input"
                         placeholder="Ville de facturation"
                       />
                     </div>
@@ -548,7 +571,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         type="text"
                         value={formData.billingAddress.state}
                         onChange={(e) => handleNestedInputChange('billingAddress', 'state', e.target.value)}
-                        className="form-input w-full"
+                        className="input"
                         placeholder="Commune de facturation"
                       />
                     </div>
@@ -579,7 +602,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       Conditions de Paiement (jours) *
                     </label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-green-500 h-5 w-5" />
+                      <Calendar className="input-icon text-green-500" />
                       <input
                         type="number"
                         required
@@ -587,7 +610,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         max="90"
                         value={formData.paymentTerms}
                         onChange={(e) => handleInputChange('paymentTerms', parseInt(e.target.value))}
-                        className={`form-input w-full pl-12 ${validationErrors.includes('Conditions de paiement invalides') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                        className={`input pl-10 ${validationErrors.includes('Conditions de paiement invalides') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="30"
                       />
                     </div>
@@ -602,7 +625,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       Jours de Stockage Gratuits *
                     </label>
                     <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-green-500 h-5 w-5" />
+                      <Clock className="input-icon text-green-500" />
                       <input
                         type="number"
                         required
@@ -610,7 +633,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         max="30"
                         value={formData.freeDaysAllowed}
                         onChange={(e) => handleInputChange('freeDaysAllowed', parseInt(e.target.value))}
-                        className={`form-input w-full pl-12 ${validationErrors.includes('Jours gratuits invalides') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                        className={`input pl-10 ${validationErrors.includes('Jours gratuits invalides') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="3"
                       />
                     </div>
@@ -625,7 +648,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       Tarif Journalier (FCFA) *
                     </label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-green-500 h-5 w-5" />
+                      <DollarSign className="input-icon text-green-500" />
                       <input
                         type="number"
                         required
@@ -633,7 +656,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         step="500"
                         value={formData.dailyStorageRate}
                         onChange={(e) => handleInputChange('dailyStorageRate', parseInt(e.target.value))}
-                        className={`form-input w-full pl-12 ${validationErrors.includes('Tarif journalier invalide') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                        className={`input pl-10 ${validationErrors.includes('Tarif journalier invalide') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="15000"
                       />
                     </div>
@@ -654,7 +677,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       value="FCFA"
                       readOnly
                       disabled
-                      className="form-input w-full bg-gray-100 text-gray-600"
+                      className="input bg-gray-100 text-gray-600"
                     />
                   </div>
                 </div>
@@ -716,7 +739,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                   value={formData.notes}
                   onChange={(e) => handleInputChange('notes', e.target.value)}
                   rows={4}
-                  className="form-input w-full resize-none"
+                  className="input resize-none"
                   placeholder="Instructions spéciales, exigences de manutention, ou autres notes importantes..."
                 />
               </div>

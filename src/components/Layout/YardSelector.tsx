@@ -3,6 +3,7 @@ import { MapPin, ChevronDown, Check, Building, AlertTriangle, Loader } from 'luc
 import { useYard } from '../../hooks/useYard';
 import { useAuth } from '../../hooks/useAuth';
 import { handleError } from '../../services/errorHandling';
+import { useToast } from '../../hooks/useToast';
 
 export const YardSelector: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,6 +12,7 @@ export const YardSelector: React.FC = () => {
 
   const { currentYard, availableYards, setCurrentYard, error } = useYard();
   const { user } = useAuth();
+  const toast = useToast();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -33,11 +35,11 @@ export const YardSelector: React.FC = () => {
       if (success) {
         setIsOpen(false);
       } else {
-        alert('Failed to switch yard. Please try again.');
+        toast.error('Failed to switch yard. Please try again.');
       }
     } catch (error) {
       handleError(error, 'YardSelector.handleYardChange');
-      alert(`Error switching yard: ${error}`);
+      toast.error(`Error switching yard: ${error}`);
     } finally {
       setIsChanging(false);
     }

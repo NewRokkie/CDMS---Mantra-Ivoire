@@ -6,6 +6,7 @@ import { Yard, YardStack } from '../../types';
 import { clientPoolService, clientService } from '../../services/api';
 import { handleError } from '../../services/errorHandling';
 import { StackSelectionModal } from './StackSelectionModal';
+import { useToast } from '../../hooks/useToast';
 
 interface ClientPoolFormProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   yard,
   isLoading = false
 }) => {
-
+  const toast = useToast();
 
   const [formData, setFormData] = useState<ClientPoolFormData>({
     clientId: '',
@@ -173,7 +174,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
     e.preventDefault();
 
     if (!formData.clientId || selectedStacks.size === 0) {
-      alert('Please select a client and at least one stack.');
+      toast.warning('Please select a client and at least one stack.');
       return;
     }
 

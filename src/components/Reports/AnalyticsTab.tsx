@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -149,9 +149,66 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
 }) => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedMetric, setSelectedMetric] = useState<'revenue' | 'containers' | 'occupancy'>('revenue');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user, canViewAllData, getClientFilter } = useAuth();
+  
+  // Get client filter once at the top level
+  const clientFilter = getClientFilter();
 
-  const analyticsData = useMemo(() => generateAnalyticsData(), []);
+  const analyticsData = useMemo(() => {
+    try {
+      return generateAnalyticsData();
+    } catch (err) {
+      console.error('Failed to generate analytics data:', err);
+      return {
+        containerMovements: [],
+        clientDistribution: [],
+        revenueAnalytics: [],
+        occupancyTrends: [],
+        containerTypes: []
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    // Simulate data loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Check for data generation errors
+  useEffect(() => {
+    if (analyticsData.containerMovements.length === 0 && 
+        analyticsData.clientDistribution.length === 0 && 
+        analyticsData.revenueAnalytics.length === 0) {
+      // Only set error if all arrays are empty, which might indicate a generation error
+      // But don't set error immediately as empty data might be valid
+    }
+  }, [analyticsData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   // Generate multi-depot analytics for managers
   const getMultiDepotAnalytics = () => {
@@ -230,11 +287,10 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
   };
 
   // Filter data based on user permissions
-  const getFilteredData = () => {
+  const filteredData = useMemo(() => {
     // Use multi-depot data if available
     const sourceData = getMultiDepotAnalytics() || analyticsData;
 
-    const clientFilter = getClientFilter();
     if (clientFilter) {
       // Filter client distribution to show only user's data
       const filteredClientDistribution = sourceData.clientDistribution.filter(
@@ -247,9 +303,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
       };
     }
     return sourceData;
-  };
-
-  const filteredData = getFilteredData();
+  }, [analyticsData, clientFilter, viewMode, selectedDepot, availableYards]);
 
   // Filter data by date range
   const dateFilteredData = useMemo(() => {

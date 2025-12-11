@@ -1,5 +1,7 @@
 import React from 'react';
 import { Calendar, Package, User, Truck, MapPin, AlertTriangle, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { LoadingSpinner } from '../../Common/LoadingSpinner';
+import { TableSkeleton } from '../../Common/TableSkeleton';
 
 interface Operation {
   id: string;
@@ -324,16 +326,22 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
           ))}
         </div>
 
-        {/* Empty State */}
+        {/* Loading / Empty State - Common components */}
         {filteredOperations.length === 0 && (
-          <div className="text-center py-16 px-4">
-            <div className="inline-flex p-4 bg-gray-100 rounded-full mb-4">
-              <Package className="h-12 w-12 text-gray-400" />
+          <div className="px-4 py-6">
+            <div className="flex items-center justify-center mb-6">
+              <LoadingSpinner size="md" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">No operations found</h3>
-            <p className="text-gray-600 text-sm max-w-sm mx-auto">
-              {searchTerm ? "Try adjusting your search criteria or filters." : "No gate in operations have been created yet."}
-            </p>
+
+            {/* Desktop: use TableSkeleton for table-like placeholder */}
+            <div className="hidden lg:block">
+              <TableSkeleton rows={2} columns={6} />
+            </div>
+
+            {/* Mobile: reuse TableSkeleton with fewer columns/rows to simulate cards */}
+            <div className="lg:hidden space-y-3">
+              <TableSkeleton rows={2} columns={2} />
+            </div>
           </div>
         )}
       </div>

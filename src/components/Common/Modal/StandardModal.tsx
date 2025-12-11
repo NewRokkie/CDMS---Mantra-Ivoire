@@ -88,7 +88,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
       case 'lg': return 'max-w-2xl';
       case 'xl': return 'max-w-4xl';
       case '2xl': return 'max-w-6xl';
-      default: return 'max-w-2xl';
+      default: return 'max-w-3xl';
     }
   };
 
@@ -146,7 +146,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                     {validationSummary}
                   </div>
                 )}
-                
+
                 <div className="flex items-center gap-2 ml-auto">
                   <button
                     onClick={onClose}
@@ -178,7 +178,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
             )}
           </ModalFooter>
         )}
-        
+
         {/* Custom Footer */}
         {customFooter && hideDefaultFooter && (
           <div className="flex-shrink-0">

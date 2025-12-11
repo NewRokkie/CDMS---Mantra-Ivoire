@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Package, Calendar, User, Clock, AlertTriangle, Ban, CheckCircle, Hash, BarChart3 } from 'lucide-react';
+import { FileText, Package, Calendar, User, Clock, AlertTriangle, Ban, CheckCircle, Hash, BarChart3, Edit } from 'lucide-react';
 import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { bookingReferenceService, userService } from '../../services/api';
 import { DataDisplayModal } from '../Common/Modal/DataDisplayModal';
 import { handleError } from '../../services/errorHandling';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
+import { useToast } from '../../hooks/useToast';
 
 interface BookingDetailsModalProps {
   booking: BookingReference | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (booking: BookingReference) => void;
+  onEdit?: (booking: BookingReference) => void;
   openToCancelForm?: boolean;
 }
 
@@ -24,9 +27,11 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   isOpen,
   onClose,
   onUpdate,
+  onEdit,
   openToCancelForm = false
 }) => {
   const { canViewAllData } = useAuth();
+  const toast = useToast();
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancellationData, setCancellationData] = useState<CancellationData>({
     reason: '',
@@ -34,11 +39,13 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [createdByName, setCreatedByName] = useState<string>('');
+  const [loadingCreatedBy, setLoadingCreatedBy] = useState(false);
 
   // Fetch user name for createdBy field
   useEffect(() => {
     const fetchCreatedByName = async () => {
       if (booking?.createdBy) {
+        setLoadingCreatedBy(true);
         try {
           // Try to get user by ID first, if it fails, assume createdBy is already a name
           const user = await userService.getById(booking.createdBy);
@@ -46,6 +53,8 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
         } catch (error) {
           handleError(error, 'BookingDetailsModal.fetchCreatedByName');
           setCreatedByName(booking.createdBy);
+        } finally {
+          setLoadingCreatedBy(false);
         }
       }
     };
@@ -85,7 +94,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
 
   const handleCancel = async () => {
     if (!cancellationData.reason.trim()) {
-      alert('Please provide a cancellation reason');
+      toast.warning('Please provide a cancellation reason');
       return;
     }
 
@@ -101,7 +110,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
       setCancellationData({ reason: '', newBookingReference: '' });
     } catch (error) {
       handleError(error, 'BookingDetailsModal.handleCancel');
-      alert('Failed to cancel booking. Please try again.');
+      toast.error('Failed to cancel booking. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -113,15 +122,32 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
 
   const modalActions = [];
 
-  if (canCancelBooking() && !showCancelForm) {
-    modalActions.push({
-      label: 'Cancel Booking',
-      onClick: () => setShowCancelForm(true),
-      variant: 'danger' as const,
-      icon: Ban,
-      disabled: false,
-      loading: false
-    });
+  // Only show actions when cancel form is not open
+  if (!showCancelForm) {
+    if (canCancelBooking()) {
+      modalActions.push({
+        label: 'Cancel Booking',
+        onClick: () => setShowCancelForm(true),
+        variant: 'danger' as const,
+        icon: Ban,
+        disabled: false,
+        loading: false
+      });
+    }
+    // Add Edit button if in pending status and onEdit handler provided
+    if (onEdit && booking.status === 'pending' && canViewAllData()) {
+      modalActions.push({
+        label: 'Edit Booking',
+        onClick: () => {
+          onClose(); // Close the details modal first
+          onEdit(booking);
+        },
+        variant: 'primary' as const,
+        icon: Edit,
+        disabled: false,
+        loading: false
+      });
+    }
   }
 
   return (
@@ -131,13 +157,13 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
       title="Booking Details"
       subtitle={`Reference: ${booking.bookingNumber}`}
       icon={FileText}
-      size="xl"
       actions={modalActions}
       data={booking}
     >
       <BookingDetailsContent
         booking={booking}
         createdByName={createdByName}
+        loadingCreatedBy={loadingCreatedBy}
         getStatusBadge={getStatusBadge}
         showCancelForm={showCancelForm}
         cancellationData={cancellationData}
@@ -154,6 +180,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
 interface BookingDetailsContentProps {
   booking: BookingReference;
   createdByName: string;
+  loadingCreatedBy?: boolean;
   getStatusBadge: (status: BookingReference['status']) => JSX.Element;
   showCancelForm: boolean;
   cancellationData: CancellationData;
@@ -166,6 +193,7 @@ interface BookingDetailsContentProps {
 const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
   booking,
   createdByName,
+  loadingCreatedBy = false,
   getStatusBadge,
   showCancelForm,
   cancellationData,
@@ -174,6 +202,82 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
   handleCancel,
   setShowCancelForm
 }) => {
+  // If cancel form is open, show only the cancel form
+  if (showCancelForm) {
+    return (
+      <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-6 shadow-sm">
+        <div className="flex items-center mb-4">
+          <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+          <h4 className="text-lg font-semibold text-red-800">Cancel Booking</h4>
+        </div>
+        <p className="text-sm text-red-700 mb-4">
+          This action will cancel the booking and cannot be undone. Please provide a reason for the cancellation.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Cancellation Reason *
+            </label>
+            <textarea
+              value={cancellationData.reason}
+              onChange={(e) => setCancellationData(prev => ({ ...prev, reason: e.target.value }))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+              rows={4}
+              placeholder="Please provide a detailed reason for cancellation (e.g., client request, operational issues, etc.)"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {cancellationData.reason.length}/500 characters
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              New Booking Reference (Optional)
+            </label>
+            <input
+              type="text"
+              value={cancellationData.newBookingReference}
+              onChange={(e) => setCancellationData(prev => ({ ...prev, newBookingReference: e.target.value }))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="Enter replacement booking reference if applicable"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              If this booking is being replaced by a new one, enter the new booking reference here
+            </p>
+          </div>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-red-200">
+            <button
+              onClick={() => {
+                setShowCancelForm(false);
+                setCancellationData({ reason: '', newBookingReference: '' });
+              }}
+              className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={isProcessing}
+            >
+              Back
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              disabled={isProcessing || !cancellationData.reason.trim()}
+            >
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Ban className="w-4 h-4 mr-2" />
+                  Confirm Cancellation
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Basic Information */}
@@ -228,7 +332,14 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
           </label>
           <div className="flex items-center">
             <User className="w-4 h-4 text-gray-400 mr-2" />
-            <span className="text-sm text-gray-900">{createdByName}</span>
+              {loadingCreatedBy ? (
+                <div className="flex items-center">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-sm text-gray-500 ml-2">Loading...</span>
+                </div>
+              ) : (
+                <span className="text-sm text-gray-900">{createdByName}</span>
+              )}
           </div>
         </div>
 
@@ -441,80 +552,6 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
           </div>
         </div>
       )}
-
-      {/* Cancel Form */}
-      {showCancelForm && (
-            <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-6 shadow-sm">
-              <div className="flex items-center mb-4">
-                <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-                <h4 className="text-lg font-semibold text-red-800">Cancel Booking</h4>
-              </div>
-              <p className="text-sm text-red-700 mb-4">
-                This action will cancel the booking and cannot be undone. Please provide a reason for the cancellation.
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Cancellation Reason *
-                  </label>
-                  <textarea
-                    value={cancellationData.reason}
-                    onChange={(e) => setCancellationData(prev => ({ ...prev, reason: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    rows={4}
-                    placeholder="Please provide a detailed reason for cancellation (e.g., client request, operational issues, etc.)"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {cancellationData.reason.length}/500 characters
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    New Booking Reference (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={cancellationData.newBookingReference}
-                    onChange={(e) => setCancellationData(prev => ({ ...prev, newBookingReference: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Enter replacement booking reference if applicable"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    If this booking is being replaced by a new one, enter the new booking reference here
-                  </p>
-                </div>
-                <div className="flex justify-end space-x-3 pt-4 border-t border-red-200">
-                  <button
-                    onClick={() => {
-                      setShowCancelForm(false);
-                      setCancellationData({ reason: '', newBookingReference: '' });
-                    }}
-                    className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    disabled={isProcessing}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    className="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-                    disabled={isProcessing || !cancellationData.reason.trim()}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Ban className="w-4 h-4 mr-2" />
-                        Confirm Cancellation
-                      </>
-                    )}
-                  </button>
-                </div>
-            </div>
-          </div>
-        )}
     </div>
   );
 };

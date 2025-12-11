@@ -7,17 +7,21 @@ import { ReleaseOrderForm } from './ReleaseOrderForm';
 import { BookingDetailsModal } from './BookingDetailsModal';
 import { MobileReleaseOrderStats } from './MobileReleaseOrderStats';
 import { MobileReleaseOrderTable } from './MobileReleaseOrderTable';
-import { Search, X, FileText } from 'lucide-react';
+import { CardSkeleton } from '../Common/CardSkeleton';
+import { Search, X, FileText, Download } from 'lucide-react';
 import { handleError } from '../../services/errorHandling';
-import { logger } from '../../utils/logger';
+import { exportToExcel, formatDateForExport } from '../../utils/excelExport';
+import { userService } from '../../services/api';
 
 // REMOVED: Mock data now managed by global store
 
 export const ReleaseOrderList: React.FC = () => {
   const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadData() {
+      setIsLoading(true);
       try {
         const ordersData = await bookingReferenceService.getAll().catch(err => {
           handleError(err, 'ReleaseOrderList.loadData');
@@ -27,6 +31,8 @@ export const ReleaseOrderList: React.FC = () => {
       } catch (error) {
         handleError(error, 'ReleaseOrderList.loadData');
         setReleaseOrders([]);
+      } finally {
+        setIsLoading(false);
       }
     }
     loadData();
@@ -38,6 +44,7 @@ export const ReleaseOrderList: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<BookingReference | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const { user, getClientFilter } = useAuth();
@@ -78,6 +85,7 @@ export const ReleaseOrderList: React.FC = () => {
 
   const handleCreateOrder = () => {
     setSelectedOrder(null);
+    setIsEditMode(false);
     setShowForm(true);
   };
 
@@ -89,6 +97,13 @@ export const ReleaseOrderList: React.FC = () => {
   const handleCancelBooking = (order: BookingReference) => {
     setSelectedOrder(order);
     setShowCancelModal(true);
+  };
+
+  const handleEditOrder = (order: BookingReference) => {
+    setSelectedOrder(order);
+    setIsEditMode(true);
+    setShowDetailModal(false);
+    setShowForm(true);
   };
 
   // Calculate statistics
@@ -104,6 +119,67 @@ export const ReleaseOrderList: React.FC = () => {
   };
 
   const stats = getOrderStats();
+
+  const handleExportBookings = async () => {
+    // Get user names for createdBy UUIDs
+    const userNamesMap = new Map<string, string>();
+    
+    for (const order of filteredOrders) {
+      if (order.createdBy && !userNamesMap.has(order.createdBy)) {
+        try {
+          const user = await userService.getById(order.createdBy);
+          userNamesMap.set(order.createdBy, user?.name || order.createdBy);
+        } catch (error) {
+          // If user not found, use the createdBy value as is
+          userNamesMap.set(order.createdBy, order.createdBy);
+        }
+      }
+    }
+
+    const dataToExport = filteredOrders.map(order => {
+      const quantities = order.containerQuantities || {};
+      return {
+        bookingNumber: order.bookingNumber || order.id || '',
+        bookingType: order.bookingType || '',
+        clientName: order.clientName || '',
+        clientCode: order.clientCode || '',
+        status: order.status || '',
+        totalContainers: order.totalContainers || 0,
+        size20ft: quantities.size20ft || 0,
+        size40ft: quantities.size40ft || 0,
+        processedContainers: order.processedContainers || 0,
+        remainingContainers: (order.totalContainers || 0) - (order.processedContainers || 0),
+        yardName: currentYard?.name || '',
+        createdBy: userNamesMap.get(order.createdBy) || order.createdBy || '',
+        createdAt: formatDateForExport(order.createdAt),
+        updatedAt: formatDateForExport(order.updatedAt),
+        notes: order.notes || ''
+      };
+    });
+
+    exportToExcel({
+      filename: `booking_references_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Booking References',
+      columns: [
+        { header: 'Numéro Booking', key: 'bookingNumber', width: 20 },
+        { header: 'Type Booking', key: 'bookingType', width: 15 },
+        { header: 'Client', key: 'clientName', width: 25 },
+        { header: 'Code Client', key: 'clientCode', width: 15 },
+        { header: 'Statut', key: 'status', width: 15 },
+        { header: 'Total Conteneurs', key: 'totalContainers', width: 15 },
+        { header: 'Conteneurs 20ft', key: 'size20ft', width: 15 },
+        { header: 'Conteneurs 40ft', key: 'size40ft', width: 15 },
+        { header: 'Conteneurs Traités', key: 'processedContainers', width: 18 },
+        { header: 'Conteneurs Restants', key: 'remainingContainers', width: 18 },
+        { header: 'Dépôt', key: 'yardName', width: 20 },
+        { header: 'Créé par', key: 'createdBy', width: 20 },
+        { header: 'Date Création', key: 'createdAt', width: 20 },
+        { header: 'Date Modification', key: 'updatedAt', width: 20 },
+        { header: 'Notes', key: 'notes', width: 30 }
+      ],
+      data: dataToExport
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 lg:bg-transparent">
@@ -133,13 +209,19 @@ export const ReleaseOrderList: React.FC = () => {
 
       {/* Unified Responsive Statistics */}
       <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
-        <MobileReleaseOrderStats stats={stats} />
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardSkeleton count={4} />
+          </div>
+        ) : (
+          <MobileReleaseOrderStats stats={stats} />
+        )}
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="lg:flex lg:justify-between p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
-            <div className="relative mb-4 lg:mb-0">
+            <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
@@ -191,6 +273,14 @@ export const ReleaseOrderList: React.FC = () => {
                   {filteredOrders.length} result{filteredOrders.length !== 1 ? 's' : ''}
                 </span>
               )}
+              <button
+                onClick={handleExportBookings}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export</span>
+              </button>
             </div>
           </div>
         </div>
@@ -202,6 +292,7 @@ export const ReleaseOrderList: React.FC = () => {
           selectedFilter={selectedFilter}
           onViewDetails={handleViewDetails}
           onCancelBooking={handleCancelBooking}
+          loading={isLoading}
         />
       </div>
 
@@ -209,14 +300,30 @@ export const ReleaseOrderList: React.FC = () => {
       {showForm && (
         <ReleaseOrderForm
           isOpen={showForm}
+          isEditMode={isEditMode}
+          initialData={isEditMode && selectedOrder ? {
+            bookingNumber: selectedOrder.bookingNumber,
+            bookingType: selectedOrder.bookingType,
+            clientId: selectedOrder.clientId,
+            clientCode: selectedOrder.clientCode,
+            clientName: selectedOrder.clientName,
+            maxQuantityThreshold: selectedOrder.maxQuantityThreshold,
+            containerQuantities: selectedOrder.containerQuantities,
+            totalContainers: selectedOrder.totalContainers,
+            requiresDetailedBreakdown: selectedOrder.requiresDetailedBreakdown,
+            notes: selectedOrder.notes
+          } : undefined}
           onClose={() => {
             setShowForm(false);
             setSelectedOrder(null);
+            setIsEditMode(false);
           }}
-          onSubmit={(order) => {
+          onSubmit={() => {
             setShowForm(false);
             setSelectedOrder(null);
+            setIsEditMode(false);
           }}
+
           isLoading={false}
         />
       )}
@@ -226,6 +333,7 @@ export const ReleaseOrderList: React.FC = () => {
         booking={selectedOrder}
         isOpen={showDetailModal || showCancelModal}
         openToCancelForm={showCancelModal}
+        onEdit={handleEditOrder}
         onClose={() => {
           setShowDetailModal(false);
           setShowCancelModal(false);

@@ -175,7 +175,14 @@ export const useYardProvider = () => {
   };
 
   const refreshYards = useCallback(async (): Promise<void> => {
-    if (!user) return;
+    if (!user) {
+      logger.warn('Cannot refresh yards: No user logged in', 'useYard');
+      setYardContext(prev => ({
+        ...prev,
+        error: 'Please log in to access yards'
+      }));
+      return;
+    }
     
     hasInitializedRef.current = false; // Allow re-initialization
     logger.debug('Refreshing yards', 'useYard');
@@ -185,14 +192,15 @@ export const useYardProvider = () => {
       const allYards = await Promise.race([
         yardsService.getAll(),
         new Promise<Yard[]>((_, reject) => 
-          setTimeout(() => reject(new Error('Yard loading timeout')), 10000)
+          setTimeout(() => reject(new Error('Yard loading timeout after 10 seconds')), 10000)
         )
-      ]).catch(err => {
-        logger.error('Failed to load yards from database', 'useYard', err);
-        return [];
-      });
+      ]);
+
+      logger.debug(`Retrieved ${allYards.length} yards from database`, 'useYard');
 
       const userYardAssignments = user?.yardAssignments || [];
+      logger.debug('User yard assignments', 'useYard', { assignments: userYardAssignments });
+
       const accessibleYards: Yard[] = allYards.filter(yard => {
         const nameLower = yard.name.toLowerCase().replace(/\s+/g, '-');
         const hasAccess = yard.isActive && (
@@ -204,11 +212,28 @@ export const useYardProvider = () => {
         return hasAccess;
       });
 
+      logger.info(`User has access to ${accessibleYards.length} yards`, 'useYard');
+
+      if (accessibleYards.length === 0) {
+        logger.warn('No accessible yards for user', 'useYard', { 
+          userEmail: user.email,
+          assignments: userYardAssignments 
+        });
+        setYardContext({
+          currentYard: null,
+          availableYards: [],
+          isLoading: false,
+          error: 'No yards assigned to your account. Please contact your administrator.'
+        });
+        return;
+      }
+
       let currentYard = yardsService.getCurrentYard();
       if (!currentYard || !accessibleYards.find(y => y.id === currentYard?.id)) {
         if (accessibleYards.length > 0) {
           yardsService.setCurrentYard(accessibleYards[0].id);
           currentYard = accessibleYards[0];
+          logger.info(`Set default yard: ${currentYard.code}`, 'useYard');
         } else {
           currentYard = null;
         }
@@ -221,13 +246,17 @@ export const useYardProvider = () => {
         error: null
       });
 
-      logger.info('Yards refreshed successfully', 'useYard');
+      logger.info('Yards refreshed successfully', 'useYard', {
+        currentYard: currentYard?.code,
+        availableYards: accessibleYards.length
+      });
     } catch (error) {
       logger.error('Failed to refresh yards', 'useYard', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh yards';
       setYardContext(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to refresh yards'
+        error: errorMessage
       }));
     }
   }, [user]);

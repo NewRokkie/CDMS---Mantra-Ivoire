@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Eye, Edit, CreditCard, AlertTriangle, FileText } from 'lucide-react';
+import { Search, Download, Eye, Edit, CreditCard, AlertTriangle, FileText, Recycle } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -13,7 +13,11 @@ import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { DatePicker } from '../Common/DatePicker';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TableSkeleton } from '../Common/TableSkeleton';
+import { CardSkeleton } from '../Common/CardSkeleton';
 import { handleError } from '../../services/errorHandling';
+import { exportToExcel, formatDateForExport, formatDateShortForExport } from '../../utils/excelExport';
+import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
 
 // Helper function to format container number for display (adds hyphens)
 const formatContainerNumberForDisplay = (containerNumber?: string | null): string => {
@@ -37,9 +41,9 @@ export const ContainerList: React.FC = () => {
     async function loadContainers() {
       try {
         setLoading(true);
-        const data = await containerService.getAll().catch(err => { 
+        const data = await containerService.getAll().catch(err => {
           handleError(err, 'ContainerList.loadContainers');
-          return []; 
+          return [];
         });
         setContainers(data || []);
       } catch (error) {
@@ -65,6 +69,8 @@ export const ContainerList: React.FC = () => {
   const { t } = useLanguage();
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
 
 
@@ -219,9 +225,9 @@ export const ContainerList: React.FC = () => {
   const refreshContainers = async () => {
     try {
       setLoading(true);
-      const data = await containerService.getAll().catch(err => { 
+      const data = await containerService.getAll().catch(err => {
         handleError(err, 'ContainerList.refreshContainers');
-        return []; 
+        return [];
       });
       setContainers(data || []);
     } catch (error) {
@@ -236,30 +242,90 @@ export const ContainerList: React.FC = () => {
     addAuditLog(updatedContainer.id, 'edited', 'Container information updated');
     setShowEditModal(false);
     setSelectedContainer(null);
-    
+
     // Refresh the container list from database
     await refreshContainers();
-    
-    alert('Container updated successfully!');
+
+    toast.success('Container updated successfully!');
   };
 
-  const handleDeleteContainer = async (containerId: string) => {
-    if (!window.confirm('Are you sure you want to delete this container?')) {
-      return;
-    }
-
+const handleDeleteContainer = async (containerId: string) => {
     try {
-      await containerService.delete(containerId);
-      
-      // Refresh the container list from database
-      await refreshContainers();
-      
-      alert('Container deleted successfully!');
-    } catch (error) {
-      handleError(error, 'ContainerList.handleDeleteContainer');
-      alert('Failed to delete container. Please try again.');
+        // First, check if container can be deleted
+        const constraints = await containerService.checkDeletionConstraints(containerId);
+        
+        if (!constraints.canDelete) {
+            // Show detailed blocking reason
+            let message = 'Cannot delete this container:\n\n';
+            message += constraints.blockingReason || 'Unknown reason';
+            message += '\n\nContainer Details:\n';
+            message += `• Status: ${constraints.currentStatus}\n`;
+            message += `• Gate-In Operations: ${constraints.gateInCount}\n`;
+            message += `• Gate-Out Operations: ${constraints.gateOutCount}\n`;
+            message += `• Location Assigned: ${constraints.locationAssigned ? 'Yes' : 'No'}\n`;
+            
+            if (constraints.currentStatus === 'in_depot' || constraints.currentStatus === 'gate_in') {
+                message += '\nAction Required:\n';
+                message += '1. Gate out the container first\n';
+                message += '2. Ensure status is "out_depot"\n';
+                message += '3. Then try deleting again';
+            } else if (constraints.locationAssigned) {
+                message += '\nAction Required:\n';
+                message += '1. Remove the location assignment\n';
+                message += '2. Then try deleting again';
+            }
+            
+            toast.error(message);
+            return;
+        }
+
+        // Show confirmation with details
+        const container = containers.find(c => c.id === containerId);
+        const containerNumber = container?.number || 'Unknown';
+        
+        let confirmMessage = `Delete Container: ${containerNumber}\n\n`;
+        confirmMessage += 'This will mark the container as deleted.\n';
+        if (constraints.gateInCount > 0 || constraints.gateOutCount > 0) {
+            confirmMessage += `\nNote: This container has ${constraints.gateInCount} gate-in and ${constraints.gateOutCount} gate-out operation(s) in history.\n`;
+            confirmMessage += 'These records will be preserved.\n';
+        }
+        confirmMessage += '\nAre you sure you want to continue?';
+        
+        confirm({
+            title: 'Delete Container',
+            message: confirmMessage,
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    // Perform soft delete
+                    await containerService.delete(containerId);
+
+                    // Add audit log
+                    addAuditLog(containerId, 'deleted', 'Container soft deleted from system');
+
+                    // Refresh the container list from database
+                    await refreshContainers();
+
+                    toast.success('Container deleted successfully!');
+                } catch (error: any) {
+                    handleError(error, 'ContainerList.handleDeleteContainer');
+                    
+                    // Show user-friendly error message
+                    const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
+                    toast.error(`Delete Failed: ${errorMessage}`);
+                }
+            }
+        });
+    } catch (error: any) {
+        handleError(error, 'ContainerList.handleDeleteContainer');
+        
+        // Show user-friendly error message
+        const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
+        toast.error(`Delete Failed: ${errorMessage}`);
     }
-  };
+};
 
   // --------------------------
   // Export helpers
@@ -319,31 +385,48 @@ export const ContainerList: React.FC = () => {
   };
 
   const exportExcel = (rows: Container[]) => {
-    // Simple Excel: serve CSV with .xls extension for quick compatibility
-    const data = generateExportRows(rows);
-    const headers = ['Container Number', 'Size', 'Type', 'Full/Empty', 'In/Out', 'Gate In', 'Gate Out', 'Client', 'Client Code'];
-    const csv = [
-      headers.join('\t'),
-      ...data.map(r => {
-        const keyMap: Record<string, string> = {
-          'Container Number': 'number',
-          'Size': 'size',
-          'Type': 'type',
-          'Full/Empty': 'fullEmpty',
-          'In/Out': 'inOut',
-          'Gate In': 'gateIn',
-          'Gate Out': 'gateOut',
-          'Client': 'client',
-          'Client Code': 'clientCode'
-        };
-        return headers.map(h => {
-          const key = keyMap[h] || 'clientCode';
-          const v = (r as any)[key] ?? '';
-          return String(v).replace(/\t/g, ' ');
-        }).join('\t');
-      }).join('\n')
-    ].join('\n');
-    downloadFile(csv, `containers_export_${new Date().toISOString().slice(0,10)}.xls`, 'application/vnd.ms-excel');
+    const dataToExport = rows.map(container => ({
+      number: container.number || '',
+      size: container.size || '',
+      type: container.type || '',
+      status: container.status || '',
+      fullEmpty: container.fullEmpty || '',
+      location: container.location || '',
+      clientName: container.clientName || '',
+      clientCode: container.clientCode || '',
+      gateInDate: formatDateShortForExport(container.gateInDate),
+      gateOutDate: formatDateShortForExport(container.gateOutDate),
+      arrivalDate: formatDateShortForExport(container.arrivalDate),
+      yardName: currentYard?.name || '',
+      createdBy: container.createdBy || '',
+      createdAt: formatDateForExport(container.createdAt),
+      updatedAt: formatDateForExport(container.updatedAt),
+      damage: container.damage && container.damage.length > 0 ? `${container.damage.length} dommage(s)` : 'Aucun'
+    }));
+
+    exportToExcel({
+      filename: `containers_export_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Containers',
+      columns: [
+        { header: 'Numéro Conteneur', key: 'number', width: 20 },
+        { header: 'Taille', key: 'size', width: 12 },
+        { header: 'Type', key: 'type', width: 15 },
+        { header: 'Statut', key: 'status', width: 15 },
+        { header: 'Plein/Vide', key: 'fullEmpty', width: 12 },
+        { header: 'Emplacement', key: 'location', width: 20 },
+        { header: 'Client', key: 'clientName', width: 25 },
+        { header: 'Code Client', key: 'clientCode', width: 15 },
+        { header: 'Date Gate In', key: 'gateInDate', width: 15 },
+        { header: 'Date Gate Out', key: 'gateOutDate', width: 15 },
+        { header: 'Date Arrivée', key: 'arrivalDate', width: 15 },
+        { header: 'Dépôt', key: 'yardName', width: 20 },
+        { header: 'Créé par', key: 'createdBy', width: 20 },
+        { header: 'Date Création', key: 'createdAt', width: 20 },
+        { header: 'Date Modification', key: 'updatedAt', width: 20 },
+        { header: 'Dommages', key: 'damage', width: 20 }
+      ],
+      data: dataToExport
+    });
   };
 
   const exportHTML = (rows: Container[]) => {
@@ -431,7 +514,7 @@ function filterTable(){
   const regenerateEDI = (container: Container) => {
     // Simulate EDI regeneration/update: add audit log and notify user
     addAuditLog(container.id, 'edi_regenerated', `EDI regenerated for container ${container.number}`);
-    alert(`EDI regenerated for ${container.number} (will reuse existing EDI id where applicable).`);
+    toast.info(`EDI regenerated for ${container.number} (will reuse existing EDI id where applicable).`);
   };
 
   // Show client restriction notice
@@ -654,8 +737,8 @@ function filterTable(){
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredContainers.map((container) => (
-                <tr 
-                  key={container.id} 
+                <tr
+                  key={container.id}
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => handleViewContainer(container)}
                 >
@@ -704,8 +787,8 @@ function filterTable(){
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' : 
-                      container.fullEmpty === 'EMPTY' ? 'bg-gray-100 text-gray-800' : 
+                      container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' :
+                      container.fullEmpty === 'EMPTY' ? 'bg-gray-100 text-gray-800' :
                       'bg-gray-50 text-gray-500'
                     }`}>
                       {container.fullEmpty || '-'}
@@ -754,6 +837,18 @@ function filterTable(){
                           <CreditCard className="h-4 w-4" />
                         </button>
                       )}
+                      {canEditContainers && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteContainer(container.id);
+                          }}
+                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                          title="Delete Container"
+                        >
+                          <Recycle className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -783,12 +878,13 @@ function filterTable(){
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
-          <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+      <div className="space-y-6">
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <CardSkeleton count={4} />
         </div>
-        <TableSkeleton rows={10} columns={8} />
+        {/* Table skeleton */}
+        <TableSkeleton rows={5} columns={8} />
       </div>
     );
   }

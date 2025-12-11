@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X } from 'lucide-react';
+import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, stackService, realtimeService } from '../../services/api';
@@ -7,6 +7,9 @@ import { supabase } from '../../services/api/supabaseClient';
 import { generateStackLocations } from '../../utils/locationHelpers';
 import { stackPairingService } from '../../services/api/stackPairingService';
 // import moment from 'moment'; // Commented out - not used in current code
+import { CardSkeleton } from '../Common/CardSkeleton';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
+import { TableSkeleton } from '../Common/TableSkeleton';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
@@ -16,10 +19,13 @@ import { isValidContainerTypeAndSize } from './GateInModal/ContainerTypeSelect';
 import { ValidationService } from '../../services/validationService';
 import { GateInError, handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
+import { exportToExcel, formatDateForExport } from '../../utils/excelExport';
+import { useToast } from '../../hooks/useToast';
 
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
+  const toast = useToast();
 
   const [activeView, setActiveView] = useState<'overview' | 'pending' | 'location'>('overview');
   const [showForm, setShowForm] = useState(false);
@@ -35,9 +41,11 @@ export const GateIn: React.FC = () => {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
+      setLoading(true);
       const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
         clientService.getAll().catch(err => { handleError(err, 'GateIn.loadClients'); return []; }),
         gateService.getGateInOperations({ yardId: currentYard?.id }).catch(err => {
@@ -61,6 +69,8 @@ export const GateIn: React.FC = () => {
       setContainers([]);
       setStacks([]);
       setPairingMap(new Map());
+    } finally {
+      setLoading(false);
     }
   }, [currentYard?.id]);
 
@@ -73,105 +83,31 @@ export const GateIn: React.FC = () => {
 
 
 useEffect(() => {
-    if (!currentYard?.id) {
-        return;
+  if (!currentYard?.id) return;
+
+  const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
+    currentYard.id,
+    () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
     }
+  );
 
-    const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
-        currentYard.id,
-        (payload) => {
-            if (document.visibilityState === 'visible') {
-                loadData();
-            }
-        }
-    );
+  const unsubscribeContainers = realtimeService.subscribeToContainers(() => {
+    if (document.visibilityState === 'visible') {
+      loadData();
+    }
+  });
 
-    const unsubscribeContainers = realtimeService.subscribeToContainers(
-        (payload) => {
-            if (document.visibilityState === 'visible') {
-                loadData();
-            }
-        }
-    );
-
-    return () => {
-        unsubscribeGateIn();
-        unsubscribeContainers();
-    };
+  return () => {
+    try { unsubscribeGateIn(); } catch (e) { /* ignore */ }
+    try { unsubscribeContainers(); } catch (e) { /* ignore */ }
+  };
 }, [currentYard?.id]);
 
-  // Generate locations from stacks with Location ID format (S01-R1-H1)
-  // Filter by Client Pools and exclude occupied locations
-  const mockLocations = React.useMemo(() => {
-    const locations20ft: any[] = [];
-    const locations40ft: any[] = [];
-    const locationsDamage: any[] = [];
-
-    // Get all occupied locations from containers
-    const occupiedLocations = new Set(
-      containers
-        .filter(c => c.location && c.status === 'in_depot')
-        .map(c => c.location)
-    );
-
-    // Track which virtual stacks we've already processed to avoid duplicates
-    const processedVirtualStacks = new Set<number>();
-
-    stacks.forEach((stack) => {
-      const rows = stack.rows || 6;
-      const maxTiers = stack.maxTiers || 4;
-
-      // Check if this stack is part of a pairing (for 40ft)
-      const virtualStackNumber = pairingMap.get(stack.stackNumber);
-
-      // For 40ft containers with pairing: S03→4, S05→4, S07→8, S09→8, etc.
-      // Only process each virtual stack once
-      if (virtualStackNumber && stack.containerSize === '40ft') {
-        if (processedVirtualStacks.has(virtualStackNumber)) {
-          return; // Skip, already processed this virtual stack
-        }
-        processedVirtualStacks.add(virtualStackNumber);
-      }
-
-      // Generate locations with virtual stack number if paired
-      const allPositions = generateStackLocations(
-        stack.stackNumber,
-        rows,
-        maxTiers,
-        virtualStackNumber
-      );
-
-      // Filter out occupied positions
-      const availablePositions = allPositions.filter(locationId => !occupiedLocations.has(locationId));
-
-      availablePositions.forEach((locationId) => {
-        const locationData = {
-          id: locationId,
-          name: locationId,
-          stackId: stack.id,
-          stackNumber: stack.stackNumber,
-          virtualStackNumber: virtualStackNumber,
-          capacity: 1,
-          available: 1,
-          section: stack.sectionName || 'Main Section'
-        };
-
-        if (stack.isSpecialStack) {
-          locationsDamage.push(locationData);
-        } else if (stack.containerSize === '20ft') {
-          locations20ft.push(locationData);
-        } else if (stack.containerSize === '40ft') {
-          locations40ft.push(locationData);
-        }
-      });
-    });
-
-    return {
-      '20ft': locations20ft,
-      '40ft': locations40ft,
-      damage: locationsDamage
-    };
-  }, [stacks, containers, pairingMap]);
+// Minimal mockLocations for pending operations view. Replace with full logic if needed.
+const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] }), [stacks, containers, pairingMap]);
 
   const pendingOperations = gateInOperations.filter(op =>
     op.status === 'pending' || !op.assignedLocation
@@ -185,6 +121,8 @@ useEffect(() => {
   const [formData, setFormData] = useState<GateInFormData>({
     containerSize: '20ft',
     containerType: 'dry',
+    isHighCube: false,
+    containerIsoCode: '',
     containerQuantity: 1,
     status: 'FULL',
     clientId: '',
@@ -253,12 +191,16 @@ useEffect(() => {
 
   const handleContainerSizeChange = (size: '20ft' | '40ft') => {
     setFormData(prev => {
-      // Check if current container type is valid for the new size
-      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, size);
+      // Check if current container type is valid for the new size and high cube flag
+      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, size, prev.isHighCube);
+
+      // If switching to 20ft, disable High Cube since it's only for 40ft
+      const newIsHighCube = size === '20ft' ? false : prev.isHighCube;
 
       return {
         ...prev,
         containerSize: size,
+        isHighCube: newIsHighCube,
         containerQuantity: size === '40ft' ? 1 : prev.containerQuantity,
         secondContainerNumber: size === '40ft' ? '' : prev.secondContainerNumber,
         // Reset to default 'dry' type if current type is not valid for new size
@@ -282,6 +224,20 @@ useEffect(() => {
       status: newStatus,
       bookingReference: newStatus === 'EMPTY' ? '' : prev.bookingReference
     }));
+  };
+
+  const handleHighCubeChange = (isHighCube: boolean) => {
+    setFormData(prev => {
+      // If switching High Cube, validate if current container type is still valid
+      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, prev.containerSize, isHighCube);
+
+      return {
+        ...prev,
+        isHighCube,
+        // Reset to default 'dry' type if current type is not valid for new high cube setting
+        containerType: isCurrentTypeValid ? prev.containerType : 'dry'
+      };
+    });
   };
 
 
@@ -481,8 +437,7 @@ useEffect(() => {
         formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''
       }`;
 
-      // You could replace alert with a toast notification system
-      alert(successMessage);
+      toast.success(successMessage);
 
       // Reset form and close modal
       resetForm();
@@ -513,6 +468,8 @@ useEffect(() => {
     setFormData({
       containerSize: '20ft',
       containerType: 'dry',
+      isHighCube: false,
+      containerIsoCode: '',
       containerQuantity: 1,
       status: 'EMPTY', // Default to 'EMPTY'
       clientId: '',
@@ -667,12 +624,12 @@ useEffect(() => {
       }
 
       const damageStatus = locationData.damageAssessment?.hasDamage ? 'with damage reported' : 'in good condition';
-      alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation} (${damageStatus})`);
+      toast.success(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation} (${damageStatus})`);
       setActiveView('overview');
     } catch (error) {
       handleError(error, 'GateIn.handleLocationValidation');
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`Error completing operation: ${errorMessage}`);
+      toast.error(`Error completing operation: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
@@ -695,6 +652,59 @@ useEffect(() => {
 
     return matchesSearch && matchesFilter;
   });
+
+  const handleExportGateIn = () => {
+    const dataToExport = filteredOperations.map(op => ({
+      containerNumber: op.containerNumber || '',
+      secondContainerNumber: op.secondContainerNumber || '',
+      containerSize: op.containerSize || '',
+      containerType: op.containerType || '',
+      status: op.status || '',
+      fullEmpty: op.fullEmpty || op.status || '', // Use fullEmpty or status as fallback
+      clientName: op.clientName || '',
+      clientCode: op.clientCode || '',
+      classification: op.classification || '',
+      driverName: op.driverName || '',
+      truckNumber: op.truckNumber || '',
+      transportCompany: op.transportCompany || '',
+      assignedLocation: op.assignedLocation || '',
+      truckArrivalDate: formatDateForExport(op.truckArrivalDate),
+      truckArrivalTime: op.truckArrivalTime || '',
+      yardName: currentYard?.name || '',
+      operatorName: op.operatorName || '',
+      createdAt: formatDateForExport(op.createdAt),
+      updatedAt: formatDateForExport(op.updatedAt),
+      notes: op.notes || ''
+    }));
+
+    exportToExcel({
+      filename: `gate_in_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Gate In Operations',
+      columns: [
+        { header: 'Numéro Conteneur', key: 'containerNumber', width: 20 },
+        { header: '2ème Conteneur', key: 'secondContainerNumber', width: 20 },
+        { header: 'Taille', key: 'containerSize', width: 12 },
+        { header: 'Type', key: 'containerType', width: 15 },
+        { header: 'Statut', key: 'status', width: 15 },
+        { header: 'Plein/Vide', key: 'fullEmpty', width: 12 },
+        { header: 'Client', key: 'clientName', width: 25 },
+        { header: 'Code Client', key: 'clientCode', width: 15 },
+        { header: 'Classification', key: 'classification', width: 15 },
+        { header: 'Chauffeur', key: 'driverName', width: 20 },
+        { header: 'Camion', key: 'truckNumber', width: 15 },
+        { header: 'Transporteur', key: 'transportCompany', width: 25 },
+        { header: 'Emplacement', key: 'assignedLocation', width: 20 },
+        { header: 'Date Arrivée', key: 'truckArrivalDate', width: 20 },
+        { header: 'Heure Arrivée', key: 'truckArrivalTime', width: 15 },
+        { header: 'Dépôt', key: 'yardName', width: 20 },
+        { header: 'Opérateur', key: 'operatorName', width: 20 },
+        { header: 'Date Création', key: 'createdAt', width: 20 },
+        { header: 'Date Modification', key: 'updatedAt', width: 20 },
+        { header: 'Notes', key: 'notes', width: 30 }
+      ],
+      data: dataToExport
+    });
+  };
 
 
 
@@ -722,6 +732,35 @@ useEffect(() => {
       />
     );
   }
+
+  // Show skeletons while initial data is loading
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-4 lg:px-6 py-4 lg:py-6">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate In</h1>
+              <p className="text-sm text-gray-600 hidden lg:block">Container entry management</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+
+        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden p-4">
+          <TableSkeleton />
+        </div>
+      </div>
+    </div>
+  );
 
   // Main Overview
   return (
@@ -817,9 +856,9 @@ useEffect(() => {
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="lg:flex lg:justify-between p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
-            <div className="relative mb-4 lg:mb-0">
+            <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
@@ -872,6 +911,14 @@ useEffect(() => {
                   {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
                 </span>
               )}
+              <button
+                onClick={handleExportGateIn}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export</span>
+              </button>
             </div>
           </div>
         </div>
@@ -901,6 +948,7 @@ useEffect(() => {
           handlePrevStep={handlePrevStep}
           handleInputChange={handleInputChange}
           handleContainerSizeChange={handleContainerSizeChange}
+          handleHighCubeChange={handleHighCubeChange}
           handleQuantityChange={handleQuantityChange}
           handleStatusChange={handleStatusChange}
           handleClientChange={handleClientChange}
@@ -910,6 +958,13 @@ useEffect(() => {
           validationErrors={validationErrors}
           validationWarnings={validationWarnings}
         />
+      )}
+
+      {/* Processing Spinner Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
       )}
     </div>
   );

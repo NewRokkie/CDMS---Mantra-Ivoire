@@ -163,21 +163,168 @@ export class ContainerService {
     }
   }
 
-  async delete(id: string): Promise<void> {
+  /**
+   * Check if a container can be deleted and get blocking reasons
+   */
+  async checkDeletionConstraints(id: string): Promise<{
+    canDelete: boolean;
+    blockingReason: string | null;
+    gateInCount: number;
+    gateOutCount: number;
+    locationAssigned: boolean;
+    currentStatus: string;
+  }> {
     try {
-      // Get container to check if it has a location
-      const container = await this.getById(id);
-      if (container && container.location) {
-        // Release location before deleting container
-        await this.releaseContainerLocation(id, container.location);
-      }
-
-      const { error } = await supabase
-        .from('containers')
-        .delete()
-        .eq('id', id);
+      const { data, error } = await supabase
+        .rpc('check_container_deletion_constraints', { container_uuid: id });
 
       if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        throw new GateInError({
+          code: 'CONTAINER_NOT_FOUND',
+          message: 'Container not found',
+          severity: 'error',
+          retryable: false,
+          userMessage: 'The specified container does not exist'
+        });
+      }
+
+      const result = data[0];
+      return {
+        canDelete: result.can_delete,
+        blockingReason: result.blocking_reason,
+        gateInCount: result.gate_in_count,
+        gateOutCount: result.gate_out_count,
+        locationAssigned: result.location_assigned,
+        currentStatus: result.current_status
+      };
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Soft delete a container (marks as deleted instead of removing from database)
+   */
+  async delete(id: string): Promise<void> {
+    try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new GateInError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+          severity: 'error',
+          retryable: false,
+          userMessage: 'You must be logged in to delete containers'
+        });
+      }
+
+      // Get user record to pass user UUID
+      const { data: userRecord, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (userError || !userRecord) {
+        throw new GateInError({
+          code: 'USER_NOT_FOUND',
+          message: 'User record not found',
+          severity: 'error',
+          retryable: false,
+          userMessage: 'User profile not found'
+        });
+      }
+
+      // Perform soft delete using database function
+      const { data, error } = await supabase
+        .rpc('soft_delete_container', {
+          container_uuid: id,
+          user_uuid: userRecord.id
+        });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new GateInError({
+          code: 'DELETE_FAILED',
+          message: 'Delete operation returned no result',
+          severity: 'error',
+          retryable: false,
+          userMessage: 'Failed to delete container'
+        });
+      }
+
+      const result = data[0];
+      
+      if (!result.success) {
+        throw new GateInError({
+          code: 'DELETE_BLOCKED',
+          message: result.blocking_reason || result.message,
+          severity: 'warning',
+          retryable: false,
+          userMessage: result.blocking_reason || result.message
+        });
+      }
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Restore a soft-deleted container
+   */
+  async restore(id: string): Promise<void> {
+    try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new GateInError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+          severity: 'error',
+          retryable: false,
+          userMessage: 'You must be logged in to restore containers'
+        });
+      }
+
+      // Get user record
+      const { data: userRecord, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (userError || !userRecord) {
+        throw new GateInError({
+          code: 'USER_NOT_FOUND',
+          message: 'User record not found',
+          severity: 'error',
+          retryable: false,
+          userMessage: 'User profile not found'
+        });
+      }
+
+      // Restore container
+      const { data, error } = await supabase
+        .rpc('restore_container', {
+          container_uuid: id,
+          user_uuid: userRecord.id
+        });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0 || !data[0].success) {
+        throw new GateInError({
+          code: 'RESTORE_FAILED',
+          message: data?.[0]?.message || 'Failed to restore container',
+          severity: 'error',
+          retryable: false,
+          userMessage: data?.[0]?.message || 'Failed to restore container'
+        });
+      }
     } catch (error) {
       throw ErrorHandler.createGateInError(error);
     }
@@ -259,10 +406,10 @@ export class ContainerService {
         return;
       }
 
-      // Try to get location by UUID first, then by location ID (SXXRXHX format)
-      let location = await locationManagementService.getById(locationToRelease);
+      // Try to get location by location ID (SXXRXHX format) first, then by UUID
+      let location = await locationManagementService.getByLocationId(locationToRelease);
       if (!location) {
-        location = await locationManagementService.getByLocationId(locationToRelease);
+        location = await locationManagementService.getById(locationToRelease);
       }
 
       if (!location) {
@@ -342,10 +489,10 @@ export class ContainerService {
 
       let location = null;
       if (container.location) {
-        // Try to get location by UUID first, then by location ID (SXXRXHX format)
-        location = await locationManagementService.getById(container.location);
+        // Try to get location by location ID (SXXRXHX format) first, then by UUID
+        location = await locationManagementService.getByLocationId(container.location);
         if (!location) {
-          location = await locationManagementService.getByLocationId(container.location);
+          location = await locationManagementService.getById(container.location);
         }
       }
 
@@ -394,10 +541,10 @@ export class ContainerService {
    */
   async getContainersByLocation(locationIdOrString: string): Promise<Container[]> {
     try {
-      // Try to get location by UUID first, then by location ID (SXXRXHX format)
-      let location = await locationManagementService.getById(locationIdOrString);
+      // Try to get location by location ID (SXXRXHX format) first, then by UUID
+      let location = await locationManagementService.getByLocationId(locationIdOrString);
       if (!location) {
-        location = await locationManagementService.getByLocationId(locationIdOrString);
+        location = await locationManagementService.getById(locationIdOrString);
       }
 
       if (!location) {
@@ -451,10 +598,10 @@ export class ContainerService {
         return { isValid: false, errors, warnings, location: null };
       }
 
-      // Try to get location by UUID first, then by location ID (SXXRXHX format)
-      let location = await locationManagementService.getById(locationIdOrString);
+      // Try to get location by location ID (SXXRXHX format) first, then by UUID
+      let location = await locationManagementService.getByLocationId(locationIdOrString);
       if (!location) {
-        location = await locationManagementService.getByLocationId(locationIdOrString);
+        location = await locationManagementService.getById(locationIdOrString);
       }
 
       if (!location) {
@@ -530,10 +677,10 @@ export class ContainerService {
     message: string;
   }> {
     try {
-      // Try to get location by UUID first, then by location ID (SXXRXHX format)
-      let location = await locationManagementService.getById(locationIdOrString);
+      // Try to get location by location ID (SXXRXHX format) first, then by UUID
+      let location = await locationManagementService.getByLocationId(locationIdOrString);
       if (!location) {
-        location = await locationManagementService.getByLocationId(locationIdOrString);
+        location = await locationManagementService.getById(locationIdOrString);
       }
 
       if (!location) {
@@ -737,7 +884,11 @@ export class ContainerService {
       updatedBy: data.updated_by,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
-      placedAt: data.gate_in_date ? new Date(data.gate_in_date) : undefined
+      placedAt: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
+      // Soft delete fields
+      isDeleted: data.is_deleted || false,
+      deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined,
+      deletedBy: data.deleted_by
     };
   }
 }

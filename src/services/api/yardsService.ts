@@ -39,10 +39,12 @@ export class YardsService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        return [];
+        console.error('Supabase error fetching yards:', error);
+        throw new Error(`Failed to fetch yards: ${error.message}`);
       }
 
       if (!data || data.length === 0) {
+        console.warn('No yards found in database');
         return [];
       }
 

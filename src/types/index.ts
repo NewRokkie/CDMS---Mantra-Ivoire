@@ -246,6 +246,10 @@ export interface Container {
   bookingReference?: string;
   sealNumber?: string;
   temperatureSetting?: number;
+  // Soft delete fields
+  isDeleted?: boolean; // Soft delete flag
+  deletedAt?: Date; // When container was deleted
+  deletedBy?: string; // User ID who deleted the container
 }
 
 export interface BookinReferenceContainer {

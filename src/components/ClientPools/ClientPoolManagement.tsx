@@ -11,6 +11,8 @@ import { ClientPoolViewModal } from './ClientPoolViewModal';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { handleError } from '../../services/errorHandling';
+import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
 
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
@@ -28,6 +30,8 @@ export const ClientPoolManagement: React.FC = () => {
   const [realYardData, setRealYardData] = useState<any>(null);
   const { user } = useAuth();
   const { currentYard } = useYard();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const canManageClientPools = async () => {
     if (!user) return false;
 
@@ -219,11 +223,11 @@ export const ClientPoolManagement: React.FC = () => {
         setShowStackDetails(true);
         setAssignedStacksData(prev => new Map(prev.set(stackId, stackDetails)));
       } else {
-        alert('Stack details not found');
+        toast.warning('Stack details not found')
       }
     } catch (error) {
       handleError(error, 'ClientPoolManagement.handleViewStackDetails');
-      alert('Error loading stack details');
+      toast.error('Error loading stack details')
     }
   };
 
@@ -281,10 +285,10 @@ export const ClientPoolManagement: React.FC = () => {
       await loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
-      alert(`Client pool created successfully for ${data.clientName}!`);
+      toast.success(`Client pool created successfully for ${data.clientName}!`)
     } catch (error) {
       handleError(error, 'ClientPoolManagement.handleCreatePool');
-      alert(`Error creating client pool: ${error}`);
+      toast.error(`Error creating client pool: ${error}`)
     } finally {
       setIsProcessing(false);
     }
@@ -343,7 +347,6 @@ export const ClientPoolManagement: React.FC = () => {
           }, user.id);
         } catch (stackError) {
           handleError(stackError, `ClientPoolManagement.assignStack-${stackId}`);
-          console.error(`Failed to assign stack ${stackId}:`, stackError);
         }
       }
 
@@ -360,17 +363,16 @@ export const ClientPoolManagement: React.FC = () => {
           }
         } catch (removeError) {
           handleError(removeError, 'ClientPoolManagement.removeStackAssignments');
-          console.error('Failed to remove stack assignments:', removeError);
         }
       }
 
       await loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
-      alert(`Client pool updated successfully for ${data.clientName}!`);
+      toast.success(`Client pool updated successfully for ${data.clientName}!`)
     } catch (error) {
       handleError(error, 'ClientPoolManagement.handleUpdatePool');
-      alert(`Error updating client pool: ${error}`);
+      toast.error(`Error updating client pool: ${error}`)
     } finally {
       setIsProcessing(false);
     }
@@ -413,11 +415,11 @@ export const ClientPoolManagement: React.FC = () => {
         <button
           onClick={() => {
             if (!realYardData) {
-              alert('Loading yard data... Please wait.');
+              toast.info('Loading yard data... Please wait.')
               return;
             }
             if (!realYardData.sections || realYardData.sections.length === 0) {
-              alert('No stacks found in this yard. Please create stacks in Stack Management first.');
+              toast.warning('No stacks found in this yard. Please create stacks in Stack Management first.')
               return;
             }
             setSelectedPool(null);
@@ -615,7 +617,7 @@ export const ClientPoolManagement: React.FC = () => {
                         <button
                           onClick={() => {
                             if (!realYardData) {
-                              alert('Loading yard data... Please wait.');
+                              toast.info('Loading yard data... Please wait.')
                               return;
                             }
                             setSelectedPool(pool);
@@ -627,17 +629,24 @@ export const ClientPoolManagement: React.FC = () => {
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={async () => {
-                            if (confirm(`Are you sure you want to delete the pool for ${pool.clientName}?`)) {
-                              try {
-                                await clientPoolService.delete(pool.id);
-                                await loadClientPools();
-                                alert(`Client pool for ${pool.clientName} deleted successfully!`);
-                              } catch (error) {
-                                handleError(error, 'ClientPoolManagement.deletePool');
-                                alert(`Error deleting client pool: ${error}`);
+                          onClick={() => {
+                            confirm({
+                              title: 'Delete Client Pool',
+                              message: `Are you sure you want to delete the pool for ${pool.clientName}? This action cannot be undone.`,
+                              confirmText: 'Delete',
+                              cancelText: 'Cancel',
+                              variant: 'danger',
+                              onConfirm: async () => {
+                                try {
+                                  await clientPoolService.delete(pool.id);
+                                  await loadClientPools();
+                                  toast.success(`Client pool for ${pool.clientName} deleted successfully!`);
+                                } catch (error) {
+                                  handleError(error, 'ClientPoolManagement.deletePool');
+                                  toast.error(`Error deleting client pool: ${error}`);
+                                }
                               }
-                            }
+                            });
                           }}
                           className="text-red-600 hover:text-red-900 p-1 rounded"
                           title="Delete Pool"
@@ -710,19 +719,26 @@ export const ClientPoolManagement: React.FC = () => {
             setShowViewModal(false);
             setShowForm(true);
           }}
-          onDelete={async (pool) => {
-            if (confirm(`Are you sure you want to delete the pool for ${pool.clientName}?`)) {
-              try {
-                await clientPoolService.delete(pool.id);
-                setShowViewModal(false);
-                setSelectedPool(null);
-                await loadClientPools();
-                alert(`Client pool for ${pool.clientName} deleted successfully!`);
-              } catch (error) {
-                handleError(error, 'ClientPoolManagement.deletePoolFromModal');
-                alert(`Error deleting client pool: ${error}`);
+          onDelete={(pool) => {
+            confirm({
+              title: 'Delete Client Pool',
+              message: `Are you sure you want to delete the pool for ${pool.clientName}? This action cannot be undone.`,
+              confirmText: 'Delete',
+              cancelText: 'Cancel',
+              variant: 'danger',
+              onConfirm: async () => {
+                try {
+                  await clientPoolService.delete(pool.id);
+                  setShowViewModal(false);
+                  setSelectedPool(null);
+                  await loadClientPools();
+                  toast.success(`Client pool for ${pool.clientName} deleted successfully!`);
+                } catch (error) {
+                  handleError(error, 'ClientPoolManagement.deletePoolFromModal');
+                  toast.error(`Error deleting client pool: ${error}`);
+                }
               }
-            }
+            });
           }}
         />
       )}

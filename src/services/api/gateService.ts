@@ -336,6 +336,25 @@ export class GateService {
     }
   }
 
+  /**
+   * Checks if there's a pending operation with the same truck number
+   */
+  async checkPendingOperationByTruckNumber(vehicleNumber: string): Promise<boolean> {
+    try {
+      const { data: operations, error } = await supabase
+        .from('gate_out_operations')
+        .select('*')
+        .eq('vehicle_number', vehicleNumber.trim().toUpperCase())
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      return (operations?.length || 0) > 0;
+    } catch (error: any) {
+      console.error('Error checking pending operations by truck number:', error);
+      return false;
+    }
+  }
+
   async createPendingGateOut(data: {
     bookingReferenceId: string;
     transportCompany: string;
@@ -347,6 +366,15 @@ export class GateService {
     yardId: string;
   }): Promise<{ success: boolean; operationId?: string; error?: string }> {
     try {
+      // Check for existing pending operations with the same truck number
+      const hasPendingOperation = await this.checkPendingOperationByTruckNumber(data.vehicleNumber);
+      if (hasPendingOperation) {
+        return {
+          success: false,
+          error: `Cannot proceed: Truck ${data.vehicleNumber} has a pending operation in progress. Please complete or cancel the existing operation before proceeding with a new one.`
+        };
+      }
+
       // Get booking reference
       const bookingReference = await bookingReferenceService.getById(data.bookingReferenceId);
       if (!bookingReference) {

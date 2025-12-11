@@ -20,6 +20,8 @@ interface AuthContextType {
   user: AppUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
   hasModuleAccess: (module: keyof ModuleAccess) => boolean;
@@ -343,6 +345,59 @@ export const useAuthProvider = () => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      // First, check if user exists in our database
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id, email, active')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (userError) {
+        handleError(userError, 'useAuth.resetPassword.checkUser');
+        throw new Error('Erreur lors de la vérification de l\'utilisateur');
+      }
+
+      // If user doesn't exist, show a generic message for security
+      if (!users) {
+        throw new Error('Si cet email existe dans notre système, un lien de réinitialisation a été envoyé');
+      }
+
+      // Check if user is active
+      if (!users.active) {
+        throw new Error('Ce compte est désactivé. Veuillez contacter l\'administrateur');
+      }
+
+      // User exists and is active, send reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Échec de l\'envoi de l\'email de réinitialisation');
+      }
+    } catch (error: any) {
+      handleError(error, 'useAuth.resetPassword');
+      throw error;
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update password');
+      }
+    } catch (error: any) {
+      handleError(error, 'useAuth.updatePassword');
+      throw error;
+    }
+  };
+
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -428,6 +483,8 @@ export const useAuthProvider = () => {
     user,
     login,
     logout,
+    resetPassword,
+    updatePassword,
     isLoading,
     isAuthenticated,
     hasModuleAccess,

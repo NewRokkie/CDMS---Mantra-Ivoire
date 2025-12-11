@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  Filter,
   ChevronUp,
   ChevronDown,
   ChevronLeft,
@@ -9,18 +8,20 @@ import {
   Eye,
   X,
   Package,
-  Calendar,
   User,
   FileText,
-  MapPin,
   Clock,
   AlertTriangle
 } from 'lucide-react';
 import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { TableSkeleton } from '../Common/TableSkeleton';
+import { CardSkeleton } from '../Common/CardSkeleton';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
 
 interface ReleaseOrderTableViewProps {
   orders: BookingReference[];
+  loading?: boolean;
 }
 
 type SortField = 'id' | 'containerCount' | 'clientName' | 'status';
@@ -31,8 +32,8 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ orders }) => {
-  const { user, canViewAllData } = useAuth();
+export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ orders, loading = false }) => {
+  const { canViewAllData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState('all');
@@ -65,7 +66,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
       const matchesSearch =
         order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (order.containers && order.containers.some(c => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase())));
+        (order.containers && order.containers.some((c: any) => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase())));
 
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       const matchesClient = clientFilter === 'all' || order.clientCode === clientFilter;
@@ -172,6 +173,12 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
 
   return (
     <div className="space-y-6">
+      {/* Top stats skeletons when loading */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardSkeleton count={3} />
+        </div>
+      ) : null}
       {/* Search and Filter */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
@@ -227,7 +234,12 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          {loading ? (
+            <div className="p-6">
+              <TableSkeleton rows={5} columns={5} />
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs">
@@ -295,6 +307,7 @@ export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ or
               ))}
             </tbody>
           </table>
+          )}
         </div>
 
         {/* Empty State */}

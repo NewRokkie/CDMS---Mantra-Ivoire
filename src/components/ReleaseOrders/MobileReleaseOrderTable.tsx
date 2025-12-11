@@ -3,6 +3,8 @@ import { Calendar, Package, User, FileText, Clock, CheckCircle, AlertTriangle, C
 import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { safeToLocaleDateString } from '../../utils/dateHelpers';
+import { TableSkeleton } from '../Common/TableSkeleton';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
 
 interface MobileReleaseOrderTableProps {
   orders: BookingReference[];
@@ -10,6 +12,7 @@ interface MobileReleaseOrderTableProps {
   selectedFilter: string;
   onViewDetails: (order: BookingReference) => void;
   onCancelBooking?: (order: BookingReference) => void;
+  loading?: boolean;
 }
 
 export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = ({
@@ -17,9 +20,23 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
   searchTerm,
   selectedFilter,
   onViewDetails,
-  onCancelBooking
+  onCancelBooking,
+  loading = false
 }) => {
   const { canViewAllData } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="space-y-4 px-4 lg:px-0">
+        <div className="lg:hidden">
+          <TableSkeleton rows={4} columns={2} />
+        </div>
+        <div className="hidden lg:block">
+          <TableSkeleton rows={6} columns={6} />
+        </div>
+      </div>
+    );
+  }
 
   // Filter orders based on search and filter
   const getFilteredOrders = () => {

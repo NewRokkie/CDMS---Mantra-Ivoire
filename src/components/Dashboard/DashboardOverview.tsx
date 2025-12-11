@@ -27,7 +27,9 @@ import {
   Layers,
   RefreshCw,
   DownloadCloud,
+  Download,
 } from 'lucide-react';
+import { exportToExcel, formatDateShortForExport, formatTimeForExport } from '../../utils/excelExport';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -380,7 +382,7 @@ export const DashboardOverview: React.FC = () => {
       setIsExporting(true);
       // Choose data to export: filteredData if active, otherwise filteredContainers
       const rows = (filteredData?.containers ?? filteredContainers).map((c) => ({
-        id: c.id,
+        id: c.id ? c.id.substring(0, 8) : '', // Keep only first 8 characters of ID
         number: c.number,
         client: c.clientName,
         clientCode: c.clientCode,
@@ -389,6 +391,8 @@ export const DashboardOverview: React.FC = () => {
         status: c.status,
         location: c.location,
         gateInDate: c.gateInDate ? new Date(c.gateInDate).toISOString() : '',
+        gateOutDate: c.gateOutDate ? new Date(c.gateOutDate).toISOString() : '',
+        depot: c.yardName || currentYard?.name || '',
         damaged: c.damage && c.damage.length > 0 ? 'Yes' : 'No'
       }));
 
@@ -400,13 +404,73 @@ export const DashboardOverview: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `containers_export_${selectedDepot ?? 'all'}.csv`;
+      a.download = `containers_export_${viewMode === 'global' ? 'all_depots' : currentYard?.code || 'current'}_${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
       handleError(err, 'DashboardOverview.exportCSV');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Export Excel (filtered by view)
+  const exportExcel = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Choose data to export: filteredData if active, otherwise filteredContainers
+      const containersToExport = filteredData?.containers ?? filteredContainers;
+      
+      // Get yard name for each container
+      const dataToExport = containersToExport.map((c) => {
+        // Find yard name from availableYards
+        const yard = availableYards.find(y => y.id === c.yardId);
+        const yardName = yard?.name || c.yardName || currentYard?.name || '';
+        
+        return {
+          id: c.id ? c.id.substring(0, 8) : '', // Keep only first 8 characters of ID
+          number: c.number || '',
+          client: c.clientName || '',
+          clientCode: c.clientCode || '',
+          type: c.type || '',
+          size: c.size || '',
+          status: c.status || '',
+          location: c.location || '',
+          gateInDate: formatDateShortForExport(c.gateInDate),
+          gateInTime: formatTimeForExport(c.gateInDate),
+          gateOutDate: formatDateShortForExport(c.gateOutDate),
+          gateOutTime: formatTimeForExport(c.gateOutDate),
+          depot: yardName,
+          damaged: c.damage && c.damage.length > 0 ? 'Oui' : 'Non'
+        };
+      });
+
+      exportToExcel({
+        filename: `containers_export_${viewMode === 'global' ? 'all_depots' : currentYard?.code || 'current'}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        sheetName: 'Containers',
+        columns: [
+          { header: 'ID', key: 'id', width: 12 },
+          { header: 'Numéro Conteneur', key: 'number', width: 20 },
+          { header: 'Client', key: 'client', width: 25 },
+          { header: 'Code Client', key: 'clientCode', width: 15 },
+          { header: 'Type', key: 'type', width: 15 },
+          { header: 'Taille', key: 'size', width: 12 },
+          { header: 'Statut', key: 'status', width: 15 },
+          { header: 'Emplacement', key: 'location', width: 20 },
+          { header: 'Date Gate In', key: 'gateInDate', width: 15 },
+          { header: 'Heure Gate In', key: 'gateInTime', width: 15 },
+          { header: 'Date Gate Out', key: 'gateOutDate', width: 15 },
+          { header: 'Heure Gate Out', key: 'gateOutTime', width: 15 },
+          { header: 'Dépôt', key: 'depot', width: 20 },
+          { header: 'Endommagé', key: 'damaged', width: 12 }
+        ],
+        data: dataToExport
+      });
+    } catch (err) {
+      handleError(err, 'DashboardOverview.exportExcel');
     } finally {
       setIsExporting(false);
     }
@@ -536,6 +600,15 @@ export const DashboardOverview: React.FC = () => {
             >
               {isExporting ? <Spinner className="w-4 h-4" /> : <DownloadCloud className="h-4 w-4 text-gray-600" />}
               <span className="hidden lg:inline text-sm text-gray-700">Export CSV</span>
+            </button>
+
+            <button
+              onClick={exportExcel}
+              className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 hover:shadow-sm"
+              title="Export filtered data to Excel"
+            >
+              {isExporting ? <Spinner className="w-4 h-4" /> : <Download className="h-4 w-4" />}
+              <span className="hidden lg:inline text-sm">Export Excel</span>
             </button>
           </div>
         </header>

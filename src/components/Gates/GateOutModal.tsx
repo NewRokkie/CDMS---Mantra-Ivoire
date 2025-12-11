@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, CheckCircle, AlertTriangle, FileText, Calculator } from 'lucide-react';
 import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
 import { useAuth } from '../../hooks/useAuth';
 import { GateOutModalProps, GateOutFormData } from './types';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
+import { gateService } from '../../services/api';
 
 export const GateOutModal: React.FC<GateOutModalProps> = ({
   showModal,
@@ -24,6 +25,23 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     notes: ''
   });
 
+  const [vehicleNumberError, setVehicleNumberError] = useState<string>('');
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!showModal) {
+      setCurrentStep(1);
+      setFormData({
+        selectedReleaseOrderId: '',
+        driverName: '',
+        vehicleNumber: '',
+        transportCompany: '',
+        notes: ''
+      });
+      setVehicleNumberError('');
+    }
+  }, [showModal]);
+
   const selectedBooking = (availableBookings || []).find(
     order => order.id === formData.selectedReleaseOrderId
   );
@@ -33,6 +51,11 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
       ...prev,
       [field]: value
     }));
+
+    // Clear vehicle number error when user changes it
+    if (field === 'vehicleNumber') {
+      setVehicleNumberError('');
+    }
   };
 
 
@@ -47,6 +70,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         vehicleNumber: '',
         transportCompany: ''
       }));
+      setVehicleNumberError('');
       return;
     }
 
@@ -60,6 +84,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         vehicleNumber: '',
         transportCompany: ''
       }));
+      setVehicleNumberError('');
     }
   };
 
@@ -69,7 +94,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
         return formData.selectedReleaseOrderId !== '';
       case 2:
         return formData.driverName !== '' && formData.vehicleNumber !== '' &&
-               formData.transportCompany !== '';
+               formData.transportCompany !== '' && !vehicleNumberError;
       default:
         return true;
     }
@@ -82,6 +107,13 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
 
     if (!selectedBooking) {
       throw new Error('Please select a booking.');
+    }
+
+    // Check for pending operations with the same truck number
+    const hasPendingOperation = await gateService.checkPendingOperationByTruckNumber(formData.vehicleNumber);
+    if (hasPendingOperation) {
+      setVehicleNumberError(`Truck ${formData.vehicleNumber} has a pending operation in progress. Please complete or cancel the existing operation before proceeding with a new one.`);
+      return;
     }
 
     const submitData = {
@@ -247,9 +279,15 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                     required
                     value={formData.vehicleNumber}
                     onChange={(e) => handleInputChange('vehicleNumber', e.target.value)}
-                    className="form-input w-full"
+                    className={`form-input w-full ${vehicleNumberError ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' : ''}`}
                     placeholder="License plate number"
                   />
+                  {vehicleNumberError && (
+                    <div className="mt-2 flex items-start p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-800">{vehicleNumberError}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">

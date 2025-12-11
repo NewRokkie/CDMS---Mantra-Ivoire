@@ -25,6 +25,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   handlePrevStep,
   handleInputChange,
   handleContainerSizeChange,
+  handleHighCubeChange,
   handleQuantityChange,
   handleStatusChange,
   handleClientChange,
@@ -75,6 +76,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
         isProcessing={isProcessing}
         handleInputChange={handleInputChange}
         handleContainerSizeChange={handleContainerSizeChange}
+        handleHighCubeChange={handleHighCubeChange}
         handleQuantityChange={handleQuantityChange}
         handleStatusChange={handleStatusChange}
         handleClientChange={handleClientChange}
@@ -96,6 +98,7 @@ interface GateInFormContentProps {
   isProcessing: boolean;
   handleInputChange: (field: any, value: any) => void;
   handleContainerSizeChange: (size: any) => void;
+  handleHighCubeChange: (isHighCube: boolean) => void;
   handleQuantityChange: (quantity: any) => void;
   handleStatusChange: (isFull: boolean) => void;
   handleClientChange: (clientId: string, clientName: string, clientCode: string) => void;
@@ -112,6 +115,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
   validationWarnings,
   handleInputChange,
   handleContainerSizeChange,
+  handleHighCubeChange,
   handleQuantityChange,
   handleStatusChange,
   handleClientChange
@@ -184,8 +188,8 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                   </h4>
 
                   <div className="depot-step-spacing">
-                    {/* Container Size and Quantity */}
-                    <div className="depot-form-grid">
+                    {/* Container Size, High Cube, and Container Type - Three Part Selection */}
+                    <div className="depot-form-grid md:grid-cols-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Container Size *
@@ -207,29 +211,52 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       </div>
 
                       <div>
-                        <ContainerTypeSelect
-                          value={formData.containerType}
-                          onChange={(value: string) => handleInputChange('containerType', value)}
-                          containerSize={formData.containerSize}
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Is High Cube ?
+                        </label>
+                        <Switch
+                          checked={formData.isHighCube}
+                          onChange={handleHighCubeChange}
+                          label=""
+                          leftLabel="No"
+                          rightLabel="Yes"
+                          disabled={formData.containerSize === '20ft'}
                         />
+                        {formData.containerSize === '20ft' && (
+                          <p className="text-xs text-gray-500 mt-2">Only available for 40ft</p>
+                        )}
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Quantity *
-                        </label>
-                        <Switch
-                          checked={formData.containerQuantity === 2}
-                          onChange={(isDouble) => handleQuantityChange(isDouble ? 2 : 1)}
-                          label=""
-                          leftLabel="Single (1)"
-                          rightLabel="Double (2)"
-                          disabled={formData.containerSize === '40ft'}
+                        <ContainerTypeSelect
+                          value={formData.containerType}
+                          selectedIso={formData.containerIsoCode}
+                          onChange={(value: string, iso?: string) => {
+                            handleInputChange('containerType', value);
+                            handleInputChange('containerIsoCode', iso || '');
+                          }}
+                          containerSize={formData.containerSize}
+                          isHighCube={formData.isHighCube}
                         />
-                        {formData.containerSize === '40ft' && (
-                          <p className="text-xs text-gray-500 mt-2">40ft containers limited to single quantity</p>
-                        )}
                       </div>
+                    </div>
+
+                    {/* Quantity - Second Row */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Quantity *
+                      </label>
+                      <Switch
+                        checked={formData.containerQuantity === 2}
+                        onChange={(isDouble) => handleQuantityChange(isDouble ? 2 : 1)}
+                        label=""
+                        leftLabel="Single (1)"
+                        rightLabel="Double (2)"
+                        disabled={formData.containerSize === '40ft'}
+                      />
+                      {formData.containerSize === '40ft' && (
+                        <p className="text-xs text-gray-500 mt-2">40ft containers limited to single quantity</p>
+                      )}
                     </div>
 
                     {/* Container Status and Classification - Side by Side on Desktop */}
