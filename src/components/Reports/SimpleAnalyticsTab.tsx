@@ -41,8 +41,14 @@ export const SimpleAnalyticsTab: React.FC<SimpleAnalyticsTabProps> = ({
     lastUpdated: null
   });
 
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
+  const [autoRefresh, setAutoRefresh] = useState(() => {
+    const saved = localStorage.getItem('reports-analytics-auto-refresh');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [refreshInterval, setRefreshInterval] = useState(() => {
+    const saved = localStorage.getItem('reports-analytics-refresh-interval');
+    return saved ? parseInt(saved) : 30000; // 30 seconds default
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     dateRange: { startDate: null, endDate: null },
@@ -171,6 +177,15 @@ export const SimpleAnalyticsTab: React.FC<SimpleAnalyticsTabProps> = ({
 
     loadFilterOptions();
   }, []);
+
+  // Save auto-refresh settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('reports-analytics-auto-refresh', JSON.stringify(autoRefresh));
+  }, [autoRefresh]);
+
+  useEffect(() => {
+    localStorage.setItem('reports-analytics-refresh-interval', refreshInterval.toString());
+  }, [refreshInterval]);
 
   // Auto-refresh functionality
   useEffect(() => {

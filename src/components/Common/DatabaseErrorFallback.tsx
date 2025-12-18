@@ -211,7 +211,7 @@ export const UserManagementErrorFallback: React.FC<{
       error={error}
       onRetry={onRetry}
       context={`User Management - ${operationMessages[operation]}`}
-      showTechnicalDetails={process.env.NODE_ENV === 'development'}
+      showTechnicalDetails={import.meta.env.DEV}
     />
   );
 };
@@ -265,7 +265,7 @@ export const MigrationErrorFallback: React.FC<{
           </button>
         )}
 
-        {error && process.env.NODE_ENV === 'development' && (
+        {error && import.meta.env.DEV && (
           <details className="mt-6 text-left">
             <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
               Technical Details

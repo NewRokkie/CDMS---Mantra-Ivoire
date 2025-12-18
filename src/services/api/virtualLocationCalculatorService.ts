@@ -14,6 +14,7 @@ import { supabase } from './supabaseClient';
 import { ErrorHandler, GateInError } from '../errorHandling';
 import { Location, VirtualStackPair } from '../../types/location';
 import { locationIdGeneratorService } from './locationIdGeneratorService';
+import { logger } from '../../utils/logger';
 
 export interface VirtualLocationRequest {
   yardId: string;
@@ -77,6 +78,10 @@ export class VirtualLocationCalculatorService {
    * Create or get virtual stack pair record
    * Requirements: 3.4 - Methods for creating and managing virtual location records
    * 
+   * Note: This method normalizes stack IDs by sorting them to ensure consistent
+   * ordering and prevent duplicate pairs caused by different stack ID orderings
+   * (e.g., stack1=A,stack2=B vs stack1=B,stack2=A representing the same logical pair)
+   * 
    * @param request - Virtual location request
    * @returns Virtual stack pair record
    */
@@ -87,41 +92,170 @@ export class VirtualLocationCalculatorService {
         request.stack2Number
       );
 
-      // Check if virtual stack pair already exists
-      const { data: existingPair, error: checkError } = await supabase
-        .from('virtual_stack_pairs')
-        .select('*')
-        .eq('yard_id', request.yardId)
-        .eq('stack1_id', request.stack1Id)
-        .eq('stack2_id', request.stack2Id)
-        .eq('is_active', true)
-        .maybeSingle();
+      // Normalize stack IDs to ensure consistent ordering
+      const [normalizedStack1Id, normalizedStack2Id] = [request.stack1Id, request.stack2Id].sort();
 
-      if (checkError) throw checkError;
+      logger.info('Debug', 'VirtualLocationCalculatorService', 
+        `🔍 Checking for existing pair: yard=${request.yardId}, original=(${request.stack1Id}, ${request.stack2Id}), normalized=(${normalizedStack1Id}, ${normalizedStack2Id})`);
+
+      // Use upsert approach to handle race conditions
+      // First, try to find existing pair with both possible orderings
+      const existingPair = await this.findExistingVirtualStackPair(
+        request.yardId, 
+        normalizedStack1Id, 
+        normalizedStack2Id
+      );
 
       if (existingPair) {
-        return this.mapToVirtualStackPair(existingPair);
+        logger.info('Debug', 'VirtualLocationCalculatorService', 
+          `✅ Found existing pair: ${existingPair.id}`);
+        return existingPair;
       }
 
-      // Create new virtual stack pair
-      const { data: newPair, error: createError } = await supabase
-        .from('virtual_stack_pairs')
-        .insert({
-          yard_id: request.yardId,
-          stack1_id: request.stack1Id,
-          stack2_id: request.stack2Id,
-          virtual_stack_number: virtualStackNumber,
-          is_active: true
-        })
-        .select()
-        .single();
+      // Use PostgreSQL's upsert to handle concurrent inserts
+      logger.info('Debug', 'VirtualLocationCalculatorService', 
+        `➕ Creating new pair with upsert: yard=${request.yardId}, stack1=${normalizedStack1Id}, stack2=${normalizedStack2Id}, virtualNum=${virtualStackNumber}`);
 
-      if (createError) throw createError;
+      try {
+        // Use raw SQL with ON CONFLICT to handle race conditions
+        const { data: newPair, error: createError } = await supabase.rpc('upsert_virtual_stack_pair', {
+          p_yard_id: request.yardId,
+          p_stack1_id: normalizedStack1Id,
+          p_stack2_id: normalizedStack2Id,
+          p_virtual_stack_number: virtualStackNumber
+        });
 
-      return this.mapToVirtualStackPair(newPair);
+        if (createError) {
+          logger.error('Error', 'VirtualLocationCalculatorService', 
+            `❌ Failed to upsert pair: ${createError.message}`);
+          throw createError;
+        }
+
+        if (!newPair || newPair.length === 0) {
+          throw new Error('Upsert returned no data');
+        }
+
+        return this.mapToVirtualStackPair(newPair[0]);
+      } catch (error) {
+        // Fallback: if upsert function doesn't exist, try regular insert with error handling
+        logger.info('Debug', 'VirtualLocationCalculatorService', 
+          `⚠️ Upsert function not available, falling back to insert with error handling`);
+        
+        const { data: newPair, error: createError } = await supabase
+          .from('virtual_stack_pairs')
+          .insert({
+            yard_id: request.yardId,
+            stack1_id: normalizedStack1Id,
+            stack2_id: normalizedStack2Id,
+            virtual_stack_number: virtualStackNumber,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          // If it's a duplicate key error, try to find the existing pair
+          if (createError.code === '23505' || createError.message.includes('unique constraint')) {
+            logger.info('Debug', 'VirtualLocationCalculatorService', 
+              `🔄 Duplicate detected, searching for existing pair`);
+            
+            // Add a small delay to ensure the conflicting record is committed
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const existingAfterError = await this.findExistingVirtualStackPair(
+              request.yardId, 
+              normalizedStack1Id, 
+              normalizedStack2Id
+            );
+            
+            if (existingAfterError) {
+              logger.info('Debug', 'VirtualLocationCalculatorService', 
+                `✅ Found existing pair after conflict: ${existingAfterError.id}`);
+              return existingAfterError;
+            }
+          }
+          
+          logger.error('Error', 'VirtualLocationCalculatorService', 
+            `❌ Failed to create pair: ${createError.message}`);
+          throw createError;
+        }
+
+        return this.mapToVirtualStackPair(newPair);
+      }
     } catch (error) {
       throw ErrorHandler.createGateInError(error);
     }
+  }
+
+  /**
+   * Find existing virtual stack pair with both possible orderings
+   * @private
+   */
+  private async findExistingVirtualStackPair(
+    yardId: string, 
+    normalizedStack1Id: string, 
+    normalizedStack2Id: string
+  ): Promise<VirtualStackPair | null> {
+    logger.info('Debug', 'VirtualLocationCalculatorService', 
+      `🔍 Searching for existing pair: yard=${yardId}, normalized=(${normalizedStack1Id}, ${normalizedStack2Id})`);
+
+    // Get all active pairs for this yard and filter in memory
+    // This is more reliable than complex Supabase queries
+    const { data: allPairs, error } = await supabase
+      .from('virtual_stack_pairs')
+      .select('*')
+      .eq('yard_id', yardId)
+      .eq('is_active', true);
+
+    if (error) {
+      logger.error('Error', 'VirtualLocationCalculatorService', 
+        `❌ Error searching for pairs: ${error.message}`);
+      throw error;
+    }
+
+    if (!allPairs || allPairs.length === 0) {
+      logger.info('Debug', 'VirtualLocationCalculatorService', 
+        `❌ No active pairs found for yard ${yardId}`);
+      return null;
+    }
+
+    // Log all existing pairs for debugging
+    logger.info('Debug', 'VirtualLocationCalculatorService', 
+      `📋 Found ${allPairs.length} active pairs in yard:`);
+    allPairs.forEach((pair, index) => {
+      logger.info('Debug', 'VirtualLocationCalculatorService', 
+        `   Pair ${index + 1}: (${pair.stack1_id}, ${pair.stack2_id}) - Virtual Stack: ${pair.virtual_stack_number}`);
+    });
+
+    // Find matching pair by checking both possible orderings
+    const matchingPair = allPairs.find(pair => {
+      const pairStack1 = pair.stack1_id;
+      const pairStack2 = pair.stack2_id;
+      
+      const match = (
+        (pairStack1 === normalizedStack1Id && pairStack2 === normalizedStack2Id) ||
+        (pairStack1 === normalizedStack2Id && pairStack2 === normalizedStack1Id)
+      );
+      
+      if (match) {
+        logger.info('Debug', 'VirtualLocationCalculatorService', 
+          `🎯 Match found! Pair (${pairStack1}, ${pairStack2}) matches normalized (${normalizedStack1Id}, ${normalizedStack2Id})`);
+      }
+      
+      return match;
+    });
+
+    if (matchingPair) {
+      logger.info('Debug', 'VirtualLocationCalculatorService', 
+        `✅ Found matching pair: ${matchingPair.id} with stacks (${matchingPair.stack1_id}, ${matchingPair.stack2_id})`);
+      return this.mapToVirtualStackPair(matchingPair);
+    }
+
+    logger.info('Debug', 'VirtualLocationCalculatorService', 
+      `❌ No matching pair found among ${allPairs.length} active pairs`);
+    logger.info('Debug', 'VirtualLocationCalculatorService', 
+      `   Looking for: (${normalizedStack1Id}, ${normalizedStack2Id})`);
+    return null;
   }
 
   /**
@@ -380,6 +514,9 @@ export class VirtualLocationCalculatorService {
   /**
    * Get virtual stack pair by stack IDs
    * 
+   * Note: This method normalizes stack IDs by sorting them to handle both
+   * possible orderings (stack1,stack2) and (stack2,stack1) for the same logical pair
+   * 
    * @param yardId - Yard ID
    * @param stack1Id - First stack ID
    * @param stack2Id - Second stack ID
@@ -391,17 +528,10 @@ export class VirtualLocationCalculatorService {
     stack2Id: string
   ): Promise<VirtualStackPair | null> {
     try {
-      const { data, error } = await supabase
-        .from('virtual_stack_pairs')
-        .select('*')
-        .eq('yard_id', yardId)
-        .eq('stack1_id', stack1Id)
-        .eq('stack2_id', stack2Id)
-        .eq('is_active', true)
-        .maybeSingle();
+      // Normalize stack IDs to ensure consistent ordering
+      const [normalizedStack1Id, normalizedStack2Id] = [stack1Id, stack2Id].sort();
 
-      if (error) throw error;
-      return data ? this.mapToVirtualStackPair(data) : null;
+      return await this.findExistingVirtualStackPair(yardId, normalizedStack1Id, normalizedStack2Id);
     } catch (error) {
       throw ErrorHandler.createGateInError(error);
     }
@@ -513,7 +643,9 @@ export class VirtualLocationCalculatorService {
       isVirtual: data.is_virtual,
       virtualStackPairId: data.virtual_stack_pair_id,
       isOccupied: data.is_occupied,
+      available: !data.is_occupied && data.is_active,
       containerId: data.container_id,
+      containerNumber: data.container_number,
       containerSize: data.container_size,
       clientPoolId: data.client_pool_id,
       isActive: data.is_active,

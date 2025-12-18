@@ -1,0 +1,30 @@
+<n0:SAP_CODECO_REPORT_MT xmlns:n0='urn:olam.com:IVC:EDIFACT:ONE' xmlns:prx='urn:sap.com:proxy:GRP:/1SAI/TASC3DF160D1FCBB8D1B039:740' xmlns:soap-env='http://schemas.xmlsoap.org/soap/envelope/'>
+  <Records>
+    <Header>
+      <Company_Code>CIABJ31</Company_Code>
+      <Plant>4191</Plant>
+      <Customer>0001052069</Customer>
+    </Header>
+    <Item>
+      <Weighbridge_ID>244191001345</Weighbridge_ID>
+      <Weighbridge_ID_SNO>00001</Weighbridge_ID_SNO>
+      <Transporter>PROPRE MOYEN</Transporter>
+      <Container_Number>PCIU9507070</Container_Number>
+      <Container_Size>40</Container_Size>
+      <Design>003</Design>
+      <Type>02</Type>
+      <Color>#312682</Color>
+      <Clean_Type>001</Clean_Type>
+      <Status>01</Status>
+      <Device_Number>TD2019031200</Device_Number>
+      <Vehicle_Number>028-AA-01</Vehicle_Number>
+      <Created_Date>20240425</Created_Date>
+      <Created_Time>040011</Created_Time>
+      <Created_By>HCIHABIBS</Created_By>
+      <Changed_Date>20240425</Changed_Date>
+      <Changed_Time>040011</Changed_Time>
+      <Changed_By>HCIHABIBS</Changed_By>
+      <Num_Of_Entries>1</Num_Of_Entries>
+    </Item>
+  </Records>
+</n0:SAP_CODECO_REPORT_MT>

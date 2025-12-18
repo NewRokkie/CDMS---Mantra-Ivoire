@@ -21,7 +21,7 @@ interface ValidationResult {
 
 export const AccessibilityValidator: React.FC<AccessibilityValidatorProps> = ({
   containerRef,
-  enabled = process.env.NODE_ENV === 'development',
+  enabled = import.meta.env.DEV,
   showInProduction = false
 }) => {
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);

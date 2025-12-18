@@ -244,7 +244,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Technical Details (Development/Debug Mode) */}
-            {(this.props.showDetails || process.env.NODE_ENV === 'development') && error && (
+            {(this.props.showDetails || import.meta.env.DEV) && error && (
               <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm">
                 <div className="p-4 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center">

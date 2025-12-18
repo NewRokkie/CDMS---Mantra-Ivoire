@@ -31,16 +31,46 @@ class Config:
     # Ensure output directory exists
     Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
-    # SFTP Configuration
-    SFTP_HOST = os.getenv('SFTP_HOST')
-    SFTP_PORT = int(os.getenv('SFTP_PORT', '22'))
-    SFTP_USER = os.getenv('SFTP_USER')
-    SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
-    SFTP_REMOTE_DIR = os.getenv('SFTP_REMOTE_DIR', '/')
+    # File Transfer Configuration (supports both FTP and SFTP)
+    TRANSFER_HOST = os.getenv('TRANSFER_HOST') or os.getenv('SFTP_HOST')  # Backward compatibility
+    TRANSFER_PORT = int(os.getenv('TRANSFER_PORT', os.getenv('SFTP_PORT', '22')))
+    TRANSFER_USER = os.getenv('TRANSFER_USER') or os.getenv('SFTP_USER')
+    TRANSFER_PASSWORD = os.getenv('TRANSFER_PASSWORD') or os.getenv('SFTP_PASSWORD')
+    TRANSFER_REMOTE_DIR = os.getenv('TRANSFER_REMOTE_DIR', os.getenv('SFTP_REMOTE_DIR', '/'))
+    TRANSFER_PROTOCOL = os.getenv('TRANSFER_PROTOCOL', 'auto')  # 'ftp', 'sftp', or 'auto'
 
-    # SFTP Retry configuration
-    SFTP_MAX_RETRIES = int(os.getenv('SFTP_MAX_RETRIES', '3'))
-    SFTP_RETRY_DELAY = int(os.getenv('SFTP_RETRY_DELAY', '1'))
+    # Transfer Retry configuration
+    TRANSFER_MAX_RETRIES = int(os.getenv('TRANSFER_MAX_RETRIES', os.getenv('SFTP_MAX_RETRIES', '3')))
+    TRANSFER_RETRY_DELAY = int(os.getenv('TRANSFER_RETRY_DELAY', os.getenv('SFTP_RETRY_DELAY', '1')))
+
+    # Legacy SFTP properties for backward compatibility
+    @property
+    def SFTP_HOST(self):
+        return self.TRANSFER_HOST
+    
+    @property
+    def SFTP_PORT(self):
+        return self.TRANSFER_PORT
+    
+    @property
+    def SFTP_USER(self):
+        return self.TRANSFER_USER
+    
+    @property
+    def SFTP_PASSWORD(self):
+        return self.TRANSFER_PASSWORD
+    
+    @property
+    def SFTP_REMOTE_DIR(self):
+        return self.TRANSFER_REMOTE_DIR
+    
+    @property
+    def SFTP_MAX_RETRIES(self):
+        return self.TRANSFER_MAX_RETRIES
+    
+    @property
+    def SFTP_RETRY_DELAY(self):
+        return self.TRANSFER_RETRY_DELAY
 
 
 class DevelopmentConfig(Config):

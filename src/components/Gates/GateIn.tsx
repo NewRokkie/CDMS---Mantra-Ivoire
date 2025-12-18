@@ -602,7 +602,57 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
       }
 
-      // 5. Update local state
+      // 5. Process EDI transmission after successful container assignment
+      let ediResult = null;
+      try {
+        // Import EDI management service
+        const { ediManagementService } = await import('../../services/edi/ediManagement');
+        
+        // Prepare EDI container data
+        const ediContainerData = {
+          containerNumber: operation.containerNumber,
+          size: operation.containerSize as '20ft' | '40ft' | '45ft',
+          type: (operation.containerType || 'dry') as 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top',
+          clientName: operation.clientName,
+          clientCode: operation.clientCode,
+          transporter: operation.transportCompany || 'Unknown',
+          vehicleNumber: operation.truckNumber || 'Unknown',
+          userName: user?.name || 'System',
+          containerLoadStatus: (operation.fullEmpty || operation.status || 'FULL') as 'FULL' | 'EMPTY',
+          timestamp: new Date(),
+          location: locationData.assignedLocation,
+          yardId: currentYard?.id
+        };
+
+        // Process EDI transmission
+        ediResult = await ediManagementService.processGateIn(ediContainerData);
+        
+        if (ediResult) {
+          // Update gate_in_operation with EDI transmission info
+          await supabase
+            .from('gate_in_operations')
+            .update({
+              edi_transmitted: true,
+              edi_transmission_date: new Date().toISOString(),
+              edi_log_id: ediResult.id
+            })
+            .eq('id', operation.id);
+        }
+      } catch (ediError) {
+        // EDI transmission failed, but don't fail the entire operation
+        console.error('EDI transmission failed:', ediError);
+        
+        // Update gate_in_operation to indicate EDI failure
+        await supabase
+          .from('gate_in_operations')
+          .update({
+            edi_transmitted: false,
+            edi_error_message: ediError instanceof Error ? ediError.message : 'EDI transmission failed'
+          })
+          .eq('id', operation.id);
+      }
+
+      // 6. Update local state
       setGateInOperations(prev => prev.map(op =>
         op.id === operation.id
           ? {
@@ -610,12 +660,14 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               containerId: createdContainers?.[0]?.id,
               assignedLocation: locationData.assignedLocation,
               completedAt: new Date(),
-              status: 'completed'
+              status: 'completed',
+              ediTransmitted: ediResult ? true : false,
+              ediLogId: ediResult?.id
             }
           : op
       ));
 
-      // 6. Refresh containers list (non-blocking)
+      // 7. Refresh containers list (non-blocking)
       try {
         const updatedContainers = await containerService.getAll();
         setContainers(updatedContainers);
@@ -623,8 +675,11 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         logger.warn('Avertissement', 'ComponentName', refreshError);
       }
 
+      // 8. Show success message with EDI status
       const damageStatus = locationData.damageAssessment?.hasDamage ? 'with damage reported' : 'in good condition';
-      toast.success(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation} (${damageStatus})`);
+      const ediStatus = ediResult ? '✓ EDI transmitted' : '⚠ EDI transmission failed';
+      
+      toast.success(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation} (${damageStatus}) - ${ediStatus}`);
       setActiveView('overview');
     } catch (error) {
       handleError(error, 'GateIn.handleLocationValidation');

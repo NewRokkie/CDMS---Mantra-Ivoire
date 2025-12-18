@@ -5,9 +5,9 @@ LOG_LEVEL=INFO
 
 # SFTP Configuration
 SFTP_HOST=127.0.0.1
-SFTP_PORT=22
-SFTP_USER=sftpuser_magloire
-SFTP_PASSWORD=4pD^LYDteaF!YHnr
+SFTP_PORT=21
+SFTP_USER=habib.sayegh
+SFTP_PASSWORD=root
 SFTP_REMOTE_DIR=/C/ProgramData
 
 # Output Directory

@@ -4,6 +4,7 @@ Creates and configures the Flask app with all blueprints and error handlers.
 """
 
 from flask import Flask, jsonify
+from flask_cors import CORS
 from flasgger import Swagger
 import logging
 from config import config
@@ -32,6 +33,9 @@ def create_app(config_obj=None):
     """
 
     app = Flask(__name__)
+
+    # Enable CORS for all routes
+    CORS(app, origins=['http://localhost:5173', 'http://localhost:5174'])
 
     # Load configuration
     if config_obj is None:

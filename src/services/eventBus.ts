@@ -21,6 +21,11 @@ export type EventType =
   | 'EDI_TRANSMISSION_REQUESTED'
   | 'EDI_TRANSMISSION_COMPLETED'
   | 'EDI_TRANSMISSION_FAILED'
+  | 'EDI_GATE_IN_SUCCESS'
+  | 'EDI_GATE_IN_FAILED'
+  | 'EDI_GATE_OUT_SUCCESS'
+  | 'EDI_GATE_OUT_FAILED'
+  | 'EDI_RETRY_SUCCESS'
   | 'DAMAGE_ASSESSMENT_RECORDED'
   | 'DAMAGE_NOTIFICATION_REQUIRED';
 
@@ -43,6 +48,11 @@ export interface EventPayload {
   EDI_TRANSMISSION_REQUESTED: { entityId: string; entityType: string; messageType: string };
   EDI_TRANSMISSION_COMPLETED: { entityId: string; transmissionId: string };
   EDI_TRANSMISSION_FAILED: { entityId: string; error: string };
+  EDI_GATE_IN_SUCCESS: { containerNumber: string; containerId: string; ediLogId: string; uploadedToSftp: boolean };
+  EDI_GATE_IN_FAILED: { containerNumber: string; containerId: string; error: string };
+  EDI_GATE_OUT_SUCCESS: { containerNumber: string; containerId: string; ediLogId: string; uploadedToSftp: boolean };
+  EDI_GATE_OUT_FAILED: { containerId: string; error: string };
+  EDI_RETRY_SUCCESS: { logId: string; containerNumber: string; operation: string };
   DAMAGE_ASSESSMENT_RECORDED: { 
     operationId: string; 
     containerId?: string; 

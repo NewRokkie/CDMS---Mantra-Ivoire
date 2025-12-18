@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Package, User, Truck, MapPin, AlertTriangle, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { Calendar, Package, User, Truck, MapPin, AlertTriangle, CheckCircle, Clock, ChevronRight, Wifi, WifiOff, XCircle } from 'lucide-react';
 import { LoadingSpinner } from '../../Common/LoadingSpinner';
 import { TableSkeleton } from '../../Common/TableSkeleton';
 
@@ -23,6 +23,9 @@ interface Operation {
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   classification?: 'divers' | 'alimentaire';
   completedAt?: Date;
+  ediTransmitted?: boolean;
+  ediLogId?: string;
+  ediErrorMessage?: string;
 }
 
 interface MobileOperationsTableProps {
@@ -93,6 +96,36 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
     );
   };
 
+  const getEDIStatusBadge = (operation: Operation) => {
+    // Only show EDI status for completed operations
+    if (operation.status !== 'completed') {
+      return null;
+    }
+
+    if (operation.ediTransmitted === true) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+          <Wifi className="h-3 w-3 mr-1" />
+          EDI Sent
+        </span>
+      );
+    } else if (operation.ediTransmitted === false) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 border border-red-200">
+          <XCircle className="h-3 w-3 mr-1" />
+          EDI Failed
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+          <WifiOff className="h-3 w-3 mr-1" />
+          No EDI
+        </span>
+      );
+    }
+  };
+
   const formatDate = (date?: Date) => {
     if (!date) return 'N/A';
     return date.toLocaleDateString('en-US', {
@@ -137,6 +170,9 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Location
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  EDI Status
                 </th>
               </tr>
             </thead>
@@ -204,6 +240,9 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                       <span className="text-gray-400 italic">Pending</span>
                     )}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getEDIStatusBadge(operation)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -242,6 +281,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
                           Alimentaire
                         </span>
                       )}
+                      {getEDIStatusBadge(operation)}
                     </div>
                   </div>
                   <div className="text-right ml-3 flex-shrink-0">

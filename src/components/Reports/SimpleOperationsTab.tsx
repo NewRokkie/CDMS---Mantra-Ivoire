@@ -198,8 +198,14 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
     }
   };
 
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
+  const [autoRefresh, setAutoRefresh] = useState(() => {
+    const saved = localStorage.getItem('reports-operations-auto-refresh');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [refreshInterval, setRefreshInterval] = useState(() => {
+    const saved = localStorage.getItem('reports-operations-refresh-interval');
+    return saved ? parseInt(saved) : 30000; // 30 seconds default
+  });
 
   // Notification hooks
   const showSuccess = useSuccessNotification();
@@ -248,6 +254,15 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
   useEffect(() => {
     loadOperationsData();
   }, [viewMode, selectedDepot, activeYard?.id]);
+
+  // Save auto-refresh settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('reports-operations-auto-refresh', JSON.stringify(autoRefresh));
+  }, [autoRefresh]);
+
+  useEffect(() => {
+    localStorage.setItem('reports-operations-refresh-interval', refreshInterval.toString());
+  }, [refreshInterval]);
 
   // Auto-refresh functionality
   useEffect(() => {

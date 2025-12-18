@@ -9,7 +9,7 @@ echo.
 REM Check if virtual environment exists
 if not exist "venv" (
     echo Virtual environment not found. Creating one...
-    python -m venv venv
+    py -m venv venv
     if errorlevel 1 (
         echo Failed to create virtual environment.
         echo Make sure Python is installed and accessible.
@@ -65,6 +65,6 @@ echo ===============================================
 echo.
 
 REM Start the API
-python app.py
+py app.py
 
 pause

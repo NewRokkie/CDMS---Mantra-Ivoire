@@ -16,13 +16,15 @@ interface ReportsStatsWidgetProps {
   lastUpdated?: Date | null;
   activeFiltersCount?: number;
   autoRefreshEnabled?: boolean;
+  activeTab?: 'analytics' | 'operations';
 }
 
 export const ReportsStatsWidget: React.FC<ReportsStatsWidgetProps> = ({
   onRefreshData,
   lastUpdated,
   activeFiltersCount = 0,
-  autoRefreshEnabled = false
+  autoRefreshEnabled = false,
+  activeTab = 'analytics'
 }) => {
   const { currentYard } = useYard();
   const [stats, setStats] = useState<ReportsStats>({
@@ -52,13 +54,43 @@ export const ReportsStatsWidget: React.FC<ReportsStatsWidgetProps> = ({
     }
   }, []);
 
+  // Function to get auto-refresh status from localStorage
+  const getAutoRefreshStatus = () => {
+    const key = activeTab === 'analytics' 
+      ? 'reports-analytics-auto-refresh' 
+      : 'reports-operations-auto-refresh';
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : false;
+  };
+
   useEffect(() => {
     setStats(prev => ({
       ...prev,
       activeFilters: activeFiltersCount,
-      autoRefreshEnabled
+      autoRefreshEnabled: getAutoRefreshStatus()
     }));
-  }, [activeFiltersCount, autoRefreshEnabled]);
+  }, [activeFiltersCount, autoRefreshEnabled, activeTab]);
+
+  // Listen for localStorage changes to update auto-refresh status
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setStats(prev => ({
+        ...prev,
+        autoRefreshEnabled: getAutoRefreshStatus()
+      }));
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also check periodically for changes within the same tab
+    const interval = setInterval(handleStorageChange, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     if (lastUpdated) {

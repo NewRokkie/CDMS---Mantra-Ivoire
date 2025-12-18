@@ -709,6 +709,14 @@ export class StackService {
         });
       }
     } catch (error) {
+      // Temporary workaround: if it's a virtual stack pair constraint error, log it but don't fail the operation
+      if (error instanceof Error && error.message.includes('unique constraint "unique_stack_pair"')) {
+        logger.error('Warning', 'StackService.syncVirtualLocationsForPairing', 
+          `⚠️ Virtual location sync failed due to constraint violation, but stack update will continue: ${error.message}`);
+        // Don't throw the error - allow the stack update to succeed
+        return;
+      }
+      
       handleError(error, 'StackService.syncVirtualLocationsForPairing');
       throw error;
     }
