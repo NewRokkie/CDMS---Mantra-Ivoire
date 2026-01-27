@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle, FileText } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileText, Shield } from 'lucide-react';
 import { DamageAssessment } from '../types';
 import { FormModal } from '../../Common/Modal/FormModal';
 
@@ -12,12 +12,14 @@ export interface DamageAssessmentModalProps {
 }
 
 const damageTypeOptions = [
-  { value: 'structural', label: 'Structural Damage' },
-  { value: 'surface', label: 'Surface Damage' },
-  { value: 'door', label: 'Door Damage' },
-  { value: 'corner', label: 'Corner Damage' },
-  { value: 'seal', label: 'Seal Damage' },
-  { value: 'other', label: 'Other' }
+  { value: 'structural', label: 'Dommage Structurel' },
+  { value: 'surface', label: 'Dommage de Surface' },
+  { value: 'door', label: 'Dommage de Porte' },
+  { value: 'corner', label: 'Dommage de Coin' },
+  { value: 'seal', label: 'Dommage de Joint' },
+  { value: 'roof', label: 'Dommage de Toit' },
+  { value: 'floor', label: 'Dommage de Plancher' },
+  { value: 'other', label: 'Autre' }
 ];
 
 export const DamageAssessmentModal: React.FC<DamageAssessmentModalProps> = ({
@@ -120,18 +122,34 @@ export const DamageAssessmentModal: React.FC<DamageAssessmentModalProps> = ({
           </div>
         </div>
 
+        {/* Buffer Zone Notice (shown only if damage is detected) */}
+        {hasDamage && (
+          <div className="bg-orange-50 rounded-xl p-4 border border-orange-200 mb-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Shield className="h-5 w-5 text-orange-600" />
+              <h4 className="font-semibold text-orange-900">Zone Tampon Automatique</h4>
+            </div>
+            <p className="text-sm text-orange-700">
+              ⚠️ <strong>Attention :</strong> Ce conteneur sera automatiquement assigné à une <strong>zone tampon</strong> 
+              car il présente des dommages. Les zones tampons sont des emplacements virtuels temporaires 
+              qui n'existent pas physiquement dans le dépôt et ne font pas partie des stacks virtuels créés 
+              par la fusion de stacks physiques.
+            </p>
+          </div>
+        )}
+
         {/* Damage Details (shown only if damage is detected) */}
         {hasDamage && (
           <div className="bg-red-50 rounded-xl p-4 border border-red-200 space-y-4">
             <h4 className="font-semibold text-red-900 flex items-center">
               <FileText className="h-4 w-4 mr-2" />
-              Damage Details
+              Détails des Dommages
             </h4>
 
             {/* Damage Type */}
             <div>
               <label className="block text-sm font-medium text-red-800 mb-2">
-                Damage Type *
+                Type de Dommage *
               </label>
               <select
                 value={damageType}
@@ -139,7 +157,7 @@ export const DamageAssessmentModal: React.FC<DamageAssessmentModalProps> = ({
                 className="form-select w-full text-base py-3"
                 required={hasDamage}
               >
-                <option value="">Select damage type...</option>
+                <option value="">Sélectionner le type de dommage...</option>
                 {damageTypeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -151,18 +169,18 @@ export const DamageAssessmentModal: React.FC<DamageAssessmentModalProps> = ({
             {/* Damage Description */}
             <div>
               <label className="block text-sm font-medium text-red-800 mb-2">
-                Damage Description *
+                Description des Dommages *
               </label>
               <textarea
                 value={damageDescription}
                 onChange={(e) => setDamageDescription(e.target.value)}
                 rows={3}
                 className="form-input w-full text-base py-3 resize-none"
-                placeholder="Describe the damage in detail..."
+                placeholder="Décrivez les dommages en détail..."
                 required={hasDamage}
               />
               <p className="text-xs text-red-600 mt-1">
-                Please provide specific details about the location and extent of damage
+                Veuillez fournir des détails précis sur l'emplacement et l'étendue des dommages
               </p>
             </div>
           </div>
@@ -170,9 +188,15 @@ export const DamageAssessmentModal: React.FC<DamageAssessmentModalProps> = ({
 
         {/* Assessment Info */}
         <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-          <p><strong>Assessed by:</strong> {operatorName}</p>
-          <p><strong>Assessment stage:</strong> Assignment</p>
-          <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+          <p><strong>Évalué par :</strong> {operatorName}</p>
+          <p><strong>Étape d'évaluation :</strong> Assignation</p>
+          <p><strong>Date :</strong> {new Date().toLocaleDateString('fr-FR')}</p>
+          {hasDamage && (
+            <p className="text-orange-600 font-medium mt-2">
+              <Shield className="h-4 w-4 inline mr-1" />
+              Assignation automatique en zone tampon
+            </p>
+          )}
         </div>
       </div>
     </FormModal>

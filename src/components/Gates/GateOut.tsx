@@ -14,7 +14,9 @@ import { handleError } from '../../services/errorHandling';
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { TableSkeleton } from '../Common/TableSkeleton';
-import { exportToExcel, formatDateShortForExport, formatTimeForExport } from '../../utils/excelExport';
+import { exportToExcel, formatDateShortForExport, formatTimeForExport, formatDateForExport, formatDurationForExport } from '../../utils/excelExport';
+import { useToast } from '../../hooks/useToast';
+import { logger } from '../../utils/logger';
 
 interface GateOutFormData {
   booking?: {
@@ -35,6 +37,7 @@ export const GateOut: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
+  const toast = useToast();
 
   const [activeView, setActiveView] = useState<'overview' | 'pending'>('overview');
   const [showForm, setShowForm] = useState(false);
@@ -141,51 +144,95 @@ export const GateOut: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleExportGateOut = () => {
-    const dataToExport = filteredOperations.map(op => ({
-      bookingNumber: op.bookingNumber || '',
-      bookingType: op.bookingType || '',
-      clientName: op.clientName || '',
-      clientCode: op.clientCode || '',
-      status: op.status || '',
-      totalContainers: op.totalContainers || 0,
-      processedContainers: op.processedContainers || 0,
-      remainingContainers: op.remainingContainers || 0,
-      driverName: op.driverName || '',
-      vehicleNumber: op.vehicleNumber || op.truckNumber || '', // Use vehicleNumber or truckNumber
-      transportCompany: op.transportCompany || '',
-      yardName: currentYard?.name || '',
-      operatorName: op.operatorName || '',
-      createdDate: formatDateShortForExport(op.createdAt || op.date),
-      createdTime: formatTimeForExport(op.createdAt || op.date),
-      updatedAt: formatDateShortForExport(op.updatedAt),
-      notes: op.notes || ''
-    }));
+  const handleExportGateOut = async () => {
+    try {
+      // Calculate durations for each operation
+      const dataToExport = await Promise.all(
+        filteredOperations.map(async (op) => {
+          let durations = {};
+          
+          // Calculate time tracking durations if operation is completed
+          if (op.status === 'completed' && op.id) {
+            try {
+              const { gateTimeTrackingService } = await import('../../services/api/gateTimeTrackingService');
+              durations = await gateTimeTrackingService.calculateGateOutDurations(op.id);
+            } catch (error) {
+              console.warn('Failed to calculate durations for operation:', op.id, error);
+            }
+          }
 
-    exportToExcel({
-      filename: `gate_out_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
-      sheetName: 'Gate Out Operations',
-      columns: [
-        { header: 'Numéro Booking', key: 'bookingNumber', width: 20 },
-        { header: 'Type Booking', key: 'bookingType', width: 15 },
-        { header: 'Client', key: 'clientName', width: 25 },
-        { header: 'Code Client', key: 'clientCode', width: 15 },
-        { header: 'Statut', key: 'status', width: 15 },
-        { header: 'Total Conteneurs', key: 'totalContainers', width: 15 },
-        { header: 'Conteneurs Traités', key: 'processedContainers', width: 18 },
-        { header: 'Conteneurs Restants', key: 'remainingContainers', width: 18 },
-        { header: 'Chauffeur', key: 'driverName', width: 20 },
-        { header: 'Véhicule', key: 'vehicleNumber', width: 15 },
-        { header: 'Transporteur', key: 'transportCompany', width: 25 },
-        { header: 'Dépôt', key: 'yardName', width: 20 },
-        { header: 'Opérateur', key: 'operatorName', width: 20 },
-        { header: 'Date Création', key: 'createdDate', width: 15 },
-        { header: 'Heure Création', key: 'createdTime', width: 15 },
-        { header: 'Date Modification', key: 'updatedAt', width: 20 },
-        { header: 'Notes', key: 'notes', width: 30 }
-      ],
-      data: dataToExport
-    });
+          return {
+            bookingNumber: op.bookingNumber || '',
+            bookingType: op.bookingType || '',
+            clientName: op.clientName || '',
+            clientCode: op.clientCode || '',
+            status: op.status || '',
+            totalContainers: op.totalContainers || 0,
+            processedContainers: op.processedContainers || 0,
+            remainingContainers: op.remainingContainers || 0,
+            driverName: op.driverName || '',
+            vehicleNumber: op.vehicleNumber || op.truckNumber || '', // Use vehicleNumber or truckNumber
+            transportCompany: op.transportCompany || '',
+            yardName: currentYard?.name || '',
+            operatorName: op.operatorName || '',
+            createdDate: formatDateShortForExport(op.createdAt || op.date),
+            createdTime: formatTimeForExport(op.createdAt || op.date),
+            updatedAt: formatDateShortForExport(op.updatedAt),
+            notes: op.notes || '',
+            // Time tracking metrics
+            totalDuration: formatDurationForExport(durations.totalDuration),
+            containerSelectionDuration: formatDurationForExport(durations.containerSelectionDuration),
+            ediProcessingDuration: formatDurationForExport(durations.ediProcessingDuration),
+            // Additional time tracking fields
+            containerSelectionStarted: formatDateForExport(op.container_selection_started),
+            containerSelectionCompleted: formatDateForExport(op.container_selection_completed),
+            ediProcessingStarted: formatDateForExport(op.edi_processing_started),
+            ediTransmissionDate: formatDateForExport(op.edi_transmission_date)
+          };
+        })
+      );
+
+      const { formatDurationForExport } = await import('../../utils/excelExport');
+
+      exportToExcel({
+        filename: `gate_out_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        sheetName: 'Gate Out Operations',
+        columns: [
+          { header: 'Numéro Booking', key: 'bookingNumber', width: 20 },
+          { header: 'Type Booking', key: 'bookingType', width: 15 },
+          { header: 'Client', key: 'clientName', width: 25 },
+          { header: 'Code Client', key: 'clientCode', width: 15 },
+          { header: 'Statut', key: 'status', width: 15 },
+          { header: 'Total Conteneurs', key: 'totalContainers', width: 15 },
+          { header: 'Conteneurs Traités', key: 'processedContainers', width: 18 },
+          { header: 'Conteneurs Restants', key: 'remainingContainers', width: 18 },
+          { header: 'Chauffeur', key: 'driverName', width: 20 },
+          { header: 'Véhicule', key: 'vehicleNumber', width: 15 },
+          { header: 'Transporteur', key: 'transportCompany', width: 25 },
+          { header: 'Dépôt', key: 'yardName', width: 20 },
+          { header: 'Opérateur', key: 'operatorName', width: 20 },
+          { header: 'Date Création', key: 'createdDate', width: 15 },
+          { header: 'Heure Création', key: 'createdTime', width: 15 },
+          { header: 'Date Modification', key: 'updatedAt', width: 20 },
+          { header: 'Notes', key: 'notes', width: 30 },
+          // Time tracking columns
+          { header: 'Durée Totale', key: 'totalDuration', width: 15 },
+          { header: 'Durée Sélection Conteneurs', key: 'containerSelectionDuration', width: 25 },
+          { header: 'Durée Traitement EDI', key: 'ediProcessingDuration', width: 20 },
+          // Detailed timestamps
+          { header: 'Début Sélection Conteneurs', key: 'containerSelectionStarted', width: 25 },
+          { header: 'Fin Sélection Conteneurs', key: 'containerSelectionCompleted', width: 25 },
+          { header: 'Début Traitement EDI', key: 'ediProcessingStarted', width: 20 },
+          { header: 'Date Transmission EDI', key: 'ediTransmissionDate', width: 20 }
+        ],
+        data: dataToExport
+      });
+
+      toast.success('Export Gate Out completed successfully');
+    } catch (error) {
+      console.error('Error exporting Gate Out data:', error);
+      toast.error('Failed to export Gate Out data');
+    }
   };
 
   const handleCreateGateOut = async (data: GateOutFormData) => {
@@ -258,9 +305,8 @@ export const GateOut: React.FC = () => {
     setError('');
     try {
       // Find container IDs from container numbers
-      const containerIds = containers
-        .filter(c => containerNumbers.includes(c.number))
-        .map(c => c.id);
+      const selectedContainers = containers.filter(c => containerNumbers.includes(c.number));
+      const containerIds = selectedContainers.map(c => c.id);
 
       if (containerIds.length !== containerNumbers.length) {
         setError('Some containers were not found in the system');
@@ -277,6 +323,57 @@ export const GateOut: React.FC = () => {
       if (!result.success) {
         setError(result.error || 'Failed to process containers');
         return;
+      }
+
+      // Process EDI CODECO transmission for Gate Out
+      try {
+        // Import Gate Out CODECO service
+        const { gateOutCodecoService } = await import('../../services/edi/gateOutCodecoService');
+        
+        // Find the booking reference
+        const booking = releaseOrders.find(order => order.id === operation.bookingReferenceId);
+        
+        if (booking && selectedContainers.length > 0) {
+          // Create Gate Out CODECO data with all required fields
+          const gateOutCodecoData = gateOutCodecoService.createGateOutCodecoDataFromOperation(
+            operation,
+            selectedContainers,
+            booking,
+            currentYard?.id || 'unknown',
+            user.name || 'System',
+            user.id || 'system'
+          );
+
+          // Yard information for EDI
+          const yardInfo = {
+            companyCode: currentYard?.code || 'DEPOT',
+            plant: currentYard?.id || 'SYSTEM',
+            customer: booking.clientCode
+          };
+
+          // Generate and transmit CODECO for Gate Out
+          const codecoResult = await gateOutCodecoService.generateAndTransmitCodeco(
+            gateOutCodecoData,
+            yardInfo
+          );
+          
+          if (codecoResult.success) {
+            logger.info('Gate Out CODECO transmitted successfully', 'GateOut', {
+              bookingNumber: booking.bookingNumber,
+              containerCount: selectedContainers.length,
+              transmissionCount: codecoResult.transmissionLogs?.length || 0
+            });
+          } else {
+            logger.warn('Gate Out CODECO transmission failed', 'GateOut', {
+              error: codecoResult.error,
+              bookingNumber: booking.bookingNumber
+            });
+          }
+        }
+      } catch (ediError) {
+        // EDI transmission failed, but don't fail the entire Gate Out operation
+        logger.error('EDI CODECO transmission failed for Gate Out', 'GateOut', ediError);
+        console.error('Gate Out EDI CODECO transmission failed:', ediError);
       }
 
       // Reload operations and containers from database

@@ -37,7 +37,7 @@ import { reportService, containerService } from '../../services/api';
 import type { ContainerStats, GateStats } from '../../services/api/reportService';
 import { handleError } from '../../services/errorHandling';
 
-type FilterType = 'customer' | 'yard' | 'type' | 'damage' | null;
+type FilterType = 'customer' | 'yard' | 'type' | 'damage' | 'classification' | null;
 
 interface FilteredData {
   containers: any[];
@@ -69,6 +69,7 @@ export const DashboardOverview: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedClassification, setSelectedClassification] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'current' | 'global'>('current');
   const [selectedDepot, setSelectedDepot] = useState<string | null>(null);
 
@@ -243,17 +244,25 @@ export const DashboardOverview: React.FC = () => {
       undamaged: filteredContainers.filter(c => !c.damage || c.damage.length === 0).length
     };
 
+    // Classification stats (Divers or Alimentaire)
+    const classificationStats = {
+      divers: filteredContainers.filter(c => c.classification === 'divers' || !c.classification).length,
+      alimentaire: filteredContainers.filter(c => c.classification === 'alimentaire').length
+    };
+
     return {
       customerStats,
       inYardContainers,
       typeByCustomer,
       damagedStats,
+      classificationStats,
       totalContainers: filteredContainers.length
     } as {
       customerStats: Record<string, { count: number; name: string; code: string }>;
       inYardContainers: any[];
       typeByCustomer: Record<string, Record<string, any>>;
       damagedStats: { damaged: number; undamaged: number };
+      classificationStats: { divers: number; alimentaire: number };
       totalContainers: number;
     };
   }, [filteredContainers]);
@@ -282,6 +291,14 @@ export const DashboardOverview: React.FC = () => {
       { name: 'Endommagé', value: stats.damagedStats.damaged, fill: '#EF4444' }
     ];
   }, [stats.damagedStats]);
+
+  // Classification chart data
+  const classificationPieData = useMemo(() => {
+    return [
+      { name: 'Divers', value: stats.classificationStats.divers, fill: '#3B82F6' },
+      { name: 'Alimentaire', value: stats.classificationStats.alimentaire, fill: '#10B981' }
+    ];
+  }, [stats.classificationStats]);
 
   const quantityPieData = useMemo(() => {
     const types = ['dry', 'reefer', 'tank', 'flat_rack', 'open_top'];
@@ -350,12 +367,30 @@ export const DashboardOverview: React.FC = () => {
           description: 'Container condition and damage reports'
         };
 
+      case 'classification':
+        if (selectedClassification) {
+          const containers = filteredContainers.filter(c => 
+            c.classification === selectedClassification || 
+            (!c.classification && selectedClassification === 'divers')
+          );
+          return {
+            containers,
+            title: `${selectedClassification.charAt(0).toUpperCase() + selectedClassification.slice(1)} Containers`,
+            description: `All ${selectedClassification} classification containers`
+          };
+        }
+        return {
+          containers: filteredContainers,
+          title: 'All Classifications',
+          description: 'Container distribution by classification (Divers/Alimentaire)'
+        };
+
       default:
         return null;
     }
   };
 
-  const filteredData = useMemo(() => getFilteredData(), [activeFilter, selectedCustomer, selectedType, filteredContainers, stats]);
+  const filteredData = useMemo(() => getFilteredData(), [activeFilter, selectedCustomer, selectedType, selectedClassification, filteredContainers, stats]);
 
   const handleStatCardClick = (filterType: FilterType, additionalData?: any) => {
     if (activeFilter === filterType) {
@@ -363,15 +398,19 @@ export const DashboardOverview: React.FC = () => {
       setActiveFilter(null);
       setSelectedCustomer(null);
       setSelectedType(null);
+      setSelectedClassification(null);
     } else {
       setActiveFilter(filterType);
       if (filterType === 'customer' && additionalData) {
         setSelectedCustomer(additionalData);
       } else if (filterType === 'type' && additionalData) {
         setSelectedType(additionalData);
+      } else if (filterType === 'classification' && additionalData) {
+        setSelectedClassification(additionalData);
       } else {
         setSelectedCustomer(null);
         setSelectedType(null);
+        setSelectedClassification(null);
       }
     }
   };
@@ -651,7 +690,7 @@ export const DashboardOverview: React.FC = () => {
         })()}
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card>
             <div className="flex items-center justify-between">
               <div>
@@ -705,10 +744,24 @@ export const DashboardOverview: React.FC = () => {
               </div>
             </div>
           </Card>
+
+          <Card>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Classification</p>
+                <h3 className="text-2xl font-semibold mt-1">{stats.classificationStats.divers} / {stats.classificationStats.alimentaire}</h3>
+                <p className="text-xs text-gray-400 mt-1">Divers / Alimentaire</p>
+              </div>
+              <div className="p-3 rounded-lg bg-orange-50">
+                <Layers className="h-6 w-6 text-orange-600" />
+              </div>
+            </div>
+          </Card>
         </div>
 
-        {/* Charts Section (with full-screen toggle) */}
-        <div className={'grid grid-cols-1 lg:grid-cols-3 gap-6'}>
+        {/* Charts Section */}
+        <div className="space-y-6">
+          {/* Row 1: Client Chart (Full Width) */}
           {/* Customers bar chart */}
           <Card className="relative">
             <div className="flex items-center justify-between mb-4">
@@ -774,7 +827,9 @@ export const DashboardOverview: React.FC = () => {
            </div>
           </Card>
 
-          {/* Type Pie */}
+          {/* Row 2: Three Charts Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Type Pie */}
           <Card className="relative">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Type de Conteneur</h3>
@@ -891,6 +946,63 @@ export const DashboardOverview: React.FC = () => {
               ))}
             </div>
           </Card>
+
+          {/* Classification Pie Chart */}
+          <Card className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Classification</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    // clicking chart toggles classification filter off/on
+                    if (activeFilter === 'classification') handleStatCardClick(null);
+                    else handleStatCardClick('classification');
+                  }}
+                  className="p-1 rounded hover:bg-gray-100"
+                  aria-label="Toggle classification filter"
+                >
+                  <Layers className="h-4 w-4 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <div style={{ height: 240 }} className="flex flex-col items-center justify-between">
+              <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                <PieChart>
+                  <Pie
+                    data={classificationPieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    labelLine={false}
+                    label={({ value }) => `${value}`}
+                    onClick={(entry) => handleStatCardClick('classification', entry.name.toLowerCase())}
+                    onMouseDown={(e: any) => e?.preventDefault?.()}
+                  >
+                    {classificationPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                </PieChart>
+              </ResponsiveContainer>
+
+              {/* Custom legend */}
+              <div className="flex flex-wrap gap-3 mt-1">
+                {classificationPieData.map((entry, index) => (
+                  <div key={`legend-${index}`} className="flex items-center gap-2 text-sm">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: entry.fill }}
+                    />
+                    <span>{entry.name} ({entry.value})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+          </div>
         </div>
 
         {/* Depot Performance Table - Only for Admin and Supervisor */}

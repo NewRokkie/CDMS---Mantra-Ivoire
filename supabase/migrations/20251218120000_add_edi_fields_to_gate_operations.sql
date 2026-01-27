@@ -60,7 +60,7 @@ END $$;
 
 -- Create helper function to automatically create EDI transmission log when gate operation is completed
 CREATE OR REPLACE FUNCTION auto_create_edi_transmission_on_gate_completion()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 DECLARE
   v_client_id uuid;
   v_client_code text;
@@ -86,29 +86,33 @@ BEGIN
     FROM clients 
     WHERE code = NEW.client_code;
 
-    -- Check if client has EDI enabled
-    IF EXISTS (
-      SELECT 1 FROM get_edi_config_for_client(v_client_code, v_client_name)
-      WHERE edi_enabled = true
-    ) THEN
-      -- Create EDI transmission log
-      SELECT log_edi_transmission(
-        NEW.container_number,
-        v_operation_type,
-        NEW.container_id,
-        NEW.id,
-        v_client_id
-      ) INTO v_edi_log_id;
+    -- Check if client has EDI enabled (only if EDI functions exist)
+    IF EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_name = 'get_edi_config_for_client') THEN
+      IF EXISTS (
+        SELECT 1 FROM get_edi_config_for_client(v_client_code, v_client_name)
+        WHERE edi_enabled = true
+      ) THEN
+        -- Create EDI transmission log (only if function exists)
+        IF EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_name = 'log_edi_transmission') THEN
+          SELECT log_edi_transmission(
+            NEW.container_number,
+            v_operation_type,
+            NEW.container_id,
+            NEW.id,
+            v_client_id
+          ) INTO v_edi_log_id;
 
-      -- Update the operation with EDI log reference
-      NEW.edi_log_id := v_edi_log_id;
-      NEW.edi_transmitted := false; -- Will be updated to true when transmission succeeds
+          -- Update the operation with EDI log reference
+          NEW.edi_log_id := v_edi_log_id;
+          NEW.edi_transmitted := false; -- Will be updated to true when transmission succeeds
+        END IF;
+      END IF;
     END IF;
   END IF;
 
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create triggers for automatic EDI log creation
 CREATE TRIGGER trigger_auto_create_edi_transmission_gate_in
@@ -145,15 +149,17 @@ SELECT
   created_at,
   updated_at
 FROM gate_in_operations
+
 UNION ALL
+
 SELECT 
   'GATE_OUT' as operation_type,
   id,
-  container_number,
+  booking_number as container_number, -- Use booking_number for gate_out operations
   client_code,
   client_name,
   status,
-  assigned_location,
+  NULL as assigned_location, -- gate_out operations don't have assigned_location
   completed_at,
   edi_transmitted,
   edi_transmission_date,
@@ -162,7 +168,15 @@ SELECT
   created_at,
   updated_at
 FROM gate_out_operations
-WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'gate_out_operations');
+WHERE EXISTS (
+  SELECT 1 FROM information_schema.tables 
+  WHERE table_name = 'gate_out_operations'
+  AND EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'gate_out_operations' 
+    AND column_name = 'edi_transmitted'
+  )
+);
 
 -- Grant permissions
 GRANT SELECT ON gate_operations_with_edi TO authenticated;

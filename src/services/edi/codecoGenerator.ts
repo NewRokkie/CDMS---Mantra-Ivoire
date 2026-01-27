@@ -34,6 +34,17 @@ export interface CodecoMessageData {
   changedTime?: string;
   changedBy?: string;
   
+  // Gate In specific fields
+  gateInDate?: string;
+  gateInTime?: string;
+  
+  // Damage Assessment
+  damageReported?: boolean;
+  damageType?: string;
+  damageDescription?: string;
+  damageAssessedBy?: string;
+  damageAssessedAt?: string;
+  
   // Additional
   numOfEntries?: string;
 }
@@ -160,6 +171,21 @@ export class CodecoGenerator {
         `137:${msgDateTime}:204`
       ]
     });
+
+    // Gate operation date/time - use appropriate qualifier based on operation type
+    if (data.gateInDate && data.gateInTime) {
+      const gateDateTime = `${data.gateInDate}${data.gateInTime}`;
+      // Determine if this is Gate In or Gate Out based on status
+      const isGateOut = data.status === '06' || data.type === '02';
+      const qualifier = isGateOut ? '133' : '132'; // 133 = Departure, 132 = Arrival
+      
+      this.segments.push({
+        tag: 'DTM',
+        elements: [
+          `${qualifier}:${gateDateTime}:204` // Gate In/Out date/time
+        ]
+      });
+    }
   }
 
   /**
@@ -230,11 +256,11 @@ export class CodecoGenerator {
    * Conditional, max 9 occurrences
    */
   private addReferences(data: CodecoMessageData): void {
-    // Weighbridge reference
+    // Weighbridge reference (or booking reference for Gate Out)
     this.segments.push({
       tag: 'RFF',
       elements: [
-        `AAO:${data.weighbridgeId}` // AAO = Delivery order number
+        `AAO:${data.weighbridgeId}` // AAO = Delivery order number (or booking reference)
       ]
     });
 
@@ -265,6 +291,19 @@ export class CodecoGenerator {
         `AHP:${data.createdBy}`      // AHP = Responsible person
       ]
     });
+
+    // Booking reference (if different from weighbridge ID and contains booking info)
+    if (data.weighbridgeId && data.weighbridgeId.includes('_') && !data.weighbridgeId.startsWith('WB')) {
+      const bookingNumber = data.weighbridgeId.split('_')[0];
+      if (bookingNumber && bookingNumber !== data.weighbridgeId) {
+        this.segments.push({
+          tag: 'RFF',
+          elements: [
+            `CR:${bookingNumber}` // CR = Customer reference (booking number)
+          ]
+        });
+      }
+    }
   }
 
   /**
@@ -369,6 +408,17 @@ export class CodecoGenerator {
       ]
     });
 
+    // Gate In date/time if available (132 = Arrival date/time)
+    if (data.gateInDate && data.gateInTime) {
+      const gateInDateTime = `${data.gateInDate}${data.gateInTime}`;
+      this.segments.push({
+        tag: 'DTM',
+        elements: [
+          `132:${gateInDateTime}:204` // 132 = Arrival date/time (Gate In)
+        ]
+      });
+    }
+
     // Last change date/time if available
     if (data.changedDate && data.changedTime) {
       const changeDateTime = `${data.changedDate}${data.changedTime}`;
@@ -376,6 +426,16 @@ export class CodecoGenerator {
         tag: 'DTM',
         elements: [
           `182:${changeDateTime}:204` // 182 = Revised date/time
+        ]
+      });
+    }
+
+    // Damage assessment date/time if available
+    if (data.damageAssessedAt) {
+      this.segments.push({
+        tag: 'DTM',
+        elements: [
+          `200:${data.damageAssessedAt}:204` // 200 = Pick-up/collection date/time (used for damage assessment)
         ]
       });
     }
@@ -405,6 +465,68 @@ export class CodecoGenerator {
           attributes.join('; ')      // Free text
         ]
       });
+    }
+
+    // Add operation type and status information
+    const isGateOut = data.status === '06' || data.type === '02';
+    const operationType = isGateOut ? 'GATE_OUT' : 'GATE_IN';
+    const statusText = isGateOut ? 'Container departure from depot' : 'Container arrival at depot';
+    
+    this.segments.push({
+      tag: 'FTX',
+      elements: [
+        'AAI',                     // Text subject qualifier (AAI = General information)
+        '',                        // Text function
+        '',                        // Text reference
+        '',                        // Text literal
+        `Operation: ${operationType}; Status: ${statusText}`
+      ]
+    });
+
+    // Add damage assessment information if available (mainly for Gate In)
+    if (data.damageReported !== undefined && !isGateOut) {
+      const damageStatus = data.damageReported ? 'DAMAGED' : 'UNDAMAGED';
+      let damageText = `Container Status: ${damageStatus}`;
+      
+      if (data.damageReported && data.damageType) {
+        damageText += `; Damage Type: ${data.damageType}`;
+      }
+      
+      if (data.damageReported && data.damageDescription) {
+        damageText += `; Description: ${data.damageDescription}`;
+      }
+      
+      if (data.damageAssessedBy) {
+        damageText += `; Assessed by: ${data.damageAssessedBy}`;
+      }
+      
+      this.segments.push({
+        tag: 'FTX',
+        elements: [
+          'AAI',                     // Text subject qualifier (AAI = General information)
+          '',                        // Text function
+          '',                        // Text reference
+          '',                        // Text literal
+          damageText                 // Damage assessment information
+        ]
+      });
+    }
+
+    // Add booking information for Gate Out operations
+    if (isGateOut && data.weighbridgeId && data.weighbridgeId.includes('_')) {
+      const bookingNumber = data.weighbridgeId.split('_')[0];
+      if (bookingNumber) {
+        this.segments.push({
+          tag: 'FTX',
+          elements: [
+            'AAI',                     // Text subject qualifier (AAI = General information)
+            '',                        // Text function
+            '',                        // Text reference
+            '',                        // Text literal
+            `Booking Reference: ${bookingNumber}` // Booking number information
+          ]
+        });
+      }
     }
 
     // Add changed by information if available
@@ -570,6 +692,80 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
     changedDate: getText('Changed_Date'),
     changedTime: getText('Changed_Time'),
     changedBy: getText('Changed_By'),
-    numOfEntries: getText('Num_Of_Entries')
+    numOfEntries: getText('Num_Of_Entries'),
+    // Gate In specific fields
+    gateInDate: getText('Gate_In_Date'),
+    gateInTime: getText('Gate_In_Time'),
+    // Damage assessment fields
+    damageReported: getText('Damage_Reported') === 'true' || getText('Damage_Reported') === '1',
+    damageType: getText('Damage_Type'),
+    damageDescription: getText('Damage_Description'),
+    damageAssessedBy: getText('Damage_Assessed_By'),
+    damageAssessedAt: getText('Damage_Assessed_At')
+  };
+}
+
+/**
+ * Parse Gate In Operation data to CodecoMessageData
+ * This function converts Gate In operation data to the format expected by the CODECO generator
+ */
+export function parseGateInOperation(
+  operation: any,
+  yardInfo: { companyCode: string; plant: string; customer?: string }
+): CodecoMessageData {
+  const now = new Date();
+  const formatDate = (date: Date): string => {
+    return date.toISOString().slice(0, 10).replace(/-/g, '');
+  };
+  const formatTime = (date: Date): string => {
+    return date.toTimeString().slice(0, 8).replace(/:/g, '');
+  };
+  const formatDateTime = (date: Date): string => {
+    return formatDate(date) + formatTime(date);
+  };
+
+  // Extract damage assessment information
+  const damageAssessment = operation.damageAssessment || {};
+  const hasDamage = damageAssessment.hasDamage || operation.damageReported || false;
+
+  return {
+    sender: yardInfo.companyCode || 'DEPOT',
+    receiver: yardInfo.plant || 'SYSTEM',
+    companyCode: yardInfo.companyCode || 'DEPOT',
+    plant: yardInfo.plant || 'SYSTEM',
+    customer: yardInfo.customer || operation.clientCode || 'UNKNOWN',
+    weighbridgeId: `WB${operation.id || now.getTime()}`,
+    weighbridgeIdSno: '00001',
+    transporter: operation.transportCompany || 'UNKNOWN',
+    containerNumber: operation.containerNumber,
+    containerSize: operation.containerSize?.replace('ft', '') || '20',
+    design: '001', // Default design
+    type: operation.containerType === 'reefer' ? '03' : '01', // 01 = General purpose, 03 = Reefer
+    color: '#000000', // Default color
+    cleanType: operation.classification === 'alimentaire' ? '002' : '001', // 002 = Food grade, 001 = Standard
+    status: operation.status === 'FULL' || operation.fullEmpty === 'FULL' ? '05' : '04', // 05 = Full, 04 = Empty
+    deviceNumber: operation.deviceNumber || `DEV${now.getTime()}`,
+    vehicleNumber: operation.truckNumber || operation.vehicleNumber || 'UNKNOWN',
+    createdDate: formatDate(operation.createdAt ? new Date(operation.createdAt) : now),
+    createdTime: formatTime(operation.createdAt ? new Date(operation.createdAt) : now),
+    createdBy: operation.operatorName || operation.createdBy || 'SYSTEM',
+    changedDate: operation.updatedAt ? formatDate(new Date(operation.updatedAt)) : undefined,
+    changedTime: operation.updatedAt ? formatTime(new Date(operation.updatedAt)) : undefined,
+    changedBy: operation.updatedBy || undefined,
+    numOfEntries: operation.containerQuantity?.toString() || '1',
+    // Gate In specific fields
+    gateInDate: operation.gateInDate ? formatDate(new Date(operation.gateInDate)) : 
+                operation.truckArrivalDate ? operation.truckArrivalDate.replace(/-/g, '') :
+                formatDate(now),
+    gateInTime: operation.gateInTime ? operation.gateInTime.replace(/:/g, '') :
+                operation.truckArrivalTime ? operation.truckArrivalTime.replace(/:/g, '') + '00' :
+                formatTime(now),
+    // Damage assessment fields
+    damageReported: hasDamage,
+    damageType: damageAssessment.damageType || (hasDamage ? 'GENERAL' : undefined),
+    damageDescription: damageAssessment.damageDescription || operation.damageDescription,
+    damageAssessedBy: damageAssessment.assessedBy || operation.operatorName,
+    damageAssessedAt: damageAssessment.assessedAt ? formatDateTime(new Date(damageAssessment.assessedAt)) : 
+                      (hasDamage ? formatDateTime(now) : undefined)
   };
 }

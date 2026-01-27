@@ -44,7 +44,7 @@ const AccessDenied: React.FC = () => (
 );
 
 const ProtectedApp: React.FC = () => {
-  const { user, hasModuleAccess, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, hasModuleAccess, isLoading: authLoading, isAuthenticated, authError, isDatabaseConnected, retryConnection } = useAuth();
   const yardProvider = useYardProvider();
   const { hasPermissionUpdate } = useModuleAccessSync();
   const [activeModule, setActiveModule] = useState('dashboard');
@@ -84,7 +84,22 @@ const ProtectedApp: React.FC = () => {
 
   // Check authentication first - redirect to login if not authenticated
   if (authLoading) {
-    return <FullScreenLoader message="Authenticating..." submessage="Please wait" />;
+    let message = "Authenticating...";
+    let submessage = "Please wait";
+    let showDatabaseWarning = false;
+    let onRetry = undefined;
+
+    if (!isDatabaseConnected) {
+      message = "Database Connection Issue";
+      submessage = "The database appears to be paused or unreachable. Please try again later.";
+      showDatabaseWarning = true;
+      onRetry = retryConnection;
+    } else if (authError) {
+      message = "Authentication Error";
+      submessage = authError;
+    }
+
+    return <FullScreenLoader message={message} submessage={submessage} showDatabaseWarning={showDatabaseWarning} onRetry={onRetry} />;
   }
 
   if (!isAuthenticated || !user) {

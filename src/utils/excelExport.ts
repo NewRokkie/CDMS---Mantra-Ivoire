@@ -109,3 +109,23 @@ export const formatTimeForExport = (date: Date | string | null | undefined): str
     minute: '2-digit'
   });
 };
+
+/**
+ * Formate une durée en minutes pour l'export
+ */
+export const formatDurationForExport = (minutes: number | null | undefined): string => {
+  if (!minutes || minutes <= 0) return '';
+  
+  if (minutes < 60) {
+    return `${minutes}min`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  
+  return `${hours}h ${remainingMinutes}min`;
+};

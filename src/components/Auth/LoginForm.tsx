@@ -67,7 +67,7 @@ export const LoginForm: React.FC = React.memo(() => {
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-  const { login, resetPassword, isLoading, isAuthenticated } = useAuth();
+  const { login, resetPassword, isLoading, isAuthenticated, authError, isDatabaseConnected } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -355,6 +355,19 @@ export const LoginForm: React.FC = React.memo(() => {
                   <p className="text-sm text-red-600 font-medium flex items-center">
                     <Shield className="h-4 w-4 mr-2" />
                     {error}
+                  </p>
+                </div>
+              )}
+
+              {/* Database Connection Warning */}
+              {!isDatabaseConnected && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 animate-bounce-in" role="alert" aria-live="assertive" aria-atomic="true">
+                  <p className="text-sm text-yellow-700 font-medium flex items-center">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Database connection issue. The database may be paused or unreachable.
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1">
+                    Please try again later or contact support if the issue persists.
                   </p>
                 </div>
               )}

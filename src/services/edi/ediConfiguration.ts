@@ -183,7 +183,7 @@ class EDIConfigurationServiceImpl implements EDIConfigurationService {
       }
 
       // Simulate different test results based on configuration
-      if (config.host.includes('test') || config.testMode) {
+      if (config.testMode) {
         return {
           success: true,
           message: 'Test connection successful (test mode)'
