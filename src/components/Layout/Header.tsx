@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, User, Globe, LogOut, Menu, X } from 'lucide-react';
+import { Bell, User, Globe, LogOut, Menu, X, Crown, Star, Eye } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { YardSelector } from './YardSelector';
@@ -81,8 +81,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               {/* User Menu */}
               <div className="flex items-center space-x-3 pl-2">
                 <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
-                    <User className="h-4 w-4 text-white" />
+                  <div className="h-8 w-8 border-2 border-green-400 bg-gray-100 rounded-full flex items-center justify-center shadow-md">
+                    { user?.role === 'admin' ? (<Crown className="h-5 w-5 text-red-600" />)
+                        : user?.role === 'supervisor' ? (<Star className="h-5 w-5 text-orange-400" />)
+                            : user?.role === 'operator' ? (<User className="h-5 w-5 text-blue-600" />)
+
+                    : <Eye className="h-5 w-5 text-cyan-600" />
+                    }
                   </div>
                   <div className="text-sm">
                     <p className="font-medium text-gray-900">{user?.name}</p>

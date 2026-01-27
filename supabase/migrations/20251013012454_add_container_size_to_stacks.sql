@@ -3,8 +3,8 @@
 
   1. Changes
     - Add container_size column to stacks table
-    - Values: '20feet' or '40feet'
-    - Default to '20feet'
+    - Values: '20ft' or '40ft'
+    - Default to '20ft'
     - Add check constraint to ensure valid values
 
   2. Purpose
@@ -21,11 +21,11 @@ BEGIN
     WHERE table_name = 'stacks' AND column_name = 'container_size'
   ) THEN
     ALTER TABLE stacks 
-      ADD COLUMN container_size TEXT DEFAULT '20feet' NOT NULL;
+      ADD COLUMN container_size TEXT DEFAULT '20ft' NOT NULL;
     
     -- Add check constraint for valid values
     ALTER TABLE stacks 
       ADD CONSTRAINT check_container_size 
-      CHECK (container_size IN ('20feet', '40feet'));
+      CHECK (container_size IN ('20ft', '40ft'));
   END IF;
 END $$;

@@ -1,23 +1,42 @@
 import React from 'react';
-import { Calendar, Package, User, FileText, Clock, CheckCircle, AlertTriangle, ChevronRight, Eye } from 'lucide-react';
+import { Calendar, Package, User, FileText, Clock, CheckCircle, AlertTriangle, ChevronRight, Eye, Ban, BarChart3 } from 'lucide-react';
 import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { safeToLocaleDateString } from '../../utils/dateHelpers';
+import { TableSkeleton } from '../Common/TableSkeleton';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
 
 interface MobileReleaseOrderTableProps {
   orders: BookingReference[];
   searchTerm: string;
   selectedFilter: string;
   onViewDetails: (order: BookingReference) => void;
+  onCancelBooking?: (order: BookingReference) => void;
+  loading?: boolean;
 }
 
 export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = ({
   orders,
   searchTerm,
   selectedFilter,
-  onViewDetails
+  onViewDetails,
+  onCancelBooking,
+  loading = false
 }) => {
   const { canViewAllData } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="space-y-4 px-4 lg:px-0">
+        <div className="lg:hidden">
+          <TableSkeleton rows={4} columns={2} />
+        </div>
+        <div className="hidden lg:block">
+          <TableSkeleton rows={6} columns={6} />
+        </div>
+      </div>
+    );
+  }
 
   // Filter orders based on search and filter
   const getFilteredOrders = () => {
@@ -30,7 +49,7 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
         order.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.clientCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (order.containers && order.containers.some(c => c.containerNumber.toLowerCase().includes(searchTerm.toLowerCase())))
+        (order.containers && order.containers.some((c: any) => c.containerNumber?.toLowerCase().includes(searchTerm.toLowerCase())))
       );
     }
 
@@ -86,6 +105,54 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
     return count === 1 ? '1 container' : `${count} containers`;
   };
 
+  const getProgressPercentage = (order: BookingReference) => {
+    // remainingContainers starts at totalContainers and decreases with each gate out
+    // When remainingContainers = 0, the booking is completed (100% progress)
+    const remaining = order.remainingContainers ?? order.totalContainers;
+    const processed = order.totalContainers - remaining;
+    return order.totalContainers > 0 ? Math.round((processed / order.totalContainers) * 100) : 0;
+  };
+
+  const getProgressColor = (percentage: number) => {
+    if (percentage === 0) return 'bg-gray-300';        // Not started - gray
+    if (percentage < 30) return 'bg-blue-500';         // Just started - blue
+    if (percentage < 70) return 'bg-yellow-500';       // In progress - yellow
+    if (percentage < 100) return 'bg-orange-500';      // Nearly complete - orange
+    return 'bg-green-500';                             // Completed - green
+  };
+
+  const canCancelBooking = (order: BookingReference) => {
+    return canViewAllData() && order.status !== 'cancelled' && order.status !== 'completed';
+  };
+
+  const ProgressBar: React.FC<{ order: BookingReference }> = ({ order }) => {
+    const percentage = getProgressPercentage(order);
+    const remaining = order.remainingContainers ?? order.totalContainers;
+    const processed = order.totalContainers - remaining;
+
+    return (
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-gray-700">
+            {processed}/{order.totalContainers}
+          </span>
+          <span className="text-xs font-medium text-gray-700">
+            {percentage}%
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(percentage)}`}
+            style={{ width: `${percentage}%` }}
+          ></div>
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          {remaining} remaining
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4 px-4 lg:px-0">
       {/* Mobile-First Card Layout */}
@@ -113,6 +180,12 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center space-x-1">
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Progress</span>
+                  </div>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -121,16 +194,21 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
               {filteredOrders.map((order) => (
                 <tr
                   key={order.id}
-                  onClick={() => onViewDetails(order)}
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="hover:bg-gray-50 transition-colors"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer"
+                    onClick={() => onViewDetails(order)}
+                  >
                     <div className="text-sm font-medium text-gray-900">{order.bookingNumber || order.id}</div>
                     <div className="text-sm text-gray-500">
                       Created {safeToLocaleDateString(order.createdAt)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer"
+                    onClick={() => onViewDetails(order)}
+                  >
                     <div className="flex items-center space-x-2">
                       <Package className="h-4 w-4 text-gray-400" />
                       <span className="text-sm font-medium text-gray-900">
@@ -142,7 +220,10 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                       {(order.containerQuantities?.size40ft || 0) > 0 && `${order.containerQuantities?.size40ft || 0}×40" `}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer"
+                    onClick={() => onViewDetails(order)}
+                  >
                     <div className="text-sm font-medium text-gray-900">
                       {canViewAllData() ? order.clientName : 'Your Company'}
                     </div>
@@ -150,20 +231,42 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                       {order.clientCode}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer"
+                    onClick={() => onViewDetails(order)}
+                  >
                     {getStatusBadge(order.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewDetails(order);
-                      }}
-                      className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                    <div className="w-32">
+                      <ProgressBar order={order} />
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewDetails(order);
+                        }}
+                        className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {canCancelBooking(order) && onCancelBooking && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCancelBooking(order);
+                          }}
+                          className="inline-flex items-center justify-center w-8 h-8 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          title="Cancel Booking"
+                        >
+                          <Ban className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -242,9 +345,20 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                   </div>
                 </div>
 
-                {/* Date & Progress */}
+                {/* Progress Bar */}
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0 p-2.5 bg-orange-100 rounded-xl">
+                    <BarChart3 className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 text-sm mb-2">Processing Progress</div>
+                    <ProgressBar order={order} />
+                  </div>
+                </div>
+
+                {/* Date & Actions */}
                 <div className="pt-3 border-t border-gray-100">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4 text-blue-600 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -259,11 +373,27 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-gray-500 font-medium">Remaining</div>
                         <div className="text-sm font-bold text-gray-900">
-                          {order.remainingContainers || order.totalContainers}
+                          {order.remainingContainers ?? order.totalContainers}
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Quick Actions */}
+                  {canCancelBooking(order) && onCancelBooking && (
+                    <div className="flex lg:justify-end justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCancelBooking(order);
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
+                      >
+                        <Ban className="h-3 w-3 mr-1" />
+                        Cancel Booking
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}

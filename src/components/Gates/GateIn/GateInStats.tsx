@@ -1,19 +1,25 @@
 import React from 'react';
 import { Truck, Clock, Container as ContainerIcon, AlertTriangle } from 'lucide-react';
+import { CardSkeleton } from '../../Common/CardSkeleton';
 
 interface GateInStatsProps {
   todayGateIns: number;
   pendingOperations: number;
   containersProcessed: number;
   damagedContainers: number;
+  loading?: boolean;
 }
 
 export const GateInStats: React.FC<GateInStatsProps> = ({
   todayGateIns,
   pendingOperations,
   containersProcessed,
-  damagedContainers
+  damagedContainers,
+  loading = false
 }) => {
+  if (loading) {
+    return <div className="grid grid-cols-1 md:grid-cols-4 gap-4"><CardSkeleton count={3} /></div>;
+  }
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div className="bg-white rounded-lg border border-gray-200 p-4 interactive">

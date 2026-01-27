@@ -9,7 +9,7 @@
   2. Default Configuration
     - Total: 50 stacks (Stack 01 to Stack 50)
     - Sections: Main Section (01-30), Zone A (31-40), Zone B (41-50)
-    - All stacks start as 20feet capacity
+    - All stacks start as 20ft capacity
     - Standard configuration: 6 rows x 4 tiers = 24 capacity per stack
     - Positions calculated based on standard 12m length, 2.5m width
 */
@@ -77,7 +77,7 @@ BEGIN
         0,
         2.5,
         12,
-        '20feet',
+        '20ft',
         true,
         (i % 2 = 1), -- Odd numbered stacks for pairing logic
         'System'

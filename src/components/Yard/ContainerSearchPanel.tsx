@@ -34,11 +34,11 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
   // Search results
   const searchResults = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return [];
-    
+
     return containers
       .filter(container =>
         container.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        container.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        container.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         container.location.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .slice(0, 10);
@@ -46,11 +46,12 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
 
   const getStatusBadge = (status: Container['status']) => {
     const statusConfig = {
+      gate_in: { color: 'bg-blue-100 text-blue-800', label: 'Gate In' },
       in_depot: { color: 'bg-green-100 text-green-800', label: 'In Depot' },
-      maintenance: { color: 'bg-orange-100 text-orange-800', label: 'Maintenance' },
-      cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' },
-      out_depot: { color: 'bg-blue-100 text-blue-800', label: 'Out Depot' },
-      in_service: { color: 'bg-yellow-100 text-yellow-800', label: 'In Service' }
+      gate_out: { color: 'bg-orange-100 text-orange-800', label: 'Gate Out' },
+      out_depot: { color: 'bg-gray-100 text-gray-800', label: 'Out Depot' },
+      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
+      cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' }
     };
 
     const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: status };
@@ -62,8 +63,8 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -109,7 +110,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
                   <div>
                     <div className="font-medium text-gray-900">{container.number}</div>
                     <div className="text-sm text-gray-600">
-                      {canViewAllData ? container.client : 'Your Company'} • {container.location}
+                      {canViewAllData ? container.clientName : 'Your Company'} • {container.location}
                     </div>
                   </div>
                   {getStatusBadge(container.status)}
@@ -144,7 +145,10 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Status</option>
+              <option value="gate_in">Gate In</option>
               <option value="in_depot">In Depot</option>
+              <option value="gate_out">Gate Out</option>
+              <option value="out_depot">Out Depot</option>
               <option value="maintenance">Maintenance</option>
               <option value="cleaning">Cleaning</option>
               <option value="damaged">Damaged</option>
@@ -200,7 +204,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
                   <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">
                     <User className="h-3 w-3" />
                     <span className="truncate">
-                      {canViewAllData ? container.client : 'Your Company'}
+                      {canViewAllData ? container.clientName : 'Your Company'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">

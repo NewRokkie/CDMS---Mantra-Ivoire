@@ -2,18 +2,36 @@ import { useState, useEffect, createContext, useContext, useRef, useCallback } f
 import type { User as AppUser, ModuleAccess } from '../types';
 import { supabase } from '../services/api/supabaseClient';
 import { userService } from '../services/api';
+import { moduleAccessService } from '../services/api/moduleAccessService';
+import { syncManager } from '../services/sync/SyncManager';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { handleError } from '../services/errorHandling';
+import { logger } from '../utils/logger';
+
+export interface SyncStatus {
+  isHealthy: boolean;
+  lastSyncAt?: Date;
+  inconsistencyCount: number;
+  failedSyncCount: number;
+  nextScheduledSync?: Date;
+}
 
 interface AuthContextType {
   user: AppUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
   hasModuleAccess: (module: keyof ModuleAccess) => boolean;
   canViewAllData: () => boolean;
   getClientFilter: () => string | null;
   refreshUser: () => Promise<void>;
+  refreshModuleAccess: () => Promise<void>;
+  getSyncStatus: () => SyncStatus;
+  onSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
+  offSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,11 +50,17 @@ export const useAuthProvider = () => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
+    isHealthy: true,
+    inconsistencyCount: 0,
+    failedSyncCount: 0
+  });
 
   // Références pour éviter les re-renders
   const userRef = useRef<AppUser | null>(null);
   const isLoadingRef = useRef(true);
   const isAuthenticatedRef = useRef(false);
+  const syncStatusCallbacks = useRef<((status: SyncStatus) => void)[]>([]);
 
   // Mettre à jour à la fois l'état et les refs
   const setAuthState = useCallback((newUser: AppUser | null, loading: boolean, authenticated: boolean) => {
@@ -56,49 +80,36 @@ export const useAuthProvider = () => {
     setIsAuthenticated(authenticated);
   }, []);
 
-  // Load user profile (identique à votre version originale)
+  // Load user profile with enhanced module access handling
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
-    console.log('📋 [LOAD_PROFILE] Loading profile for:', authUser.email, 'auth_uid:', authUser.id);
-
     try {
-      console.log('📋 [LOAD_PROFILE] Querying users table by auth_user_id...');
-
       const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
         .maybeSingle();
 
-      console.log('📋 [LOAD_PROFILE] Query result - data:', users, 'error:', error);
-
       if (error) {
-        console.error('📋 [LOAD_PROFILE] Error loading user profile:', error);
+        handleError(error, 'useAuth.loadUserProfile');
         return null;
       }
 
       if (!users) {
-        console.warn('📋 [LOAD_PROFILE] User not found in database for auth_user_id:', authUser.id);
         return null;
       }
 
       // Map database user to app user
-      console.log('📋 [LOAD_PROFILE] Mapping user data to AppUser...');
-
-      let modulePermissions = users.module_access;
-
-      if (!modulePermissions) {
-        try {
-          const { moduleAccessService } = await import('../services/api');
-          const customPermissions = await moduleAccessService.getUserModuleAccess(users.id);
-
-          if (customPermissions) {
-            modulePermissions = customPermissions;
-          }
-        } catch (error) {
-          console.error('Error loading custom module access:', error);
-        }
+      // Use the enhanced ModuleAccessService with fallback mechanism
+      let modulePermissions: ModuleAccess | null = null;
+      
+      try {
+        modulePermissions = await moduleAccessService.getUserModuleAccessWithFallback(users.id);
+      } catch (error) {
+        handleError(error, 'useAuth.loadUserProfile.getModuleAccess');
+        // Continue with default permissions if service fails
       }
 
+      // Fallback to default permissions if no data found
       if (!modulePermissions) {
         modulePermissions = {
           dashboard: true,
@@ -141,28 +152,25 @@ export const useAuthProvider = () => {
         moduleAccess: modulePermissions
       };
 
-      console.log('📋 [LOAD_PROFILE] ✅ Profile mapped successfully:', appUser.email);
       return appUser;
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+      handleError(error, 'useAuth.loadUserProfile');
       return null;
     }
   };
 
   // Version stable de checkSession
   const checkSession = useCallback(async () => {
-    console.log('🔐 [SESSION] Checking session...');
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
-        console.error('🔐 [SESSION] Session error:', error);
+        handleError(error, 'useAuth.checkSession');
         setAuthState(null, false, false);
         return;
       }
 
       if (session?.user) {
-        console.log('🔐 [SESSION] Session found for:', session.user.email);
 
         // Vérifier si l'utilisateur a vraiment changé
         const profile = await loadUserProfile(session.user);
@@ -171,53 +179,97 @@ export const useAuthProvider = () => {
           // Comparaison intelligente pour éviter les re-renders inutiles
           if (userRef.current?.id !== profile.id ||
               userRef.current?.email !== profile.email) {
-            console.log('🔐 [SESSION] User changed, updating state');
             setAuthState(profile, false, true);
 
             // Update last login (non-blocking)
             userService.update(profile.id, {
               last_login: new Date().toISOString()
             }).catch(err => {
-              console.warn('🔐 [SESSION] Could not update last login:', err);
+              // Silently handle - not critical
             });
-          } else {
-            console.log('🔐 [SESSION] User unchanged, skipping state update');
           }
         } else {
-          console.warn('🔐 [SESSION] Could not load user profile');
           setAuthState(null, false, false);
         }
       } else {
-        console.log('🔐 [SESSION] No active session');
         setAuthState(null, false, false);
       }
     } catch (error) {
-      console.error('🔐 [SESSION] Error checking session:', error);
+      handleError(error, 'useAuth.checkSession');
       setAuthState(null, false, false);
     }
   }, [setAuthState]);
 
-  // useEffect optimisé
+  // useEffect optimisé with sync monitoring
   useEffect(() => {
     let mounted = true;
     let sessionCheckTimeout: NodeJS.Timeout;
+    let syncStatusInterval: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       await checkSession();
     };
 
+    // Initialize sync status monitoring
+    const initializeSyncMonitoring = () => {
+      // Update sync status every 30 seconds, but only if status actually changed
+      syncStatusInterval = setInterval(() => {
+        if (mounted && userRef.current) {
+          try {
+            const metrics = syncManager.getSyncMetrics();
+            const newStatus: SyncStatus = {
+              isHealthy: metrics.isHealthy,
+              lastSyncAt: metrics.lastSyncTime,
+              inconsistencyCount: metrics.recentErrors.length,
+              failedSyncCount: metrics.failedSyncs,
+              nextScheduledSync: metrics.nextScheduledSync
+            };
+            
+            // Only update if status actually changed to prevent unnecessary re-renders
+            const currentStatus = syncStatus;
+            if (currentStatus.isHealthy !== newStatus.isHealthy ||
+                currentStatus.inconsistencyCount !== newStatus.inconsistencyCount ||
+                currentStatus.failedSyncCount !== newStatus.failedSyncCount) {
+              updateSyncStatus(newStatus);
+            }
+          } catch (error) {
+            handleError(error, 'useAuth.syncStatusMonitoring');
+          }
+        }
+      }, 30000); // 30 seconds
+
+      // Set up sync error callback
+      const handleSyncError = (error: any) => {
+        if (mounted) {
+          const metrics = syncManager.getSyncMetrics();
+          const newStatus: SyncStatus = {
+            isHealthy: false,
+            lastSyncAt: metrics.lastSyncTime,
+            inconsistencyCount: metrics.recentErrors.length,
+            failedSyncCount: metrics.failedSyncs,
+            nextScheduledSync: metrics.nextScheduledSync
+          };
+          updateSyncStatus(newStatus);
+        }
+      };
+
+      syncManager.onSyncError(handleSyncError);
+
+      return () => {
+        syncManager.offSyncError(handleSyncError);
+      };
+    };
+
     initializeAuth();
+    const cleanupSyncMonitoring = initializeSyncMonitoring();
 
     // Écouteur DÉBONCÉ et FILTRÉ
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 [AUTH_CHANGE] Event:', event);
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (!mounted) return;
 
       // FILTRER les événements non critiques
       const criticalEvents = ['SIGNED_IN', 'SIGNED_OUT', 'USER_DELETED'];
       if (!criticalEvents.includes(event)) {
-        console.log('🔄 [AUTH_CHANGE] Ignoring non-critical event:', event);
         return;
       }
 
@@ -225,7 +277,6 @@ export const useAuthProvider = () => {
       clearTimeout(sessionCheckTimeout);
       sessionCheckTimeout = setTimeout(() => {
         if (mounted) {
-          console.log('🔄 [AUTH_CHANGE] Processing critical event:', event);
           checkSession();
         }
       }, 1000); // 1 seconde de debounce
@@ -234,14 +285,14 @@ export const useAuthProvider = () => {
     return () => {
       mounted = false;
       clearTimeout(sessionCheckTimeout);
+      clearInterval(syncStatusInterval);
       subscription.unsubscribe();
+      cleanupSyncMonitoring();
     };
   }, [checkSession]);
 
   // login optimisé
   const login = async (email: string, password: string) => {
-    console.log('🔑 [LOGIN] Starting login attempt for:', email);
-
     try {
       setAuthState(userRef.current, true, isAuthenticatedRef.current);
 
@@ -253,10 +304,7 @@ export const useAuthProvider = () => {
       if (error) throw new Error(error.message || 'Invalid credentials');
       if (!data.user) throw new Error('No user returned from authentication');
 
-      console.log('🔑 [LOGIN] Authentication successful for:', data.user.email);
-
       const profile = await loadUserProfile(data.user);
-      console.log('🔑 [LOGIN] Profile loaded:', profile);
 
       if (!profile) {
         await supabase.auth.signOut();
@@ -275,12 +323,10 @@ export const useAuthProvider = () => {
       userService.update(profile.id, {
         last_login: new Date().toISOString()
       }).catch(err => {
-        console.warn('🔑 [LOGIN] Could not update last login:', err);
+        // Silently handle - not critical
       });
-
-      console.log('🔑 [LOGIN] ✅ Login complete!');
     } catch (error: any) {
-      console.error('🔑 [LOGIN] ❌ Login error:', error);
+      handleError(error, 'useAuth.login');
       setAuthState(null, false, false);
       throw error;
     }
@@ -288,29 +334,100 @@ export const useAuthProvider = () => {
 
   const logout = async () => {
     try {
-      console.log('Logging out...');
       await supabase.auth.signOut();
       setAuthState(null, false, false);
 
       // Clear local storage
       localStorage.removeItem('depot_preferences');
       localStorage.removeItem('language');
-      console.log('Logout complete');
     } catch (error) {
-      console.error('Error during logout:', error);
+      handleError(error, 'useAuth.logout');
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      // First, check if user exists in our database
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id, email, active')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (userError) {
+        handleError(userError, 'useAuth.resetPassword.checkUser');
+        throw new Error('Erreur lors de la vérification de l\'utilisateur');
+      }
+
+      // If user doesn't exist, show a generic message for security
+      if (!users) {
+        throw new Error('Si cet email existe dans notre système, un lien de réinitialisation a été envoyé');
+      }
+
+      // Check if user is active
+      if (!users.active) {
+        throw new Error('Ce compte est désactivé. Veuillez contacter l\'administrateur');
+      }
+
+      // User exists and is active, send reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Échec de l\'envoi de l\'email de réinitialisation');
+      }
+    } catch (error: any) {
+      handleError(error, 'useAuth.resetPassword');
+      throw error;
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update password');
+      }
+    } catch (error: any) {
+      handleError(error, 'useAuth.updatePassword');
+      throw error;
     }
   };
 
   const refreshUser = async () => {
-    console.log('🔄 [REFRESH_USER] Refreshing user profile...');
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session?.user) {
       const profile = await loadUserProfile(session.user);
       if (profile) {
         setAuthState(profile, false, true);
-        console.log('🔄 [REFRESH_USER] ✅ User profile refreshed');
       }
+    }
+  };
+
+  // New method to refresh only module access permissions
+  const refreshModuleAccess = async () => {
+    if (!userRef.current) {
+      return;
+    }
+
+    try {
+      const updatedPermissions = await moduleAccessService.getUserModuleAccessWithFallback(userRef.current.id);
+      
+      if (updatedPermissions && userRef.current) {
+        const updatedUser = {
+          ...userRef.current,
+          moduleAccess: updatedPermissions
+        };
+        
+        setAuthState(updatedUser, false, true);
+      }
+    } catch (error) {
+      handleError(error, 'useAuth.refreshModuleAccess');
     }
   };
 
@@ -334,16 +451,50 @@ export const useAuthProvider = () => {
     return null;
   }, [canViewAllData]);
 
+  // Sync status management
+  const getSyncStatus = useCallback((): SyncStatus => {
+    return syncStatus;
+  }, [syncStatus]);
+
+  const onSyncStatusChange = useCallback((callback: (status: SyncStatus) => void) => {
+    syncStatusCallbacks.current.push(callback);
+  }, []);
+
+  const offSyncStatusChange = useCallback((callback: (status: SyncStatus) => void) => {
+    const index = syncStatusCallbacks.current.indexOf(callback);
+    if (index > -1) {
+      syncStatusCallbacks.current.splice(index, 1);
+    }
+  }, []);
+
+  // Update sync status and notify callbacks
+  const updateSyncStatus = useCallback((newStatus: SyncStatus) => {
+    setSyncStatus(newStatus);
+    syncStatusCallbacks.current.forEach(callback => {
+      try {
+        callback(newStatus);
+      } catch (error) {
+        handleError(error, 'useAuth.onSyncStatusChange.callback');
+      }
+    });
+  }, []);
+
   return {
     user,
     login,
     logout,
+    resetPassword,
+    updatePassword,
     isLoading,
     isAuthenticated,
     hasModuleAccess,
     canViewAllData,
     getClientFilter,
-    refreshUser
+    refreshUser,
+    refreshModuleAccess,
+    getSyncStatus,
+    onSyncStatusChange,
+    offSyncStatusChange
   };
 };
 

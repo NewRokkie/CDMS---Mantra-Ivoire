@@ -1,4 +1,4 @@
-import { Container, Client, User, ReleaseOrder } from '../types';
+import { Container, Client, User, BookingReference } from '../types';
 import { GateInOperation, GateOutOperation } from '../types/operations';
 
 export const MOCK_CLIENTS: Client[] = [
@@ -32,7 +32,8 @@ export const MOCK_CLIENTS: Client[] = [
     updatedAt: new Date('2025-01-10'),
     createdBy: 'System',
     updatedBy: 'Admin',
-    notes: 'Premium client with priority handling'
+    notes: 'Premium client with priority handling',
+    autoEDI: true
   },
   {
     id: 'client-2',
@@ -63,7 +64,8 @@ export const MOCK_CLIENTS: Client[] = [
     createdAt: new Date('2024-02-20'),
     updatedAt: new Date('2025-01-08'),
     createdBy: 'System',
-    updatedBy: 'Admin'
+    updatedBy: 'Admin',
+    autoEDI: true
   },
   {
     id: 'client-3',
@@ -94,7 +96,8 @@ export const MOCK_CLIENTS: Client[] = [
     createdAt: new Date('2024-03-10'),
     updatedAt: new Date('2025-01-05'),
     createdBy: 'System',
-    updatedBy: 'Admin'
+    updatedBy: 'Admin',
+    autoEDI: true
   },
   {
     id: 'client-4',
@@ -126,7 +129,8 @@ export const MOCK_CLIENTS: Client[] = [
     updatedAt: new Date('2025-01-11'),
     createdBy: 'System',
     updatedBy: 'Admin',
-    notes: 'Growing client, monitor credit usage'
+    notes: 'Growing client, monitor credit usage',
+    autoEDI: false
   },
   {
     id: 'client-5',
@@ -157,7 +161,8 @@ export const MOCK_CLIENTS: Client[] = [
     createdAt: new Date('2024-01-20'),
     updatedAt: new Date('2025-01-09'),
     createdBy: 'System',
-    updatedBy: 'Admin'
+    updatedBy: 'Admin',
+    autoEDI: true
   }
 ];
 
@@ -165,12 +170,12 @@ export const MOCK_CONTAINERS: Container[] = [
   {
     id: 'cont-1',
     number: 'MSKU1234567',
-    type: 'standard',
+    type: 'dry',
     size: '40ft',
     status: 'in_depot',
     location: 'Stack S01-Row 1-Tier 1',
     gateInDate: new Date('2025-01-10T08:30:00'),
-    client: 'Maersk Line',
+    clientName: 'Maersk Line',
     clientId: 'client-1',
     clientCode: 'MAEU',
     createdBy: 'System',
@@ -189,7 +194,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'in_depot',
     location: 'Stack S03-Row 2-Tier 1',
     gateInDate: new Date('2025-01-09T14:15:00'),
-    client: 'MSC Mediterranean Shipping',
+    clientName: 'MSC Mediterranean Shipping',
     clientId: 'client-2',
     clientCode: 'MSCU',
     createdBy: 'System',
@@ -204,12 +209,12 @@ export const MOCK_CONTAINERS: Container[] = [
   {
     id: 'cont-3',
     number: 'GESU4567891',
-    type: 'standard',
+    type: 'dry',
     size: '40ft',
     status: 'maintenance',
     location: 'Workshop 1',
     gateInDate: new Date('2025-01-08T16:45:00'),
-    client: 'CMA CGM',
+    clientName: 'CMA CGM',
     clientId: 'client-3',
     clientCode: 'CMDU',
     createdBy: 'System',
@@ -223,12 +228,12 @@ export const MOCK_CONTAINERS: Container[] = [
   {
     id: 'cont-4',
     number: 'SHIP1112228',
-    type: 'standard',
+    type: 'dry',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S33-Row 3-Tier 1',
     gateInDate: new Date('2025-01-11T09:15:00'),
-    client: 'Shipping Solutions Inc',
+    clientName: 'Shipping Solutions Inc',
     clientId: 'client-4',
     clientCode: 'SHIP001',
     createdBy: 'Jane Operator',
@@ -247,7 +252,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'in_depot',
     location: 'Stack S05-Row 1-Tier 2',
     gateInDate: new Date('2025-01-07T13:20:00'),
-    client: 'Shipping Solutions Inc',
+    clientName: 'Shipping Solutions Inc',
     clientId: 'client-4',
     clientCode: 'SHIP001',
     createdBy: 'System',
@@ -267,7 +272,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'in_depot',
     location: 'Stack S61-Row 2-Tier 3',
     gateInDate: new Date('2025-01-09T11:20:00'),
-    client: 'Maersk Line',
+    clientName: 'Maersk Line',
     clientId: 'client-1',
     clientCode: 'MAEU',
     createdBy: 'System',
@@ -282,12 +287,12 @@ export const MOCK_CONTAINERS: Container[] = [
   {
     id: 'cont-7',
     number: 'CMDU7890125',
-    type: 'standard',
+    type: 'dry',
     size: '40ft',
     status: 'in_depot',
     location: 'Stack S17-Row 1-Tier 1',
     gateInDate: new Date('2025-01-06T13:30:00'),
-    client: 'CMA CGM',
+    clientName: 'CMA CGM',
     clientId: 'client-3',
     clientCode: 'CMDU',
     createdBy: 'System',
@@ -301,12 +306,12 @@ export const MOCK_CONTAINERS: Container[] = [
   {
     id: 'cont-8',
     number: 'HLCU3456789',
-    type: 'standard',
+    type: 'dry',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S101-Row 1-Tier 1',
     gateInDate: new Date('2025-01-05T15:45:00'),
-    client: 'Hapag-Lloyd',
+    clientName: 'Hapag-Lloyd',
     clientId: 'client-5',
     clientCode: 'HLCU',
     createdBy: 'System',
@@ -325,7 +330,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'in_depot',
     location: 'Stack S67-Row 3-Tier 2',
     gateInDate: new Date('2025-01-04T10:15:00'),
-    client: 'MSC Mediterranean Shipping',
+    clientName: 'MSC Mediterranean Shipping',
     clientId: 'client-2',
     clientCode: 'MSCU',
     createdBy: 'System',
@@ -345,7 +350,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'cleaning',
     location: 'Cleaning Bay 1',
     gateInDate: new Date('2025-01-03T09:00:00'),
-    client: 'Maersk Line',
+    clientName: 'Maersk Line',
     clientId: 'client-1',
     clientCode: 'MAEU',
     createdBy: 'System',
@@ -364,7 +369,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'in_depot',
     location: 'Stack S65-Row 1-Tier 1',
     gateInDate: new Date('2025-01-02T14:30:00'),
-    client: 'MSC Mediterranean Shipping',
+    clientName: 'MSC Mediterranean Shipping',
     clientId: 'client-2',
     clientCode: 'MSCU',
     createdBy: 'System',
@@ -383,7 +388,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'in_depot',
     location: 'Stack S35-Row 2-Tier 1',
     gateInDate: new Date('2025-01-01T16:00:00'),
-    client: 'CMA CGM',
+    clientName: 'CMA CGM',
     clientId: 'client-3',
     clientCode: 'CMDU',
     createdBy: 'System',
@@ -397,12 +402,12 @@ export const MOCK_CONTAINERS: Container[] = [
   {
     id: 'cont-13',
     number: 'SHIP4445556',
-    type: 'standard',
+    type: 'dry',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S17-Row 1-Tier 2',
     gateInDate: new Date('2024-12-30T11:45:00'),
-    client: 'Shipping Solutions Inc',
+    clientName: 'Shipping Solutions Inc',
     clientId: 'client-4',
     clientCode: 'SHIP001',
     createdBy: 'System',
@@ -421,7 +426,7 @@ export const MOCK_CONTAINERS: Container[] = [
     status: 'in_depot',
     location: 'Stack S07-Row 3-Tier 1',
     gateInDate: new Date('2024-12-29T08:20:00'),
-    client: 'Hapag-Lloyd',
+    clientName: 'Hapag-Lloyd',
     clientId: 'client-5',
     clientCode: 'HLCU',
     createdBy: 'System',
@@ -436,12 +441,12 @@ export const MOCK_CONTAINERS: Container[] = [
   {
     id: 'cont-15',
     number: 'MAEU8889990',
-    type: 'standard',
+    type: 'dry',
     size: '20ft',
     status: 'in_depot',
     location: 'Stack S03-Row 4-Tier 1',
     gateInDate: new Date('2024-12-28T13:15:00'),
-    client: 'Maersk Line',
+    clientName: 'Maersk Line',
     clientId: 'client-1',
     clientCode: 'MAEU',
     createdBy: 'System',
@@ -454,7 +459,7 @@ export const MOCK_CONTAINERS: Container[] = [
   }
 ];
 
-export const MOCK_RELEASE_ORDERS: ReleaseOrder[] = [
+export const MOCK_RELEASE_ORDERS: BookingReference[] = [
   {
     id: 'RO-2025-001',
     bookingNumber: 'BK-MAEU-2025-001',
@@ -469,10 +474,7 @@ export const MOCK_RELEASE_ORDERS: ReleaseOrder[] = [
     requiresDetailedBreakdown: false,
     status: 'pending',
     createdBy: 'Jane Operator',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T09:00:00'),
-    validatedAt: new Date('2025-01-11T10:30:00'),
-    estimatedReleaseDate: new Date('2025-01-12T14:00:00'),
     notes: 'Priority booking - handle with care',
     containers: []
   },
@@ -490,11 +492,8 @@ export const MOCK_RELEASE_ORDERS: ReleaseOrder[] = [
     requiresDetailedBreakdown: false,
     status: 'completed',
     createdBy: 'Jane Operator',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-10T14:30:00'),
-    validatedAt: new Date('2025-01-10T15:00:00'),
     completedAt: new Date('2025-01-11T10:00:00'),
-    estimatedReleaseDate: new Date('2025-01-11T16:00:00'),
     containers: [
       {
         id: 'roc-1',
@@ -523,16 +522,13 @@ export const MOCK_RELEASE_ORDERS: ReleaseOrder[] = [
     requiresDetailedBreakdown: false,
     status: 'in_process',
     createdBy: 'Sarah Client',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-09T11:00:00'),
-    validatedAt: new Date('2025-01-09T12:00:00'),
-    estimatedReleaseDate: new Date('2025-01-13T09:00:00'),
     containers: [
       {
         id: 'roc-2',
         containerId: 'cont-4',
         containerNumber: 'SHIP1112228',
-        containerType: 'standard',
+        containerType: 'dry',
         containerSize: '20ft',
         currentLocation: 'Stack S33-Row 3-Tier 1',
         status: 'ready',
@@ -564,10 +560,7 @@ export const MOCK_RELEASE_ORDERS: ReleaseOrder[] = [
     requiresDetailedBreakdown: false,
     status: 'pending',
     createdBy: 'System',
-    validatedBy: 'Mike Supervisor',
     createdAt: new Date('2025-01-11T11:00:00'),
-    validatedAt: new Date('2025-01-11T12:30:00'),
-    estimatedReleaseDate: new Date('2025-01-12T16:00:00'),
     notes: 'CMA CGM regular booking',
     containers: []
   }

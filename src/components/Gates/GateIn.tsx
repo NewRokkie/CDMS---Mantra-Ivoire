@@ -1,23 +1,31 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Truck, Container as ContainerIcon, Package, Calendar, MapPin, FileText, Eye, ArrowLeft, X, Menu, ChevronDown } from 'lucide-react';
-import { useLanguage } from '../../hooks/useLanguage';
+import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, stackService, realtimeService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
-import { formatLocationId, generateStackLocations } from '../../utils/locationHelpers';
+import { generateStackLocations } from '../../utils/locationHelpers';
 import { stackPairingService } from '../../services/api/stackPairingService';
 // import moment from 'moment'; // Commented out - not used in current code
+import { CardSkeleton } from '../Common/CardSkeleton';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
+import { TableSkeleton } from '../Common/TableSkeleton';
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
-import { GateInFormData, GateInOperation } from './types';
-import { validateContainerNumber, formatContainerNumberForDisplay, validateGateInStep, getStatusBadgeConfig } from './utils';
+import { GateInFormData } from './types';
+import { isValidContainerTypeAndSize } from './GateInModal/ContainerTypeSelect';
+
+import { ValidationService } from '../../services/validationService';
+import { GateInError, handleError } from '../../services/errorHandling';
+import { logger } from '../../utils/logger';
+import { exportToExcel, formatDateForExport } from '../../utils/excelExport';
+import { useToast } from '../../hooks/useToast';
 
 export const GateIn: React.FC = () => {
-  const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
+  const toast = useToast();
 
   const [activeView, setActiveView] = useState<'overview' | 'pending' | 'location'>('overview');
   const [showForm, setShowForm] = useState(false);
@@ -30,34 +38,24 @@ export const GateIn: React.FC = () => {
   const [containers, setContainers] = useState<any[]>([]);
   const [stacks, setStacks] = useState<any[]>([]);
   const [pairingMap, setPairingMap] = useState<Map<number, number>>(new Map());
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-
-      // DIAGNOSTIC LOGGING - Check current yard state
-      console.log('🔍 [GateIn] loadData called with currentYard:', currentYard);
-      console.log('🔍 [GateIn] currentYard?.id:', currentYard?.id);
-
       const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
-        clientService.getAll().catch(err => { console.error('Error loading clients:', err); return []; }),
+        clientService.getAll().catch(err => { handleError(err, 'GateIn.loadClients'); return []; }),
         gateService.getGateInOperations({ yardId: currentYard?.id }).catch(err => {
-          console.error('❌ [GateIn] Error loading operations:', err);
-          console.error('❌ [GateIn] currentYard?.id at time of error:', currentYard?.id);
+          handleError(err, 'GateIn.loadOperations');
           return [];
         }),
-        containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; }),
-        stackService.getAll(currentYard?.id).catch(err => { console.error('Error loading stacks:', err); return []; }),
-        stackPairingService.getPairingMap(currentYard?.id || '').catch(err => { console.error('Error loading pairing map:', err); return new Map(); })
+        containerService.getAll().catch(err => { handleError(err, 'GateIn.loadContainers'); return []; }),
+        stackService.getAll(currentYard?.id).catch(err => { handleError(err, 'GateIn.loadStacks'); return []; }),
+        stackPairingService.getPairingMap(currentYard?.id || '').catch(err => { handleError(err, 'GateIn.loadPairingMap'); return new Map(); })
       ]);
-
-      // DIAGNOSTIC LOGGING - Check what data was loaded
-      console.log('🔍 [GateIn] Operations data loaded:', operationsData?.length || 0, 'operations');
-      console.log('🔍 [GateIn] First few operations:', operationsData?.slice(0, 5) || []);
-      console.log('🔍 [GateIn] Clients data loaded:', clientsData?.length || 0, 'clients');
-      console.log('🔍 [GateIn] Containers data loaded:', containersData?.length || 0, 'containers');
-      console.log('🔍 [GateIn] Stacks data loaded:', stacksData?.length || 0, 'stacks');
 
       setClients(clientsData || []);
       setGateInOperations(operationsData || []);
@@ -65,8 +63,7 @@ export const GateIn: React.FC = () => {
       setStacks(stacksData || []);
       setPairingMap(pairingMapData || new Map());
     } catch (error) {
-      console.error('❌ [GateIn] Error loading gate in data:', error);
-      // Set empty arrays/maps to prevent infinite loading
+      handleError(error, 'GateIn.loadData');
       setClients([]);
       setGateInOperations([]);
       setContainers([]);
@@ -77,124 +74,40 @@ export const GateIn: React.FC = () => {
     }
   }, [currentYard?.id]);
 
+  // Load data when currentYard changes, not when loadData function changes
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (currentYard?.id) {
+      loadData();
+    }
+  }, [currentYard?.id]); // Remove loadData from dependencies
 
 
 useEffect(() => {
-    if (!currentYard?.id) {
-        console.log('⚠️ [GateIn] No currentYard?.id available, skipping realtime subscriptions');
-        return;
-    }
+  if (!currentYard?.id) return;
 
-    console.log(`🔌 [GateIn] Setting up direct realtime subscriptions for yard: ${currentYard.id}`);
-
-    const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
-        currentYard.id,
-        (payload) => {
-            console.log(`🔄 [GateIn] Direct GateIn ${payload.eventType} update received:`, payload.new);
-            console.log(`🔄 [GateIn] Document visibility state: ${document.visibilityState}`);
-            if (document.visibilityState === 'visible') {
-                console.log(`🔄 [GateIn] Triggering loadData() after GateIn update`);
-                loadData();
-            } else {
-                console.log(`🔄 [GateIn] Skipping GateIn update - tab not visible`);
-            }
-        }
-    );
-
-    const unsubscribeContainers = realtimeService.subscribeToContainers(
-        (payload) => {
-            console.log(`🔄 [GateIn] Container ${payload.eventType} update received:`, payload.new);
-            if (document.visibilityState === 'visible') {
-                console.log(`🔄 [GateIn] Triggering loadData() after container update`);
-                loadData();
-            } else {
-                console.log(`🔄 [GateIn] Skipping container update - tab not visible`);
-            }
-        }
-    );
-
-    return () => {
-        console.log(`🔌 [GateIn] Cleaning up direct realtime subscriptions`);
-        unsubscribeGateIn();
-        unsubscribeContainers();
-    };
-}, [currentYard?.id, loadData])
-
-  // Generate locations from stacks with Location ID format (S01-R1-H1)
-  // Filter by Client Pools and exclude occupied locations
-  const mockLocations = React.useMemo(() => {
-    const locations20ft: any[] = [];
-    const locations40ft: any[] = [];
-    const locationsDamage: any[] = [];
-
-    // Get all occupied locations from containers
-    const occupiedLocations = new Set(
-      containers
-        .filter(c => c.location && c.status === 'in_depot')
-        .map(c => c.location)
-    );
-
-    // Track which virtual stacks we've already processed to avoid duplicates
-    const processedVirtualStacks = new Set<number>();
-
-    stacks.forEach((stack) => {
-      const rows = stack.rows || 6;
-      const maxTiers = stack.maxTiers || 4;
-
-      // Check if this stack is part of a pairing (for 40ft)
-      const virtualStackNumber = pairingMap.get(stack.stackNumber);
-
-      // For 40ft containers with pairing: S03→4, S05→4, S07→8, S09→8, etc.
-      // Only process each virtual stack once
-      if (virtualStackNumber && stack.containerSize === '40feet') {
-        if (processedVirtualStacks.has(virtualStackNumber)) {
-          return; // Skip, already processed this virtual stack
-        }
-        processedVirtualStacks.add(virtualStackNumber);
+  const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
+    currentYard.id,
+    () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
       }
+    }
+  );
 
-      // Generate locations with virtual stack number if paired
-      const allPositions = generateStackLocations(
-        stack.stackNumber,
-        rows,
-        maxTiers,
-        virtualStackNumber
-      );
+  const unsubscribeContainers = realtimeService.subscribeToContainers(() => {
+    if (document.visibilityState === 'visible') {
+      loadData();
+    }
+  });
 
-      // Filter out occupied positions
-      const availablePositions = allPositions.filter(locationId => !occupiedLocations.has(locationId));
+  return () => {
+    try { unsubscribeGateIn(); } catch (e) { /* ignore */ }
+    try { unsubscribeContainers(); } catch (e) { /* ignore */ }
+  };
+}, [currentYard?.id]);
 
-      availablePositions.forEach((locationId) => {
-        const locationData = {
-          id: locationId,
-          name: locationId,
-          stackId: stack.id,
-          stackNumber: stack.stackNumber,
-          virtualStackNumber: virtualStackNumber,
-          capacity: 1,
-          available: 1,
-          section: stack.sectionName || 'Main Section'
-        };
-
-        if (stack.isSpecialStack) {
-          locationsDamage.push(locationData);
-        } else if (stack.containerSize === '20feet') {
-          locations20ft.push(locationData);
-        } else if (stack.containerSize === '40feet') {
-          locations40ft.push(locationData);
-        }
-      });
-    });
-
-    return {
-      '20ft': locations20ft,
-      '40ft': locations40ft,
-      damage: locationsDamage
-    };
-  }, [stacks, containers, pairingMap]);
+// Minimal mockLocations for pending operations view. Replace with full logic if needed.
+const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] }), [stacks, containers, pairingMap]);
 
   const pendingOperations = gateInOperations.filter(op =>
     op.status === 'pending' || !op.assignedLocation
@@ -207,21 +120,24 @@ useEffect(() => {
 
   const [formData, setFormData] = useState<GateInFormData>({
     containerSize: '20ft',
-    containerType: 'standard',
+    containerType: 'dry',
+    isHighCube: false,
+    containerIsoCode: '',
     containerQuantity: 1,
     status: 'FULL',
-    isDamaged: false,
     clientId: '',
     clientCode: '',
     clientName: '',
     bookingReference: '',
     containerNumber: '',
+    containerNumberConfirmation: '',
     secondContainerNumber: '',
+    secondContainerNumberConfirmation: '',
+    classification: 'divers', // Default to 'divers'
     bookingType: 'EXPORT',
     driverName: '',
     truckNumber: '',
     transportCompany: '',
-    assignedLocation: '',
     truckArrivalDate: new Date().toISOString().split('T')[0], // Default to today
     truckArrivalTime: new Date().toTimeString().slice(0, 5), // Default to current time
     truckDepartureDate: '',
@@ -255,32 +171,11 @@ useEffect(() => {
     return opDate.getTime() === today.getTime();
   });
 
-  const damagedContainersCount = allOperations.filter(op => op.isDamaged).length;
+  const alimentaireContainersCount = allOperations.filter(op => op.classification === 'alimentaire').length;
 
   const handleInputChange = (field: keyof GateInFormData, value: any) => {
-    // Special handling for container number validation
-    if (field === 'containerNumber' || field === 'secondContainerNumber') {
-      // Remove any non-alphanumeric characters and convert to uppercase
-      const cleanValue = value.replace(/[^A-Z0-9]/g, '').toUpperCase();
-
-      // Limit to 11 characters maximum
-      if (cleanValue.length <= 11) {
-        setFormData(prev => ({
-          ...prev,
-          [field]: cleanValue
-        }));
-
-        // Trigger auto-save with cleanup
-        setAutoSaving(true);
-        if (autoSaveTimeoutRef.current) {
-          clearTimeout(autoSaveTimeoutRef.current);
-        }
-        autoSaveTimeoutRef.current = setTimeout(() => setAutoSaving(false), 1000);
-        return;
-      }
-      return; // Don't allow more than 11 characters
-    }
-
+    // Container number fields are now handled by ContainerNumberInput component
+    // No special processing needed here since the component handles validation
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -295,12 +190,23 @@ useEffect(() => {
   };
 
   const handleContainerSizeChange = (size: '20ft' | '40ft') => {
-    setFormData(prev => ({
-      ...prev,
-      containerSize: size,
-      containerQuantity: size === '40ft' ? 1 : prev.containerQuantity,
-      secondContainerNumber: size === '40ft' ? '' : prev.secondContainerNumber
-    }));
+    setFormData(prev => {
+      // Check if current container type is valid for the new size and high cube flag
+      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, size, prev.isHighCube);
+
+      // If switching to 20ft, disable High Cube since it's only for 40ft
+      const newIsHighCube = size === '20ft' ? false : prev.isHighCube;
+
+      return {
+        ...prev,
+        containerSize: size,
+        isHighCube: newIsHighCube,
+        containerQuantity: size === '40ft' ? 1 : prev.containerQuantity,
+        secondContainerNumber: size === '40ft' ? '' : prev.secondContainerNumber,
+        // Reset to default 'dry' type if current type is not valid for new size
+        containerType: isCurrentTypeValid ? prev.containerType : 'dry'
+      };
+    });
   };
 
   const handleQuantityChange = (quantity: 1 | 2) => {
@@ -320,13 +226,21 @@ useEffect(() => {
     }));
   };
 
-  const handleDamageChange = (isDamaged: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      isDamaged,
-      assignedLocation: isDamaged ? 'DMG-VIRTUAL' : prev.assignedLocation && prev.assignedLocation !== 'DMG-VIRTUAL' ? prev.assignedLocation : ''
-    }));
+  const handleHighCubeChange = (isHighCube: boolean) => {
+    setFormData(prev => {
+      // If switching High Cube, validate if current container type is still valid
+      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, prev.containerSize, isHighCube);
+
+      return {
+        ...prev,
+        isHighCube,
+        // Reset to default 'dry' type if current type is not valid for new high cube setting
+        containerType: isCurrentTypeValid ? prev.containerType : 'dry'
+      };
+    });
   };
+
+
 
   const handleClientChange = (clientId: string) => {
     const selectedClient = clients.find(c => c.id === clientId);
@@ -340,26 +254,56 @@ useEffect(() => {
     }
   };
 
+  // Memoized validation check for current step (safe for render-time calls)
+  const isCurrentStepValid = React.useMemo(() => {
+    try {
+      if (!formData) return false;
+      const hasTimeTrackingAccess = hasModuleAccess('timeTracking');
+      const validationResult = ValidationService.validateStep(currentStep, formData, hasTimeTrackingAccess);
+      return validationResult.isValid;
+    } catch (error) {
+      handleError(error, 'GateIn.isCurrentStepValid');
+      return false;
+    }
+  }, [currentStep, formData, hasModuleAccess]);
+
   const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 1:
-        const hasContainerNumber = formData.containerNumber.trim() !== '';
-        const isValidFirstContainer = hasContainerNumber && validateContainerNumber(formData.containerNumber).isValid;
-        const hasSecondContainer = formData.containerQuantity === 1 || formData.secondContainerNumber.trim() !== '';
-        const isValidSecondContainer = formData.containerQuantity === 1 || (formData.secondContainerNumber ? validateContainerNumber(formData.secondContainerNumber).isValid : true);
-        const hasClient = formData.clientId !== '';
-        const hasBookingRef = formData.status === 'EMPTY' || formData.bookingReference.trim() !== '';
-        return isValidFirstContainer && hasSecondContainer && isValidSecondContainer && hasClient && hasBookingRef;
-      case 2:
-        return formData.driverName !== '' && formData.truckNumber !== '' && formData.transportCompany !== '';
-      default:
-        return true;
+    try {
+      // Clear previous validation errors
+      setValidationErrors([]);
+      setValidationWarnings([]);
+
+      // Ensure formData is available
+      if (!formData) {
+        setValidationErrors(['Form data is not available']);
+        return false;
+      }
+
+      // Use enhanced validation service
+      const hasTimeTrackingAccess = hasModuleAccess('timeTracking');
+      const validationResult = ValidationService.validateStep(step, formData, hasTimeTrackingAccess);
+
+      if (!validationResult.isValid) {
+        const errorMessages = ValidationService.formatValidationErrors(validationResult);
+        setValidationErrors(errorMessages);
+      }
+
+      const warningMessages = ValidationService.formatValidationWarnings(validationResult);
+      if (warningMessages.length > 0) {
+        setValidationWarnings(warningMessages);
+      }
+
+      return validationResult.isValid;
+    } catch (error) {
+      handleError(error, 'GateIn.validateStep');
+      setValidationErrors(['Validation error occurred. Please try again.']);
+      return false;
     }
   };
 
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(2, prev + 1));
+      setCurrentStep(prev => Math.min(3, prev + 1));
     }
   };
 
@@ -368,29 +312,49 @@ useEffect(() => {
   };
 
   const handleSubmit = async () => {
-    console.log('🪲 DEBUG - handleSubmit called', {
-      canPerformGateIn,
-      userRole: user?.role,
-      currentYard: currentYard?.id
-    });
+
+    // Clear previous errors
+    setSubmissionError(null);
+    setValidationErrors([]);
+    setValidationWarnings([]);
 
     if (!canPerformGateIn) {
-      console.log('🪲 DEBUG - Cannot perform gate in: insufficient permissions');
+      const errorMessage = 'You do not have permission to perform Gate In operations';
+      setSubmissionError(errorMessage);
       return;
     }
 
     // Validate yard operation
     const yardValidation = validateYardOperation('gate_in');
-    console.log('🪲 DEBUG - Yard validation result:', yardValidation);
-
     if (!yardValidation.isValid) {
-      console.log('🪲 DEBUG - Yard validation failed:', yardValidation.message);
-      alert(`Cannot perform gate in: ${yardValidation.message}`);
+      const errorMessage = `Cannot perform Gate In: ${yardValidation.message}`;
+      setSubmissionError(errorMessage);
       return;
     }
 
-    console.log('🪲 DEBUG - Starting gate in processing...');
+    // Comprehensive form validation
+    const existingContainerNumbers = containers.map(c => c.number.toUpperCase());
+    const hasTimeTrackingAccess = hasModuleAccess('timeTracking');
+    const formValidation = ValidationService.validateGateInForm(formData, undefined, hasTimeTrackingAccess);
+    const businessValidation = ValidationService.validateBusinessRules(formData, existingContainerNumbers);
+
+    // Combine validation results
+    const allErrors = [...formValidation.errors, ...businessValidation.errors];
+    const allWarnings = [...formValidation.warnings, ...businessValidation.warnings];
+
+    if (allErrors.length > 0) {
+      const errorMessages = allErrors.map(e => e.userMessage);
+      setValidationErrors(errorMessages);
+      return;
+    }
+
+    if (allWarnings.length > 0) {
+      const warningMessages = allWarnings.map(w => w.userMessage);
+      setValidationWarnings(warningMessages);
+    }
+
     setIsProcessing(true);
+
     try {
       // Use client pool service to find optimal stack assignment
       const { clientPoolService } = await import('../../services/clientPoolService');
@@ -401,73 +365,62 @@ useEffect(() => {
         containerNumber: formData.containerNumber,
         clientCode: formData.clientCode,
         containerSize: formData.containerSize,
-        requiresSpecialHandling: formData.isDamaged
+        requiresSpecialHandling: false
       };
 
       // Find optimal stack assignment
-      const optimalStack = clientPoolService.findOptimalStackForContainer(
-        assignmentRequest,
-        { sections: [] } as any, // Would use actual yard data
-        [] // Would use actual container data
-      );
+      let optimalStack;
+      try {
+        optimalStack = clientPoolService.findOptimalStackForContainer(
+          assignmentRequest,
+          { sections: [] } as any, // Would use actual yard data
+          [] // Would use actual container data
+        );
+      } catch (error) {
+        // Silently handle - not critical for gate in
+      }
 
-      // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Ensure truck arrival date/time are set (use current system time if not provided)
+      const now = new Date();
+      const truckArrivalDate = formData.truckArrivalDate || now.toISOString().split('T')[0];
+      const truckArrivalTime = formData.truckArrivalTime || now.toTimeString().slice(0, 5);
 
-      // Process Gate In through API service
-      console.log('🪲 DEBUG - Calling gateService.processGateIn with:', {
-        containerNumber: formData.containerNumber,
+      // Process Gate In through enhanced API service
+      const gateInData = {
+        containerNumber: formData.containerNumber.trim().toUpperCase(),
+        containerQuantity: formData.containerQuantity,
+        secondContainerNumber: formData.secondContainerNumber?.trim().toUpperCase(),
+        clientName: formData.clientName,
         clientCode: formData.clientCode,
         containerType: formData.containerType,
         containerSize: formData.containerSize,
+        fullEmpty: formData.status, // Pass the FULL/EMPTY status from form
         transportCompany: formData.transportCompany,
         driverName: formData.driverName,
         truckNumber: formData.truckNumber,
         location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
+        truckArrivalDate: truckArrivalDate,
+        truckArrivalTime: truckArrivalTime,
+        weight: undefined,
         operatorId: user?.id || 'unknown',
         operatorName: user?.name || 'Unknown Operator',
         yardId: currentYard?.id || 'unknown',
-        damageReported: formData.isDamaged,
-        damageDescription: formData.isDamaged ? 'Container flagged as damaged during gate in' : undefined
-      });
+        classification: formData.classification,
+        damageReported: false, // Keep for backward compatibility
+        damageDescription: undefined // Keep for backward compatibility
+        // damageAssessment: moved to pending operations phase
+      };
 
-      try {
-        const result = await gateService.processGateIn({
-          containerNumber: formData.containerNumber,
-          clientCode: formData.clientCode,
-          containerType: formData.containerType,
-          containerSize: formData.containerSize,
-          transportCompany: formData.transportCompany,
-          driverName: formData.driverName,
-          truckNumber: formData.truckNumber,
-          location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
-          weight: undefined,
-          operatorId: user?.id || 'unknown',
-          operatorName: user?.name || 'Unknown Operator',
-          yardId: currentYard?.id || 'unknown',
-          damageReported: formData.isDamaged,
-          damageDescription: formData.isDamaged ? 'Container flagged as damaged during gate in' : undefined
-        });
+      const result = await gateService.processGateIn(gateInData);
 
-        console.log('🪲 DEBUG - gateService.processGateIn result:', result);
-
-        if (!result.success) {
-          console.log('🪲 DEBUG - Gate in processing failed:', result.error);
-          alert(result.error || 'Failed to process gate in');
-          setIsProcessing(false);
-          return;
-        }
-
-        console.log('🪲 DEBUG - Gate in processing successful');
-      } catch (apiError) {
-        console.error('🪲 DEBUG - Exception in gateService.processGateIn:', apiError);
-        alert(`API Error: ${apiError}`);
-        setIsProcessing(false);
+      if (!result.success) {
+        const errorMessage = result.userMessage || result.error || 'Failed to process Gate In operation';
+        setSubmissionError(errorMessage);
         return;
       }
 
       // Update client pool occupancy if stack was assigned
-      if (optimalStack && !formData.isDamaged) {
+      if (optimalStack) {
         try {
           await clientPoolService.assignContainerToClientStack(
             assignmentRequest,
@@ -475,56 +428,113 @@ useEffect(() => {
             []
           );
         } catch (error) {
-          console.warn('Could not update client pool occupancy:', error);
+          // Silently handle - not critical
         }
       }
 
-      alert(`Gate In operation submitted for container ${formData.containerNumber}${formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''}`);
+      // Show success message
+      const successMessage = `Gate In operation completed successfully for container ${formData.containerNumber}${
+        formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''
+      }`;
 
-      // Reset form
-      setFormData({
-        containerSize: '20ft',
-        containerType: 'standard',
-        containerQuantity: 1,
-        status: 'FULL',
-        isDamaged: false,
-        clientId: '',
-        clientCode: '',
-        clientName: '',
-        bookingReference: '',
-        bookingType: 'EXPORT',
-        containerNumber: '',
-        secondContainerNumber: '',
-        driverName: '',
-        truckNumber: '',
-        transportCompany: '',
-        assignedLocation: '',
-        truckArrivalDate: new Date().toISOString().split('T')[0],
-        truckArrivalTime: new Date().toTimeString().slice(0, 5),
-        truckDepartureDate: '',
-        truckDepartureTime: '',
-        notes: '',
-        operationStatus: 'pending'
-      });
+      toast.success(successMessage);
+
+      // Reset form and close modal
+      resetForm();
       setCurrentStep(1);
       setShowForm(false);
+
+      // Refresh data
+      await loadData();
+
     } catch (error) {
-      console.error('🪲 DEBUG - Exception in handleSubmit:', error);
-      alert(`Error processing gate in: ${error}`);
+      handleError(error, 'GateIn.handleSubmit');
+
+      let errorMessage = 'An unexpected error occurred while processing the Gate In operation';
+
+      if (error instanceof GateInError) {
+        errorMessage = error.userMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      setSubmissionError(errorMessage);
     } finally {
-      console.log('🪲 DEBUG - handleSubmit finally block, setting isProcessing to false');
       setIsProcessing(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      containerSize: '20ft',
+      containerType: 'dry',
+      isHighCube: false,
+      containerIsoCode: '',
+      containerQuantity: 1,
+      status: 'EMPTY', // Default to 'EMPTY'
+      clientId: '',
+      clientCode: '',
+      clientName: '',
+      bookingReference: '',
+      bookingType: 'EXPORT',
+      containerNumber: '',
+      containerNumberConfirmation: '',
+      secondContainerNumber: '',
+      secondContainerNumberConfirmation: '',
+      classification: 'divers', // Default to 'divers'
+      driverName: '',
+      truckNumber: '',
+      transportCompany: '',
+      truckArrivalDate: new Date().toISOString().split('T')[0],
+      truckArrivalTime: new Date().toTimeString().slice(0, 5),
+      truckDepartureDate: '',
+      truckDepartureTime: '',
+      notes: '',
+      operationStatus: 'pending'
+    });
+    setSubmissionError(null);
+    setValidationErrors([]);
+    setValidationWarnings([]);
   };
 
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
     setIsProcessing(true);
     try {
+      // Validate required data
+      if (!operation?.containerNumber) {
+        throw new Error('Container number is required');
+      }
+      if (!locationData?.assignedLocation) {
+        throw new Error('Assigned location is required');
+      }
+      if (!currentYard?.id) {
+        throw new Error('Current yard is not selected');
+      }
+
       // 1. Get client info
       const client = clients.find(c => c.code === operation.clientCode);
+      if (!client) {
+        throw new Error(`Client not found: ${operation.clientCode}`);
+      }
 
-      // 2. Create container(s) in containers table
+      // 2. Check if containers already exist
+      const containerNumbers = [operation.containerNumber];
+      if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
+        containerNumbers.push(operation.secondContainerNumber);
+      }
+
+      const { data: existingContainers } = await supabase
+        .from('containers')
+        .select('number')
+        .in('number', containerNumbers);
+
+      if (existingContainers && existingContainers.length > 0) {
+        const duplicateNumbers = existingContainers.map(c => c.number).join(', ');
+        throw new Error(`Container(s) already exist in the system: ${duplicateNumbers}`);
+      }
+
+      // 3. Create container(s) in containers table
       const containersToCreate = [
         {
           number: operation.containerNumber,
@@ -561,22 +571,88 @@ useEffect(() => {
         .insert(containersToCreate)
         .select();
 
-      if (containerError) throw containerError;
+      if (containerError) {
+        if (containerError.code === '23505') {
+          throw new Error('Container number already exists in the system');
+        }
+        throw new Error(`Failed to create container: ${containerError.message}`);
+      }
 
-      // 3. Link container ID to gate_in_operation
+      // 4. Link container ID to gate_in_operation and include damage assessment
+      const updateData: any = {
+        container_id: createdContainers?.[0]?.id,
+        assigned_location: locationData.assignedLocation,
+        completed_at: new Date().toISOString(),
+        status: 'completed'
+      };
+
+      // Add damage assessment data if provided
+      if (locationData.damageAssessment) {
+        updateData.damage_reported = locationData.damageAssessment.hasDamage;
+        updateData.damage_description = locationData.damageAssessment.damageDescription || null;
+        updateData.damage_assessment = JSON.stringify(locationData.damageAssessment);
+      }
+
       const { error: updateError } = await supabase
         .from('gate_in_operations')
-        .update({
-          container_id: createdContainers?.[0]?.id,
-          assigned_location: locationData.assignedLocation,
-          completed_at: new Date().toISOString(),
-          status: 'completed'
-        })
+        .update(updateData)
         .eq('id', operation.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
+      }
 
-      // 4. Update local state
+      // 5. Process EDI transmission after successful container assignment
+      let ediResult = null;
+      try {
+        // Import EDI management service
+        const { ediManagementService } = await import('../../services/edi/ediManagement');
+        
+        // Prepare EDI container data
+        const ediContainerData = {
+          containerNumber: operation.containerNumber,
+          size: operation.containerSize as '20ft' | '40ft' | '45ft',
+          type: (operation.containerType || 'dry') as 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top',
+          clientName: operation.clientName,
+          clientCode: operation.clientCode,
+          transporter: operation.transportCompany || 'Unknown',
+          vehicleNumber: operation.truckNumber || 'Unknown',
+          userName: user?.name || 'System',
+          containerLoadStatus: (operation.fullEmpty || operation.status || 'FULL') as 'FULL' | 'EMPTY',
+          timestamp: new Date(),
+          location: locationData.assignedLocation,
+          yardId: currentYard?.id
+        };
+
+        // Process EDI transmission
+        ediResult = await ediManagementService.processGateIn(ediContainerData);
+        
+        if (ediResult) {
+          // Update gate_in_operation with EDI transmission info
+          await supabase
+            .from('gate_in_operations')
+            .update({
+              edi_transmitted: true,
+              edi_transmission_date: new Date().toISOString(),
+              edi_log_id: ediResult.id
+            })
+            .eq('id', operation.id);
+        }
+      } catch (ediError) {
+        // EDI transmission failed, but don't fail the entire operation
+        console.error('EDI transmission failed:', ediError);
+        
+        // Update gate_in_operation to indicate EDI failure
+        await supabase
+          .from('gate_in_operations')
+          .update({
+            edi_transmitted: false,
+            edi_error_message: ediError instanceof Error ? ediError.message : 'EDI transmission failed'
+          })
+          .eq('id', operation.id);
+      }
+
+      // 6. Update local state
       setGateInOperations(prev => prev.map(op =>
         op.id === operation.id
           ? {
@@ -584,26 +660,37 @@ useEffect(() => {
               containerId: createdContainers?.[0]?.id,
               assignedLocation: locationData.assignedLocation,
               completedAt: new Date(),
-              status: 'completed'
+              status: 'completed',
+              ediTransmitted: ediResult ? true : false,
+              ediLogId: ediResult?.id
             }
           : op
       ));
 
-      // 5. Refresh containers list
-      const updatedContainers = await containerService.getAll();
-      setContainers(updatedContainers);
+      // 7. Refresh containers list (non-blocking)
+      try {
+        const updatedContainers = await containerService.getAll();
+        setContainers(updatedContainers);
+      } catch (refreshError) {
+        logger.warn('Avertissement', 'ComponentName', refreshError);
+      }
 
-      alert(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation}`);
+      // 8. Show success message with EDI status
+      const damageStatus = locationData.damageAssessment?.hasDamage ? 'with damage reported' : 'in good condition';
+      const ediStatus = ediResult ? '✓ EDI transmitted' : '⚠ EDI transmission failed';
+      
+      toast.success(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation} (${damageStatus}) - ${ediStatus}`);
       setActiveView('overview');
     } catch (error) {
-      console.error('Error completing operation:', error);
-      alert(`Error completing operation: ${error}`);
+      handleError(error, 'GateIn.handleLocationValidation');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Error completing operation: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Import centralized getStatusBadgeConfig function
+
 
   const filteredOperations = allOperations.filter(op => {
     const matchesSearch = !searchTerm ||
@@ -615,41 +702,66 @@ useEffect(() => {
 
     const matchesFilter = selectedFilter === 'all' ||
                          op.status === selectedFilter ||
-                         (selectedFilter === 'damaged' && op.isDamaged);
+                         (selectedFilter === 'alimentaire' && op.classification === 'alimentaire') ||
+                         (selectedFilter === 'divers' && op.classification === 'divers');
 
-    // DIAGNOSTIC LOGGING - Check individual operation filtering
-    if (selectedFilter !== 'all') {
-      console.log('🔍 [GateIn] Filter debug for operation:', op.id, {
-        status: op.status,
-        isDamaged: op.isDamaged,
-        truckNumber : op.truckNumber,
-        selectedFilter,
-        matchesFilter,
-        matchesSearch
-      });
-    }
-
-    const result = matchesSearch && matchesFilter;
-    return result;
+    return matchesSearch && matchesFilter;
   });
 
-  // DIAGNOSTIC LOGGING - Check filtering results
-  console.log('🔍 [GateIn] Filtering debug:', {
-    totalOperations: allOperations.length,
-    filteredOperations: filteredOperations.length,
-    searchTerm,
-    selectedFilter,
-    pendingOperations: pendingOperations.length,
-    completedOperations: completedOperations.length
-  });
+  const handleExportGateIn = () => {
+    const dataToExport = filteredOperations.map(op => ({
+      containerNumber: op.containerNumber || '',
+      secondContainerNumber: op.secondContainerNumber || '',
+      containerSize: op.containerSize || '',
+      containerType: op.containerType || '',
+      status: op.status || '',
+      fullEmpty: op.fullEmpty || op.status || '', // Use fullEmpty or status as fallback
+      clientName: op.clientName || '',
+      clientCode: op.clientCode || '',
+      classification: op.classification || '',
+      driverName: op.driverName || '',
+      truckNumber: op.truckNumber || '',
+      transportCompany: op.transportCompany || '',
+      assignedLocation: op.assignedLocation || '',
+      truckArrivalDate: formatDateForExport(op.truckArrivalDate),
+      truckArrivalTime: op.truckArrivalTime || '',
+      yardName: currentYard?.name || '',
+      operatorName: op.operatorName || '',
+      createdAt: formatDateForExport(op.createdAt),
+      updatedAt: formatDateForExport(op.updatedAt),
+      notes: op.notes || ''
+    }));
 
-  // DIAGNOSTIC LOGGING - Check operation status values
-  if (allOperations.length > 0) {
-    const statusValues = [...new Set(allOperations.map(op => op.status))];
-    const damageValues = [...new Set(allOperations.map(op => op.isDamaged))];
-    console.log('🔍 [GateIn] Unique status values:', statusValues);
-    console.log('🔍 [GateIn] Unique isDamaged values:', damageValues);
-  }
+    exportToExcel({
+      filename: `gate_in_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Gate In Operations',
+      columns: [
+        { header: 'Numéro Conteneur', key: 'containerNumber', width: 20 },
+        { header: '2ème Conteneur', key: 'secondContainerNumber', width: 20 },
+        { header: 'Taille', key: 'containerSize', width: 12 },
+        { header: 'Type', key: 'containerType', width: 15 },
+        { header: 'Statut', key: 'status', width: 15 },
+        { header: 'Plein/Vide', key: 'fullEmpty', width: 12 },
+        { header: 'Client', key: 'clientName', width: 25 },
+        { header: 'Code Client', key: 'clientCode', width: 15 },
+        { header: 'Classification', key: 'classification', width: 15 },
+        { header: 'Chauffeur', key: 'driverName', width: 20 },
+        { header: 'Camion', key: 'truckNumber', width: 15 },
+        { header: 'Transporteur', key: 'transportCompany', width: 25 },
+        { header: 'Emplacement', key: 'assignedLocation', width: 20 },
+        { header: 'Date Arrivée', key: 'truckArrivalDate', width: 20 },
+        { header: 'Heure Arrivée', key: 'truckArrivalTime', width: 15 },
+        { header: 'Dépôt', key: 'yardName', width: 20 },
+        { header: 'Opérateur', key: 'operatorName', width: 20 },
+        { header: 'Date Création', key: 'createdAt', width: 20 },
+        { header: 'Date Modification', key: 'updatedAt', width: 20 },
+        { header: 'Notes', key: 'notes', width: 30 }
+      ],
+      data: dataToExport
+    });
+  };
+
+
 
   if (!canPerformGateIn) {
     return (
@@ -675,6 +787,35 @@ useEffect(() => {
       />
     );
   }
+
+  // Show skeletons while initial data is loading
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-4 lg:px-6 py-4 lg:py-6">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate In</h1>
+              <p className="text-sm text-gray-600 hidden lg:block">Container entry management</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+
+        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden p-4">
+          <TableSkeleton />
+        </div>
+      </div>
+    </div>
+  );
 
   // Main Overview
   return (
@@ -757,12 +898,12 @@ useEffect(() => {
           {/* Damaged Containers */}
           <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-red-500 lg:bg-purple-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-purple-600" />
+              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{damagedContainersCount}</p>
-                <p className="text-xs font-medium text-red-700 lg:text-gray-500 leading-tight">Damaged Containers</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900">{alimentaireContainersCount}</p>
+                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Alimentaire Containers</p>
               </div>
             </div>
           </div>
@@ -770,9 +911,9 @@ useEffect(() => {
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="lg:flex lg:justify-between p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
-            <div className="relative mb-4 lg:mb-0">
+            <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
@@ -793,7 +934,7 @@ useEffect(() => {
 
             {/* Filter Chips (Mobile) / Dropdown (Desktop) */}
             <div className="lg:hidden flex items-center justify-center space-x-2 overflow-x-auto py-2 scrollbar-none -mx-4 px-4">
-              {['all', 'pending', 'completed', 'damaged'].map((filter) => (
+              {['all', 'pending', 'completed', 'alimentaire', 'divers'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
@@ -817,13 +958,22 @@ useEffect(() => {
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
-                <option value="damaged">Damaged</option>
+                <option value="alimentaire">Alimentaire</option>
+                <option value="divers">Divers</option>
               </select>
               {searchTerm && (
                 <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg font-medium">
                   {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
                 </span>
               )}
+              <button
+                onClick={handleExportGateIn}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export</span>
+              </button>
             </div>
           </div>
         </div>
@@ -847,17 +997,29 @@ useEffect(() => {
           isProcessing={isProcessing}
           autoSaving={autoSaving}
           validateStep={validateStep}
+          isCurrentStepValid={isCurrentStepValid}
           handleSubmit={handleSubmit}
           handleNextStep={handleNextStep}
           handlePrevStep={handlePrevStep}
           handleInputChange={handleInputChange}
           handleContainerSizeChange={handleContainerSizeChange}
+          handleHighCubeChange={handleHighCubeChange}
           handleQuantityChange={handleQuantityChange}
           handleStatusChange={handleStatusChange}
-          handleDamageChange={handleDamageChange}
           handleClientChange={handleClientChange}
+
           clients={clients}
+          submissionError={submissionError}
+          validationErrors={validationErrors}
+          validationWarnings={validationWarnings}
         />
+      )}
+
+      {/* Processing Spinner Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
       )}
     </div>
   );

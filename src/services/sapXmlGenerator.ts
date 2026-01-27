@@ -51,20 +51,23 @@ export interface SapCodecoReportXml {
  * Generates XML in SAP_CODECO_REPORT_MT format for EDI transmission
  */
 export class SapXmlGenerator {
-  
+
   /**
    * Map container type to SAP design code
    */
   private static getDesignCode(containerType: Container['type']): string {
     const designMapping = {
-      'standard': '003',        // Standard standard container
-      'reefer': '004',     // Refrigerated container
-      'tank': '005',       // Tank container
-      'flat_rack': '006',  // Flat rack container
-      'open_top': '007'    // Open top container
+      'dry': '003',        // Standard dry container
+      'high_cube': '004',  // High-cube container
+      'hard_top': '005',   // Hard top container
+      'ventilated': '006', // Ventilated container
+      'reefer': '007',     // Refrigerated container
+      'tank': '008',       // Tank container
+      'flat_rack': '009',  // Flat rack container
+      'open_top': '010'    // Open top container
     };
-    
-    return designMapping[containerType] || '003'; // Default to standard container
+
+    return designMapping[containerType] || '003'; // Default to dry container
   }
 
   /**
@@ -98,7 +101,7 @@ export class SapXmlGenerator {
     const prefix = operationType === 'GATE_IN' ? '244191' : '244192';
     const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
     const containerSuffix = containerNumber.slice(-3); // Last 3 chars of container number
-    
+
     return `${prefix}${timestamp}${containerSuffix}`;
   }
 
@@ -171,10 +174,10 @@ export class SapXmlGenerator {
     // Build XML string using xml2js Builder
     const builder = new Builder({
       xmldec: { version: '1.0', encoding: 'UTF-8' },
-      renderOpts: { 
-        pretty: true, 
-        indent: '    ', 
-        newline: '\n' 
+      renderOpts: {
+        pretty: true,
+        indent: '    ',
+        newline: '\n'
       },
       headless: false
     });
@@ -202,7 +205,7 @@ export class SapXmlGenerator {
       operationType: 'GATE_IN',
       transporter,
       vehicleNumber,
-      clientCode: container.clientCode || container.client,
+      clientCode: container.clientCode || container.clientName,
       userName,
       containerLoadStatus
     };
@@ -225,7 +228,7 @@ export class SapXmlGenerator {
       operationType: 'GATE_OUT',
       transporter,
       vehicleNumber,
-      clientCode: container.clientCode || container.client,
+      clientCode: container.clientCode || container.clientName,
       userName,
       containerLoadStatus
     };
@@ -287,8 +290,8 @@ export class SapXmlGenerator {
    */
   static getContainerTypeDescription(containerType: Container['type']): string {
     const descriptions = {
-      'standard': 'Standard Container',
-      'hi_cube': 'Hi-Cube Container',
+      'dry': 'Dry Container',
+      'high_cube': 'High-Cube Container',
       'hard_top': 'Hard Top Container',
       'ventilated': 'Ventilated Container',
       'reefer': 'Refrigerated Container',
@@ -296,7 +299,7 @@ export class SapXmlGenerator {
       'flat_rack': 'Flat Rack Container',
       'open_top': 'Open Top Container'
     };
-    
+
     return descriptions[containerType] || 'Unknown Container Type';
   }
 
@@ -304,8 +307,8 @@ export class SapXmlGenerator {
    * Get operation description for logging
    */
   static getOperationDescription(operationType: 'GATE_IN' | 'GATE_OUT'): string {
-    return operationType === 'GATE_IN' 
-      ? 'Container Entry (Gate In)' 
+    return operationType === 'GATE_IN'
+      ? 'Container Entry (Gate In)'
       : 'Container Exit (Gate Out)';
   }
 }

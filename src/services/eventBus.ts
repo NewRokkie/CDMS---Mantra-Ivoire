@@ -1,5 +1,6 @@
 import { Container, BookingReference } from '../types';
 import { GateInOperation, GateOutOperation } from '../types/operations';
+import { logger } from '../utils/logger';
 
 export type EventType =
   | 'CONTAINER_ADDED'
@@ -19,7 +20,14 @@ export type EventType =
   | 'YARD_POSITION_ASSIGNED'
   | 'EDI_TRANSMISSION_REQUESTED'
   | 'EDI_TRANSMISSION_COMPLETED'
-  | 'EDI_TRANSMISSION_FAILED';
+  | 'EDI_TRANSMISSION_FAILED'
+  | 'EDI_GATE_IN_SUCCESS'
+  | 'EDI_GATE_IN_FAILED'
+  | 'EDI_GATE_OUT_SUCCESS'
+  | 'EDI_GATE_OUT_FAILED'
+  | 'EDI_RETRY_SUCCESS'
+  | 'DAMAGE_ASSESSMENT_RECORDED'
+  | 'DAMAGE_NOTIFICATION_REQUIRED';
 
 export interface EventPayload {
   CONTAINER_ADDED: { container: Container; operation: GateInOperation };
@@ -40,6 +48,36 @@ export interface EventPayload {
   EDI_TRANSMISSION_REQUESTED: { entityId: string; entityType: string; messageType: string };
   EDI_TRANSMISSION_COMPLETED: { entityId: string; transmissionId: string };
   EDI_TRANSMISSION_FAILED: { entityId: string; error: string };
+  EDI_GATE_IN_SUCCESS: { containerNumber: string; containerId: string; ediLogId: string; uploadedToSftp: boolean };
+  EDI_GATE_IN_FAILED: { containerNumber: string; containerId: string; error: string };
+  EDI_GATE_OUT_SUCCESS: { containerNumber: string; containerId: string; ediLogId: string; uploadedToSftp: boolean };
+  EDI_GATE_OUT_FAILED: { containerId: string; error: string };
+  EDI_RETRY_SUCCESS: { logId: string; containerNumber: string; operation: string };
+  DAMAGE_ASSESSMENT_RECORDED: { 
+    operationId: string; 
+    containerId?: string; 
+    assessment: {
+      hasDamage: boolean;
+      damageType?: string;
+      damageDescription?: string;
+      assessmentStage: 'assignment' | 'inspection';
+      assessedBy: string;
+      assessedAt: Date;
+    };
+    assessedBy: string;
+  };
+  DAMAGE_NOTIFICATION_REQUIRED: {
+    containerId: string;
+    assessment: {
+      hasDamage: boolean;
+      damageType?: string;
+      damageDescription?: string;
+      assessmentStage: 'assignment' | 'inspection';
+      assessedBy: string;
+      assessedAt: Date;
+    };
+    assessedBy: string;
+  };
 }
 
 type EventHandler<T extends EventType> = (payload: EventPayload[T]) => void | Promise<void>;
@@ -99,18 +137,18 @@ class EventBus {
     // Get handlers for this event
     const handlers = this.listeners.get(eventType);
     if (!handlers || handlers.size === 0) {
-      console.log(`[EventBus] No listeners for event: ${eventType}`);
+      logger.debug(`No listeners for event: ${eventType}`, 'EventBus');
       return;
     }
 
-    console.log(`[EventBus] Emitting ${eventType} to ${handlers.size} listeners`);
+    logger.debug(`Emitting ${eventType} to ${handlers.size} listeners`, 'EventBus');
 
     // Execute all handlers (in parallel for performance)
     const promises = Array.from(handlers).map(async (handler) => {
       try {
         await handler(payload);
       } catch (error) {
-        console.error(`[EventBus] Error in handler for ${eventType}:`, error);
+        logger.error(`Error in handler for ${eventType}`, 'EventBus', error);
       }
     });
 
@@ -122,7 +160,7 @@ class EventBus {
    */
   emitSync<T extends EventType>(eventType: T, payload: EventPayload[T]): void {
     this.emit(eventType, payload).catch((error) => {
-      console.error(`[EventBus] Error emitting ${eventType}:`, error);
+      logger.error(`[EventBus] Error emitting ${eventType}:`, error);
     });
   }
 

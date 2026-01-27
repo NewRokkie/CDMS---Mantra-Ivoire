@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader, Package, User, FileText, Calculator, AlertTriangle, Plus, Minus } from 'lucide-react';
-import { DatePicker } from '../Common/DatePicker';
+import { Package, User, FileText, Calculator, AlertTriangle, Plus, Minus, ArrowRight, CheckCircle, ArrowLeft } from 'lucide-react';
 import { ClientSearchField } from '../Common/ClientSearchField';
-import { ContainerQuantityBySize } from '../../types';
+import { ContainerQuantityBySize, Client } from '../../types';
+import { MultiStepModal } from '../Common/Modal/MultiStepModal';
+import { clientService } from '../../services/api';
 
 interface BookingReferenceFormData {
   bookingNumber: string;
@@ -14,6 +15,7 @@ interface BookingReferenceFormData {
   containerQuantities: ContainerQuantityBySize;
   totalContainers: number;
   requiresDetailedBreakdown: boolean;
+  notes?: string;
 }
 
 interface BookingReferenceFormProps {
@@ -21,16 +23,21 @@ interface BookingReferenceFormProps {
   onClose: () => void;
   onSubmit: (data: any) => void;
   isLoading?: boolean;
+  initialData?: Partial<BookingReferenceFormData>;
+  isEditMode?: boolean;
 }
 
 export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  isLoading = false
+  isLoading = false,
+  initialData,
+  isEditMode = false
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
 
   const [formData, setFormData] = useState<BookingReferenceFormData>({
     bookingNumber: '',
@@ -38,26 +45,40 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     clientId: '',
     clientCode: '',
     clientName: '',
-    maxQuantityThreshold: 10,
+    maxQuantityThreshold: 0,
     containerQuantities: {
       size20ft: 0,
       size40ft: 0
     },
     totalContainers: 0,
-    requiresDetailedBreakdown: false
+    requiresDetailedBreakdown: false,
+    notes: ''
   });
 
-  // Mock client data
-  const mockClients = [
-    { id: '1', name: 'Maersk Line', code: 'MAEU' },
-    { id: '2', name: 'MSC Mediterranean', code: 'MSCU' },
-    { id: '3', name: 'CMA CGM', code: 'CMDU' },
-    { id: '4', name: 'COSCO Shipping', code: 'COSU' },
-    { id: '5', name: 'Hapag-Lloyd', code: 'HLCU' },
-    { id: '6', name: 'ONE (Ocean Network Express)', code: 'ONEY' },
-    { id: '7', name: 'Evergreen Marine', code: 'EGLV' },
-    { id: '8', name: 'Yang Ming Marine', code: 'YMLU' }
-  ];
+  // Fetch real clients from database
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const fetchedClients = await clientService.getAll();
+        setClients(fetchedClients);
+      } catch (error) {
+        console.error('Error loading clients:', error);
+        setClients([]);
+      }
+    };
+
+    loadClients();
+  }, []);
+
+  // Initialize form with data if provided
+  useEffect(() => {
+    if (initialData && isOpen) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData
+      }));
+    }
+  }, [initialData, isOpen]);
 
   // Calculate total containers whenever quantities change
   useEffect(() => {
@@ -78,16 +99,13 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     const currentTotal = formData.containerQuantities.size20ft + formData.containerQuantities.size40ft;
 
     if (currentTotal > formData.maxQuantityThreshold && formData.maxQuantityThreshold > 0) {
-      // Calculate proportional reduction to fit within new threshold
       const reductionRatio = formData.maxQuantityThreshold / currentTotal;
 
       const newSize20ft = Math.floor(formData.containerQuantities.size20ft * reductionRatio);
       const newSize40ft = Math.floor(formData.containerQuantities.size40ft * reductionRatio);
 
-      // Ensure at least one container if threshold > 0
       const adjustedTotal = newSize20ft + newSize40ft;
       if (adjustedTotal === 0 && formData.maxQuantityThreshold > 0) {
-        // Assign one container to the size that had more before
         if (formData.containerQuantities.size20ft >= formData.containerQuantities.size40ft) {
           setFormData(prev => ({
             ...prev,
@@ -128,12 +146,10 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   const handleQuantityChange = (size: keyof ContainerQuantityBySize, value: number) => {
     const newValue = Math.max(0, value);
 
-    // Calculate what the new total would be
     const otherSize = size === 'size20ft' ? 'size40ft' : 'size20ft';
     const otherValue = formData.containerQuantities[otherSize];
     const newTotal = newValue + otherValue;
 
-    // Don't allow exceeding the maximum threshold
     if (newTotal > formData.maxQuantityThreshold) {
       return;
     }
@@ -149,7 +165,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   };
 
   const handleClientSelect = (clientId: string) => {
-    const selectedClient = mockClients.find(c => c.id === clientId);
+    const selectedClient = clients.find((c: Client) => c.id === clientId);
     if (selectedClient) {
       setFormData(prev => ({
         ...prev,
@@ -187,16 +203,64 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = () => {
     if (!validateStep(currentStep)) return;
-
-    const bookingData = formData;
-
-    onSubmit(bookingData);
+    onSubmit(formData);
   };
 
+  if (!isOpen) return null;
+
+  return (
+    <MultiStepModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditMode ? 'Edit Booking' : 'Create Booking'}
+      subtitle={isEditMode ? `Update booking reference` : `Generate new booking reference`}
+      icon={FileText}
+      currentStep={currentStep}
+      totalSteps={2}
+      stepLabels={['Booking & Client', 'Container Quantities']}
+      onNextStep={currentStep === 2 ? handleSubmit : handleNextStep}
+      onPrevStep={handlePrevStep}
+      isStepValid={validateStep(currentStep)}
+      showProgressBar={true}
+      size="md"
+    >
+      <ReleaseOrderFormContent
+        currentStep={currentStep}
+        formData={formData}
+        isEditMode={isEditMode}
+        clients={clients}
+        maxQuantityThreshold={formData.maxQuantityThreshold}
+        handleInputChange={handleInputChange}
+        handleQuantityChange={handleQuantityChange}
+        handleClientSelect={handleClientSelect}
+      />
+    </MultiStepModal>
+  );
+};
+
+// Form content component
+interface ReleaseOrderFormContentProps {
+  currentStep: number;
+  formData: BookingReferenceFormData;
+  isEditMode: boolean;
+  clients: Client[];
+  maxQuantityThreshold: number;
+  handleInputChange: (field: keyof BookingReferenceFormData, value: any) => void;
+  handleQuantityChange: (size: keyof ContainerQuantityBySize, value: number) => void;
+  handleClientSelect: (clientId: string) => void;
+}
+
+const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
+  currentStep,
+  formData,
+  isEditMode,
+  clients,
+  handleInputChange,
+  handleQuantityChange,
+  handleClientSelect
+}) => {
   const getContainerBreakdownText = (): string => {
     const parts = [];
     if (formData.containerQuantities.size20ft > 0) {
@@ -212,382 +276,296 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     return `${result} for a total of ${formData.totalContainers} container${formData.totalContainers !== 1 ? 's' : ''}`;
   };
 
-  const isFormValid = validateStep(1) && validateStep(2);
-
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in !mt-0">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong animate-slide-in-up max-h-[90vh] overflow-hidden flex flex-col">
-
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+    <div className="space-y-6">
+      {/* Step 1: Booking Number & Client Information */}
+      {currentStep === 1 && (
+        <div className="space-y-5 animate-slide-in-right">
+          {/* Booking Information Section */}
+          <div className="rounded-xl p-6 shadow-md bg-gray-100">
+            <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-blue-600 text-white rounded-lg">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Create Booking</h3>
-                <p className="text-xs text-gray-600">Step {currentStep} of 2 - Generate new booking</p>
+                <h4 className="font-semibold text-blue-900">Booking Information</h4>
+                <p className="text-xs text-blue-700">Define the booking type and reference number</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              {autoSaving && (
-                <div className="flex items-center space-x-2 text-green-600">
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span className="text-xs">Auto-saving...</span>
+
+            <div className="space-y-5">
+              {/* Booking Type */}
+              <div>
+                <label className="block text-sm font-semibold text-blue-900 mb-3">
+                  Booking Type *
+                </label>
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 transition-colors flex-1">
+                    <input
+                      type="radio"
+                      name="bookingType"
+                      value="IMPORT"
+                      checked={formData.bookingType === 'IMPORT'}
+                      onChange={(e) => handleInputChange('bookingType', e.target.value)}
+                      className="outline-none h-4 w-4 text-blue-600"
+                    />
+                    <span className="text-sm font-medium text-blue-900">IMPORT</span>
+                    <ArrowLeft className="h-4 w-4 text-blue-500 ml-auto" />
+                  </label>
+                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 transition-colors flex-1">
+                    <input
+                      type="radio"
+                      name="bookingType"
+                      value="EXPORT"
+                      checked={formData.bookingType === 'EXPORT'}
+                      onChange={(e) => handleInputChange('bookingType', e.target.value)}
+                      className="outline-none h-4 w-4 text-blue-600"
+                    />
+                    <span className="text-sm font-medium text-blue-900">EXPORT</span>
+                    <ArrowRight className="h-4 w-4 text-blue-500 ml-auto" />
+                  </label>
                 </div>
-              )}
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-white/50 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              </div>
+
+              {/* Booking Reference Number */}
+              <div>
+                <label className="block text-sm font-semibold text-blue-900 mb-2">
+                  Booking Reference Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  disabled={isEditMode}
+                  value={formData.bookingNumber}
+                  onChange={(e) => handleInputChange('bookingNumber', e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm bg-white hover:bg-blue-50 transition-colors disabled:bg-gray-100 disabled:text-gray-500"
+                  placeholder="e.g., ABJEXXXXXXXX"
+                />
+                <p className="text-xs text-blue-700 mt-2">
+                  {isEditMode ? 'Reference number cannot be changed' : 'This will be used as the booking ID throughout the application'}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mt-3">
-            <div className="relative">
-              <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
-              <div
-                className="absolute top-3 left-0 h-0.5 bg-blue-600 z-10 transition-all duration-300"
-                style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
-              ></div>
-
-              <div className="flex justify-between relative z-20">
-                {[1, 2].map((step) => (
-                  <div key={step} className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
-                      step <= currentStep
-                        ? 'bg-blue-600 text-white border border-blue-600'
-                        : 'bg-white text-gray-500 border border-gray-300'
-                    }`}>
-                      {step}
-                    </div>
-                    <span className={`mt-1.5 text-xs font-medium transition-colors duration-300 ${
-                      step <= currentStep ? 'text-blue-600' : 'text-gray-500'
-                    }`}>
-                      {step === 1 && 'Booking & Client'}
-                      {step === 2 && 'Container Quantities'}
-                    </span>
-                  </div>
-                ))}
+          {/* Client Information Section */}
+          <div className="rounded-xl p-6 shadow-md bg-gray-100">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-green-600 text-white rounded-lg">
+                <User className="h-5 w-5" />
               </div>
+              <div>
+                <h4 className="font-semibold text-green-900">Client Information</h4>
+                <p className="text-xs text-green-700">Select the client for this booking</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-green-900 mb-3">
+                Select Client *
+              </label>
+              <ClientSearchField
+                clients={clients}
+                selectedClientId={formData.clientId}
+                onClientSelect={handleClientSelect}
+                placeholder="Search and select client..."
+                required
+              />
+              {formData.clientName && (
+                <div className="mt-3 p-3 bg-white rounded-lg border border-green-200 flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{formData.clientName}</p>
+                    <p className="text-xs text-gray-500">{formData.clientCode}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Modal Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <form className="space-y-6">
+      {/* Step 2: Container Quantities */}
+      {currentStep === 2 && (
+        <div className="space-y-5 animate-slide-in-right">
+          {/* Maximum Quantity Threshold */}
+          <div className="rounded-xl p-6 shadow-md bg-gray-50">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-purple-600 text-white rounded-lg">
+                <Calculator className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-purple-900">Quantity Control</h4>
+                <p className="text-xs text-purple-700">Set limits for container allocation</p>
+              </div>
+            </div>
 
-            {/* Step 1: Booking Number & Client Information */}
-            {currentStep === 1 && (
-              <div className="space-y-6 animate-slide-in-right">
+            <div>
+              <label className="block text-sm font-semibold text-purple-900 mb-3">
+                Maximum Quantity Threshold *
+              </label>
+              <div className="flex items-center space-x-3">
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="100"
+                  value={formData.maxQuantityThreshold}
+                  onChange={(e) => handleInputChange('maxQuantityThreshold', parseInt(e.target.value) || 1)}
+                  className="flex-1 px-4 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  placeholder="10"
+                />
+                <span className="text-sm font-medium text-purple-900">containers</span>
+              </div>
+              <p className="text-xs text-purple-700 mt-2">
+                Maximum containers allowed before requiring detailed breakdown per size
+              </p>
+            </div>
+          </div>
 
-                {/* Booking Number */}
-                <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-                  <h4 className="font-semibold text-green-900 mb-4 flex items-center">
-                    <FileText className="h-5 w-5 mr-2" />
-                    Booking Information
-                  </h4>
+          {/* Container Quantities by Size */}
+          <div className="rounded-xl p-6 shadow-md bg-gray-50">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-orange-600 text-white rounded-lg">
+                <Package className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-orange-900">Container Quantities by Size</h4>
+                <p className="text-xs text-orange-700">
+                  Total: <span className="font-bold">{formData.totalContainers}</span> container{formData.totalContainers !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
 
-                  <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+              {/* 20ft Containers */}
+              <div className="bg-white rounded-lg p-5 border-2 border-blue-200 hover:border-blue-300 transition-colors">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold text-gray-900">20" Containers</span>
+                  </div>
+                  <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">Standard</span>
+                </div>
+
+                <div className="flex items-center justify-between space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft - 1)}
+                    disabled={formData.containerQuantities.size20ft <= 0}
+                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Decrease 20ft containers"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={formData.containerQuantities.size20ft}
+                    onChange={(e) => handleQuantityChange('size20ft', parseInt(e.target.value) || 0)}
+                    className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft + 1)}
+                    disabled={formData.totalContainers >= formData.maxQuantityThreshold}
+                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Increase 20ft containers"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* 40ft Containers */}
+              <div className="bg-white rounded-lg p-5 border-2 border-green-200 hover:border-green-300 transition-colors">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-5 w-5 text-green-600" />
+                    <span className="font-semibold text-gray-900">40" Containers</span>
+                  </div>
+                  <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">High Capacity</span>
+                </div>
+
+                <div className="flex items-center justify-between space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft - 1)}
+                    disabled={formData.containerQuantities.size40ft <= 0}
+                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Decrease 40ft containers"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={formData.containerQuantities.size40ft}
+                    onChange={(e) => handleQuantityChange('size40ft', parseInt(e.target.value) || 0)}
+                    className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft + 1)}
+                    disabled={formData.totalContainers >= formData.maxQuantityThreshold}
+                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Increase 40ft containers"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Container Summary */}
+            {formData.totalContainers > 0 && (
+              <div className="space-y-3">
+                <div className="p-4 bg-white rounded-lg border-2 border-orange-300">
+                  <h5 className="font-semibold text-orange-900 mb-2">Summary</h5>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {getContainerBreakdownText()}
+                  </p>
+                </div>
+
+                {formData.requiresDetailedBreakdown && (
+                  <div className="flex items-start p-4 bg-orange-50 border border-orange-300 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-orange-600 mr-3 mt-0.5 flex-shrink-0" />
                     <div>
-                      <label className="block text-sm font-medium text-green-800 mb-2">
-                        Booking Type *
-                      </label>
-                      <div className="flex items-center space-x-4">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="bookingType"
-                            value="IMPORT"
-                            checked={formData.bookingType === 'IMPORT'}
-                            onChange={(e) => handleInputChange('bookingType', e.target.value)}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
-                          />
-                          <span className="text-sm font-medium text-green-800">IMPORT</span>
-                        </label>
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="bookingType"
-                            value="EXPORT"
-                            checked={formData.bookingType === 'EXPORT'}
-                            onChange={(e) => handleInputChange('bookingType', e.target.value)}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
-                          />
-                          <span className="text-sm font-medium text-green-800">EXPORT</span>
-                        </label>
-                      </div>
-                      <p className="text-xs text-green-600 mt-1">
-                        Select booking type for reporting purposes
+                      <p className="text-sm font-semibold text-orange-900">Detailed Breakdown Required</p>
+                      <p className="text-xs text-orange-700 mt-1">
+                        Total exceeds threshold ({formData.maxQuantityThreshold}). Detailed breakdown will be required for processing.
                       </p>
                     </div>
-
-                    <label className="block text-sm font-medium text-green-800 mb-2">
-                      Booking Reference Number *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.bookingNumber}
-                      onChange={(e) => handleInputChange('bookingNumber', e.target.value.toUpperCase())}
-                      className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono"
-                      placeholder="e.g., BK-MAEU-2025-001"
-                    />
-                    <p className="text-xs text-green-600 mt-1">
-                      This will be used as the booking ID throughout the application
-                    </p>
                   </div>
-                </div>
-
-                {/* Client Selection */}
-                <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                  <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
-                    <User className="h-5 w-5 mr-2" />
-                    Client Information
-                  </h4>
-
-                  <div>
-                    <label className="block text-sm font-medium text-blue-800 mb-2">
-                      Select Client *
-                    </label>
-                    <ClientSearchField
-                      clients={mockClients}
-                      selectedClientId={formData.clientId}
-                      onClientSelect={handleClientSelect}
-                      placeholder="Search and select client..."
-                      required
-                    />
-                  </div>
-                </div>
+                )}
               </div>
             )}
+          </div>
 
-            {/* Step 2: Container Quantities */}
-            {currentStep === 2 && (
-              <div className="space-y-6 animate-slide-in-right">
-
-                {/* Maximum Quantity Threshold */}
-                <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-                  <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
-                    <Calculator className="h-5 w-5 mr-2" />
-                    Quantity Control
-                  </h4>
-
-                  <div>
-                    <label className="block text-sm font-medium text-purple-800 mb-2">
-                      Maximum Quantity Threshold *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      max="100"
-                      value={formData.maxQuantityThreshold}
-                      onChange={(e) => handleInputChange('maxQuantityThreshold', parseInt(e.target.value) || 1)}
-                      className="w-full px-4 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="10"
-                    />
-                    <p className="text-xs text-purple-600 mt-1">
-                      Maximum containers allowed before requiring detailed breakdown per size
-                    </p>
-                  </div>
-                </div>
-
-                {/* Container Quantities by Size */}
-                <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-orange-600 text-white rounded-lg">
-                        <Package className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-orange-900">Container Quantities by Size</h4>
-                        <p className="text-sm text-orange-700">
-                          Total: {formData.totalContainers} container{formData.totalContainers !== 1 ? 's' : ''}
-                          {formData.requiresDetailedBreakdown && (
-                            <span className="ml-2 px-2 py-1 bg-orange-200 text-orange-800 text-xs rounded-full">
-                              Detailed breakdown required
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* 20ft Containers */}
-                    <div className="bg-white rounded-lg p-4 border border-orange-300">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <Package className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium text-gray-900">20" Containers</span>
-                        </div>
-                        <span className="text-xs text-gray-500">Standard</span>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft - 1)}
-                          disabled={formData.containerQuantities.size20ft <= 0}
-                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
-
-                        <input
-                          type="number"
-                          min="0"
-                          max="50"
-                          value={formData.containerQuantities.size20ft}
-                          onChange={(e) => handleQuantityChange('size20ft', parseInt(e.target.value) || 0)}
-                          className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft + 1)}
-                          disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 40ft Containers */}
-                    <div className="bg-white rounded-lg p-4 border border-orange-300">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <Package className="h-4 w-4 text-green-600" />
-                          <span className="font-medium text-gray-900">40" Containers</span>
-                        </div>
-                        <span className="text-xs text-gray-500">High Capacity</span>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft - 1)}
-                          disabled={formData.containerQuantities.size40ft <= 0}
-                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
-
-                        <input
-                          type="number"
-                          min="0"
-                          max="50"
-                          value={formData.containerQuantities.size40ft}
-                          onChange={(e) => handleQuantityChange('size40ft', parseInt(e.target.value) || 0)}
-                          className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-medium"
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft + 1)}
-                          disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Container Summary */}
-                  {formData.totalContainers > 0 && (
-                    <div className="mt-6 p-4 bg-white rounded-lg border-2 border-orange-300">
-                      <h5 className="font-medium text-orange-900 mb-2">Container Summary</h5>
-                      <div className="text-sm text-gray-700">
-                        {getContainerBreakdownText()}
-                      </div>
-
-                      {formData.requiresDetailedBreakdown && (
-                        <div className="mt-3 flex items-center p-3 bg-orange-100 border border-orange-200 rounded-lg">
-                          <AlertTriangle className="h-4 w-4 text-orange-600 mr-2" />
-                          <p className="text-sm text-orange-800">
-                            Total exceeds threshold ({formData.maxQuantityThreshold}). Detailed breakdown will be required for processing.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+          {/* Notes Section */}
+          <div className="rounded-xl p-6 bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-200">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-gray-600 text-white rounded-lg">
+                <FileText className="h-5 w-5" />
               </div>
-            )}
-          </form>
-        </div>
-
-        {/* Modal Footer - Fixed */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            {/* Left: Previous Button */}
-            {currentStep > 1 && (
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
-              >
-                <span className="sm:hidden">← Prev</span>
-                <span className="hidden sm:inline">Previous</span>
-              </button>
-            )}
-
-            {/* Right: Cancel + Next/Submit */}
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
-              >
-                <span className="sm:hidden">✕</span>
-                <span className="hidden sm:inline">Cancel</span>
-              </button>
-
-              {currentStep < 2 ? (
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={!validateStep(currentStep)}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 sm:px-6 sm:py-2 text-sm"
-                >
-                  <span className="sm:hidden">Next →</span>
-                  <span className="hidden sm:inline">Next Step</span>
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  onClick={handleSubmit}
-                  disabled={!isFormValid || isLoading}
-                  className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader className="h-4 w-4 animate-spin" />
-                      <span>...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      <span className="sm:hidden">Create</span>
-                      <span className="hidden sm:inline">Create Booking</span>
-                    </>
-                  )}
-                </button>
-              )}
+              <h4 className="font-semibold text-gray-900">Additional Notes (Optional)</h4>
             </div>
+            <textarea
+              value={formData.notes || ''}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent resize-none text-sm"
+              rows={3}
+              placeholder="Add any additional notes or special instructions..."
+            />
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

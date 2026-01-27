@@ -3,6 +3,8 @@ import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, 
 import type { ModuleAccess, ModulePermission, User } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { userService, moduleAccessService } from '../../services/api';
+import { handleError } from '../../services/errorHandling';
+import { useToast } from '../../hooks/useToast';
 
 // Enhanced module configuration with beautiful icons and colors
 const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
@@ -156,146 +158,6 @@ const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
   }
 };
 
-// Mock users data
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'John Administrator',
-    email: 'admin@depot.com',
-    role: 'admin',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1001',
-    department: 'Administration',
-    isActive: true,
-    lastLogin: new Date('2025-01-11T08:30:00'),
-    createdAt: new Date('2024-01-01'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: true,
-      gateOut: true,
-      releases: true,
-      edi: true,
-      yard: true,
-      clients: true,
-      users: true,
-      moduleAccess: true,
-      reports: true,
-      depotManagement: true,
-      timeTracking: true,
-      analytics: true,
-      clientPools: true,
-      stackManagement: true,
-      auditLogs: true,
-      billingReports: true,
-      operationsReports: true
-    }
-  },
-  {
-    id: '2',
-    name: 'Jane Operator',
-    email: 'operator@depot.com',
-    role: 'operator',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1002',
-    department: 'Operations',
-    isActive: true,
-    lastLogin: new Date('2025-01-11T07:15:00'),
-    createdAt: new Date('2024-02-15'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: true,
-      gateOut: true,
-      releases: true,
-      edi: false,
-      yard: true,
-      clients: false,
-      users: false,
-      moduleAccess: false,
-      reports: false,
-      depotManagement: false,
-      timeTracking: false,
-      analytics: false,
-      clientPools: false,
-      stackManagement: false,
-      auditLogs: true,
-      billingReports: false,
-      operationsReports: false
-    }
-  },
-  {
-    id: '3',
-    name: 'Mike Supervisor',
-    email: 'supervisor@depot.com',
-    role: 'supervisor',
-    company: 'Container Depot Ltd',
-    phone: '+1-555-1003',
-    department: 'Operations',
-    isActive: true,
-    lastLogin: new Date('2025-01-10T16:45:00'),
-    createdAt: new Date('2024-01-20'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: true,
-      gateOut: true,
-      releases: true,
-      edi: true,
-      yard: true,
-      clients: true,
-      users: false,
-      moduleAccess: false,
-      reports: true,
-      depotManagement: true,
-      timeTracking: true,
-      analytics: true,
-      clientPools: true,
-      stackManagement: true,
-      auditLogs: true,
-      billingReports: true,
-      operationsReports: true
-    }
-  },
-  {
-    id: '4',
-    name: 'Sarah Client',
-    email: 'client@shipping.com',
-    role: 'client',
-    company: 'Shipping Solutions Inc',
-    phone: '+1-555-2001',
-    department: 'Logistics',
-    isActive: true,
-    lastLogin: new Date('2025-01-09T14:20:00'),
-    createdAt: new Date('2024-03-10'),
-    createdBy: 'System',
-    moduleAccess: {
-      dashboard: true,
-      containers: true,
-      gateIn: false,
-      gateOut: false,
-      releases: true,
-      edi: false,
-      yard: true,
-      clients: false,
-      users: false,
-      moduleAccess: false,
-      reports: false,
-      depotManagement: false,
-      timeTracking: false,
-      analytics: false,
-      clientPools: false,
-      stackManagement: false,
-      auditLogs: false,
-      billingReports: false,
-      operationsReports: false
-    }
-  }
-];
-
 export const ModuleAccessManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -306,6 +168,7 @@ export const ModuleAccessManagement: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const { user: currentUser, refreshUser } = useAuth();
+  const toast = useToast();
 
   const canManageModuleAccess = currentUser?.role === 'admin';
 
@@ -316,11 +179,10 @@ export const ModuleAccessManagement: React.FC = () => {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const allUsers = await userService.getAll().catch(err => { console.error('Error loading users:', err); return []; });
+      const allUsers = await userService.getAll().catch(err => { handleError(err, 'ModuleAccessManagement.loadUsers'); return []; });
       setUsers(allUsers || []);
     } catch (error) {
-      console.error('Error loading users:', error);
-      // Set empty array to prevent infinite loading
+      handleError(error, 'ModuleAccessManagement.loadUsers');
       setUsers([]);
     } finally {
       setIsLoading(false);
@@ -426,14 +288,27 @@ export const ModuleAccessManagement: React.FC = () => {
   };
 
   const handleModuleToggle = async (moduleKey: keyof ModuleAccess) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      return;
+    }
 
     const targetUserIds = selectionMode === 'single'
       ? (selectedUserId ? [selectedUserId] : [])
       : bulkSelectedUserIds;
 
-    if (targetUserIds.length === 0) return;
+    if (targetUserIds.length === 0) {
+      return;
+    }
 
+    // Get current access states for target users
+    const targetUsers = users.filter(user => targetUserIds.includes(user.id));
+    const currentAccessStates = targetUsers.map(user => user.moduleAccess[moduleKey]);
+
+    // Determine new state: if all are enabled, disable; otherwise enable
+    const allEnabled = currentAccessStates.every(state => state === true);
+    const newState = !allEnabled;
+
+    // Optimistic update
     setUsers(prevUsers =>
       prevUsers.map(user =>
         targetUserIds.includes(user.id)
@@ -441,7 +316,7 @@ export const ModuleAccessManagement: React.FC = () => {
               ...user,
               moduleAccess: {
                 ...user.moduleAccess,
-                [moduleKey]: !user.moduleAccess[moduleKey]
+                [moduleKey]: newState
               }
             }
           : user
@@ -449,14 +324,23 @@ export const ModuleAccessManagement: React.FC = () => {
     );
 
     try {
+      // Get complete module access for each user to ensure all modules are saved
+      const allModules: (keyof ModuleAccess)[] = [
+        'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+        'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
+        'timeTracking', 'analytics', 'clientPools', 'stackManagement',
+        'auditLogs', 'billingReports', 'operationsReports'
+      ];
+
       for (const userId of targetUserIds) {
         const user = users.find(u => u.id === userId);
         if (user) {
-          const updatedAccess = {
-            ...user.moduleAccess,
-            [moduleKey]: !user.moduleAccess[moduleKey]
-          };
-          await moduleAccessService.setUserModuleAccess(userId, updatedAccess, currentUser.id);
+          const completeAccess: ModuleAccess = allModules.reduce((acc, key) => {
+            acc[key] = key === moduleKey ? newState : user.moduleAccess[key] || false;
+            return acc;
+          }, {} as ModuleAccess);
+
+          await moduleAccessService.setUserModuleAccess(userId, completeAccess, currentUser.id);
         }
       }
 
@@ -466,8 +350,9 @@ export const ModuleAccessManagement: React.FC = () => {
         await refreshUser();
       }
     } catch (error) {
-      console.error('Error saving module access:', error);
-      alert('Error saving module access changes');
+      handleError(error, 'ModuleAccessManagement.handleModuleToggle');
+      toast.error('Error saving module access changes');
+      await loadUsers();
     }
   };
 
@@ -537,9 +422,15 @@ export const ModuleAccessManagement: React.FC = () => {
             )
           );
           bulkSelectedUserIds.forEach(userId => {
+            const allModules: (keyof ModuleAccess)[] = [
+              'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+              'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
+              'timeTracking', 'analytics', 'clientPools', 'stackManagement',
+              'auditLogs', 'billingReports', 'operationsReports'
+            ];
             updates.push({
               userId,
-              permissions: Object.keys(moduleConfig).reduce((acc, key) => ({
+              permissions: allModules.reduce((acc, key) => ({
                 ...acc,
                 [key]: true
               }), {} as ModuleAccess)
@@ -562,9 +453,15 @@ export const ModuleAccessManagement: React.FC = () => {
             )
           );
           bulkSelectedUserIds.forEach(userId => {
+            const allModules: (keyof ModuleAccess)[] = [
+              'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+              'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
+              'timeTracking', 'analytics', 'clientPools', 'stackManagement',
+              'auditLogs', 'billingReports', 'operationsReports'
+            ];
             updates.push({
               userId,
-              permissions: Object.keys(moduleConfig).reduce((acc, key) => ({
+              permissions: allModules.reduce((acc, key) => ({
                 ...acc,
                 [key]: key === 'dashboard'
               }), {} as ModuleAccess)
@@ -573,7 +470,7 @@ export const ModuleAccessManagement: React.FC = () => {
           break;
 
         default:
-          alert('Action not implemented yet');
+          toast.info('Action not implemented yet');
           return;
       }
 
@@ -585,10 +482,10 @@ export const ModuleAccessManagement: React.FC = () => {
         await refreshUser();
       }
 
-      alert(`Applied ${action} to ${bulkSelectedUserIds.length} users`);
+      toast.success(`Applied ${action} to ${bulkSelectedUserIds.length} users`);
     } catch (error) {
-      console.error('Error applying bulk action:', error);
-      alert('Error applying bulk action');
+      handleError(error, 'ModuleAccessManagement.handleBulkAction');
+      toast.error('Error applying bulk action');
     }
   };
 
@@ -669,9 +566,15 @@ export const ModuleAccessManagement: React.FC = () => {
   };
 
   const calculateAccessPercentage = (user: User): number => {
-    const totalModules = Object.keys(moduleConfig).length;
-    const accessibleModules = Object.keys(moduleConfig).filter(
-      key => user.moduleAccess[key as keyof ModuleAccess] === true
+    const allModules: (keyof ModuleAccess)[] = [
+      'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+      'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
+      'timeTracking', 'analytics', 'clientPools', 'stackManagement',
+      'auditLogs', 'billingReports', 'operationsReports'
+    ];
+    const totalModules = allModules.length;
+    const accessibleModules = allModules.filter(
+      key => user.moduleAccess[key] === true
     ).length;
     return Math.round((accessibleModules / totalModules) * 100);
   };
@@ -971,7 +874,12 @@ export const ModuleAccessManagement: React.FC = () => {
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-500">Module Access</span>
                             <span className="text-xs font-medium text-gray-700">
-                              {Object.keys(moduleConfig).filter(key => user.moduleAccess[key as keyof ModuleAccess] === true).length}/{Object.keys(moduleConfig).length}
+                              {[
+                                'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+                                'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
+                                'timeTracking', 'analytics', 'clientPools', 'stackManagement',
+                                'auditLogs', 'billingReports', 'operationsReports'
+                              ].filter(key => user.moduleAccess[key as keyof ModuleAccess] === true).length}/19
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-1.5 lg:h-2">

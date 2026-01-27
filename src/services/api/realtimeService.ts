@@ -26,7 +26,6 @@ class RealtimeService {
 
     // If already subscribed, just return the unsubscribe function
     if (this.channels.has(channelName)) {
-      console.log(`🔄 [REALTIME] Reference count increased to ${currentRefs + 1} for ${channelName}`);
       return () => this.unsubscribe(channelName);
     }
 
@@ -48,13 +47,7 @@ class RealtimeService {
           });
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`✅ Subscribed to ${tableName} changes (channel: ${channelName})`);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error(`❌ Error subscribing to ${tableName} (channel: ${channelName})`);
-        }
-      });
+      .subscribe();
 
     this.channels.set(channelName, channel);
 
@@ -66,26 +59,20 @@ class RealtimeService {
     const newRefs = currentRefs - 1;
     this.channelRefs.set(channelName, newRefs);
 
-    console.log(`🔄 [REALTIME] Reference count decreased to ${newRefs} for ${channelName}`);
-
     // Only actually unsubscribe when reference count reaches 0
     if (newRefs <= 0) {
       const channel = this.channels.get(channelName);
       if (channel) {
         supabase.removeChannel(channel);
         this.channels.delete(channelName);
-        console.log(`🔌 Unsubscribed from ${channelName}`);
       }
       this.channelRefs.delete(channelName);
-    } else {
-      console.log(`🔄 [REALTIME] Keeping ${channelName} subscribed (refs: ${newRefs})`);
     }
   }
 
   unsubscribeAll(): void {
-    this.channels.forEach((channel, name) => {
+    this.channels.forEach((channel) => {
       supabase.removeChannel(channel);
-      console.log(`🔌 Unsubscribed from ${name}`);
     });
     this.channels.clear();
     this.channelRefs.clear();

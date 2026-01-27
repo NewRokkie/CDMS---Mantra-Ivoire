@@ -62,8 +62,8 @@ export class CODECOGenerator {
     // Enhanced size/type mapping based on container type
     const getContainerCode = (size: string, type: Container['type']): string => {
       const typeCodeMap = {
-        'standard': size === '20ft' ? '22G1' : '42G1',
-        'hi_cube': size === '20ft' ? '25G1' : '45G1',
+        'dry': size === '20ft' ? '22G1' : '42G1',
+        'high_cube': size === '40ft' ? '45G1' : '22G1', // High-cube only for 40ft
         'hard_top': size === '20ft' ? '22H1' : '42H1',
         'ventilated': size === '20ft' ? '22V1' : '42V1',
         'reefer': size === '20ft' ? '22R1' : '42R1',
@@ -87,14 +87,14 @@ export class CODECOGenerator {
       }
     };
 
-    // Add damage details if present
+    // Add damage details if present - now sourced from assignment stage assessment
     if (container.damage && container.damage.length > 0) {
       detail.damageDetails = container.damage.map((damage, index) => ({
         damageDetailsQualifier: 'DAM',
-        damageCode: 'GEN', // General damage code
+        damageCode: 'GEN', // General damage code - could be enhanced based on damage_type from assessment
         damageLocation: 'ALL',
-        damageType: 'SCR', // Scratch
-        damageExtent: 'MIN' // Minor
+        damageType: 'SCR', // Scratch - could be mapped from container.damage_type if available
+        damageExtent: 'MIN' // Minor - could be determined from damage assessment severity
       }));
     }
 

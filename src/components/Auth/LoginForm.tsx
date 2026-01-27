@@ -67,7 +67,7 @@ export const LoginForm: React.FC = React.memo(() => {
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, resetPassword, isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -174,27 +174,29 @@ export const LoginForm: React.FC = React.memo(() => {
   const handlePasswordReset = React.useCallback(async () => {
     if (isResetting) return;
 
+    // Validate email first
+    if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) {
+      setResetError('Veuillez fournir une adresse email valide');
+      return;
+    }
+
     setIsResetting(true);
     setResetError('');
     setResetSuccess('');
 
     try {
-      // Simuler l'envoi d'email de réinitialisation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) {
-        setResetError('Veuillez fournir une adresse email valide');
-        return;
-      }
-
-      // Message de démonstration seulement
-      setResetSuccess(`Instructions de réinitialisation envoyées à ${resetEmail} (démo)`);
+      await resetPassword(resetEmail);
+      setResetSuccess(`Instructions de réinitialisation envoyées à ${resetEmail}. Veuillez vérifier votre boîte de réception (et le dossier spam). L'email peut prendre quelques minutes à arriver.`);
+      // Clear the email field after successful submission
+      setTimeout(() => {
+        setResetEmail('');
+      }, 5000);
     } catch (err) {
       setResetError(err instanceof Error ? err.message : 'Erreur lors de l\'envoi des instructions');
     } finally {
       setIsResetting(false);
     }
-  }, [isResetting, resetEmail]);
+  }, [isResetting, resetEmail, resetPassword]);
 
 
   const isProcessing = React.useMemo(() => isLoading || isSubmitting, [isLoading, isSubmitting]);

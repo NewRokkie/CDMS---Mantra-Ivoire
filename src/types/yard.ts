@@ -48,6 +48,11 @@ export interface YardSection {
   color?: string;
 }
 
+export interface RowTierConfig {
+  row: number;
+  maxTiers: number;
+}
+
 export interface YardStack {
   id: string;
   yardId?: string;
@@ -56,9 +61,10 @@ export interface YardStack {
   sectionName?: string;
   rows: number;
   maxTiers: number;
+  rowTierConfig?: RowTierConfig[]; // Per-row tier configuration
   currentOccupancy: number;
   capacity: number;
-  containerSize?: '20feet' | '40feet';
+  containerSize?: '20ft' | '40ft';
   position: {
     x: number;
     y: number;
@@ -71,6 +77,7 @@ export interface YardStack {
   containerPositions: YardPosition[];
   isOddStack?: boolean;
   isSpecialStack?: boolean;
+  isVirtual?: boolean; // True if this is a virtual stack for 40ft containers
   isActive?: boolean;
   assignedClientCode?: string;
   notes?: string;

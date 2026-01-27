@@ -1,76 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { BookingReference, Container } from '../../types';
+import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { bookingReferenceService, containerService } from '../../services/api';
+import { bookingReferenceService } from '../../services/api';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
-import { MobileReleaseOrderHeader } from './MobileReleaseOrderHeader';
+import { BookingDetailsModal } from './BookingDetailsModal';
 import { MobileReleaseOrderStats } from './MobileReleaseOrderStats';
 import { MobileReleaseOrderTable } from './MobileReleaseOrderTable';
-import { Search, X, Eye, Package, Calendar, User, FileText, Clock, AlertTriangle } from 'lucide-react';
+import { CardSkeleton } from '../Common/CardSkeleton';
+import { Search, X, FileText, Download } from 'lucide-react';
+import { handleError } from '../../services/errorHandling';
+import { exportToExcel, formatDateForExport } from '../../utils/excelExport';
+import { userService } from '../../services/api';
 
 // REMOVED: Mock data now managed by global store
 
 export const ReleaseOrderList: React.FC = () => {
   const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
-  const [containers, setContainers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadData() {
+      setIsLoading(true);
       try {
-        setLoading(true);
-        const [ordersData, containersData] = await Promise.all([
-          bookingReferenceService.getAll().catch(err => { console.error('Error loading orders:', err); return []; }),
-          containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; })
-        ]);
+        const ordersData = await bookingReferenceService.getAll().catch(err => {
+          handleError(err, 'ReleaseOrderList.loadData');
+          return [];
+        });
         setReleaseOrders(ordersData || []);
-        setContainers(containersData || []);
       } catch (error) {
-        console.error('Error loading release orders:', error);
-        // Set empty arrays to prevent infinite loading
+        handleError(error, 'ReleaseOrderList.loadData');
         setReleaseOrders([]);
-        setContainers([]);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
     loadData();
   }, []);
 
-  const addBookingReference = async (order: any) => {
-    const newOrder = await bookingReferenceService.create(order);
-    setReleaseOrders(prev => [...prev, newOrder]);
-  };
 
-  const updateBookingReference = async (id: string, updates: any) => {
-    await bookingReferenceService.update(id, updates);
-    setReleaseOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-  };
-
-  const getReleaseOrdersByStatus = (status: string) => {
-    return releaseOrders.filter(o => o.status === status);
-  };
 
   const [showForm, setShowForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<BookingReference | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const { user, getClientFilter, canViewAllData } = useAuth();
+  const { user, getClientFilter } = useAuth();
   const { currentYard } = useYard();
-
-  // Get available containers for release (in_depot status)
-  const mockAvailableContainers = containers.filter(c => c.status === 'in_depot');
 
   // Filter release orders based on user permissions and search/status filters
   const getFilteredOrders = () => {
     let orders = releaseOrders;
-
-    // Filter by current yard
-    if (currentYard) {
-      console.log(`Filtering orders for yard: ${currentYard.name}`);
-    }
 
     // Apply client filter for client users
     const clientFilter = getClientFilter();
@@ -103,12 +85,25 @@ export const ReleaseOrderList: React.FC = () => {
 
   const handleCreateOrder = () => {
     setSelectedOrder(null);
+    setIsEditMode(false);
     setShowForm(true);
   };
 
   const handleViewDetails = (order: BookingReference) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
+  };
+
+  const handleCancelBooking = (order: BookingReference) => {
+    setSelectedOrder(order);
+    setShowCancelModal(true);
+  };
+
+  const handleEditOrder = (order: BookingReference) => {
+    setSelectedOrder(order);
+    setIsEditMode(true);
+    setShowDetailModal(false);
+    setShowForm(true);
   };
 
   // Calculate statistics
@@ -125,28 +120,65 @@ export const ReleaseOrderList: React.FC = () => {
 
   const stats = getOrderStats();
 
-  const getStatusBadge = (status: BookingReference['status']) => {
-    const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-      inProcess: { color: 'bg-orange-100 text-orange-800', label: 'In Process' },
-      completed: { color: 'bg-green-600 text-white', label: 'Completed' },
-      cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig];
-    if (!config) {
-      return (
-        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-          {status || 'Unknown'}
-        </span>
-      );
+  const handleExportBookings = async () => {
+    // Get user names for createdBy UUIDs
+    const userNamesMap = new Map<string, string>();
+    
+    for (const order of filteredOrders) {
+      if (order.createdBy && !userNamesMap.has(order.createdBy)) {
+        try {
+          const user = await userService.getById(order.createdBy);
+          userNamesMap.set(order.createdBy, user?.name || order.createdBy);
+        } catch (error) {
+          // If user not found, use the createdBy value as is
+          userNamesMap.set(order.createdBy, order.createdBy);
+        }
+      }
     }
 
-    return (
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
-        {config.label}
-      </span>
-    );
+    const dataToExport = filteredOrders.map(order => {
+      const quantities = order.containerQuantities || {};
+      return {
+        bookingNumber: order.bookingNumber || order.id || '',
+        bookingType: order.bookingType || '',
+        clientName: order.clientName || '',
+        clientCode: order.clientCode || '',
+        status: order.status || '',
+        totalContainers: order.totalContainers || 0,
+        size20ft: quantities.size20ft || 0,
+        size40ft: quantities.size40ft || 0,
+        processedContainers: order.processedContainers || 0,
+        remainingContainers: (order.totalContainers || 0) - (order.processedContainers || 0),
+        yardName: currentYard?.name || '',
+        createdBy: userNamesMap.get(order.createdBy) || order.createdBy || '',
+        createdAt: formatDateForExport(order.createdAt),
+        updatedAt: formatDateForExport(order.updatedAt),
+        notes: order.notes || ''
+      };
+    });
+
+    exportToExcel({
+      filename: `booking_references_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Booking References',
+      columns: [
+        { header: 'Numéro Booking', key: 'bookingNumber', width: 20 },
+        { header: 'Type Booking', key: 'bookingType', width: 15 },
+        { header: 'Client', key: 'clientName', width: 25 },
+        { header: 'Code Client', key: 'clientCode', width: 15 },
+        { header: 'Statut', key: 'status', width: 15 },
+        { header: 'Total Conteneurs', key: 'totalContainers', width: 15 },
+        { header: 'Conteneurs 20ft', key: 'size20ft', width: 15 },
+        { header: 'Conteneurs 40ft', key: 'size40ft', width: 15 },
+        { header: 'Conteneurs Traités', key: 'processedContainers', width: 18 },
+        { header: 'Conteneurs Restants', key: 'remainingContainers', width: 18 },
+        { header: 'Dépôt', key: 'yardName', width: 20 },
+        { header: 'Créé par', key: 'createdBy', width: 20 },
+        { header: 'Date Création', key: 'createdAt', width: 20 },
+        { header: 'Date Modification', key: 'updatedAt', width: 20 },
+        { header: 'Notes', key: 'notes', width: 30 }
+      ],
+      data: dataToExport
+    });
   };
 
   return (
@@ -177,13 +209,19 @@ export const ReleaseOrderList: React.FC = () => {
 
       {/* Unified Responsive Statistics */}
       <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
-        <MobileReleaseOrderStats stats={stats} />
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardSkeleton count={4} />
+          </div>
+        ) : (
+          <MobileReleaseOrderStats stats={stats} />
+        )}
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="lg:flex lg:justify-between p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
-            <div className="relative mb-4 lg:mb-0">
+            <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
@@ -235,6 +273,14 @@ export const ReleaseOrderList: React.FC = () => {
                   {filteredOrders.length} result{filteredOrders.length !== 1 ? 's' : ''}
                 </span>
               )}
+              <button
+                onClick={handleExportBookings}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export</span>
+              </button>
             </div>
           </div>
         </div>
@@ -245,6 +291,8 @@ export const ReleaseOrderList: React.FC = () => {
           searchTerm={searchTerm}
           selectedFilter={selectedFilter}
           onViewDetails={handleViewDetails}
+          onCancelBooking={handleCancelBooking}
+          loading={isLoading}
         />
       </div>
 
@@ -252,229 +300,58 @@ export const ReleaseOrderList: React.FC = () => {
       {showForm && (
         <ReleaseOrderForm
           isOpen={showForm}
+          isEditMode={isEditMode}
+          initialData={isEditMode && selectedOrder ? {
+            bookingNumber: selectedOrder.bookingNumber,
+            bookingType: selectedOrder.bookingType,
+            clientId: selectedOrder.clientId,
+            clientCode: selectedOrder.clientCode,
+            clientName: selectedOrder.clientName,
+            maxQuantityThreshold: selectedOrder.maxQuantityThreshold,
+            containerQuantities: selectedOrder.containerQuantities,
+            totalContainers: selectedOrder.totalContainers,
+            requiresDetailedBreakdown: selectedOrder.requiresDetailedBreakdown,
+            notes: selectedOrder.notes
+          } : undefined}
           onClose={() => {
             setShowForm(false);
             setSelectedOrder(null);
+            setIsEditMode(false);
           }}
-          onSubmit={(order) => {
-            console.log('Saving release order:', order);
+          onSubmit={() => {
             setShowForm(false);
             setSelectedOrder(null);
+            setIsEditMode(false);
           }}
+
           isLoading={false}
         />
       )}
 
-      {/* Detail Modal */}
-      {showDetailModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full h-[90vh] flex flex-col overflow-hidden">
-            {/* Fixed Header */}
-            <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-white rounded-t-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    Booking Details
-                  </h3>
-                  <div className="flex items-center space-x-3 mt-2">
-                    {getStatusBadge(selectedOrder.status)}
-                    {selectedOrder.bookingType && (
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        selectedOrder.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {selectedOrder.bookingType}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="text-gray-400 hover:text-gray-600 p-2"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {/* Order Information and Notes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Order Information */}
-                <div className="space-y-4 md:col-span-1">
-                  <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Booking Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <FileText className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Booking Reference:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.bookingNumber || selectedOrder.id}</span>
-                      </div>
-                    </div>
-                    {selectedOrder.bookingType && (
-                      <div className="flex items-center space-x-3">
-                        <Package className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="text-sm text-gray-600">Type:</span>
-                          <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
-                            selectedOrder.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                          }`}>
-                            {selectedOrder.bookingType}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center space-x-3">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Client:</span>
-                        <span className="ml-2 font-medium">
-                          {canViewAllData() ? selectedOrder.clientName : 'Your Company'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Created:</span>
-                        <span className="ml-2 font-medium">
-                          {selectedOrder.createdAt.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                        <User className="h-4 w-4 text-gray-400" />
-                        <div>
-                            <span className="text-sm text-gray-600">Created by:</span>
-                            <span className="ml-2 font-medium">{selectedOrder.createdBy}</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Total Containers:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.totalContainers}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                        <Package className="h-4 w-4 text-gray-400" />
-                        <div>
-                            <span className="text-sm text-gray-600">Processed:</span>
-                            <span className="ml-2 font-medium">{selectedOrder.totalContainers - (selectedOrder.remainingContainers || selectedOrder.totalContainers)}</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <span className="text-sm text-gray-600">Remaining:</span>
-                        <span className="ml-2 font-medium">{selectedOrder.remainingContainers ?? selectedOrder.totalContainers}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-4 md:col-span-1">
-                  <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Notes
-                  </h4>
-                  {selectedOrder.notes ? (
-                    <div className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm leading-relaxed">
-                      {selectedOrder.notes}
-                    </div>
-                  ) : (
-                    <div className="text-gray-500 italic text-sm">
-                      No notes available
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Container Quantities Breakdown */}
-              <div className="mt-6">
-                <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-6">
-                  Container Quantities Breakdown
-                </h4>
-
-                <div className="flex justify-center">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-                    {/* 20ft Containers */}
-                    <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <Package className="h-6 w-6 text-blue-600" />
-                        <div>
-                          <h5 className="font-semibold text-blue-900">20" Containers</h5>
-                          <p className="text-sm text-blue-700">Standard Size</p>
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-900 mb-2">
-                          {selectedOrder.containerQuantities?.size20ft || 0}
-                        </div>
-                        <div className="text-sm text-blue-700">
-                          {(selectedOrder.containerQuantities?.size20ft || 0) === 1 ? 'Container' : 'Containers'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 40ft Containers */}
-                    <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <Package className="h-6 w-6 text-green-600" />
-                        <div>
-                          <h5 className="font-semibold text-green-900">40" Containers</h5>
-                          <p className="text-sm text-green-700">High Capacity</p>
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-green-900 mb-2">
-                          {selectedOrder.containerQuantities?.size40ft || 0}
-                        </div>
-                        <div className="text-sm text-green-700">
-                          {(selectedOrder.containerQuantities?.size40ft || 0) === 1 ? 'Container' : 'Containers'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Summary */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-center">
-                    <div className="text-lg font-semibold text-gray-900 mb-2">
-                      Total: {selectedOrder.totalContainers} Container{selectedOrder.totalContainers !== 1 ? 's' : ''}
-                    </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      Processed: {selectedOrder.totalContainers - (selectedOrder.remainingContainers || selectedOrder.totalContainers)} •
-                      Remaining: {selectedOrder.remainingContainers || selectedOrder.totalContainers}
-                    </div>
-                    {selectedOrder.requiresDetailedBreakdown && (
-                      <div className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">
-                        <AlertTriangle className="h-4 w-4 mr-1" />
-                        Requires Detailed Breakdown
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Fixed Footer */}
-            <div className="flex-shrink-0 p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Booking Details Modal */}
+      <BookingDetailsModal
+        booking={selectedOrder}
+        isOpen={showDetailModal || showCancelModal}
+        openToCancelForm={showCancelModal}
+        onEdit={handleEditOrder}
+        onClose={() => {
+          setShowDetailModal(false);
+          setShowCancelModal(false);
+          setSelectedOrder(null);
+        }}
+        onUpdate={(updatedBooking) => {
+          // Update the booking in the list
+          setReleaseOrders(prev =>
+            prev.map(order =>
+              order.id === updatedBooking.id ? updatedBooking : order
+            )
+          );
+          setSelectedOrder(updatedBooking);
+          // Close both modals after update
+          setShowDetailModal(false);
+          setShowCancelModal(false);
+        }}
+      />
     </div>
   );
 };

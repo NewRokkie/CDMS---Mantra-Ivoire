@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Menu, X, Clock, Plus, Truck, Package, Search, Filter, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Menu, X, Clock, Plus, Truck, Package, Search, Filter, CheckCircle, Download } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -10,8 +10,11 @@ import { MobileGateOutOperationsTable } from './GateOut/MobileGateOutOperationsT
 import { PendingOperationsView } from './GateOut/PendingOperationsView';
 import { GateOutCompletionModal } from './GateOut/GateOutCompletionModal';
 import { PendingGateOut } from './types';
-
-// Import centralized mock data
+import { handleError } from '../../services/errorHandling';
+import { CardSkeleton } from '../Common/CardSkeleton';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
+import { TableSkeleton } from '../Common/TableSkeleton';
+import { exportToExcel, formatDateShortForExport, formatTimeForExport } from '../../utils/excelExport';
 
 interface GateOutFormData {
   booking?: {
@@ -52,16 +55,15 @@ export const GateOut: React.FC = () => {
       try {
         setLoading(true);
         const [ordersData, containersData, operationsData] = await Promise.all([
-          bookingReferenceService.getAll().catch(err => { console.error('Error loading orders:', err); return []; }),
-          containerService.getAll().catch(err => { console.error('Error loading containers:', err); return []; }),
-          gateService.getGateOutOperations().catch(err => { console.error('Error loading operations:', err); return []; })
+          bookingReferenceService.getAll().catch(err => { handleError(err, 'GateOut.loadOrders'); return []; }),
+          containerService.getAll().catch(err => { handleError(err, 'GateOut.loadContainers'); return []; }),
+          gateService.getGateOutOperations().catch(err => { handleError(err, 'GateOut.loadOperations'); return []; })
         ]);
         setReleaseOrders(ordersData || []);
         setContainers(containersData || []);
         setGateOutOperations(operationsData || []);
       } catch (error) {
-        console.error('Error loading gate out data:', error);
-        // Set empty arrays to prevent infinite loading
+        handleError(error, 'GateOut.loadData');
         setReleaseOrders([]);
         setContainers([]);
         setGateOutOperations([]);
@@ -75,12 +77,9 @@ export const GateOut: React.FC = () => {
   useEffect(() => {
     if (!currentYard) return;
 
-    console.log(`🔌 Setting up Gate Out real-time subscriptions for yard: ${currentYard.id}`);
-
     const unsubscribeGateOut = realtimeService.subscribeToGateOutOperations(
       currentYard.id,
       async (payload) => {
-        console.log(`📡 Gate Out ${payload.eventType}:`, payload.new);
         const operations = await gateService.getGateOutOperations();
         setGateOutOperations(operations);
       }
@@ -88,7 +87,6 @@ export const GateOut: React.FC = () => {
 
     const unsubscribeBookingReferences = realtimeService.subscribeToBookingReferences(
       async (payload) => {
-        console.log(`📡 Booking Reference ${payload.eventType}:`, payload.new);
         const orders = await bookingReferenceService.getAll();
         setReleaseOrders(orders);
       }
@@ -96,7 +94,6 @@ export const GateOut: React.FC = () => {
 
     const unsubscribeContainers = realtimeService.subscribeToContainers(
       async (payload) => {
-        console.log(`📡 Container ${payload.eventType}:`, payload.new);
         const containers = await containerService.getAll();
         setContainers(containers);
       }
@@ -106,7 +103,6 @@ export const GateOut: React.FC = () => {
       unsubscribeGateOut();
       unsubscribeBookingReferences();
       unsubscribeContainers();
-      console.log(`🔌 Cleaned up Gate Out real-time subscriptions`);
     };
   }, [currentYard?.id]);
 
@@ -144,6 +140,53 @@ export const GateOut: React.FC = () => {
 
     return matchesSearch && matchesFilter;
   });
+
+  const handleExportGateOut = () => {
+    const dataToExport = filteredOperations.map(op => ({
+      bookingNumber: op.bookingNumber || '',
+      bookingType: op.bookingType || '',
+      clientName: op.clientName || '',
+      clientCode: op.clientCode || '',
+      status: op.status || '',
+      totalContainers: op.totalContainers || 0,
+      processedContainers: op.processedContainers || 0,
+      remainingContainers: op.remainingContainers || 0,
+      driverName: op.driverName || '',
+      vehicleNumber: op.vehicleNumber || op.truckNumber || '', // Use vehicleNumber or truckNumber
+      transportCompany: op.transportCompany || '',
+      yardName: currentYard?.name || '',
+      operatorName: op.operatorName || '',
+      createdDate: formatDateShortForExport(op.createdAt || op.date),
+      createdTime: formatTimeForExport(op.createdAt || op.date),
+      updatedAt: formatDateShortForExport(op.updatedAt),
+      notes: op.notes || ''
+    }));
+
+    exportToExcel({
+      filename: `gate_out_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Gate Out Operations',
+      columns: [
+        { header: 'Numéro Booking', key: 'bookingNumber', width: 20 },
+        { header: 'Type Booking', key: 'bookingType', width: 15 },
+        { header: 'Client', key: 'clientName', width: 25 },
+        { header: 'Code Client', key: 'clientCode', width: 15 },
+        { header: 'Statut', key: 'status', width: 15 },
+        { header: 'Total Conteneurs', key: 'totalContainers', width: 15 },
+        { header: 'Conteneurs Traités', key: 'processedContainers', width: 18 },
+        { header: 'Conteneurs Restants', key: 'remainingContainers', width: 18 },
+        { header: 'Chauffeur', key: 'driverName', width: 20 },
+        { header: 'Véhicule', key: 'vehicleNumber', width: 15 },
+        { header: 'Transporteur', key: 'transportCompany', width: 25 },
+        { header: 'Dépôt', key: 'yardName', width: 20 },
+        { header: 'Opérateur', key: 'operatorName', width: 20 },
+        { header: 'Date Création', key: 'createdDate', width: 15 },
+        { header: 'Heure Création', key: 'createdTime', width: 15 },
+        { header: 'Date Modification', key: 'updatedAt', width: 20 },
+        { header: 'Notes', key: 'notes', width: 30 }
+      ],
+      data: dataToExport
+    });
+  };
 
   const handleCreateGateOut = async (data: GateOutFormData) => {
     if (!canPerformGateOut) return;
@@ -283,6 +326,35 @@ export const GateOut: React.FC = () => {
   );
 
   // Main Overview
+  // Show skeletons while initial data is loading
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-4 lg:px-6 py-4 lg:py-6">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate Out</h1>
+              <p className="text-sm text-gray-600 hidden lg:block">Container exit management</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+
+        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden p-4">
+          <TableSkeleton />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 lg:bg-transparent">
       {/* Unified Mobile-First Header */}
@@ -376,9 +448,9 @@ export const GateOut: React.FC = () => {
 
         {/* Unified Search and Filter */}
         <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="lg:flex lg:justify-between p-4 lg:p-4">
+          <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
-            <div className="relative mb-4 lg:mb-0">
+            <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
@@ -430,6 +502,14 @@ export const GateOut: React.FC = () => {
                   {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
                 </span>
               )}
+              <button
+                onClick={handleExportGateOut}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                title="Export to Excel"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export</span>
+              </button>
             </div>
           </div>
         </div>
@@ -462,6 +542,13 @@ export const GateOut: React.FC = () => {
         onComplete={handleCompleteOperation}
         isProcessing={isProcessing}
       />
+
+      {/* Processing Spinner Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
 
       {/* Success Message Display */}
       {successMessage && (

@@ -1,0 +1,171 @@
+/* Modal animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slide-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.3s ease-out;
+}
+
+.animate-slide-in-down {
+  animation: slide-in-down 0.2s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+/* Modal size utilities */
+.shadow-strong {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Form input styles consistent with existing design */
+.form-input {
+  @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors;
+}
+
+.form-input:disabled {
+  @apply bg-gray-50 text-gray-500 cursor-not-allowed;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium;
+}
+
+.btn-secondary {
+  @apply px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium;
+}
+
+.btn-success {
+  @apply px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium;
+}
+
+.btn-danger {
+  @apply px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium;
+}
+
+/* Skeleton animations */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Loading state transitions */
+.loading-transition {
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.loading-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.loading-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.loading-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.loading-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Progress bar animations */
+.progress-bar-fill {
+  transition: width 0.5s ease-out;
+}
+
+/* Notification animations */
+.notification-enter {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+}
+
+.notification-enter-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.notification-exit {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.notification-exit-active {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+  transition: opacity 0.2s ease-in, transform 0.2s ease-in;
+}

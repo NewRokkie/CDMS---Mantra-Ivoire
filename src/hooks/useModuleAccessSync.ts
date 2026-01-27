@@ -20,7 +20,6 @@ export const useModuleAccessSync = () => {
           filter: `user_id=eq.${user.id}`
         },
         async (payload) => {
-          console.log('🔔 [PERMISSION_UPDATE] Your permissions have been updated:', payload);
           setHasPermissionUpdate(true);
 
           await refreshUser();
@@ -35,7 +34,7 @@ export const useModuleAccessSync = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, refreshUser]);
+  }, [user?.id]); // Remove refreshUser from dependencies to prevent infinite loops
 
   return { hasPermissionUpdate };
 };

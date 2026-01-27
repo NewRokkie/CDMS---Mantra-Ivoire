@@ -25,7 +25,7 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
         op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         op.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        op.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+        op.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -152,7 +152,7 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                 </div>
                 <div className="flex-1">
                   <div className="font-medium text-gray-900">{operation.driverName}</div>
-                  <div className="text-sm text-gray-500">{operation.vehicleNumber} • {operation.transportCompany}</div>
+                  <div className="text-sm text-gray-500">{operation.truckNumber} • {operation.transportCompany}</div>
                 </div>
               </div>
 
@@ -283,7 +283,7 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {operation.vehicleNumber || '-'}
+                      {operation.truckNumber || '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

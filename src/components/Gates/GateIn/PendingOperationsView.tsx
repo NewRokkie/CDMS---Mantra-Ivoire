@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Search, X, FileText, Package, User, Truck, Calendar, Clock, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
+import { ArrowLeft, Search, X, Package, User, Truck, Calendar, Clock, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
 import { LocationValidationModal } from './LocationValidationModal';
 
 interface PendingOperation {
@@ -20,8 +20,9 @@ interface PendingOperation {
   assignedLocation?: string;
   bookingReference?: string;
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
-  isDamaged: boolean;
+  classification?: 'divers' | 'alimentaire';
   completedAt?: Date;
+  isDamaged: boolean;
 }
 
 interface PendingOperationsViewProps {
@@ -45,13 +46,20 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
 }) => {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState('all');
 
   const filteredOperations = operations.filter(operation => {
     const matchesSearch = operation.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    
+    const matchesFilter = selectedFilter === 'all' ||
+                         operation.status === selectedFilter ||
+                         (selectedFilter === 'alimentaire' && operation.classification === 'alimentaire') ||
+                         (selectedFilter === 'divers' && operation.classification === 'divers');
+    
+    return matchesSearch && matchesFilter;
   });
 
   const handleOperationClick = (operation: PendingOperation) => {
@@ -126,8 +134,8 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
           </div>
         </div>
 
-        {/* Mobile Search */}
-        <div className="lg:hidden px-4">
+        {/* Mobile Search and Filter */}
+        <div className="lg:hidden px-4 space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -148,9 +156,26 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               )}
             </div>
           </div>
+
+          {/* Mobile Filter Chips */}
+          <div className="flex items-center justify-center space-x-2 overflow-x-auto py-2 scrollbar-none -mx-4 px-4">
+            {['all', 'pending', 'completed', 'alimentaire', 'divers'].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setSelectedFilter(filter)}
+                className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  selectedFilter === filter
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                }`}
+              >
+                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Desktop Search */}
+        {/* Desktop Search and Filter */}
         <div className="hidden lg:block bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-4">
             <div className="relative flex-1">
@@ -164,7 +189,18 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center space-x-3">
+              <select
+                value={selectedFilter}
+                onChange={(e) => setSelectedFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="alimentaire">Alimentaire</option>
+                <option value="divers">Divers</option>
+              </select>
               <span className="text-sm text-gray-500">
                 {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
               </span>
@@ -191,9 +227,14 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(operation.status)}
-                    {operation.isDamaged && (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                        Damaged
+                    {operation.classification === 'alimentaire' && (
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                        Alimentaire
+                      </span>
+                    )}
+                    {operation.classification === 'divers' && (
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                        Divers
                       </span>
                     )}
                   </div>
@@ -337,6 +378,16 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(operation.status)}
+                        {operation.classification === 'alimentaire' && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            Alimentaire
+                          </span>
+                        )}
+                        {operation.classification === 'divers' && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            Divers
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

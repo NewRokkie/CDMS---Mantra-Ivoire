@@ -91,7 +91,7 @@ export class EDIService {
         operationType,
         transporter,
         vehicleNumber,
-        clientCode: container.clientCode || container.client,
+        clientCode: container.clientCode || container.clientName,
         userName,
         containerLoadStatus
       });
@@ -118,15 +118,6 @@ export class EDIService {
         partnerCode,
         currentYard?.id || 'unknown'
       );
-
-      console.log(`[SAP XML] Generated for ${container.number}:`, {
-        operationType,
-        containerType: SapXmlGenerator.getContainerTypeDescription(container.type),
-        operationDesc: SapXmlGenerator.getOperationDescription(operationType),
-        transporter,
-        vehicleNumber,
-        yardCode: currentYard?.code || 'UNKNOWN'
-      });
 
       return { xmlContent, log };
     } catch (error) {
@@ -221,13 +212,6 @@ export class EDIService {
       fileName,
       yardId,
       yardCode
-    });
-
-    console.log(`[SIMULATED] EDI transmission for ${container.number} in yard ${yardCode}:`, {
-      fileName,
-      operation,
-      yardCode,
-      ediContent: ediContent.substring(0, 200) + '...'
     });
 
     return log;
@@ -327,7 +311,7 @@ export class EDIService {
       'Hapag-Lloyd': 'HLCU'
     };
 
-    return clientPartnerMap[container.client] || 'DEFAULT';
+    return clientPartnerMap[container.clientName] || 'DEFAULT';
   }
 
   private async getContainerByNumber(containerNumber: string): Promise<Container> {
@@ -336,12 +320,12 @@ export class EDIService {
     return {
       id: '1',
       number: containerNumber,
-      type: 'standard',
+      type: 'dry',
       size: '40ft',
-      status: 'in_depot',
+      status: 'gate_in', // Status 01: Gate In - pending location assignment
       location: 'Block A-12',
       gateInDate: new Date(),
-      client: 'Maersk Line',
+      clientName: 'Maersk Line',
       createdBy: 'system'
     };
   }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
   Line,
   ComposedChart,
   Area,
@@ -16,7 +15,6 @@ import {
 import {
   Clock,
   Truck,
-  Package,
   AlertTriangle,
   CheckCircle,
   TrendingUp,
@@ -25,7 +23,6 @@ import {
   Users,
   Calendar,
   Download,
-  Filter,
   BarChart3,
   Zap,
   Target
@@ -163,9 +160,54 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
 }) => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedView, setSelectedView] = useState<'performance' | 'efficiency' | 'quality'>('performance');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user, canViewAllData } = useAuth();
 
-  const operationsData = useMemo(() => generateOperationsData(), []);
+  const operationsData = useMemo(() => {
+    try {
+      return generateOperationsData();
+    } catch (err) {
+      setError('Failed to generate operations data');
+      return {
+        dailyOperations: [],
+        operatorPerformance: [],
+        processingTimes: [],
+        hourlyDistribution: [],
+        equipmentUtilization: [],
+        qualityMetrics: []
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    // Simulate data loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading operations data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   // Generate multi-depot operations data for managers
   const getMultiDepotOperationsData = () => {

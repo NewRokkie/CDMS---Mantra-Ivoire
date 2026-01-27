@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Package, Settings, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Building, X, Loader, Calendar } from 'lucide-react';
+import { Users, Package, Plus, Search, Filter, CreditCard as Edit, Trash2, Eye, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Building } from 'lucide-react';
 import { ClientPool, ClientPoolStats } from '../../types/clientPool';
 import { supabase } from '../../services/api/supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
 import { clientPoolService } from '../../services/api';
+import { stackService } from '../../services/api';
 import { ClientPoolForm } from './ClientPoolForm';
+import { StackDetailsModal } from './StackDetailsModal';
+import { ClientPoolViewModal } from './ClientPoolViewModal';
 import { useYard } from '../../hooks/useYard';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
+import { handleError } from '../../services/errorHandling';
+import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
 
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
@@ -15,94 +21,21 @@ export const ClientPoolManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [selectedPool, setSelectedPool] = useState<ClientPool | null>(null);
+  const [showStackDetails, setShowStackDetails] = useState(false);
+  const [selectedStack, setSelectedStack] = useState<any>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [assignedStacksData, setAssignedStacksData] = useState<Map<string, any>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [realYardData, setRealYardData] = useState<any>(null);
   const { user } = useAuth();
   const { currentYard } = useYard();
-
-  // Mock yard data for the form
-  const mockYard = {
-    id: 'depot-tantarelli',
-    name: 'Depot Tantarelli',
-    code: 'DEPOT-01',
-    description: 'Main container depot',
-    location: 'Tantarelli Port Complex',
-    isActive: true,
-    totalCapacity: 2500,
-    currentOccupancy: 1847,
-    sections: [
-      {
-        id: 'section-top',
-        name: 'Top Section',
-        yardId: 'depot-tantarelli',
-        stacks: Array.from({ length: 16 }, (_, i) => ({
-          id: `stack-${[1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31][i]}`,
-          stackNumber: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31][i],
-          sectionId: 'section-top',
-          rows: i === 0 || i === 15 ? (i === 0 ? 4 : 7) : 5,
-          maxTiers: 5,
-          currentOccupancy: Math.floor(Math.random() * 25),
-          capacity: (i === 0 ? 4 : i === 15 ? 7 : 5) * 5,
-          position: { x: 0, y: 0, z: 0 },
-          dimensions: { width: 12, length: 6 },
-          containerPositions: [],
-          isOddStack: true
-        })),
-        position: { x: 0, y: 0, z: 0 },
-        dimensions: { width: 400, length: 120 },
-        color: '#3b82f6'
-      },
-      {
-        id: 'section-center',
-        name: 'Center Section',
-        yardId: 'depot-tantarelli',
-        stacks: Array.from({ length: 12 }, (_, i) => ({
-          id: `stack-${[33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55][i]}`,
-          stackNumber: [33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55][i],
-          sectionId: 'section-center',
-          rows: i < 4 ? 5 : 4,
-          maxTiers: 5,
-          currentOccupancy: Math.floor(Math.random() * 25),
-          capacity: (i < 4 ? 5 : 4) * 5,
-          position: { x: 0, y: 0, z: 0 },
-          dimensions: { width: 12, length: 6 },
-          containerPositions: [],
-          isOddStack: true
-        })),
-        position: { x: 0, y: 140, z: 0 },
-        dimensions: { width: 400, length: 100 },
-        color: '#f59e0b'
-      },
-      {
-        id: 'section-bottom',
-        name: 'Bottom Section',
-        yardId: 'depot-tantarelli',
-        stacks: Array.from({ length: 22 }, (_, i) => ({
-          id: `stack-${[61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103][i]}`,
-          stackNumber: [61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103][i],
-          sectionId: 'section-bottom',
-          rows: i < 6 ? 6 : i < 18 ? 4 : (i === 20 ? 1 : 2),
-          maxTiers: 5,
-          currentOccupancy: Math.floor(Math.random() * 30),
-          capacity: (i < 6 ? 6 : i < 18 ? 4 : (i === 20 ? 1 : 2)) * 5,
-          position: { x: 0, y: 0, z: 0 },
-          dimensions: { width: 12, length: 6 },
-          containerPositions: [],
-          isOddStack: true
-        })),
-        position: { x: 0, y: 260, z: 0 },
-        dimensions: { width: 400, length: 140 },
-        color: '#10b981'
-      }
-    ],
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date(),
-    createdBy: "System",
-    layout: 'tantarelli' as const
-  };
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const canManageClientPools = async () => {
     if (!user) return false;
 
-    const { data: userProfile, error } = await supabase
+    const { data: userProfile } = await supabase
       .from('users')
       .select('role')
       .eq('auth_user_id', user.id)
@@ -113,20 +46,126 @@ export const ClientPoolManagement: React.FC = () => {
 
   useEffect(() => {
     loadClientPools();
-  }, []);
+    loadRealYardData();
+  }, [currentYard?.id]);
+
+  const loadRealYardData = async () => {
+    if (!currentYard?.id) return;
+
+    try {
+      // Fetch real stacks from the database
+      const allStacks = await stackService.getAll(currentYard.id);
+      
+      // Filter out virtual stacks - only show physical stacks
+      // Virtual stacks are automatically handled when physical stacks are assigned
+      const physicalStacks = allStacks.filter(stack => {
+        // Virtual stacks have even stack numbers (S02, S04, S06, etc.)
+        // Physical stacks have odd stack numbers (S01, S03, S05, etc.)
+        return stack.stackNumber % 2 !== 0;
+      });
+      
+      // Group stacks by section
+      const stacksBySection = new Map<string, any[]>();
+      
+      physicalStacks.forEach(stack => {
+        const sectionId = stack.sectionId || 'default-section';
+        if (!stacksBySection.has(sectionId)) {
+          stacksBySection.set(sectionId, []);
+        }
+        stacksBySection.get(sectionId)?.push(stack);
+      });
+
+      // Create sections from grouped stacks
+      const sections = Array.from(stacksBySection.entries()).map(([sectionId, stacks]) => ({
+        id: sectionId,
+        name: stacks[0]?.sectionName || 'Unknown Section',
+        yardId: currentYard.id,
+        stacks: stacks,
+        position: { x: 0, y: 0, z: 0 },
+        dimensions: { width: 400, length: 120 },
+        color: '#3b82f6'
+      }));
+
+      // Create yard data structure
+      const yardData = {
+        id: currentYard.id,
+        name: currentYard.name,
+        code: currentYard.code || 'YARD-01',
+        description: currentYard.description || '',
+        location: currentYard.location || '',
+        isActive: currentYard.isActive,
+        totalCapacity: currentYard.totalCapacity || 0,
+        currentOccupancy: currentYard.currentOccupancy || 0,
+        sections: sections,
+        createdAt: currentYard.createdAt,
+        updatedAt: currentYard.updatedAt,
+        createdBy: currentYard.createdBy,
+        layout: currentYard.layout || 'default'
+      };
+
+      setRealYardData(yardData);
+    } catch (error) {
+      handleError(error, 'ClientPoolManagement.loadRealYardData');
+      // Fallback to empty yard structure
+      setRealYardData({
+        id: currentYard.id,
+        name: currentYard.name,
+        code: currentYard.code || 'YARD-01',
+        sections: [],
+        isActive: true,
+        totalCapacity: 0,
+        currentOccupancy: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'System',
+        layout: 'default'
+      });
+    }
+  };
 
   const loadClientPools = async () => {
     try {
       setIsLoading(true);
 
-      const pools = await clientPoolService.getAll(currentYard?.id).catch(err => { console.error('Error loading client pools:', err); return []; });
-      const poolStats = await clientPoolService.getStats(currentYard?.id).catch(err => { console.error('Error loading pool stats:', err); return null; });
+      const pools = await clientPoolService.getAll(currentYard?.id).catch(err => { 
+        handleError(err, 'ClientPoolManagement.loadClientPools');
+        return []; 
+      });
+      const poolStats = await clientPoolService.getStats(currentYard?.id).catch(err => { 
+        handleError(err, 'ClientPoolManagement.loadPoolStats');
+        return null; 
+      });
 
       setClientPools(pools || []);
       setStats(poolStats);
+
+      // Load stack details for all assigned stacks
+      if (pools && pools.length > 0 && currentYard?.id) {
+        const allAssignedStackIds = pools.flatMap(pool => pool.assignedStacks);
+        const uniqueStackIds = [...new Set(allAssignedStackIds)];
+
+        if (uniqueStackIds.length > 0) {
+          try {
+            const stacksData = await Promise.all(
+              uniqueStackIds.map(async (stackId) => {
+                try {
+                  const stack = await stackService.getById(stackId);
+                  return stack ? [stackId, stack] : null;
+                } catch {
+                  return null;
+                }
+              })
+            );
+
+            const stacksMap = new Map(stacksData.filter(Boolean) as [string, any][]);
+            setAssignedStacksData(stacksMap);
+          } catch (error) {
+            handleError(error, 'ClientPoolManagement.loadAssignedStacks');
+          }
+        }
+      }
     } catch (error) {
-      console.error('Error loading client pools:', error);
-      // Set empty arrays to prevent infinite loading
+      handleError(error, 'ClientPoolManagement.loadClientPools');
       setClientPools([]);
       setStats(null);
     } finally {
@@ -169,10 +208,41 @@ export const ClientPoolManagement: React.FC = () => {
     );
   };
 
+  const handleViewStackDetails = async (stackId: string) => {
+    try {
+      const cachedStack = assignedStacksData.get(stackId);
+      if (cachedStack) {
+        setSelectedStack(cachedStack);
+        setShowStackDetails(true);
+        return;
+      }
+
+      const stackDetails = await stackService.getById(stackId);
+      if (stackDetails) {
+        setSelectedStack(stackDetails);
+        setShowStackDetails(true);
+        setAssignedStacksData(prev => new Map(prev.set(stackId, stackDetails)));
+      } else {
+        toast.warning('Stack details not found')
+      }
+    } catch (error) {
+      handleError(error, 'ClientPoolManagement.handleViewStackDetails');
+      toast.error('Error loading stack details')
+    }
+  };
+
   const handleCreatePool = async (data: any) => {
     if (!user || !currentYard) return;
+    
+    // Prevent duplicate submissions
+    if (isProcessing) {
+      console.warn('Pool creation already in progress, ignoring duplicate submission');
+      return;
+    }
 
     try {
+      setIsProcessing(true);
+      
       const newPool = await clientPoolService.create({
         yardId: currentYard.id,
         clientId: data.clientId,
@@ -188,32 +258,55 @@ export const ClientPoolManagement: React.FC = () => {
 
       if (data.assignedStacks && data.assignedStacks.length > 0) {
         for (const stackId of data.assignedStacks) {
-          await clientPoolService.assignStack({
-            yardId: currentYard.id,
-            stackId,
-            stackNumber: parseInt(stackId.split('-').pop() || '0'),
-            clientPoolId: newPool.id,
-            clientCode: data.clientCode,
-            isExclusive: false,
-            priority: 1
-          }, user.id);
+          try {
+            // Fetch the actual stack data to get the stack number
+            const stack = await stackService.getById(stackId);
+            if (!stack) {
+              console.warn(`Stack ${stackId} not found, skipping assignment`);
+              continue;
+            }
+
+            await clientPoolService.assignStack({
+              yardId: currentYard.id,
+              stackId,
+              stackNumber: stack.stackNumber,
+              clientPoolId: newPool.id,
+              clientCode: data.clientCode,
+              isExclusive: false,
+              priority: 1
+            }, user.id);
+          } catch (stackError) {
+            handleError(stackError, `ClientPoolManagement.assignStack-${stackId}`);
+            console.error(`Failed to assign stack ${stackId}:`, stackError);
+          }
         }
       }
 
       await loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
-      alert(`Client pool created successfully for ${data.clientName}!`);
+      toast.success(`Client pool created successfully for ${data.clientName}!`)
     } catch (error) {
-      console.error('Error creating client pool:', error);
-      alert(`Error creating client pool: ${error}`);
+      handleError(error, 'ClientPoolManagement.handleCreatePool');
+      toast.error(`Error creating client pool: ${error}`)
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleUpdatePool = async (data: any) => {
-    if (!selectedPool || !user) return;
+    if (!selectedPool || !user || !currentYard) return;
+    
+    // Prevent duplicate submissions
+    if (isProcessing) {
+      console.warn('Pool update already in progress, ignoring duplicate submission');
+      return;
+    }
 
     try {
+      setIsProcessing(true);
+      
+      // Update the client pool
       await clientPoolService.update(selectedPool.id, {
         assignedStacks: data.assignedStacks || [],
         maxCapacity: data.maxCapacity,
@@ -223,13 +316,65 @@ export const ClientPoolManagement: React.FC = () => {
         notes: data.notes
       }, user.id);
 
+      // Handle stack assignments
+      // Get the difference between old and new assignments
+      const oldStacks = new Set<string>(selectedPool.assignedStacks);
+      const newStacks = new Set<string>(data.assignedStacks || []);
+
+      // Find stacks to add (in new but not in old)
+      const stacksToAdd = Array.from(newStacks).filter(id => !oldStacks.has(id));
+
+      // Find stacks to remove (in old but not in new)
+      const stacksToRemove = Array.from(oldStacks).filter(id => !newStacks.has(id));
+
+      // Add new stack assignments
+      for (const stackId of stacksToAdd) {
+        try {
+          const stack = await stackService.getById(stackId as string);
+          if (!stack) {
+            console.warn(`Stack ${stackId} not found, skipping assignment`);
+            continue;
+          }
+
+          await clientPoolService.assignStack({
+            yardId: currentYard.id,
+            stackId: stackId as string,
+            stackNumber: stack.stackNumber,
+            clientPoolId: selectedPool.id,
+            clientCode: data.clientCode,
+            isExclusive: false,
+            priority: 1
+          }, user.id);
+        } catch (stackError) {
+          handleError(stackError, `ClientPoolManagement.assignStack-${stackId}`);
+        }
+      }
+
+      // Remove old stack assignments
+      // Note: This requires getting the assignment IDs first
+      if (stacksToRemove.length > 0) {
+        try {
+          const assignments = await clientPoolService.getStackAssignments(selectedPool.id);
+          for (const stackId of stacksToRemove) {
+            const assignment = assignments.find(a => a.stackId === (stackId as string));
+            if (assignment) {
+              await clientPoolService.unassignStack(assignment.id);
+            }
+          }
+        } catch (removeError) {
+          handleError(removeError, 'ClientPoolManagement.removeStackAssignments');
+        }
+      }
+
       await loadClientPools();
       setShowForm(false);
       setSelectedPool(null);
-      alert(`Client pool updated successfully for ${data.clientName}!`);
+      toast.success(`Client pool updated successfully for ${data.clientName}!`)
     } catch (error) {
-      console.error('Error updating client pool:', error);
-      alert(`Error updating client pool: ${error}`);
+      handleError(error, 'ClientPoolManagement.handleUpdatePool');
+      toast.error(`Error updating client pool: ${error}`)
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -269,6 +414,14 @@ export const ClientPoolManagement: React.FC = () => {
         </div>
         <button
           onClick={() => {
+            if (!realYardData) {
+              toast.info('Loading yard data... Please wait.')
+              return;
+            }
+            if (!realYardData.sections || realYardData.sections.length === 0) {
+              toast.warning('No stacks found in this yard. Please create stacks in Stack Management first.')
+              return;
+            }
             setSelectedPool(null);
             setShowForm(true);
           }}
@@ -403,10 +556,19 @@ export const ClientPoolManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{pool.assignedStacks.length} stacks</div>
                       <div className="text-sm text-gray-500">
-                        {pool.assignedStacks.slice(0, 3).map(stackId =>
-                          `S${stackId.split('-').pop()?.toString().padStart(2, '0')}`
-                        ).join(', ')} {pool.assignedStacks.length > 3 && ` +${pool.assignedStacks.length - 3} more`}
+                        {pool.assignedStacks.slice(0, 3).map(stackId => {
+                          const stack = assignedStacksData.get(stackId);
+                          return stack ? `S${stack.stackNumber.toString().padStart(2, '0')}` : stackId;
+                        }).join(', ')} {pool.assignedStacks.length > 3 && ` +${pool.assignedStacks.length - 3} more`}
                       </div>
+                      {pool.assignedStacks.length > 0 && (
+                        <button
+                          onClick={() => handleViewStackDetails(pool.assignedStacks[0])}
+                          className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                        >
+                          View stack details →
+                        </button>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{pool.currentOccupancy} / {pool.maxCapacity}</div>
@@ -443,34 +605,51 @@ export const ClientPoolManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => setSelectedPool(pool)}
+                          onClick={() => {
+                            setSelectedPool(pool);
+                            setShowViewModal(true);
+                          }}
                           className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                          title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => {
+                            if (!realYardData) {
+                              toast.info('Loading yard data... Please wait.')
+                              return;
+                            }
                             setSelectedPool(pool);
                             setShowForm(true);
                           }}
                           className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                          title="Edit Pool"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={async () => {
-                            if (confirm(`Are you sure you want to delete the pool for ${pool.clientName}?`)) {
-                              try {
-                                await clientPoolService.delete(pool.id);
-                                await loadClientPools(); // Reload pools after deletion
-                                alert(`Client pool for ${pool.clientName} deleted successfully!`);
-                              } catch (error) {
-                                console.error('Error deleting client pool:', error);
-                                alert(`Error deleting client pool: ${error}`);
+                          onClick={() => {
+                            confirm({
+                              title: 'Delete Client Pool',
+                              message: `Are you sure you want to delete the pool for ${pool.clientName}? This action cannot be undone.`,
+                              confirmText: 'Delete',
+                              cancelText: 'Cancel',
+                              variant: 'danger',
+                              onConfirm: async () => {
+                                try {
+                                  await clientPoolService.delete(pool.id);
+                                  await loadClientPools();
+                                  toast.success(`Client pool for ${pool.clientName} deleted successfully!`);
+                                } catch (error) {
+                                  handleError(error, 'ClientPoolManagement.deletePool');
+                                  toast.error(`Error deleting client pool: ${error}`);
+                                }
                               }
-                            }
+                            });
                           }}
                           className="text-red-600 hover:text-red-900 p-1 rounded"
+                          title="Delete Pool"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -495,17 +674,72 @@ export const ClientPoolManagement: React.FC = () => {
       </div>
 
       {/* Client Pool Form Modal */}
-      {showForm && (
+      {showForm && realYardData && (
         <ClientPoolForm
           isOpen={showForm}
           onClose={() => {
-            setShowForm(false);
-            setSelectedPool(null);
+            if (!isProcessing) {
+              setShowForm(false);
+              setSelectedPool(null);
+            }
           }}
           onSubmit={selectedPool ? handleUpdatePool : handleCreatePool}
           selectedPool={selectedPool}
-          yard={mockYard}
-          isLoading={false}
+          yard={realYardData}
+          isLoading={isProcessing}
+        />
+      )}
+
+      {/* Stack Details Modal */}
+      {showStackDetails && (
+        <StackDetailsModal
+          isOpen={showStackDetails}
+          onClose={() => {
+            setShowStackDetails(false);
+            setSelectedStack(null);
+          }}
+          stack={selectedStack}
+        />
+      )}
+
+      {/* Client Pool View Modal */}
+      {showViewModal && (
+        <ClientPoolViewModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedPool(null);
+          }}
+          clientPool={selectedPool}
+          stacksData={assignedStacksData}
+          createdByName={user?.name}
+          updatedByName={user?.name}
+          yardName={currentYard?.name}
+          onEdit={() => {
+            setShowViewModal(false);
+            setShowForm(true);
+          }}
+          onDelete={(pool) => {
+            confirm({
+              title: 'Delete Client Pool',
+              message: `Are you sure you want to delete the pool for ${pool.clientName}? This action cannot be undone.`,
+              confirmText: 'Delete',
+              cancelText: 'Cancel',
+              variant: 'danger',
+              onConfirm: async () => {
+                try {
+                  await clientPoolService.delete(pool.id);
+                  setShowViewModal(false);
+                  setSelectedPool(null);
+                  await loadClientPools();
+                  toast.success(`Client pool for ${pool.clientName} deleted successfully!`);
+                } catch (error) {
+                  handleError(error, 'ClientPoolManagement.deletePoolFromModal');
+                  toast.error(`Error deleting client pool: ${error}`);
+                }
+              }
+            });
+          }}
         />
       )}
 

@@ -15,6 +15,11 @@ export interface User {
   moduleAccess: ModuleAccess;
   clientCode?: string; // For client users to filter their data
   yardAssignments?: string[]; // Array of yard IDs user has access to
+  yardIds?: string[]; // Array of yard IDs user has access to
+  // Soft delete fields
+  isDeleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: string;
 }
 
 export interface ModuleAccess {
@@ -123,6 +128,11 @@ export interface YardSection {
   color?: string; // For visual distinction
 }
 
+export interface RowTierConfig {
+  row: number;
+  maxTiers: number;
+}
+
 export interface YardStack {
   id: string;
   yardId?: string;
@@ -131,9 +141,10 @@ export interface YardStack {
   sectionName?: string;
   rows: number;
   maxTiers: number;
+  rowTierConfig?: RowTierConfig[]; // Per-row tier configuration
   currentOccupancy: number;
   capacity: number;
-  containerSize?: '20feet' | '40feet';
+  containerSize?: '20ft' | '40ft';
   position: {
     x: number;
     y: number;
@@ -199,9 +210,10 @@ export interface YardPosition {
 export interface Container {
   id: string;
   number: string;
-  type: 'standard' | 'hi_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
+  type: 'dry' | 'high_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   size: '20ft' | '40ft';
-  status: 'in_depot' | 'out_depot' | 'in_service' | 'maintenance' | 'cleaning';
+  status: 'gate_in' | 'in_depot' | 'gate_out' | 'out_depot' | 'maintenance' | 'cleaning';
+  fullEmpty?: 'FULL' | 'EMPTY'; // Full or Empty status
   location: string;
   yardId?: string; // Add yard ID for direct relations
   yardPosition?: YardPosition;
@@ -212,10 +224,11 @@ export interface Container {
   placedAt?: Date;
   createdBy: string;
   updatedBy?: string;
-  client: string;
+  clientName: string;
   clientId?: string; // Add client ID for direct relations
   clientCode?: string; // Add client code for filtering
   releaseOrderId?: string;
+  classification?: 'divers' | 'alimentaire'; // Container classification
   damage?: string[];
   auditLogs?: AuditLog[];
   // Enhanced yard management fields
@@ -233,6 +246,10 @@ export interface Container {
   bookingReference?: string;
   sealNumber?: string;
   temperatureSetting?: number;
+  // Soft delete fields
+  isDeleted?: boolean; // Soft delete flag
+  deletedAt?: Date; // When container was deleted
+  deletedBy?: string; // User ID who deleted the container
 }
 
 export interface BookinReferenceContainer {
@@ -269,8 +286,11 @@ export interface BookingReference {
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   createdBy: string;
   createdAt: Date;
+  updatedAt?: Date;
   completedAt?: Date;
   notes?: string;
+  cancellationReason?: string;
+  newBookingReference?: string;
 }
 
 export interface CODECOMessage {
@@ -381,3 +401,51 @@ export interface AuditLog {
   action: string;
   details?: string;
 }
+
+export interface UserDetails extends User {
+  yardDetails: YardAssignment[];
+  activityHistory: UserActivity[];
+  permissionSummary: PermissionSummary;
+  loginHistory: LoginRecord[];
+}
+
+export interface YardAssignment {
+  yardId: string;
+  yardName: string;
+  yardCode: string;
+  assignedAt: Date;
+  assignedBy: string;
+}
+
+export interface UserActivity {
+  id: string;
+  action: string;
+  timestamp: Date;
+  details?: string;
+  ipAddress?: string;
+}
+
+export interface PermissionSummary {
+  totalModules: number;
+  enabledModules: number;
+  disabledModules: number;
+  moduleList: {
+    module: keyof ModuleAccess;
+    enabled: boolean;
+    category: 'core' | 'operations' | 'management' | 'admin';
+  }[];
+}
+
+export interface LoginRecord {
+  id: string;
+  userId: string;
+  loginTime: Date;
+  logoutTime?: Date;
+  ipAddress?: string;
+  userAgent?: string;
+  sessionDuration?: number; // in minutes
+}
+
+// Location Management Types
+export * from './location';
+export * from './yard';

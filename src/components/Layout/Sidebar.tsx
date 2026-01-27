@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronDown, ChevronRight, Cog, X, LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronRight, Cog, X, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { ModuleAccess } from '../../types';
+import { SyncStatusIndicator } from '../Sync';
+import { handleError } from '../../services/errorHandling';
 
 interface MenuItem {
   id: string;
@@ -24,11 +26,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileMenuOpen: externalIsMobileMenuOpen,
   setIsMobileMenuOpen: externalSetIsMobileMenuOpen
 }) => {
-  const { user, hasModuleAccess } = useAuth();
-  const { t } = useLanguage();
+   const { user, hasModuleAccess, refreshModuleAccess } = useAuth();
+   const { t } = useLanguage();
+
+   // Force re-render when user module access changes
+   const userModuleAccessKey = user?.moduleAccess ? JSON.stringify(user.moduleAccess) : 'no-access';
+   
+   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isConfigurationsOpen, setIsConfigurationsOpen] = useState(false);
   const navRef = React.useRef<HTMLElement>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
+
+
+
+  // Manual refresh handler
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      await refreshModuleAccess();
+    } catch (error) {
+      handleError(error, 'Sidebar.handleManualRefresh');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Check if any configuration module is active
   const configurationModules = [
@@ -43,7 +66,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Auto-open configurations dropdown if a configuration module is active
   React.useEffect(() => {
-    console.log('useEffect triggered: activeModule =', activeModule, 'isConfigurationActive =', isConfigurationActive);
     if (isConfigurationActive) {
       setIsConfigurationsOpen(true);
     }
@@ -117,14 +139,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const filteredMainMenuItems = getFilteredMenuItems(mainMenuItems);
   const filteredConfigurationItems = getFilteredMenuItems(configurationMenuItems);
-  console.log('Filtered main menu items:', filteredMainMenuItems.map(item => item.id));
-  console.log('Filtered configuration items:', filteredConfigurationItems.map(item => item.id));
 
   // Check if user has access to any configuration modules
   const hasConfigurationAccess = filteredConfigurationItems.length > 0;
 
   const handleConfigurationToggle = () => {
-    console.log('Toggling configurations: current state =', isConfigurationsOpen);
     saveScrollPosition();
     setIsConfigurationsOpen(!isConfigurationsOpen);
   };
@@ -137,7 +156,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleMainMenuClick = (itemId: string) => {
-    console.log('Main menu clicked: itemId =', itemId);
     saveScrollPosition();
     setActiveModule(itemId);
     // Close mobile menu when an item is clicked
@@ -150,7 +168,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [localIsMobileMenuOpen, setLocalIsMobileMenuOpen] = useState(false);
   const isMobileMenuOpen = externalIsMobileMenuOpen !== undefined ? externalIsMobileMenuOpen : localIsMobileMenuOpen;
   const setIsMobileMenuOpen = externalSetIsMobileMenuOpen || setLocalIsMobileMenuOpen;
-  console.log('Mobile menu open state:', isMobileMenuOpen);
 
   return (
     <>
@@ -163,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Sidebar */}
-      <aside className={`
+      <aside key={userModuleAccessKey} className={`
         bg-slate-900 text-white h-screen flex flex-col transition-all duration-300 ease-out
         lg:w-72 lg:relative lg:translate-x-0
         fixed top-0 left-0 w-80 z-40
@@ -182,10 +199,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
             <Container className="h-6 w-6 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="font-bold text-lg">MANTRA IVOIRE</h2>
             <p className="text-xs text-slate-400">Depot Management System (DMS)</p>
           </div>
+        </div>
+        
+        {/* Sync Status Indicator */}
+        <div className="mt-4">
+          <SyncStatusIndicator 
+            showDetails={true}
+            size="sm"
+            onRefresh={handleManualRefresh}
+          />
         </div>
       </div>
 

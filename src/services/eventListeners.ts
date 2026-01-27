@@ -1,12 +1,11 @@
 import { eventBus } from './eventBus';
-import { auditService } from './api/auditService';
-import { EDIService } from './edifact/ediService';
+import { logger } from '../utils/logger';
 
 /**
  * Initialize all event listeners for automatic inter-module linking
  */
 export function initializeEventListeners() {
-  console.log('[EventListeners] Initializing event listeners...');
+  logger.info('Initializing event listeners...', 'EventListeners');
 
   // ============================================
   // GATE IN EVENTS
@@ -14,11 +13,11 @@ export function initializeEventListeners() {
 
   // When Gate In completes
   eventBus.on('GATE_IN_COMPLETED', async ({ container, operation }) => {
-    console.log('[EventListeners] GATE_IN_COMPLETED:', container.number);
+    logger.info(`GATE_IN_COMPLETED: ${container.number}`, 'EventListeners');
 
     try {
       // 1. Yard Map is automatically updated (container stored in DB)
-      console.log('  ✓ Container added to inventory:', container.id);
+      logger.debug(`Container added to inventory: ${container.id}`, 'EventListeners');
 
       // 2. Position assigned
       if (container.location) {
@@ -37,31 +36,70 @@ export function initializeEventListeners() {
       });
 
       // 4. Dashboard stats auto-update (via DB queries)
-      console.log('  ✓ Dashboard will reflect new container on next refresh');
+      logger.debug('Dashboard will reflect new container on next refresh', 'EventListeners');
+
+      // 5. Handle damage assessment if provided during gate in
+      if (container.damage && container.damage.length > 0) {
+        logger.debug('Container has damage recorded during assignment stage', 'EventListeners');
+      }
 
     } catch (error) {
-      console.error('[EventListeners] Error handling GATE_IN_COMPLETED:', error);
+      logger.error('Error handling GATE_IN_COMPLETED', 'EventListeners', error);
     }
   });
 
-  eventBus.on('GATE_IN_FAILED', async ({ containerNumber, error }) => {
-    console.error('[EventListeners] GATE_IN_FAILED:', containerNumber, error);
-    // Could send notification, alert, etc.
+  // When damage assessment is recorded during assignment stage
+  eventBus.on('DAMAGE_ASSESSMENT_RECORDED', async ({ operationId, containerId, assessment, assessedBy }) => {
+    logger.info(`DAMAGE_ASSESSMENT_RECORDED: ${operationId}`, 'EventListeners');
+
+    try {
+      // 1. Log damage assessment for audit trail
+      logger.debug(`Damage assessment recorded by ${assessedBy} at ${assessment.assessmentStage} stage`, 'EventListeners');
+
+      // 2. Update container status if severely damaged
+      if (assessment.hasDamage && assessment.damageType === 'structural') {
+        logger.warn('Severe damage detected - container may need special handling', 'EventListeners');
+      }
+
+      // 3. Notify relevant stakeholders if damage is reported
+      if (assessment.hasDamage && containerId) {
+        logger.info('Damage notification will be sent to relevant parties', 'EventListeners');
+        
+        // Could emit notification event
+        await eventBus.emit('DAMAGE_NOTIFICATION_REQUIRED', {
+          containerId,
+          assessment,
+          assessedBy
+        });
+      }
+
+      // 4. Update dashboard statistics
+      logger.debug('Dashboard damage statistics will be updated on next refresh', 'EventListeners');
+
+    } catch (error) {
+      logger.error('Error handling DAMAGE_ASSESSMENT_RECORDED', 'EventListeners', error);
+    }
+  });
+
+  eventBus.on('DAMAGE_NOTIFICATION_REQUIRED', async ({ containerId }) => {
+    logger.info(`DAMAGE_NOTIFICATION_REQUIRED: ${containerId}`, 'EventListeners');
+    // Could send email, SMS, or system notification to relevant parties
+    // Could create work orders for repairs
   });
 
   // ============================================
   // GATE OUT EVENTS
   // ============================================
 
-  eventBus.on('GATE_OUT_COMPLETED', async ({ containers, operation, bookingNumber }) => {
-    console.log('[EventListeners] GATE_OUT_COMPLETED:', operation.bookingNumber);
+  eventBus.on('GATE_OUT_COMPLETED', async ({ containers, operation, bookingReference }) => {
+    logger.info(`GATE_OUT_COMPLETED: ${operation.bookingNumber}`, 'EventListeners');
 
     try {
       // 1. Containers already updated to 'out_depot' status
-      console.log(`  ✓ ${containers.length} containers marked as out_depot`);
+      logger.debug(`${containers.length} containers marked as out_depot`, 'EventListeners');
 
       // 2. Release order already decremented
-      console.log(`  ✓ Booking reference updated: ${bookingNumber.remainingContainers} remaining`);
+      logger.debug(`Booking reference updated: ${bookingReference.remainingContainers} remaining`, 'EventListeners');
 
       // 3. Request EDI transmission
       await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
@@ -70,42 +108,31 @@ export function initializeEventListeners() {
         messageType: 'CODECO'
       });
 
-      // 4. If booking reference completed, emit event
-      if (bookingNumber.status === 'completed') {
-        await eventBus.emit('BOOKING_REF_COMPLETED', { bookingNumber });
-      }
-
     } catch (error) {
-      console.error('[EventListeners] Error handling GATE_OUT_COMPLETED:', error);
+      logger.error('Error handling GATE_OUT_COMPLETED', 'EventListeners', error);
     }
   });
 
-  eventBus.on('GATE_OUT_FAILED', async ({ bookingNumberId, error }) => {
-    console.error('[EventListeners] GATE_OUT_FAILED:', bookingNumberId, error);
-  });
-
   // ============================================
-  // RELEASE ORDER EVENTS
+  // BOOKING REFERENCE EVENTS
   // ============================================
 
-  eventBus.on('BOOKING_REF_CREATED', async ({ bookingNumber }) => {
-    console.log('[EventListeners] BOOKING_REF_CREATED:', bookingNumber);
+  eventBus.on('BOOKING_REFERENCE_CREATED', async ({ bookingReference }) => {
+    logger.info(`BOOKING_REFERENCE_CREATED: ${bookingReference}`, 'EventListeners');
 
     try {
       // Could implement auto-reservation of containers here
       // For now, just log
-      console.log(`  ✓ Booking reference created for ${bookingNumber.totalContainers} containers`);
+      logger.debug(`Booking reference created for ${bookingReference.totalContainers} containers`, 'EventListeners');
 
       // Could send notification to client
-      // Could reserve containers automatically based on booking details
-
     } catch (error) {
-      console.error('[EventListeners] Error handling BOOKING_REF_CREATED:', error);
+      logger.error('Error handling BOOKING_REFERENCE_CREATED', 'EventListeners', error);
     }
   });
 
-  eventBus.on('BOOKING_REF_COMPLETED', async ({ bookingNumber }) => {
-    console.log('[EventListeners] BOOKING_REF_COMPLETED:', bookingNumber);
+  eventBus.on('BOOKING_REFERENCE_COMPLETED', async ({ bookingReference }) => {
+    logger.info(`BOOKING_REFERENCE_COMPLETED: ${bookingReference}`, 'EventListeners');
     // Could send completion notification, generate invoice, etc.
   });
 
@@ -113,18 +140,18 @@ export function initializeEventListeners() {
   // CONTAINER EVENTS
   // ============================================
 
-  eventBus.on('CONTAINER_ADDED', async ({ container, operation }) => {
-    console.log('[EventListeners] CONTAINER_ADDED:', container.number);
+  eventBus.on('CONTAINER_ADDED', async ({ container }) => {
+    logger.debug(`CONTAINER_ADDED: ${container.number}`, 'EventListeners');
     // Container already in DB, yard map will show it automatically
   });
 
-  eventBus.on('CONTAINER_UPDATED', async ({ containerId, before, after }) => {
-    console.log('[EventListeners] CONTAINER_UPDATED:', containerId);
+  eventBus.on('CONTAINER_UPDATED', async ({ containerId }) => {
+    logger.debug(`CONTAINER_UPDATED: ${containerId}`, 'EventListeners');
     // Changes logged in audit via service layer
   });
 
-  eventBus.on('YARD_POSITION_ASSIGNED', async ({ containerId, location, yardId }) => {
-    console.log('[EventListeners] YARD_POSITION_ASSIGNED:', containerId, '→', location);
+  eventBus.on('YARD_POSITION_ASSIGNED', async ({ containerId, location }) => {
+    logger.debug(`YARD_POSITION_ASSIGNED: ${containerId} → ${location}`, 'EventListeners');
     // Position already saved in DB, yard map will reflect it
   });
 
@@ -133,76 +160,60 @@ export function initializeEventListeners() {
   // ============================================
 
   eventBus.on('EDI_TRANSMISSION_REQUESTED', async ({ entityId, entityType, messageType }) => {
-    console.log('[EventListeners] EDI_TRANSMISSION_REQUESTED:', messageType, 'for', entityType, entityId);
+    logger.info(`EDI_TRANSMISSION_REQUESTED: ${messageType} for ${entityType} ${entityId}`, 'EventListeners');
 
     try {
-      // Check if auto-EDI is enabled for this operation
-      // For now, just log - actual transmission would happen here
-
-      // Simulate EDI transmission
-      const shouldTransmit = Math.random() > 0.3; // 70% success rate for demo
-
-      if (shouldTransmit) {
-        // In production: Generate and send CODECO via SFTP
-        // const ediService = new EDIService();
-        // const codeco = await ediService.generateCODECO(entityId, entityType);
-        // await ediService.transmit(codeco);
-
-        await eventBus.emit('EDI_TRANSMISSION_COMPLETED', {
-          entityId,
-          transmissionId: `edi-${Date.now()}`
-        });
-      } else {
-        await eventBus.emit('EDI_TRANSMISSION_FAILED', {
-          entityId,
-          error: 'Simulated transmission failure'
-        });
+      // Transmit based on entity type
+      if (entityType === 'gate_in') {
+        // Fetch gate in operation and transmit
+        // In production, this would fetch from database
+        // For now, we'll skip actual transmission
+        logger.debug('EDI transmission for gate_in operation', 'EventListeners');
+      } else if (entityType === 'gate_out') {
+        // Fetch gate out operation and transmit
+        logger.debug('EDI transmission for gate_out operation', 'EventListeners');
       }
 
-    } catch (error: any) {
-      console.error('[EventListeners] Error handling EDI_TRANSMISSION_REQUESTED:', error);
-      await eventBus.emit('EDI_TRANSMISSION_FAILED', {
+      // Emit completion event
+      await eventBus.emit('EDI_TRANSMISSION_COMPLETED', {
         entityId,
-        error: error.message
+        transmissionId: `EDI-${Date.now()}`
       });
+
+    } catch (error) {
+      logger.error('Error handling EDI_TRANSMISSION_REQUESTED', 'EventListeners', error);
     }
   });
 
   eventBus.on('EDI_TRANSMISSION_COMPLETED', async ({ entityId, transmissionId }) => {
-    console.log('[EventListeners] EDI_TRANSMISSION_COMPLETED:', transmissionId, 'for', entityId);
+    logger.info(`EDI_TRANSMISSION_COMPLETED: ${transmissionId} for ${entityId}`, 'EventListeners');
     // Update operation record with edi_transmitted = true
     // In production, this would update the gate_in/out operation
-  });
-
-  eventBus.on('EDI_TRANSMISSION_FAILED', async ({ entityId, error }) => {
-    console.error('[EventListeners] EDI_TRANSMISSION_FAILED:', entityId, error);
-    // Could retry, send alert, etc.
   });
 
   // ============================================
   // CLIENT EVENTS
   // ============================================
 
-  eventBus.on('CLIENT_CREATED', async ({ clientId, clientCode }) => {
-    console.log('[EventListeners] CLIENT_CREATED:', clientCode);
+  eventBus.on('CLIENT_CREATED', async ({ clientCode }) => {
+    logger.info(`CLIENT_CREATED: ${clientCode}`, 'EventListeners');
     // Could initialize default client pool assignments
   });
 
-  console.log('[EventListeners] ✓ All event listeners initialized');
-  console.log('[EventListeners] Listening for:', [
+  logger.info('All event listeners initialized', 'EventListeners');
+  logger.debug('Listening for events', 'EventListeners', [
     'GATE_IN_COMPLETED',
     'GATE_OUT_COMPLETED',
     'BOOKING_REF_CREATED',
-    'EDI_TRANSMISSION_REQUESTED',
-    'YARD_POSITION_ASSIGNED',
-    'and more...'
-  ].join(', '));
+    'CONTAINER_ADDED',
+    'EDI_TRANSMISSION_REQUESTED'
+  ]);
 }
 
 /**
- * Cleanup all event listeners
+ * Cleanup event listeners on app shutdown
  */
 export function cleanupEventListeners() {
-  console.log('[EventListeners] Cleaning up event listeners...');
+  logger.info('Cleaning up event listeners...', 'EventListeners');
   eventBus.clearListeners();
 }

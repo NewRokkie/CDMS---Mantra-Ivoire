@@ -3,6 +3,7 @@ import { Search, MapPin, Package, X, TrendingUp, AlertTriangle, Eye, Truck, Maxi
 import { Container } from '../../types';
 import { Yard, YardStack } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
+import { formatContainerNumberForDisplay } from '../Gates/utils';
 
 // Helper function to calculate virtual location for 40ft containers
 const getVirtualLocation = (container: Container, getStackConfiguration: (stackNum: number) => any): string => {
@@ -45,6 +46,7 @@ interface ContainerSlot {
 interface StackVisualization {
   stackNumber: number;
   isVirtual: boolean;
+  isPaired?: boolean; // True if this is a physical stack paired with a virtual stack
   pairedWith?: number;
   stack?: YardStack;
   section: any;
@@ -158,7 +160,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     const storedConfig = localStorage.getItem(`stack-config-${stackNumber}`);
     if (storedConfig) {
       const config = JSON.parse(storedConfig);
-      const containerSize = config.containerSize === '40feet' ? '40ft' : '20ft';
+      const containerSize = config.containerSize === '40ft' ? '40ft' : '20ft';
 
       if (containerSize === '40ft') {
         const pairedWith = getAdjacentStackNumber(stackNumber);
@@ -335,14 +337,106 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       sortedStacks.forEach(stack => {
         if (processedStacks.has(stack.stackNumber)) return;
 
+        // Check if this stack is virtual (from database)
+        const isVirtualStack = (stack as any).isVirtual === true;
+        
+        // For virtual stacks, render them directly
+        if (isVirtualStack) {
+          processedStacks.add(stack.stackNumber);
+          const virtualContainers = filteredContainers.filter(c => {
+            const match = c.location.match(/S(\d+)-R\d+-H\d+/);
+            return match && parseInt(match[1]) === stack.stackNumber;
+          });
+
+          const containerSlots: ContainerSlot[] = virtualContainers.map(c => {
+            const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
+            const row = locMatch ? parseInt(locMatch[1]) : 1;
+            const tier = locMatch ? parseInt(locMatch[2]) : 1;
+
+            let status: ContainerSlot['status'] = 'occupied';
+            if (c.damage && c.damage.length > 0) status = 'damaged';
+            else if (c.status === 'maintenance') status = 'priority';
+
+            return {
+              containerId: c.id,
+              containerNumber: c.number,
+              containerSize: c.size,
+              row,
+              tier,
+              status,
+              client: c.clientName,
+              transporter: 'Swift Transport',
+              containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
+            };
+          });
+
+          allStacks.push({
+            stackNumber: stack.stackNumber,
+            isVirtual: true,
+            stack,
+            section,
+            zoneName,
+            containerSize: '40ft',
+            isSpecialStack: false,
+            containerSlots,
+            currentOccupancy: containerSlots.length,
+            capacity: stack.capacity,
+            rows: stack.rows,
+            maxTiers: stack.maxTiers
+          });
+
+          return;
+        }
+
+        // Check if this physical stack is part of a valid pairing that has a virtual stack in DB
+        // If so, mark it as paired (will be rendered grayed out to show the link)
+        const stackContainerSize = (stack as any).containerSize;
+        let isPairedPhysicalStack = false;
+        let pairedVirtualStackNumber: number | null = null;
+        
+        if (stackContainerSize === '40ft') {
+          // Valid first stacks: 3, 7, 11, 15, 19, 23, 27, 33, 37, 41, 45, 49, 53, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97
+          const validFirstStacks = [3, 7, 11, 15, 19, 23, 27, 33, 37, 41, 45, 49, 53, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97];
+          
+          // Check if this is a first stack in a pair (odd, pattern 4n-1)
+          if (validFirstStacks.includes(stack.stackNumber)) {
+            pairedVirtualStackNumber = stack.stackNumber + 1; // S03 -> S04
+          }
+          // Check if this is a second stack in a pair (odd, pattern 4n+1)
+          else if (validFirstStacks.includes(stack.stackNumber - 2)) {
+            pairedVirtualStackNumber = stack.stackNumber - 1; // S05 -> S04
+          }
+          
+          if (pairedVirtualStackNumber !== null) {
+            const virtualStackExistsInDb = sortedStacks.some(s => 
+              s.stackNumber === pairedVirtualStackNumber && (s as any).isVirtual === true
+            );
+            
+            if (virtualStackExistsInDb) {
+              // Mark as paired - will render grayed out
+              isPairedPhysicalStack = true;
+            }
+          }
+        }
+
         const config = getStackConfiguration(stack.stackNumber);
 
-        // If this is an odd stack configured for 40ft pairing
-        if (config.containerSize === '40ft' && config.pairedWith && stack.stackNumber % 2 === 1) {
-          const nextOddStack = sortedStacks.find(s => s.stackNumber === config.pairedWith);
-          if (nextOddStack) {
-            // Create virtual stack between the two odd stacks
-            const virtualStackNumber = stack.stackNumber + 1;
+        // Legacy support: If this is an odd stack configured for 40ft pairing (only when no DB virtual stack)
+        // Check if this should use legacy pairing logic
+        const shouldUseLegacyPairing = config.containerSize === '40ft' && config.pairedWith && stack.stackNumber % 2 === 1;
+        
+        if (shouldUseLegacyPairing) {
+          // Check if virtual stack already exists in database
+          const virtualStackNumber = stack.stackNumber + 1;
+          const virtualStackExistsInDb = sortedStacks.some(s => 
+            s.stackNumber === virtualStackNumber && (s as any).isVirtual === true
+          );
+          
+          if (!virtualStackExistsInDb) {
+            // Legacy path: virtual stack doesn't exist in DB, create it
+            const nextOddStack = sortedStacks.find(s => s.stackNumber === config.pairedWith);
+            if (nextOddStack) {
+            // Create virtual stack between the two odd stacks (legacy path)
 
             // Get ALL 40ft containers from BOTH paired stacks (S03 + S05 = shown in all three)
             const virtual40ftContainers = filteredContainers.filter(c => {
@@ -353,8 +447,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               // Include containers from BOTH paired stacks (S03 and S05)
               return matchedStack === stack.stackNumber || matchedStack === nextOddStack.stackNumber;
             });
-
-            console.log(`[VIRTUAL STACK] S${stack.stackNumber}+S${nextOddStack.stackNumber} -> Found ${virtual40ftContainers.length} containers:`, virtual40ftContainers.map(c => c.number));
 
             const containerSlots: ContainerSlot[] = virtual40ftContainers.map(c => {
               const locMatch = c.location.match(/S\d+-R(\d+)-H(\d+)/);
@@ -372,7 +464,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 row,
                 tier,
                 status,
-                client: c.client,
+                client: c.clientName,
                 transporter: 'Swift Transport',
                 containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
               };
@@ -400,7 +492,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 row,
                 tier,
                 status,
-                client: c.client,
+                client: c.clientName,
                 transporter: 'Swift Transport',
                 containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
               };
@@ -463,7 +555,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 row,
                 tier,
                 status,
-                client: c.client,
+                client: c.clientName,
                 transporter: 'Swift Transport',
                 containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
               };
@@ -488,7 +580,10 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             processedStacks.add(stack.stackNumber);
             processedStacks.add(nextOddStack.stackNumber);
             return;
+            }
           }
+          // If virtualStackExistsInDb is true, we skip the legacy creation
+          // and fall through to regular processing below
         }
 
         // Regular stack processing
@@ -513,7 +608,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             row,
             tier,
             status,
-            client: c.client,
+            client: c.clientName,
             transporter: 'Swift Transport',
             containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
           };
@@ -522,6 +617,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         allStacks.push({
           stackNumber: stack.stackNumber,
           isVirtual: false,
+          isPaired: isPairedPhysicalStack, // Mark if this is paired with a virtual stack
+          pairedWith: pairedVirtualStackNumber ?? undefined, // Reference to virtual stack
           stack,
           section,
           zoneName,
@@ -737,7 +834,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     }}
                   >
                     <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
-                    <div className="text-xs text-gray-500">{container.client} • {getVirtualLocation(container, getStackConfiguration)}</div>
+                    <div className="text-xs text-gray-500">{container.clientName} • {getVirtualLocation(container, getStackConfiguration)}</div>
                   </div>
                 ))}
               </div>
@@ -791,7 +888,10 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Status</option>
+            <option value="gate_in">Gate In</option>
             <option value="in_depot">In Depot</option>
+            <option value="gate_out">Gate Out</option>
+            <option value="out_depot">Out Depot</option>
             <option value="maintenance">Maintenance</option>
             <option value="cleaning">Cleaning</option>
             <option value="damaged">Damaged</option>
@@ -899,29 +999,43 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               );
             }
 
-            // Render regular stacks normally
+            // Render regular stacks normally (or grayed out if paired)
             return (
               <div
                 key={`${stackViz.stackNumber}-physical`}
                 ref={(el) => {
                   if (el) stackRefs.current.set(stackViz.stackNumber, el);
                 }}
-                className={`bg-white rounded-lg border-2 transition-all overflow-hidden cursor-pointer hover:border-blue-400 ${
+                className={`rounded-lg border-2 transition-all overflow-hidden cursor-pointer ${
+                  stackViz.isPaired 
+                    ? 'bg-gray-100 opacity-60 border-gray-300 hover:border-gray-400' 
+                    : 'bg-white hover:border-blue-400'
+                } ${
                   highlightedStacks.includes(stackViz.stackNumber)
                     ? 'border-yellow-400 shadow-lg shadow-yellow-400/50 ring-2 ring-yellow-400/50 animate-pulse'
-                    : 'border-gray-200'
+                    : stackViz.isPaired ? 'border-gray-300' : 'border-gray-200'
                 }`}
                 onClick={() => handleStackClick(stackViz)}
+                title={stackViz.isPaired ? `Physical stack paired with virtual S${stackViz.pairedWith?.toString().padStart(2, '0')}` : undefined}
               >
                 <div
-                  className="px-3 py-2 border-b"
-                  style={{
+                  className={`px-3 py-2 border-b ${stackViz.isPaired ? 'bg-gray-200' : ''}`}
+                  style={!stackViz.isPaired ? {
                     backgroundColor: `${stackViz.section.color}15`,
                     borderColor: stackViz.section.color
+                  } : {
+                    borderColor: '#d1d5db'
                   }}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-base">{displayName}</span>
+                    <span className={`font-bold text-base ${stackViz.isPaired ? 'text-gray-500' : ''}`}>
+                      {displayName}
+                      {stackViz.isPaired && (
+                        <span className="ml-1 text-xs text-gray-400">
+                          → S{stackViz.pairedWith?.toString().padStart(2, '0')}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div
@@ -989,7 +1103,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     <Truck className="h-4 w-4 text-green-600" />
                     <label className="text-xs font-semibold text-green-900 uppercase tracking-wide">Client</label>
                   </div>
-                  <p className="text-lg font-bold text-green-900">{selectedContainer.client}</p>
+                  <p className="text-lg font-bold text-green-900">{selectedContainer.clientName}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
@@ -1004,15 +1118,21 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 block">Status</label>
                 <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-lg ${
+                  selectedContainer.status === 'gate_in' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' :
                   selectedContainer.status === 'in_depot' ? 'bg-green-100 text-green-800 border-2 border-green-300' :
-                  selectedContainer.status === 'maintenance' ? 'bg-orange-100 text-orange-800 border-2 border-orange-300' :
-                  selectedContainer.status === 'cleaning' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' :
+                  selectedContainer.status === 'gate_out' ? 'bg-orange-100 text-orange-800 border-2 border-orange-300' :
+                  selectedContainer.status === 'out_depot' ? 'bg-gray-100 text-gray-800 border-2 border-gray-300' :
+                  selectedContainer.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' :
+                  selectedContainer.status === 'cleaning' ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' :
                   'bg-gray-100 text-gray-800 border-2 border-gray-300'
                 }`}>
                   <div className={`w-2 h-2 rounded-full mr-2 ${
+                    selectedContainer.status === 'gate_in' ? 'bg-blue-500' :
                     selectedContainer.status === 'in_depot' ? 'bg-green-500' :
-                    selectedContainer.status === 'maintenance' ? 'bg-orange-500' :
-                    selectedContainer.status === 'cleaning' ? 'bg-blue-500' :
+                    selectedContainer.status === 'gate_out' ? 'bg-orange-500' :
+                    selectedContainer.status === 'out_depot' ? 'bg-gray-500' :
+                    selectedContainer.status === 'maintenance' ? 'bg-yellow-500' :
+                    selectedContainer.status === 'cleaning' ? 'bg-purple-500' :
                     'bg-gray-500'
                   }`} />
                   {selectedContainer.status.replace('_', ' ').toUpperCase()}
@@ -1168,9 +1288,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                             }}
                           >
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
+                              <div className="font-mono text-sm font-medium text-gray-900">{formatContainerNumberForDisplay(container.number)}</div>
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{container.client}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{container.clientName}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                               <div className="flex items-center">
                                 <Truck className="h-4 w-4 mr-1 text-gray-400" />

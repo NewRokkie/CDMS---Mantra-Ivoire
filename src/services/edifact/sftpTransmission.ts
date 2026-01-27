@@ -1,6 +1,7 @@
 import SftpClient from 'ssh2-sftp-client';
 import { format } from 'date-fns';
 import { EDITransmissionConfig, EDITransmissionLog } from '../../types';
+import { logger } from '../../utils/logger';
 
 export class SFTPTransmissionService {
   private config: EDITransmissionConfig;
@@ -37,7 +38,7 @@ export class SFTPTransmissionService {
     try {
       await this.sftp.end();
     } catch (error) {
-      console.warn('Error disconnecting SFTP:', error);
+      
     }
   }
 
@@ -85,8 +86,8 @@ export class SFTPTransmissionService {
       
       // In test mode, add a test prefix to the filename
       if (this.config.testMode) {
-        console.log(`[TEST MODE] EDI file would be sent to: ${remotePath}`);
-        console.log(`[TEST MODE] Content:\n${ediContent}`);
+        logger.warn(`[TEST MODE] EDI file would be sent to: ${remotePath}`);
+        logger.warn(`[TEST MODE] Content:\n${ediContent}`);
       }
 
       await this.disconnect();
@@ -149,7 +150,7 @@ export class SFTPTransmissionService {
 
       return false;
     } catch (error) {
-      console.error('Error checking acknowledgment:', error);
+      logger.error('Error checking acknowledgment:', 'sftpTransmission.ts', error)
       return false;
     }
   }

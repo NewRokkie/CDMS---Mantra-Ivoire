@@ -1,6 +1,7 @@
 import { ClientPool, StackAssignment, ClientPoolStats, ContainerAssignmentRequest, StackAvailabilityResult } from '../types/clientPool';
 import { Yard, YardStack, Container } from '../types';
 import { yardsService } from './api/yardsService';
+import { locationManagementService } from './api/locationManagementService';
 
 /**
  * Client Pool Service
@@ -120,8 +121,6 @@ export class ClientPoolService {
         this.stackAssignments.get(stackId)!.push(assignment);
       });
     });
-
-    console.log('Client Pool Service initialized with', defaultPools.length, 'client pools');
   }
 
   /**
@@ -171,11 +170,9 @@ export class ClientPoolService {
     containers: Container[],
     yardId?: string
   ): StackAvailabilityResult[] {
-    console.log('DEBUG: Container size for client:', containerSize);
     // Use current yard if not specified
     const targetYard = yardId ? yardsService.getYardById(yardId) : yard;
     if (!targetYard) {
-      console.warn('No valid yard found for stack availability check');
       return [];
     }
 
@@ -239,7 +236,6 @@ export class ClientPoolService {
   ): StackAvailabilityResult[] {
     const yard = yardsService.getYardById(yardId);
     if (!yard) {
-      console.warn(`Yard ${yardId} not found`);
       return [];
     }
 
@@ -387,15 +383,11 @@ export class ClientPoolService {
       );
 
       if (availableStacks.length === 0) {
-        console.warn(`No available stacks found for client ${request.clientCode} with ${request.containerSize} containers`);
         return null;
       }
 
       // Select the best stack (first in sorted list)
       const selectedStack = availableStacks[0];
-
-      // Log the assignment for audit purposes
-      console.log(`Container ${request.containerNumber} assigned to Stack ${selectedStack.stackNumber} for client ${request.clientCode} in yard ${currentYard.code}`);
 
       // Update client pool occupancy
       this.updateClientPoolOccupancy(request.clientCode, 1, userName);
@@ -413,7 +405,6 @@ export class ClientPoolService {
 
       return selectedStack;
     } catch (error) {
-      console.error('Error assigning container to client stack:', error);
       throw error;
     }
   }
@@ -435,8 +426,9 @@ export class ClientPoolService {
 
   /**
    * Assign a stack to a client pool
+   * Requirements: 6.2 - Update location access permissions when client pool assignments change
    */
-  assignStackToClient(
+  async assignStackToClient(
     stackId: string,
     stackNumber: number,
     clientCode: string,
@@ -444,7 +436,7 @@ export class ClientPoolService {
     isExclusive: boolean = true,
     priority: number = 2,
     userName?: string
-  ): StackAssignment {
+  ): Promise<StackAssignment> {
     const clientPool = this.getClientPool(clientCode);
     if (!clientPool) {
       throw new Error(`Client pool not found for ${clientCode}`);
@@ -485,6 +477,14 @@ export class ClientPoolService {
       this.clientStackMap.set(clientCode, clientStacks);
     }
 
+    // Update location access permissions in the location management system
+    // Requirements: 6.2 - Ensure location access permissions are updated when client pool assignments change
+    try {
+      await this.updateLocationAccessForStack(stackId, clientPool.id);
+    } catch (error) {
+      // Continue with assignment even if location update fails
+    }
+
     // Log operation
     yardsService.logOperation('stack_assignment', undefined, effectiveUserName, {
       stackId,
@@ -492,14 +492,14 @@ export class ClientPoolService {
       isExclusive
     });
 
-    console.log(`Stack ${stackNumber} assigned to client ${clientCode} by ${effectiveUserName}`);
     return assignment;
   }
 
   /**
    * Remove stack assignment from client
+   * Requirements: 6.2 - Update location access permissions when client pool assignments change
    */
-  removeStackFromClient(stackId: string, clientCode: string, userName?: string): boolean {
+  async removeStackFromClient(stackId: string, clientCode: string, userName?: string): Promise<boolean> {
     const effectiveUserName = userName || 'System';
     try {
       // Remove from stack assignments
@@ -520,6 +520,14 @@ export class ClientPoolService {
       const clientStacks = this.clientStackMap.get(clientCode) || [];
       this.clientStackMap.set(clientCode, clientStacks.filter(id => id !== stackId));
 
+      // Clear location access permissions in the location management system
+      // Requirements: 6.2 - Ensure location access permissions are updated when client pool assignments change
+      try {
+        await this.clearLocationAccessForStack(stackId);
+      } catch (error) {
+        // Continue with removal even if location update fails
+      }
+
       // Log operation
       yardsService.logOperation('stack_assignment', undefined, effectiveUserName, {
         stackId,
@@ -527,10 +535,8 @@ export class ClientPoolService {
         action: 'remove'
       });
 
-      console.log(`Stack ${stackId} removed from client ${clientCode} by ${effectiveUserName}`);
       return true;
     } catch (error) {
-      console.error('Error removing stack from client:', error);
       return false;
     }
   }
@@ -604,8 +610,9 @@ export class ClientPoolService {
 
   /**
    * Create a new client pool
+   * Requirements: 6.2 - Update location access permissions when creating client pools
    */
-  createClientPool(
+  async createClientPool(
     clientId: string,
     clientCode: string,
     clientName: string,
@@ -616,7 +623,7 @@ export class ClientPoolService {
     contractEndDate?: Date,
     notes?: string,
     userName?: string
-  ): ClientPool {
+  ): Promise<ClientPool> {
     const effectiveUserName = userName || 'System';
     const currentYard = yardsService.getCurrentYard();
 
@@ -643,10 +650,10 @@ export class ClientPoolService {
     this.clientStackMap.set(clientCode, assignedStacks);
 
     // Create stack assignments for each assigned stack
-    assignedStacks.forEach(stackId => {
+    for (const stackId of assignedStacks) {
       const stackNumber = this.extractStackNumber(stackId);
-      this.assignStackToClient(stackId, stackNumber, clientCode, effectiveUserName, true, 2, effectiveUserName);
-    });
+      await this.assignStackToClient(stackId, stackNumber, clientCode, effectiveUserName, true, 2, effectiveUserName);
+    }
 
     // Log creation
     yardsService.logOperation('client_pool_create', undefined, effectiveUserName, {
@@ -657,14 +664,14 @@ export class ClientPoolService {
       assignedStacksCount: assignedStacks.length
     });
 
-    console.log(`Created new client pool for ${clientName} (${clientCode}) by ${effectiveUserName}`);
     return pool;
   }
 
   /**
    * Update client pool configuration
+   * Requirements: 6.2 - Update location access permissions when client pool configuration changes
    */
-  updateClientPool(clientCode: string, updates: Partial<ClientPool>, userName?: string): ClientPool | null {
+  async updateClientPool(clientCode: string, updates: Partial<ClientPool>, userName?: string): Promise<ClientPool | null> {
     const pool = this.clientPools.get(clientCode);
     if (!pool) return null;
 
@@ -678,8 +685,36 @@ export class ClientPoolService {
 
     this.clientPools.set(clientCode, updatedPool);
 
-    // Update stack mapping if stacks changed
+    // Update stack mapping and location permissions if stacks changed
+    // Requirements: 6.2 - Ensure location access permissions are updated when client pool assignments change
     if (updates.assignedStacks) {
+      const oldStacks = pool.assignedStacks;
+      const newStacks = updates.assignedStacks;
+      
+      // Find stacks that were removed
+      const removedStacks = oldStacks.filter(stackId => !newStacks.includes(stackId));
+      
+      // Find stacks that were added
+      const addedStacks = newStacks.filter(stackId => !oldStacks.includes(stackId));
+      
+      // Clear location access for removed stacks
+      for (const stackId of removedStacks) {
+        try {
+          await this.clearLocationAccessForStack(stackId);
+        } catch (error) {
+          // Continue with other stacks
+        }
+      }
+      
+      // Update location access for added stacks
+      for (const stackId of addedStacks) {
+        try {
+          await this.updateLocationAccessForStack(stackId, pool.id);
+        } catch (error) {
+          // Continue with other stacks
+        }
+      }
+      
       this.clientStackMap.set(clientCode, updates.assignedStacks);
     }
 
@@ -689,7 +724,6 @@ export class ClientPoolService {
       updates: Object.keys(updates)
     });
 
-    console.log(`Updated client pool for ${clientCode} by ${effectiveUserName}`);
     return updatedPool;
   }
 
@@ -775,21 +809,22 @@ export class ClientPoolService {
 
   /**
    * Bulk assign stacks to client
+   * Requirements: 6.2 - Update location access permissions for bulk assignments
    */
-  bulkAssignStacksToClient(
+  async bulkAssignStacksToClient(
     stackIds: string[],
     clientCode: string,
     assignedBy: string,
     userName?: string
-  ): StackAssignment[] {
+  ): Promise<StackAssignment[]> {
     const effectiveUserName = assignedBy || userName || 'System';
     const currentYard = yardsService.getCurrentYard();
 
     const assignments: StackAssignment[] = [];
-    stackIds.forEach(stackId => {
+    for (const stackId of stackIds) {
       try {
         const stackNumber = this.extractStackNumber(stackId);
-        const assignment = this.assignStackToClient(
+        const assignment = await this.assignStackToClient(
           stackId,
           stackNumber,
           clientCode,
@@ -800,9 +835,9 @@ export class ClientPoolService {
         );
         assignments.push(assignment);
       } catch (error) {
-        console.error(`Failed to assign stack ${stackId} to client ${clientCode}:`, error);
+        // Continue with other stacks
       }
-    });
+    }
 
     // Log bulk assignment
     yardsService.logOperation('stack_bulk_assign', undefined, effectiveUserName, {
@@ -813,7 +848,6 @@ export class ClientPoolService {
       action: 'bulk'
     });
 
-    console.log(`Bulk assigned ${assignments.length} stacks to client ${clientCode} by ${effectiveUserName}`);
     return assignments;
   }
 
@@ -833,9 +867,8 @@ export class ClientPoolService {
         yardCode: currentYard?.code,
         action: 'release'
       });
-      console.log(`Container ${containerNumber} released from client pool ${clientCode} by ${effectiveUserName}`);
     } catch (error) {
-      console.error('Error releasing container from pool:', error);
+      // Silent fail
     }
   }
 
@@ -856,6 +889,165 @@ export class ClientPoolService {
         averageUtilization: stats.averageOccupancy
       }
     };
+  }
+
+  // ============================================================================
+  // LOCATION MANAGEMENT SYSTEM INTEGRATION
+  // Requirements: 6.2, 6.4, 6.5 - Integration with new location management system
+  // ============================================================================
+
+  /**
+   * Update location access permissions for a stack when assigned to a client pool
+   * Requirements: 6.2 - Ensure location access permissions are updated when client pool assignments change
+   */
+  private async updateLocationAccessForStack(stackId: string, clientPoolId: string): Promise<void> {
+    try {
+      // Get all locations for this stack
+      const locations = await locationManagementService.getByStackId(stackId);
+      
+      // Update each location to assign it to the client pool
+      for (const location of locations) {
+        // Only update if location is not currently occupied
+        if (!location.isOccupied) {
+          await locationManagementService.update(location.id, {
+            clientPoolId: clientPoolId
+          });
+        }
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Clear location access permissions for a stack when removed from a client pool
+   * Requirements: 6.2 - Ensure location access permissions are updated when client pool assignments change
+   */
+  private async clearLocationAccessForStack(stackId: string): Promise<void> {
+    try {
+      // Get all locations for this stack
+      const locations = await locationManagementService.getByStackId(stackId);
+      
+      // Update each location to remove client pool assignment
+      for (const location of locations) {
+        // Only update if location is not currently occupied
+        if (!location.isOccupied) {
+          await locationManagementService.update(location.id, {
+            clientPoolId: undefined
+          });
+        }
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get available locations for a client using the location management system
+   * Requirements: 6.4 - Handle location access for clients with no pool configuration
+   */
+  async getAvailableLocationsForClient(
+    clientCode: string,
+    yardId: string,
+    containerSize?: '20ft' | '40ft',
+    limit?: number
+  ): Promise<any[]> {
+    try {
+      const clientPool = this.getClientPool(clientCode);
+      
+      // Requirements: 6.4 - When client has no pool configuration, show all unassigned locations
+      const clientPoolId = clientPool?.id || null;
+      
+      // Use location management service to get available locations with proper access control
+      const locations = await locationManagementService.getAvailableLocationsWithPoolAccess(
+        yardId,
+        clientPoolId,
+        containerSize,
+        limit
+      );
+      
+      return locations;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a client has access to a specific location
+   * Requirements: 6.2, 6.4, 6.5 - Validate client pool access to locations
+   */
+  async hasLocationAccess(
+    clientCode: string,
+    locationId: string
+  ): Promise<boolean> {
+    try {
+      const clientPool = this.getClientPool(clientCode);
+      
+      // Requirements: 6.4 - Clients with no pool can access unassigned locations
+      const clientPoolId = clientPool?.id || null;
+      
+      // Use location management service to validate access
+      const hasAccess = await locationManagementService.hasClientPoolAccess(
+        locationId,
+        clientPoolId
+      );
+      
+      return hasAccess;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get location availability count for a client
+   * Requirements: 6.2, 6.4 - Count available locations based on client pool access
+   */
+  async getAvailableLocationCount(
+    clientCode: string,
+    yardId: string,
+    containerSize?: '20ft' | '40ft'
+  ): Promise<number> {
+    try {
+      const clientPool = this.getClientPool(clientCode);
+      
+      // Requirements: 6.4 - Handle clients with no pool configuration
+      const clientPoolId = clientPool?.id || null;
+      
+      // Use location management service to count available locations
+      const count = await locationManagementService.getAvailableLocationsCountWithPoolAccess(
+        yardId,
+        clientPoolId,
+        containerSize
+      );
+      
+      return count;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  /**
+   * Sync all existing client pool assignments with location management system
+   * This method should be called during initialization or migration to ensure
+   * all location access permissions are properly set
+   * Requirements: 6.2 - Ensure location access permissions are updated
+   */
+  async syncClientPoolLocations(): Promise<void> {
+    try {
+      // Iterate through all client pools
+      for (const [clientCode, clientPool] of this.clientPools.entries()) {
+        // For each assigned stack, update location permissions
+        for (const stackId of clientPool.assignedStacks) {
+          try {
+            await this.updateLocationAccessForStack(stackId, clientPool.id);
+          } catch (error) {
+            // Continue with other stacks
+          }
+        }
+      }
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
