@@ -231,6 +231,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     const stackData: Partial<YardStack> = {
       stackNumber: formData.stackNumber,
       sectionId: formData.sectionId,
+      sectionName: yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Zone A',
       containerSize: formData.containerSize === '40ft' ? '40ft' : '20ft',
       isSpecialStack: formData.stackType === 'special',
       rows: formData.rows,
@@ -240,15 +241,33 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       isActive: true,
     };
 
+    console.log('🔍 Frontend submitting stack data:', {
+      formData,
+      transformedStackData: stackData,
+      selectedSection: yard?.sections?.find(s => s.id === formData.sectionId)
+    });
+
     onSubmit(stackData);
   };
 
   const calculateCapacity = () => {
     if (formData.useCustomRowTiers && formData.rowTierConfig.length > 0) {
       // Calculate from custom row-tier config
-      return formData.rowTierConfig.reduce((sum, config) => sum + config.maxTiers, 0);
+      const capacity = formData.rowTierConfig.reduce((sum, config) => sum + config.maxTiers, 0);
+      console.log('🔍 Frontend capacity calculation:', {
+        useCustomRowTiers: formData.useCustomRowTiers,
+        rowTierConfig: formData.rowTierConfig,
+        calculatedCapacity: capacity
+      });
+      return capacity;
     }
-    return formData.rows * formData.maxTiers;
+    const uniformCapacity = formData.rows * formData.maxTiers;
+    console.log('🔍 Frontend uniform capacity calculation:', {
+      rows: formData.rows,
+      maxTiers: formData.maxTiers,
+      calculatedCapacity: uniformCapacity
+    });
+    return uniformCapacity;
   };
 
   const generateDefaultRowTierConfig = () => {

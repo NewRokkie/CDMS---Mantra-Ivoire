@@ -22,7 +22,7 @@ export const YardManagement: React.FC = () => {
 
         const [containers, stacks] = await Promise.all([
           containerService.getAll(),
-          stackService.getByYardId(currentYard.id)
+          stackService.getByYardIdWithStats(currentYard.id, false)
         ]);
 
         setAllContainers(containers);
@@ -62,9 +62,14 @@ export const YardManagement: React.FC = () => {
     };
   }, [currentYard?.id]);
 
-  // Filter containers for current yard
+  // Filter containers for current yard - be more lenient with yardId matching
   const containers = currentYard
-    ? allContainers.filter(c => c.yardId === currentYard.id)
+    ? allContainers.filter(c => 
+        !c.yardId || // Include containers without yardId
+        c.yardId === currentYard.id || 
+        c.yardId === '' ||
+        c.yardId === currentYard.code // Also try matching by yard code
+      )
     : allContainers;
 
   return (

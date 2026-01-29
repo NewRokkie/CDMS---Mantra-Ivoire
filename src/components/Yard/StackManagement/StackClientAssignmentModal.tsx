@@ -86,7 +86,7 @@ export const StackClientAssignmentModal: React.FC<StackClientAssignmentModalProp
       onClose={onClose}
       onSubmit={handleAssign}
       title="Assign Stack to Client Pool"
-      subtitle={`Stack ${selectedStack.stackNumber.toString().padStart(2, '0')} • ${selectedStack.sectionName || 'Main Section'}`}
+      subtitle={`Stack ${selectedStack.stackNumber.toString().padStart(2, '0')} • ${selectedStack.sectionName || 'Zone A'}`}
       icon={Users}
       size="lg"
       submitLabel="Assign Stack"

@@ -7,7 +7,7 @@
 
   2. Reason
     - All other tables use TEXT for yard_id
-    - The application uses string identifiers like 'depot-tantarelli'
+    - The application uses string identifiers like ''
     - UUID type was causing errors when querying with string yard IDs
 */
 

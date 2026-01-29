@@ -33,7 +33,7 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
                   Stack Details
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Stack {stack.stackNumber.toString().padStart(2, '0')} • {stack.sectionName || 'Main Section'}
+                  Stack {stack.stackNumber.toString().padStart(2, '0')} • {stack.sectionName || 'Zone A'}
                 </p>
               </div>
             </div>
@@ -64,7 +64,7 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Section</span>
-                  <div className="font-medium text-gray-900">{stack.sectionName || 'Main Section'}</div>
+                  <div className="font-medium text-gray-900">{stack.sectionName || 'Zone A'}</div>
                 </div>
                 <div>
                   <span className="text-sm text-gray-600">Container Size</span>

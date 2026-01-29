@@ -35,6 +35,9 @@ interface AuthContextType {
   getSyncStatus: () => SyncStatus;
   onSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
   offSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
+  hasAdminUsers: () => Promise<boolean>;
+  needsInitialSetup: boolean;
+  checkInitialSetup: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +58,7 @@ export const useAuthProvider = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isDatabaseConnected, setIsDatabaseConnected] = useState(true);
+  const [needsInitialSetup, setNeedsInitialSetup] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     isHealthy: true,
     inconsistencyCount: 0,
@@ -68,7 +72,7 @@ export const useAuthProvider = () => {
   const syncStatusCallbacks = useRef<((status: SyncStatus) => void)[]>([]);
 
   // Mettre à jour à la fois l'état et les refs
-  const setAuthState = useCallback((newUser: AppUser | null, loading: boolean, authenticated: boolean, error: string | null = null, dbConnected: boolean = true) => {
+  const setAuthState = useCallback((newUser: AppUser | null, loading: boolean, authenticated: boolean, error: string | null = null, dbConnected: boolean = true, initialSetup: boolean = false) => {
     // Éviter les mises à jour inutiles
     if (userRef.current?.id === newUser?.id &&
         isLoadingRef.current === loading &&
@@ -85,6 +89,7 @@ export const useAuthProvider = () => {
     setIsAuthenticated(authenticated);
     setAuthError(error);
     setIsDatabaseConnected(dbConnected);
+    setNeedsInitialSetup(initialSetup);
   }, []);
 
   // Database connection test with timeout
@@ -120,18 +125,27 @@ export const useAuthProvider = () => {
   // Load user profile with enhanced module access handling
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
     try {
+      // Use a more direct query to avoid RLS recursion issues
       const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
+        .eq('is_deleted', false)
+        .eq('active', true)
         .maybeSingle();
 
       if (error) {
+        // Check if this is the infinite recursion error
+        if (error.message?.includes('infinite recursion detected in policy')) {
+          logger.error('RLS infinite recursion detected - database policies need to be fixed', 'useAuth.loadUserProfile', error);
+          throw new Error('Database configuration error. Please contact support.');
+        }
         handleError(error, 'useAuth.loadUserProfile');
         return null;
       }
 
       if (!users) {
+        logger.warn('User profile not found for authenticated user', 'useAuth.loadUserProfile', { authUserId: authUser.id });
         return null;
       }
 
@@ -237,7 +251,18 @@ export const useAuthProvider = () => {
           setAuthState(null, false, false, 'User profile not found');
         }
       } else {
-        setAuthState(null, false, false);
+        // No session - check if we need initial setup
+        try {
+          const hasAdmins = await userService.hasAdminUsers();
+          if (!hasAdmins) {
+            setAuthState(null, false, false, null, true, true); // needsInitialSetup = true
+          } else {
+            setAuthState(null, false, false);
+          }
+        } catch (error) {
+          // If we can't check for admins, assume normal login flow
+          setAuthState(null, false, false);
+        }
       }
     } catch (error) {
       handleError(error, 'useAuth.checkSession');
@@ -382,6 +407,28 @@ export const useAuthProvider = () => {
       handleError(error, 'useAuth.login');
       setAuthState(null, false, false, error.message);
       throw error;
+    }
+  };
+
+  // Check if admin users exist
+  const hasAdminUsers = async (): Promise<boolean> => {
+    try {
+      return await userService.hasAdminUsers();
+    } catch (error) {
+      handleError(error, 'useAuth.hasAdminUsers');
+      throw error;
+    }
+  };
+
+  // Check if initial setup is needed
+  const checkInitialSetup = async (): Promise<void> => {
+    try {
+      const hasAdmins = await userService.hasAdminUsers();
+      setNeedsInitialSetup(!hasAdmins);
+    } catch (error) {
+      handleError(error, 'useAuth.checkInitialSetup');
+      // On error, assume setup is not needed to avoid blocking normal flow
+      setNeedsInitialSetup(false);
     }
   };
 
@@ -557,7 +604,10 @@ export const useAuthProvider = () => {
     refreshModuleAccess,
     getSyncStatus,
     onSyncStatusChange,
-    offSyncStatusChange
+    offSyncStatusChange,
+    hasAdminUsers,
+    needsInitialSetup,
+    checkInitialSetup
   };
 };
 

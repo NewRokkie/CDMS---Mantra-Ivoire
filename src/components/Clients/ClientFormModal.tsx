@@ -51,10 +51,12 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
     },
     taxId: '',
     currency: 'FCFA',
+    creditLimit: 0,
     paymentTerms: 30,
     freeDaysAllowed: 3,
-    dailyStorageRate: 15000,
+    dailyStorageRate: 45000, // Updated to match FCFA currency (45000 FCFA instead of 45 USD)
     isActive: true,
+    autoEDI: false,
     notes: ''
   });
 
@@ -82,18 +84,39 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
           contactPerson: selectedClient.contactPerson,
           taxId: selectedClient.taxId || '',
           currency: selectedClient.currency,
-          paymentTerms: selectedClient.paymentTerms || 30,
-          freeDaysAllowed: selectedClient.freeDaysAllowed || 3,
-          dailyStorageRate: selectedClient.dailyStorageRate || 15000,
+          creditLimit: selectedClient.creditLimit !== undefined ? selectedClient.creditLimit : 0,
+          paymentTerms: selectedClient.paymentTerms !== undefined ? selectedClient.paymentTerms : 30,
+          freeDaysAllowed: selectedClient.freeDaysAllowed !== undefined ? selectedClient.freeDaysAllowed : 3,
+          dailyStorageRate: selectedClient.dailyStorageRate !== undefined ? selectedClient.dailyStorageRate : 45000, // Updated default
           isActive: selectedClient.isActive,
+          autoEDI: selectedClient.autoEDI || false,
           notes: selectedClient.notes || ''
         });
+        
+        // Set billing address checkbox state
+        const hasDifferentBillingAddress = selectedClient.billingAddress && 
+          (selectedClient.billingAddress.street !== selectedClient.address.street ||
+           selectedClient.billingAddress.city !== selectedClient.address.city);
+        setUseSameAddress(!hasDifferentBillingAddress);
+        
         setIsLoading(false);
       }, 500);
     } else {
       setIsLoading(false);
     }
   }, [selectedClient]);
+
+  // Handle billing address synchronization
+  useEffect(() => {
+    if (useSameAddress) {
+      setFormData(prev => ({
+        ...prev,
+        billingAddress: {
+          ...prev.address
+        }
+      }));
+    }
+  }, [useSameAddress, formData.address]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -148,11 +171,19 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       throw new Error('Validation failed');
     }
 
-    const clientData = {
+    // Prepare the client data
+    let clientData = {
       ...formData,
       createdBy: user?.name || 'System',
       updatedBy: user?.name || 'System'
     };
+
+    // Handle billing address logic
+    if (useSameAddress) {
+      clientData.billingAddress = {
+        ...formData.address
+      };
+    }
 
     await onSubmit(clientData);
   };
@@ -599,6 +630,27 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Limite de Crédit (FCFA)
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="input-icon text-green-500" />
+                      <input
+                        type="number"
+                        min="0"
+                        step="10000"
+                        value={formData.creditLimit}
+                        onChange={(e) => handleInputChange('creditLimit', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                        className="input pl-10"
+                        placeholder="0"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Limite de crédit accordée: {formatCurrency(formData.creditLimit)} FCFA
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Conditions de Paiement (jours) *
                     </label>
                     <div className="relative">
@@ -609,7 +661,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         min="1"
                         max="90"
                         value={formData.paymentTerms}
-                        onChange={(e) => handleInputChange('paymentTerms', parseInt(e.target.value))}
+                        onChange={(e) => handleInputChange('paymentTerms', e.target.value === '' ? 30 : parseInt(e.target.value) || 30)}
                         className={`input pl-10 ${validationErrors.includes('Conditions de paiement invalides') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="30"
                       />
@@ -632,7 +684,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                         min="0"
                         max="30"
                         value={formData.freeDaysAllowed}
-                        onChange={(e) => handleInputChange('freeDaysAllowed', parseInt(e.target.value))}
+                        onChange={(e) => handleInputChange('freeDaysAllowed', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                         className={`input pl-10 ${validationErrors.includes('Jours gratuits invalides') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="3"
                       />
@@ -652,10 +704,10 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       <input
                         type="number"
                         required
-                        min="1000"
+                        min="0"
                         step="500"
                         value={formData.dailyStorageRate}
-                        onChange={(e) => handleInputChange('dailyStorageRate', parseInt(e.target.value))}
+                        onChange={(e) => handleInputChange('dailyStorageRate', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                         className={`input pl-10 ${validationErrors.includes('Tarif journalier invalide') ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="15000"
                       />
@@ -744,18 +796,61 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 />
               </div>
 
-              {/* Status */}
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => handleInputChange('isActive', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-gray-900">
-                  Client Actif
-                </label>
+              {/* System Configuration */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                <div className="flex items-center mb-6">
+                  <div className="p-2 bg-indigo-600/10 text-indigo-600 rounded-xl mr-3">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-semibold tracking-tight text-gray-900">Configuration Système</h4>
+                    <p className="text-sm text-gray-600">Paramètres système et intégrations</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Client Status */}
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={formData.isActive}
+                      onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isActive" className="text-sm font-medium text-gray-900">
+                      Client Actif
+                    </label>
+                    <span className="text-xs text-gray-500">Le client peut effectuer des opérations</span>
+                  </div>
+
+                  {/* AUTO EDI */}
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="autoEDI"
+                      checked={formData.autoEDI}
+                      onChange={(e) => handleInputChange('autoEDI', e.target.checked)}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="autoEDI" className="text-sm font-medium text-gray-900">
+                      Transmission EDI Automatique
+                    </label>
+                    <span className="text-xs text-gray-500">Envoi automatique des messages CODECO</span>
+                  </div>
+
+                  {/* EDI Information */}
+                  {formData.autoEDI && (
+                    <div className="ml-7 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                      <div className="text-xs text-indigo-700 space-y-1">
+                        <div><strong>Transmission EDI activée:</strong></div>
+                        <div>• Messages CODECO envoyés automatiquement</div>
+                        <div>• Notifications Gate In/Gate Out en temps réel</div>
+                        <div>• Intégration avec les systèmes du client</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

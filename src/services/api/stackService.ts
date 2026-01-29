@@ -4,6 +4,7 @@ import { toDate } from '../../utils/dateHelpers';
 import { locationIdGeneratorService } from './locationIdGeneratorService';
 import { virtualLocationCalculatorService } from './virtualLocationCalculatorService';
 import { locationManagementService } from './locationManagementService';
+import { automaticVirtualStackService } from './automaticVirtualStackService';
 import { handleError } from '../errorHandling';
 import { logger } from '../../utils/logger';
 
@@ -57,7 +58,7 @@ export class StackService {
   async getByYardId(yardId: string, skipOccupancySync: boolean = false): Promise<YardStack[]> {
     const stacks = await this.getAll(yardId);
 
-    // Skip occupancy sync for initial loads to improve performance
+    // Always sync occupancy for accurate stats unless explicitly skipped
     if (skipOccupancySync) {
       return stacks;
     }
@@ -65,39 +66,46 @@ export class StackService {
     try {
       const updatedStacks = await Promise.all(
         stacks.map(async (stack) => {
+          let actualOccupancy = 0;
+          
           try {
-            const locationBasedOccupancy = await this.getAccurateOccupancy(stack.id);
-            
-            if (locationBasedOccupancy !== stack.currentOccupancy) {
-              await this.updateOccupancy(stack.id, locationBasedOccupancy);
-              stack.currentOccupancy = locationBasedOccupancy;
-            }
-            
-            return stack;
+            // Try location-based occupancy first (most accurate)
+            actualOccupancy = await this.getAccurateOccupancy(stack.id);
           } catch (locationError) {
-            // Fallback to container-based counting
-            const stackPattern = `S${String(stack.stackNumber).padStart(2, '0')}-%`;
-            const { data: containers, error } = await supabase
-              .from('containers')
-              .select('id, location, yard_id, status')
-              .eq('yard_id', yardId)
-              .eq('status', 'in_depot')
-              .ilike('location', stackPattern);
+            // Fallback to container-based counting with improved pattern matching
+            try {
+              const stackPattern = `S${String(stack.stackNumber).padStart(2, '0')}-%`;
+              const { data: containers, error } = await supabase
+                .from('containers')
+                .select('id, location, yard_id, status, size')
+                .eq('yard_id', yardId)
+                .eq('status', 'in_depot')
+                .ilike('location', stackPattern);
 
-            if (error) {
-              handleError(error, 'StackService.getByYardId.containerCount');
-              return stack;
+              if (error) {
+                handleError(error, 'StackService.getByYardId.containerCount');
+                actualOccupancy = stack.currentOccupancy; // Keep existing value
+              } else {
+                actualOccupancy = containers?.length || 0;
+              }
+            } catch (containerError) {
+              handleError(containerError, 'StackService.getByYardId.fallback');
+              actualOccupancy = stack.currentOccupancy; // Keep existing value
             }
-
-            const actualOccupancy = containers?.length || 0;
-            
-            if (actualOccupancy !== stack.currentOccupancy) {
+          }
+          
+          // Update occupancy if it has changed
+          if (actualOccupancy !== stack.currentOccupancy) {
+            try {
               await this.updateOccupancy(stack.id, actualOccupancy);
               stack.currentOccupancy = actualOccupancy;
+            } catch (updateError) {
+              handleError(updateError, 'StackService.getByYardId.updateOccupancy');
+              // Continue with old occupancy value
             }
-
-            return stack;
           }
+          
+          return stack;
         })
       );
 
@@ -115,6 +123,7 @@ export class StackService {
       .select('*')
       .eq('yard_id', yardId)
       .eq('stack_number', stackNumber)
+      .eq('is_active', true)
       .maybeSingle();
 
     if (error) throw error;
@@ -122,6 +131,35 @@ export class StackService {
   }
 
   async create(stack: Partial<YardStack>, userId: string): Promise<YardStack> {
+    console.log('🔍 StackService.create called with:', {
+      stackData: stack,
+      userId,
+      timestamp: new Date().toISOString()
+    });
+
+    // Check if a soft-deleted stack with the same yard_id and stack_number exists
+    if (stack.yardId && stack.stackNumber) {
+      const { data: existingStack, error: checkError } = await supabase
+        .from('stacks')
+        .select('id, is_active, stack_number')
+        .eq('yard_id', stack.yardId)
+        .eq('stack_number', stack.stackNumber)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('🚨 Error checking for existing stack:', checkError);
+        // Continue with creation - let the database handle constraints
+      } else if (existingStack) {
+        if (existingStack.is_active) {
+          throw new Error(`Stack S${String(stack.stackNumber).padStart(2, '0')} already exists and is active in this yard.`);
+        } else {
+          // Reactivate the soft-deleted stack
+          console.log(`🔄 Reactivating soft-deleted stack S${String(stack.stackNumber).padStart(2, '0')}`);
+          return await this.reactivateSoftDeletedStack(existingStack.id, stack, userId);
+        }
+      }
+    }
+
     // Validate section_id if provided - only use it if it's not empty
     let sectionId = stack.sectionId && stack.sectionId.trim() !== '' ? stack.sectionId : null;
     
@@ -131,9 +169,10 @@ export class StackService {
       sectionId = yardsService.getSectionIdForStackNumber(stack.yardId, stack.stackNumber);
     }
 
-    // Determine section name based on section ID
-    let sectionName = stack.sectionName || 'Main Section';
-    if (sectionId) {
+    // Determine section name - use provided name or fallback to mapping
+    let sectionName = stack.sectionName || 'Zone A';
+    if (!stack.sectionName && sectionId) {
+      // Only use mapping if no section name was provided
       const sectionNameMap: Record<string, string> = {
         'section-top': 'Zone A',
         'section-center': 'Zone B',
@@ -145,40 +184,119 @@ export class StackService {
       sectionName = sectionNameMap[sectionId] || sectionName;
     }
 
-    // Calculate capacity based on row-tier config or uniform tiers
-    const capacity = stack.rowTierConfig 
-      ? this.calculateCapacityFromRowTierConfig(stack.rowTierConfig, stack.rows || 6)
-      : (stack.capacity || (stack.rows || 6) * (stack.maxTiers || 4));
+    console.log('🔍 Section processing:', {
+      providedSectionName: stack.sectionName,
+      sectionId,
+      finalSectionName: sectionName
+    });
+
+    // Calculate capacity and max_tiers based on row-tier config or uniform tiers
+    let capacity: number;
+    let maxTiers: number;
+    
+    if (stack.rowTierConfig && stack.rowTierConfig.length > 0) {
+      // Calculate from row-tier config
+      capacity = this.calculateCapacityFromRowTierConfig(stack.rowTierConfig, stack.rows || 6);
+      // Set max_tiers to the highest tier value in the config
+      maxTiers = Math.max(...stack.rowTierConfig.map(config => config.maxTiers));
+    } else {
+      // Use uniform tier calculation
+      capacity = stack.capacity || (stack.rows || 6) * (stack.maxTiers || 4);
+      maxTiers = stack.maxTiers || 4;
+    }
+
+    console.log('🔍 Capacity and max_tiers calculation:', {
+      hasRowTierConfig: !!(stack.rowTierConfig && stack.rowTierConfig.length > 0),
+      rowTierConfig: stack.rowTierConfig,
+      calculatedCapacity: capacity,
+      calculatedMaxTiers: maxTiers,
+      providedCapacity: stack.capacity,
+      providedMaxTiers: stack.maxTiers
+    });
+
+    // Prepare base insert data with proper typing
+    const baseInsertData: Record<string, any> = {
+      yard_id: stack.yardId || '',
+      stack_number: stack.stackNumber,
+      section_id: sectionId,
+      section_name: sectionName,
+      rows: stack.rows || 6,
+      max_tiers: maxTiers,
+      row_tier_config: stack.rowTierConfig ? JSON.stringify(stack.rowTierConfig) : null,
+      capacity: capacity,
+      current_occupancy: stack.currentOccupancy || 0,
+      position_x: stack.position?.x || 0,
+      position_y: stack.position?.y || 0,
+      position_z: stack.position?.z || 0,
+      width: stack.dimensions?.width || 2.5,
+      length: stack.dimensions?.length || 12,
+      is_active: stack.isActive !== false,
+      is_odd_stack: stack.isOddStack || false,
+      is_special_stack: stack.isSpecialStack || false,
+      container_size: stack.containerSize || '20ft',
+      assigned_client_code: stack.assignedClientCode,
+      notes: stack.notes,
+      created_by: userId
+    };
+
+    // Try to add buffer zone fields if they exist in the database
+    let insertData: Record<string, any> = { ...baseInsertData };
+    try {
+      // Check if buffer zone columns exist by trying a simple query
+      const { error: checkError } = await supabase
+        .from('stacks')
+        .select('is_buffer_zone, buffer_zone_type, damage_types_supported')
+        .limit(1);
+
+      if (!checkError) {
+        // Columns exist, add buffer zone fields
+        insertData.is_buffer_zone = false;
+        insertData.buffer_zone_type = null;
+        insertData.damage_types_supported = JSON.stringify([]);
+        console.log('🔍 Buffer zone columns detected, including in insert');
+      } else {
+        console.log('🔍 Buffer zone columns not found, using base insert data');
+      }
+    } catch (columnCheckError) {
+      console.log('🔍 Column check failed, using base insert data:', columnCheckError);
+    }
+
+    console.log('🔍 Final insert data:', insertData);
 
     const { data, error } = await supabase
       .from('stacks')
-      .insert({
-        yard_id: stack.yardId || 'depot-tantarelli',
-        stack_number: stack.stackNumber,
-        section_id: sectionId,
-        section_name: sectionName,
-        rows: stack.rows || 6,
-        max_tiers: stack.maxTiers || 4,
-        row_tier_config: stack.rowTierConfig ? JSON.stringify(stack.rowTierConfig) : null,
-        capacity: capacity,
-        current_occupancy: stack.currentOccupancy || 0,
-        position_x: stack.position?.x || 0,
-        position_y: stack.position?.y || 0,
-        position_z: stack.position?.z || 0,
-        width: stack.dimensions?.width || 2.5,
-        length: stack.dimensions?.length || 12,
-        is_active: stack.isActive !== false,
-        is_odd_stack: stack.isOddStack || false,
-        is_special_stack: stack.isSpecialStack || false,
-        container_size: stack.containerSize || '20ft',
-        assigned_client_code: stack.assignedClientCode,
-        notes: stack.notes,
-        created_by: userId
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('🚨 Database insert error:', {
+        error,
+        errorMessage: error.message,
+        errorCode: error.code,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        insertData,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Check if it's the specific scalar extraction error
+      if (error.message && error.message.includes('cannot extract elements from a scalar')) {
+        console.error('🚨 SCALAR EXTRACTION ERROR DETECTED');
+        console.error('🚨 This is likely a JSONB field issue');
+        console.error('🚨 Insert data that caused the error:', JSON.stringify(insertData, null, 2));
+        
+        // Try to identify which field is causing the issue
+        const jsonbFields = ['row_tier_config', 'damage_types_supported'];
+        for (const field of jsonbFields) {
+          if (insertData[field as keyof typeof insertData]) {
+            console.error(`🚨 JSONB field ${field}:`, insertData[field as keyof typeof insertData]);
+          }
+        }
+      }
+      
+      throw error;
+    }
     
     const createdStack = this.mapToStack(data);
 
@@ -187,14 +305,15 @@ export class StackService {
     try {
       const containerSize = createdStack.containerSize === '40ft' ? '40ft' : '20ft';
       await locationIdGeneratorService.generateLocationsForStack({
-        yardId: createdStack.yardId || 'depot-tantarelli',
+        yardId: createdStack.yardId || '',
         stackId: createdStack.id,
         stackNumber: createdStack.stackNumber,
         rows: createdStack.rows,
         tiers: createdStack.maxTiers,
         containerSize,
         clientPoolId: undefined,
-        isVirtual: false
+        isVirtual: false,
+        rowTierConfig: createdStack.rowTierConfig
       });
     } catch (locationError) {
       handleError(locationError, 'StackService.create.generateLocations');
@@ -203,6 +322,116 @@ export class StackService {
     }
 
     return createdStack;
+  }
+
+  /**
+   * Reactivate a soft-deleted stack with updated configuration
+   */
+  private async reactivateSoftDeletedStack(stackId: string, newConfig: Partial<YardStack>, userId: string): Promise<YardStack> {
+    // Calculate capacity and max_tiers based on row-tier config or uniform tiers
+    let capacity: number;
+    let maxTiers: number;
+    
+    if (newConfig.rowTierConfig && newConfig.rowTierConfig.length > 0) {
+      // Calculate from row-tier config
+      capacity = this.calculateCapacityFromRowTierConfig(newConfig.rowTierConfig, newConfig.rows || 6);
+      // Set max_tiers to the highest tier value in the config
+      maxTiers = Math.max(...newConfig.rowTierConfig.map(config => config.maxTiers));
+    } else {
+      // Use uniform tier calculation
+      capacity = newConfig.capacity || (newConfig.rows || 6) * (newConfig.maxTiers || 4);
+      maxTiers = newConfig.maxTiers || 4;
+    }
+
+    // Prepare update data to reactivate and update the stack
+    const updateData: Record<string, any> = {
+      is_active: true,
+      section_id: newConfig.sectionId,
+      section_name: newConfig.sectionName || 'Zone A',
+      rows: newConfig.rows || 6,
+      max_tiers: maxTiers,
+      row_tier_config: newConfig.rowTierConfig ? JSON.stringify(newConfig.rowTierConfig) : null,
+      capacity: capacity,
+      current_occupancy: newConfig.currentOccupancy || 0,
+      position_x: newConfig.position?.x || 0,
+      position_y: newConfig.position?.y || 0,
+      position_z: newConfig.position?.z || 0,
+      width: newConfig.dimensions?.width || 2.5,
+      length: newConfig.dimensions?.length || 12,
+      is_odd_stack: newConfig.isOddStack || false,
+      is_special_stack: newConfig.isSpecialStack || false,
+      container_size: newConfig.containerSize || '20ft',
+      assigned_client_code: newConfig.assignedClientCode,
+      notes: newConfig.notes,
+      updated_at: new Date().toISOString(),
+      updated_by: userId
+    };
+
+    // Try to add buffer zone fields if they exist in the database
+    try {
+      // Check if buffer zone columns exist by trying a simple query
+      const { error: checkError } = await supabase
+        .from('stacks')
+        .select('is_buffer_zone, buffer_zone_type, damage_types_supported')
+        .limit(1);
+
+      if (!checkError) {
+        // Columns exist, add buffer zone fields
+        updateData.is_buffer_zone = false;
+        updateData.buffer_zone_type = null;
+        updateData.damage_types_supported = JSON.stringify([]);
+        console.log('🔍 Buffer zone columns detected, including in reactivation');
+      }
+    } catch (columnCheckError) {
+      console.log('🔍 Column check failed during reactivation, using base update data:', columnCheckError);
+    }
+
+    console.log('🔄 Reactivating stack with data:', updateData);
+
+    const { data, error } = await supabase
+      .from('stacks')
+      .update(updateData)
+      .eq('id', stackId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('🚨 Database reactivation error:', {
+        error,
+        errorMessage: error.message,
+        errorCode: error.code,
+        stackId,
+        updateData,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+    
+    const reactivatedStack = this.mapToStack(data);
+
+    // Automatically generate location records for the reactivated stack
+    // The soft delete trigger should have reactivated existing locations,
+    // but we may need to generate additional ones if configuration changed
+    try {
+      const containerSize = reactivatedStack.containerSize === '40ft' ? '40ft' : '20ft';
+      await locationIdGeneratorService.generateLocationsForStack({
+        yardId: reactivatedStack.yardId || '',
+        stackId: reactivatedStack.id,
+        stackNumber: reactivatedStack.stackNumber,
+        rows: reactivatedStack.rows,
+        tiers: reactivatedStack.maxTiers,
+        containerSize,
+        clientPoolId: undefined,
+        isVirtual: false,
+        rowTierConfig: reactivatedStack.rowTierConfig
+      });
+    } catch (locationError) {
+      handleError(locationError, 'StackService.reactivateSoftDeletedStack.generateLocations');
+      // Don't fail the stack reactivation if location generation fails
+    }
+
+    console.log(`✅ Successfully reactivated stack S${String(reactivatedStack.stackNumber).padStart(2, '0')}`);
+    return reactivatedStack;
   }
 
   /**
@@ -249,6 +478,12 @@ export class StackService {
     if (updates.containerSize !== undefined) updateData.container_size = updates.containerSize;
     if (updates.assignedClientCode !== undefined) updateData.assigned_client_code = updates.assignedClientCode;
     if (updates.notes !== undefined) updateData.notes = updates.notes;
+    // Handle buffer zone fields
+    if (updates.isBufferZone !== undefined) updateData.is_buffer_zone = updates.isBufferZone;
+    if (updates.bufferZoneType !== undefined) updateData.buffer_zone_type = updates.bufferZoneType;
+    if (updates.damageTypesSupported !== undefined) {
+      updateData.damage_types_supported = updates.damageTypesSupported ? JSON.stringify(updates.damageTypesSupported) : JSON.stringify([]);
+    }
 
     const { data, error } = await supabase
       .from('stacks')
@@ -265,15 +500,17 @@ export class StackService {
     // Requirements: 5.2 - Stack configuration updates trigger location record updates
     const rowsChanged = updates.rows !== undefined && updates.rows !== currentStack.rows;
     const tiersChanged = updates.maxTiers !== undefined && updates.maxTiers !== currentStack.maxTiers;
+    const containerSizeChanged = updates.containerSize !== undefined && updates.containerSize !== currentStack.containerSize;
 
     if (rowsChanged || tiersChanged) {
       try {
         await locationIdGeneratorService.updateLocationsForStackConfiguration(
           updatedStack.id,
-          updatedStack.yardId || 'depot-tantarelli',
+          updatedStack.yardId || '',
           updatedStack.stackNumber,
           updatedStack.rows,
-          updatedStack.maxTiers
+          updatedStack.maxTiers,
+          updatedStack.rowTierConfig
         );
         
         // Sync occupancy with updated locations
@@ -281,6 +518,18 @@ export class StackService {
       } catch (locationError) {
         handleError(locationError, 'StackService.update.updateLocations');
         // Don't fail the stack update if location update fails
+      }
+    }
+
+    // Handle automatic virtual stack management when container_size changes
+    // Requirements: Automatic virtual stack creation/deactivation based on 40ft configuration
+    if (containerSizeChanged) {
+      try {
+        await this.handleVirtualStackManagement(updatedStack);
+      } catch (virtualStackError) {
+        handleError(virtualStackError, 'StackService.update.handleVirtualStackManagement');
+        // Don't fail the stack update if virtual stack management fails
+        logger.warn('StackService', `Virtual stack management failed for stack ${updatedStack.stackNumber}`, virtualStackError);
       }
     }
 
@@ -343,7 +592,7 @@ export class StackService {
       // Requirements: 3.5 - Cleanup virtual locations when pairings are removed
       try {
         const virtualPair = await virtualLocationCalculatorService.getVirtualStackPairByStacks(
-          stack.yardId || 'depot-tantarelli',
+          stack.yardId || '',
           pairingData.first_stack_id,
           pairingData.second_stack_id
         );
@@ -472,6 +721,9 @@ export class StackService {
       throw new Error('Special stacks cannot be configured for 40ft containers');
     }
 
+    // Store the original container size before update
+    const originalContainerSize = currentStack.containerSize;
+
     // Check for existing 40ft containers on this stack
     const { data: containersOnStack, error: containerCheckError } = await supabase
       .from('containers')
@@ -483,7 +735,7 @@ export class StackService {
     if (containerCheckError) throw containerCheckError;
 
     // Check if trying to change FROM 40ft to 20ft while containers exist
-    if (currentStack.containerSize === '40ft' && newSize === '20ft' && containersOnStack && containersOnStack.length > 0) {
+    if (originalContainerSize === '40ft' && newSize === '20ft' && containersOnStack && containersOnStack.length > 0) {
       const has40ftContainers = containersOnStack.some(c => c.size === '40ft' || c.size === '40FT');
       if (has40ftContainers) {
         throw new Error(`Cannot change stack S${String(stackNumber).padStart(2, '0')} from 40ft to 20ft. There are ${containersOnStack.filter(c => c.size === '40ft' || c.size === '40FT').length} 40ft container(s) currently stored on this stack. Please relocate them first.`);
@@ -515,80 +767,241 @@ export class StackService {
 
     updatedStacks.push(this.mapToStack(data));
 
-    // If there's a pairing, update the paired stack as well
+    // Determine paired stack - use pairing table data or fallback to adjacent logic
+    let pairedStackNumber: number | null = null;
+    
     if (pairingData) {
-      const pairedStackNumber = pairingData.first_stack_number === stackNumber
+      // Use pairing table data
+      pairedStackNumber = pairingData.first_stack_number === stackNumber
         ? pairingData.second_stack_number
         : pairingData.first_stack_number;
+    } else {
+      // Always try to find adjacent stack for potential pairing
+      pairedStackNumber = this.getAdjacentStackNumber(stackNumber);
+      console.log(`🔍 [Stack ${stackNumber}] Adjacent stack for pairing: ${pairedStackNumber}`);
+    }
 
-      // Check for containers on paired stack
-      const { data: containersOnPaired } = await supabase
-        .from('containers')
-        .select('id, number, size, location')
-        .eq('yard_id', yardId)
-        .eq('status', 'in_depot')
-        .ilike('location', `S${String(pairedStackNumber).padStart(2, '0')}-%`);
-
-      if (currentStack.containerSize === '40ft' && newSize === '20ft' && containersOnPaired && containersOnPaired.length > 0) {
-        const has40ftContainers = containersOnPaired.some(c => c.size === '40ft' || c.size === '40FT');
-        if (has40ftContainers) {
-          throw new Error(`Cannot change paired stack S${String(pairedStackNumber).padStart(2, '0')} from 40ft to 20ft. There are ${containersOnPaired.filter(c => c.size === '40ft' || c.size === '40FT').length} 40ft container(s) currently stored on the paired stack. Please relocate them first.`);
-        }
-      }
-
+    // Handle paired stack synchronization - BIDIRECTIONAL
+    if (pairedStackNumber) {
       const pairedStack = await this.getByStackNumber(yardId, pairedStackNumber);
-
+      
       if (pairedStack && !pairedStack.isSpecialStack) {
-        const { data: pairedData, error: pairedError } = await supabase
-          .from('stacks')
-          .update(updateData)
-          .eq('yard_id', yardId)
-          .eq('stack_number', pairedStackNumber)
-          .select()
-          .maybeSingle();
-
-        if (!pairedError && pairedData) {
-          updatedStacks.push(this.mapToStack(pairedData));
-        }
-      }
-
-      // Requirements: 3.3, 3.5, 5.3 - Handle virtual location updates when stack configurations change
-      // If changing TO 40ft, create/update virtual locations
-      if (newSize === '40ft' && pairingData) {
-        try {
-          await this.syncVirtualLocationsForPairing(
-            yardId,
-            pairingData.first_stack_id,
-            pairingData.second_stack_id,
-            pairingData.first_stack_number,
-            pairingData.second_stack_number,
-            currentStack.rows,
-            currentStack.maxTiers
-          );
-        } catch (virtualError) {
-          logger.error('Failed to sync virtual locations', 'ComponentName', virtualError);
-          // Don't fail the stack update if virtual location sync fails
-        }
-      }
-
-      // If changing FROM 40ft to 20ft, cleanup virtual locations
-      if (currentStack.containerSize === '40ft' && newSize === '20ft' && pairingData) {
-        try {
-          // Get virtual stack pair
-          const virtualPair = await virtualLocationCalculatorService.getVirtualStackPairByStacks(
-            yardId,
-            pairingData.first_stack_id,
-            pairingData.second_stack_id
-          );
+        console.log(`🔍 [Stack ${stackNumber}] Found paired stack ${pairedStackNumber}. Synchronizing container sizes.`);
+        
+        // ALWAYS synchronize paired stacks - both must have the same container size
+        // This works bidirectionally: S07→20ft changes S09→20ft, and S09→20ft changes S07→20ft
+        if (pairedStack.containerSize !== newSize) {
+          console.log(`🔍 [Stack ${stackNumber}] Updating paired stack ${pairedStackNumber} from ${pairedStack.containerSize} to ${newSize}`);
           
-          if (virtualPair) {
-            await virtualLocationCalculatorService.cleanupVirtualLocations(virtualPair.id);
+          const { data: pairedData, error: pairedError } = await supabase
+            .from('stacks')
+            .update({
+              container_size: newSize,
+              updated_at: new Date().toISOString(),
+              updated_by: userId
+            })
+            .eq('yard_id', yardId)
+            .eq('stack_number', pairedStackNumber)
+            .select()
+            .maybeSingle();
+
+          if (pairedError) {
+            console.error(`🚨 [Stack ${stackNumber}] Error updating paired stack ${pairedStackNumber}:`, pairedError);
+            throw new Error(`Failed to update paired stack S${String(pairedStackNumber).padStart(2, '0')} to ${newSize}: ${pairedError.message}`);
+          } else if (pairedData) {
+            console.log(`✅ [Stack ${stackNumber}] Successfully updated paired stack ${pairedStackNumber} to ${newSize}`);
+            updatedStacks.push(this.mapToStack(pairedData));
           }
-        } catch (cleanupError) {
-          handleError(cleanupError, 'StackService.updateContainerSize.cleanup');
-          // Don't fail the stack update if cleanup fails
+        } else {
+          console.log(`🔍 [Stack ${stackNumber}] Paired stack ${pairedStackNumber} already has container size ${newSize}`);
+          // Even if sizes match, add the paired stack to updatedStacks for consistency
+          updatedStacks.push(pairedStack);
+        }
+
+        // Handle pairing and virtual stack creation/deletion based on new size
+        if (newSize === '40ft') {
+          // Both stacks are now 40ft - create pairing if it doesn't exist
+          if (!pairingData) {
+            try {
+              const virtualStackNumber = this.getVirtualStackNumber(stackNumber, pairedStackNumber);
+              
+              console.log(`🔍 [Stack ${stackNumber}] Creating pairing with virtual stack ${virtualStackNumber}`);
+              
+              const { data: newPairingData, error: pairingCreateError } = await supabase
+                .from('stack_pairings')
+                .insert({
+                  yard_id: yardId,
+                  first_stack_number: Math.min(stackNumber, pairedStackNumber),
+                  second_stack_number: Math.max(stackNumber, pairedStackNumber),
+                  first_stack_id: stackNumber < pairedStackNumber ? stackId : pairedStack.id,
+                  second_stack_id: stackNumber < pairedStackNumber ? pairedStack.id : stackId,
+                  virtual_stack_number: virtualStackNumber,
+                  is_active: true
+                })
+                .select()
+                .single();
+
+              if (pairingCreateError) {
+                console.error(`🚨 [Stack ${stackNumber}] Error creating pairing:`, pairingCreateError);
+              } else if (newPairingData) {
+                console.log(`✅ [Stack ${stackNumber}] Successfully created pairing with virtual stack ${virtualStackNumber}`, {
+                  pairingId: newPairingData.id,
+                  firstStack: newPairingData.first_stack_number,
+                  secondStack: newPairingData.second_stack_number,
+                  virtualStack: newPairingData.virtual_stack_number
+                });
+                
+                // Create virtual stack in stacks table
+                try {
+                  const virtualStackData = {
+                    yard_id: yardId,
+                    stack_number: virtualStackNumber,
+                    section_id: currentStack.sectionId,
+                    section_name: currentStack.sectionName,
+                    rows: currentStack.rows,
+                    max_tiers: currentStack.maxTiers,
+                    capacity: currentStack.rows * currentStack.maxTiers,
+                    current_occupancy: 0,
+                    position_x: (currentStack.position.x + pairedStack.position.x) / 2,
+                    position_y: (currentStack.position.y + pairedStack.position.y) / 2,
+                    position_z: currentStack.position.z,
+                    width: currentStack.dimensions.width,
+                    length: currentStack.dimensions.length,
+                    is_active: true,
+                    is_virtual: true,
+                    container_size: '40ft',
+                    created_by: userId
+                  };
+
+                  const { data: virtualStack, error: virtualStackError } = await supabase
+                    .from('stacks')
+                    .insert(virtualStackData)
+                    .select()
+                    .single();
+
+                  if (virtualStackError) {
+                    console.error(`🚨 [Stack ${stackNumber}] Error creating virtual stack:`, virtualStackError);
+                  } else if (virtualStack) {
+                    console.log(`✅ [Stack ${stackNumber}] Successfully created virtual stack ${virtualStackNumber} with ID: ${virtualStack.id}`);
+                    
+                    // Generate location records for the new virtual stack
+                    try {
+                      await locationIdGeneratorService.generateLocationsForStack({
+                        yardId: yardId,
+                        stackId: virtualStack.id,
+                        stackNumber: virtualStackNumber,
+                        rows: virtualStack.rows,
+                        tiers: virtualStack.max_tiers,
+                        containerSize: '40ft',
+                        clientPoolId: undefined,
+                        isVirtual: true,
+                        rowTierConfig: virtualStack.row_tier_config ? JSON.parse(virtualStack.row_tier_config) : undefined
+                      });
+                      console.log(`✅ [Stack ${stackNumber}] Generated locations for virtual stack ${virtualStackNumber}`);
+                    } catch (locationError) {
+                      console.error(`🚨 [Stack ${stackNumber}] Error generating locations for virtual stack:`, locationError);
+                    }
+                  }
+                } catch (virtualError) {
+                  console.error(`🚨 [Stack ${stackNumber}] Error creating virtual stack:`, virtualError);
+                }
+              }
+            } catch (error) {
+              console.error(`🚨 [Stack ${stackNumber}] Error in pairing creation:`, error);
+            }
+          } else {
+            console.log(`🔍 [Stack ${stackNumber}] Pairing already exists for 40ft stacks`);
+          }
+        } else if (newSize === '20ft') {
+          // Stack is now 20ft - cleanup pairing and virtual stack regardless of pairing data
+          console.log(`🔍 [Stack ${stackNumber}] Stack is now 20ft. Cleaning up any existing pairing and virtual stack.`);
+          
+          try {
+            // Find virtual stack number for this pairing
+            const virtualStackNumber = this.getVirtualStackNumber(stackNumber, pairedStackNumber);
+            
+            // Clean up virtual stack pairs (both from stack_pairings and virtual_stack_pairs tables)
+            if (pairingData) {
+              const virtualPair = await virtualLocationCalculatorService.getVirtualStackPairByStacks(
+                yardId,
+                pairingData.first_stack_id,
+                pairingData.second_stack_id
+              );
+              
+              if (virtualPair) {
+                await virtualLocationCalculatorService.cleanupVirtualLocations(virtualPair.id);
+              }
+              
+              // Deactivate the pairing in stack_pairings table
+              await supabase
+                .from('stack_pairings')
+                .update({ is_active: false })
+                .eq('id', pairingData.id);
+            }
+            
+            // Also clean up virtual_stack_pairs table
+            await supabase
+              .from('virtual_stack_pairs')
+              .update({ 
+                is_active: false,
+                updated_at: new Date().toISOString() 
+              })
+              .eq('yard_id', yardId)
+              .eq('virtual_stack_number', virtualStackNumber);
+            
+            // Deactivate the virtual stack (don't delete, just deactivate)
+            const { data: virtualStackData, error: virtualStackUpdateError } = await supabase
+              .from('stacks')
+              .update({ 
+                is_active: false,
+                updated_at: new Date().toISOString() 
+              })
+              .eq('yard_id', yardId)
+              .eq('stack_number', virtualStackNumber)
+              .eq('is_virtual', true)
+              .select();
+              
+            if (virtualStackUpdateError) {
+              console.error(`🚨 [Stack ${stackNumber}] Error deactivating virtual stack:`, virtualStackUpdateError);
+            } else if (virtualStackData && virtualStackData.length > 0) {
+              console.log(`✅ [Stack ${stackNumber}] Successfully deactivated virtual stack ${virtualStackNumber}`);
+              
+              // Also deactivate virtual locations
+              await supabase
+                .from('locations')
+                .update({ 
+                  is_active: false,
+                  updated_at: new Date().toISOString() 
+                })
+                .eq('stack_id', virtualStackData[0].id)
+                .eq('is_virtual', true);
+            }
+            
+            console.log(`✅ [Stack ${stackNumber}] Successfully cleaned up pairing and virtual stack ${virtualStackNumber}`);
+          } catch (cleanupError) {
+            console.error(`🚨 [Stack ${stackNumber}] Error cleaning up pairing:`, cleanupError);
+          }
+        }
+      } else if (!pairedStack) {
+        console.log(`🔍 [Stack ${stackNumber}] Paired stack ${pairedStackNumber} does not exist. No pairing created.`);
+      } else if (pairedStack.isSpecialStack) {
+        console.log(`🔍 [Stack ${stackNumber}] Paired stack ${pairedStackNumber} is a special stack. No pairing created.`);
+      }
+    } else {
+      console.log(`🔍 [Stack ${stackNumber}] No adjacent stack found for pairing.`);
+    }
+
+    // Call the automatic virtual stack service to handle location generation
+    // This complements the SQL triggers by generating locations for newly created virtual stacks
+    try {
+      for (const updatedStack of updatedStacks) {
+        if (updatedStack.stackNumber % 2 === 1) { // Only process odd stacks
+          await this.handleVirtualStackManagement(updatedStack);
         }
       }
+    } catch (automaticError) {
+      logger.error('StackService', 'Error in automatic virtual stack management', automaticError);
+      // Don't fail the stack update if automatic management fails
     }
 
     return updatedStacks;
@@ -659,70 +1072,6 @@ export class StackService {
   }
 
   /**
-   * Sync virtual locations for a stack pairing
-   * Requirements: 3.3, 3.5 - Automatic virtual location generation and updates
-   * 
-   * @param yardId - Yard ID
-   * @param stack1Id - First stack ID
-   * @param stack2Id - Second stack ID
-   * @param stack1Number - First stack number
-   * @param stack2Number - Second stack number
-   * @param rows - Number of rows
-   * @param tiers - Number of tiers
-   */
-  private async syncVirtualLocationsForPairing(
-    yardId: string,
-    stack1Id: string,
-    stack2Id: string,
-    stack1Number: number,
-    stack2Number: number,
-    rows: number,
-    tiers: number
-  ): Promise<void> {
-    try {
-      // Check if virtual stack pair already exists
-      const existingPair = await virtualLocationCalculatorService.getVirtualStackPairByStacks(
-        yardId,
-        stack1Id,
-        stack2Id
-      );
-
-      if (existingPair) {
-        // Update existing virtual locations
-        logger.info('Information', 'ComponentName', `🔄 Updating virtual locations for existing pair`)
-        await virtualLocationCalculatorService.updateVirtualLocations({
-          virtualStackPairId: existingPair.id,
-          rows,
-          tiers
-        });
-      } else {
-        // Create new virtual locations
-        logger.info('Information', 'ComponentName', `➕ Creating virtual locations for new pairing`)
-        await virtualLocationCalculatorService.createVirtualLocations({
-          yardId,
-          stack1Id,
-          stack2Id,
-          stack1Number,
-          stack2Number,
-          rows,
-          tiers
-        });
-      }
-    } catch (error) {
-      // Temporary workaround: if it's a virtual stack pair constraint error, log it but don't fail the operation
-      if (error instanceof Error && error.message.includes('unique constraint "unique_stack_pair"')) {
-        logger.error('Warning', 'StackService.syncVirtualLocationsForPairing', 
-          `⚠️ Virtual location sync failed due to constraint violation, but stack update will continue: ${error.message}`);
-        // Don't throw the error - allow the stack update to succeed
-        return;
-      }
-      
-      handleError(error, 'StackService.syncVirtualLocationsForPairing');
-      throw error;
-    }
-  }
-
-  /**
    * Calculate capacity from row-tier configuration
    */
   private calculateCapacityFromRowTierConfig(rowTierConfig: any[], totalRows: number): number {
@@ -750,6 +1099,107 @@ export class StackService {
     return rowConfig ? rowConfig.maxTiers : stack.maxTiers;
   }
 
+  /**
+   * Get detailed container statistics for a stack
+   */
+  async getContainerStats(_stackId: string, yardId: string, stackNumber: number): Promise<{
+    size20ft: number;
+    size40ft: number;
+    damaged: number;
+    maintenance: number;
+    cleaning: number;
+    full: number;
+    empty: number;
+  }> {
+    try {
+      const stackPattern = `S${String(stackNumber).padStart(2, '0')}-%`;
+      const { data: containers, error } = await supabase
+        .from('containers')
+        .select('id, size, status, damage')
+        .eq('yard_id', yardId)
+        .eq('status', 'in_depot')
+        .ilike('location', stackPattern);
+
+      if (error) {
+        handleError(error, 'StackService.getContainerStats');
+        return {
+          size20ft: 0,
+          size40ft: 0,
+          damaged: 0,
+          maintenance: 0,
+          cleaning: 0,
+          full: 0,
+          empty: 0
+        };
+      }
+
+      const stats = {
+        size20ft: 0,
+        size40ft: 0,
+        damaged: 0,
+        maintenance: 0,
+        cleaning: 0,
+        full: 0,
+        empty: 0
+      };
+
+      containers?.forEach(container => {
+        // Count by size
+        if (container.size === '20ft') stats.size20ft++;
+        else if (container.size === '40ft') stats.size40ft++;
+
+        // Count by condition
+        if (container.damage && container.damage.length > 0) {
+          stats.damaged++;
+        }
+        
+        // Count by status (assuming we have these statuses)
+        if (container.status === 'maintenance') stats.maintenance++;
+        else if (container.status === 'cleaning') stats.cleaning++;
+        else if (container.status === 'full') stats.full++;
+        else if (container.status === 'empty') stats.empty++;
+      });
+
+      return stats;
+    } catch (error) {
+      handleError(error, 'StackService.getContainerStats');
+      return {
+        size20ft: 0,
+        size40ft: 0,
+        damaged: 0,
+        maintenance: 0,
+        cleaning: 0,
+        full: 0,
+        empty: 0
+      };
+    }
+  }
+
+  /**
+   * Get all stacks with container stats for a yard
+   */
+  async getByYardIdWithStats(yardId: string, skipOccupancySync: boolean = false): Promise<YardStack[]> {
+    const stacks = await this.getByYardId(yardId, skipOccupancySync);
+    
+    // Add container stats to each stack
+    const stacksWithStats = await Promise.all(
+      stacks.map(async (stack) => {
+        try {
+          const containerStats = await this.getContainerStats(stack.id, stack.yardId || yardId, stack.stackNumber);
+          return {
+            ...stack,
+            containerStats
+          };
+        } catch (error) {
+          handleError(error, 'StackService.getByYardIdWithStats');
+          return stack;
+        }
+      })
+    );
+
+    return stacksWithStats;
+  }
+
   private mapToStack(data: any): YardStack {
     // Parse row_tier_config if it exists
     let rowTierConfig: any[] | undefined;
@@ -763,6 +1213,33 @@ export class StackService {
         rowTierConfig = undefined;
       }
     }
+
+    // Parse damage_types_supported if it exists
+    let damageTypesSupported: string[] | undefined;
+    if (data.damage_types_supported) {
+      try {
+        damageTypesSupported = typeof data.damage_types_supported === 'string' 
+          ? JSON.parse(data.damage_types_supported)
+          : Array.isArray(data.damage_types_supported) 
+            ? data.damage_types_supported
+            : [];
+      } catch (error) {
+        handleError(error, 'StackService.mapToStack.parseDamageTypesSupported');
+        damageTypesSupported = [];
+      }
+    }
+    
+    // Fix capacity for virtual stacks if it's 0 or invalid
+    let finalCapacity = data.capacity;
+    if (data.is_virtual && (!finalCapacity || finalCapacity <= 0)) {
+      // Calculate proper capacity for virtual stack
+      if (rowTierConfig && rowTierConfig.length > 0) {
+        finalCapacity = rowTierConfig.reduce((sum, config) => sum + config.maxTiers, 0);
+      } else {
+        finalCapacity = data.rows * data.max_tiers;
+      }
+      console.log(`✅ Fixed virtual stack S${String(data.stack_number).padStart(2, '0')} capacity: ${data.capacity} → ${finalCapacity}`);
+    }
     
     return {
       id: data.id,
@@ -774,7 +1251,7 @@ export class StackService {
       maxTiers: data.max_tiers,
       rowTierConfig: rowTierConfig,
       currentOccupancy: data.current_occupancy,
-      capacity: data.capacity,
+      capacity: finalCapacity, // Use corrected capacity
       position: {
         x: parseFloat(data.position_x) || 0,
         y: parseFloat(data.position_y) || 0,
@@ -792,11 +1269,98 @@ export class StackService {
       containerSize: data.container_size || '20ft',
       assignedClientCode: data.assigned_client_code,
       notes: data.notes,
+      // Add buffer zone fields
+      isBufferZone: data.is_buffer_zone || false,
+      bufferZoneType: data.buffer_zone_type,
+      damageTypesSupported: damageTypesSupported,
       createdAt: toDate(data.created_at) || undefined,
       updatedAt: toDate(data.updated_at) || undefined,
       createdBy: data.created_by,
       updatedBy: data.updated_by
     };
+  }
+  /**
+   * Handle automatic virtual stack management when container_size changes
+   * This method manages virtual stacks based on the 40ft configuration of adjacent odd stacks
+   */
+  private async handleVirtualStackManagement(stack: YardStack): Promise<void> {
+    try {
+      const stackNumber = stack.stackNumber;
+      const yardId = stack.yardId || '';
+
+      // Only process odd-numbered stacks and avoid duplicate processing
+      if (stackNumber % 2 === 1) {
+        // Use the same logic as getAdjacentStackNumber to find the correct pair
+        const pairedStackNumber = this.getAdjacentStackNumber(stackNumber);
+        
+        if (pairedStackNumber) {
+          // Only process if this is the lower number in the pair to avoid duplicates
+          // This ensures we only process each pair once (e.g., only when processing S03, not S05)
+          if (stackNumber < pairedStackNumber) {
+            // Check if the primary system already handled this pairing
+            // by looking for existing virtual stack or pairing
+            const virtualStackNumber = this.getVirtualStackNumber(stackNumber, pairedStackNumber);
+            
+            // Check if virtual stack already exists
+            const existingVirtualStack = await this.getByStackNumber(yardId, virtualStackNumber);
+            
+            if (existingVirtualStack) {
+              logger.debug('StackService', 
+                `Virtual stack S${String(virtualStackNumber).padStart(2, '0')} already exists, skipping automatic management`);
+              return; // Skip if already handled by primary system
+            }
+
+            logger.info('StackService', 
+              `Checking virtual stack management for pairing S${String(stackNumber).padStart(2, '0')} + S${String(pairedStackNumber).padStart(2, '0')}`);
+
+            try {
+              const result = await automaticVirtualStackService.manageVirtualStackForPairing(
+                yardId,
+                stackNumber,
+                pairedStackNumber
+              );
+
+              if (result.success) {
+                logger.info('StackService', 
+                  `Virtual stack management result: ${result.action} - ${result.message}`);
+              }
+            } catch (pairingError) {
+              // Handle conflicts gracefully - this is expected when primary system already handled it
+              if (pairingError instanceof Error) {
+                const errorMessage = pairingError.message.toLowerCase();
+                if (errorMessage.includes('unique constraint') || 
+                    errorMessage.includes('duplicate key') ||
+                    errorMessage.includes('already exists') ||
+                    errorMessage.includes('conflict') ||
+                    errorMessage.includes('violates row-level security') ||
+                    errorMessage.includes('permission denied') ||
+                    errorMessage.includes('42501')) {
+                  logger.debug('StackService', 
+                    `Virtual stack management conflict (expected): ${pairingError.message}`);
+                  // This is expected and not an error - primary system already handled it
+                } else {
+                  logger.error('StackService', 'Unexpected error in virtual stack management', pairingError);
+                  // Don't throw - allow stack updates to continue
+                }
+              } else {
+                logger.error('StackService', 'Unknown error in virtual stack management', pairingError);
+              }
+            }
+          } else {
+            logger.debug('StackService', 
+              `Skipping virtual stack management for S${String(stackNumber).padStart(2, '0')} as it will be handled by its pair S${String(pairedStackNumber).padStart(2, '0')}`);
+          }
+        } else {
+          logger.debug('StackService', 
+            `No valid pairing found for stack S${String(stackNumber).padStart(2, '0')}`);
+        }
+      }
+
+    } catch (error) {
+      logger.error('StackService', 'Error in handleVirtualStackManagement', error);
+      // Don't throw the error - allow stack updates to continue even if virtual stack management fails
+      logger.warn('StackService', 'Virtual stack management failed but stack update will continue');
+    }
   }
 }
 

@@ -353,7 +353,11 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <div>
                       <p className="text-sm font-medium text-blue-800">Created</p>
                       <p className="text-sm text-blue-700">{formatDate(user.createdAt)}</p>
-                      <p className="text-xs text-blue-600">by {user.createdBy}</p>
+                      {user.createdBy && user.createdBy !== 'System' && (
+                        <p className="text-xs text-blue-600">
+                          by {userDetails?.createdByName || user.createdBy}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -466,93 +470,8 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
               </div>
             </div>
 
-            {/* Right Column - Yard Assignments and Activity */}
+            {/* Right Column - Activity and Information */}
             <div className="lg:col-span-2 space-y-6">
-
-              {/* Yard Assignments */}
-              <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-                <h4 className="font-semibold text-green-900 mb-4 flex items-center">
-                  <MapPin className="h-5 w-5 mr-2" />
-                  Yard Assignments
-                  {user.yardIds && user.yardIds.length > 0 && (
-                    <span className="ml-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                      {user.yardIds.length} assigned
-                    </span>
-                  )}
-                </h4>
-
-                {dataLoadingStates.yardDetails ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader className="h-5 w-5 animate-spin text-green-600" />
-                    <span className="ml-2 text-sm text-green-600">Loading yard assignments...</span>
-                  </div>
-                ) : error && (!userDetails?.yardDetails || userDetails.yardDetails.length === 0) && user.yardIds && user.yardIds.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm">Unable to load yard assignment details</span>
-                    </div>
-                    <button
-                      onClick={handleRetry}
-                      className="w-full px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                    >
-                      Retry Loading Yard Details
-                    </button>
-                    {/* Show basic yard IDs as fallback */}
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
-                      <p className="text-sm font-medium text-green-900 mb-2">Assigned Yard IDs:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {user.yardIds.map((yardId) => (
-                          <span key={yardId} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                            {yardId}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-xs text-green-600 mt-2">
-                        Detailed yard information could not be loaded
-                      </p>
-                    </div>
-                  </div>
-                ) : userDetails?.yardDetails && userDetails.yardDetails.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {userDetails.yardDetails.map((yard) => (
-                      <div key={yard.yardId} className="bg-white rounded-lg p-4 border border-green-200">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-green-600 text-white rounded-lg">
-                            <Building className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-green-900">{yard.yardName}</p>
-                            <p className="text-sm text-green-700">Code: {yard.yardCode}</p>
-                            <p className="text-xs text-green-600">
-                              Assigned {formatDate(yard.assignedAt)} by {yard.assignedBy}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-green-600">
-                    <MapPin className="h-8 w-8 mx-auto mb-2 text-green-400" />
-                    <p className="text-sm font-medium">No yard assignments</p>
-                    <p className="text-xs text-green-500 mt-1">
-                      {user.yardIds && user.yardIds.length > 0
-                        ? 'Yard assignment details are not available'
-                        : 'User has not been assigned to any yards'
-                      }
-                    </p>
-                    {user.yardIds && user.yardIds.length > 0 && (
-                      <button
-                        onClick={handleRetry}
-                        className="mt-2 px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                      >
-                        Try Loading Details
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
 
               {/* User Activity History */}
               <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
@@ -566,26 +485,6 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                   <div className="flex items-center justify-center py-8">
                     <Loader className="h-5 w-5 animate-spin text-orange-600" />
                     <span className="ml-2 text-sm text-orange-600">Loading activity history...</span>
-                  </div>
-                ) : error && (!userDetails?.activityHistory || userDetails.activityHistory.length === 0) ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm">Unable to load activity history</span>
-                    </div>
-                    <button
-                      onClick={handleRetry}
-                      className="w-full px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
-                    >
-                      Retry Loading Activity
-                    </button>
-                    <div className="bg-white rounded-lg p-4 border border-orange-200 text-center">
-                      <Activity className="h-6 w-6 mx-auto mb-2 text-orange-400" />
-                      <p className="text-sm text-orange-600">Activity tracking may not be available</p>
-                      <p className="text-xs text-orange-500 mt-1">
-                        User activity logs could not be retrieved at this time
-                      </p>
-                    </div>
                   </div>
                 ) : userDetails?.activityHistory && userDetails.activityHistory.length > 0 ? (
                   <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -612,19 +511,22 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                 ) : (
                   <div className="text-center py-8 text-orange-600">
                     <Activity className="h-8 w-8 mx-auto mb-2 text-orange-400" />
-                    <p className="text-sm font-medium">No recent activity</p>
+                    <p className="text-sm font-medium">Activity tracking is being set up</p>
                     <p className="text-xs text-orange-500 mt-1">
-                      {error
-                        ? 'Activity tracking is currently unavailable'
-                        : 'User activity will appear here when available'
-                      }
+                      User activities like creating depots, managing users, and system operations will appear here once the activity tracking system is fully configured.
                     </p>
+                    <div className="mt-4 p-3 bg-orange-100 rounded-lg">
+                      <p className="text-xs text-orange-700">
+                        <strong>Note:</strong> Activity tracking may require additional database setup. 
+                        Contact your system administrator if you expect to see activity data here.
+                      </p>
+                    </div>
                     {error && (
                       <button
                         onClick={handleRetry}
-                        className="mt-2 px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                        className="mt-3 px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
                       >
-                        Check for Activity
+                        Retry Loading Activity
                       </button>
                     )}
                   </div>
@@ -643,31 +545,6 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                   <div className="flex items-center justify-center py-8">
                     <Loader className="h-5 w-5 animate-spin text-gray-600" />
                     <span className="ml-2 text-sm text-gray-600">Loading login history...</span>
-                  </div>
-                ) : error && (!userDetails?.loginHistory || userDetails.loginHistory.length === 0) ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm">Unable to load login history</span>
-                    </div>
-                    <button
-                      onClick={handleRetry}
-                      className="w-full px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Retry Loading Login History
-                    </button>
-                    <div className="bg-white rounded-lg p-4 border border-gray-200 text-center">
-                      <Globe className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm text-gray-600">Login tracking may not be available</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Session history could not be retrieved at this time
-                      </p>
-                      {user.lastLogin && (
-                        <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
-                          <p>Last known login: {formatLastLogin(user.lastLogin)}</p>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 ) : userDetails?.loginHistory && userDetails.loginHistory.length > 0 ? (
                   <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -708,22 +585,34 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                 ) : (
                   <div className="text-center py-8 text-gray-600">
                     <Globe className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm font-medium">No login history available</p>
+                    <p className="text-sm font-medium">Detailed login history not available</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {error
-                        ? 'Session tracking is currently unavailable'
-                        : 'Login sessions will appear here when available'
-                      }
+                      Session tracking requires additional database configuration to store detailed login records.
                     </p>
+                    
                     {user.lastLogin && (
-                      <div className="mt-3 p-2 bg-gray-100 rounded text-xs text-gray-600">
-                        <p>Last known login: {formatLastLogin(user.lastLogin)}</p>
+                      <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700 mb-1">Current Session Info</p>
+                        <p className="text-xs text-gray-600">
+                          Last known login: {formatLastLogin(user.lastLogin)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          This shows the most recent login time, but detailed session history requires additional setup.
+                        </p>
                       </div>
                     )}
+                    
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-xs text-blue-700">
+                        <strong>Note:</strong> To enable detailed login history tracking, the system administrator 
+                        needs to configure the login_history table and related tracking mechanisms.
+                      </p>
+                    </div>
+                    
                     {error && (
                       <button
                         onClick={handleRetry}
-                        className="mt-2 px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                        className="mt-3 px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                       >
                         Check Login History
                       </button>

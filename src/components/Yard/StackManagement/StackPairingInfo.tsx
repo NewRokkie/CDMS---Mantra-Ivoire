@@ -16,7 +16,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
   const specialStackCount = physicalStacks.filter(s => s.isSpecialStack).length;
   const activeCount = physicalStacks.filter(s => s.isActive).length;
 
-  const sections = Array.from(new Set(physicalStacks.map(s => s.sectionName || 'Main Section')));
+  const sections = Array.from(new Set(physicalStacks.map(s => s.sectionName || 'Zone A')));
 
   const generatePairs = () => {
     const pairs: Array<{
@@ -53,7 +53,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
           stack1,
           stack2,
           virtualStack,
-          section: stack.sectionName || 'Main Section',
+          section: stack.sectionName || 'Zone A',
           bothMatch,
           both40ft
         });
@@ -162,7 +162,7 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
           <h4 className="text-sm font-medium text-gray-700 mb-2">Sections</h4>
           <div className="space-y-2">
             {sections.map((section, index) => {
-              const sectionStacks = physicalStacks.filter(s => (s.sectionName || 'Main Section') === section);
+              const sectionStacks = physicalStacks.filter(s => (s.sectionName || 'Zone A') === section);
               const section20ft = sectionStacks.filter(s => s.containerSize === '20ft').length;
               const section40ft = sectionStacks.filter(s => s.containerSize === '40ft').length;
               const sectionSpecial = sectionStacks.filter(s => s.isSpecialStack).length;

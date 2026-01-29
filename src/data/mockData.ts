@@ -579,7 +579,7 @@ export const MOCK_USERS: User[] = [
     lastLogin: new Date('2025-01-11T08:30:00'),
     createdAt: new Date('2024-01-01'),
     createdBy: 'System',
-    yardAssignments: ['depot-tantarelli', 'depot-vridi', 'depot-san-pedro'],
+    yardAssignments: ['', 'depot-vridi', 'depot-san-pedro'],
     moduleAccess: {
       dashboard: true,
       containers: true,
@@ -614,7 +614,7 @@ export const MOCK_USERS: User[] = [
     lastLogin: new Date('2025-01-11T07:15:00'),
     createdAt: new Date('2024-02-15'),
     createdBy: 'System',
-    yardAssignments: ['depot-tantarelli'],
+    yardAssignments: [''],
     moduleAccess: {
       dashboard: true,
       containers: true,
@@ -649,7 +649,7 @@ export const MOCK_USERS: User[] = [
     lastLogin: new Date('2025-01-10T16:45:00'),
     createdAt: new Date('2024-01-20'),
     createdBy: 'System',
-    yardAssignments: ['depot-tantarelli', 'depot-vridi'],
+    yardAssignments: ['', 'depot-vridi'],
     moduleAccess: {
       dashboard: true,
       containers: true,
@@ -685,7 +685,7 @@ export const MOCK_USERS: User[] = [
     createdAt: new Date('2024-03-10'),
     createdBy: 'System',
     clientCode: 'SHIP001',
-    yardAssignments: ['depot-tantarelli'],
+    yardAssignments: [''],
     moduleAccess: {
       dashboard: true,
       containers: true,
@@ -721,7 +721,7 @@ export const MOCK_USERS: User[] = [
     createdAt: new Date('2024-04-15'),
     createdBy: 'System',
     clientCode: 'MAEU',
-    yardAssignments: ['depot-tantarelli', 'depot-san-pedro'],
+    yardAssignments: ['', 'depot-san-pedro'],
     moduleAccess: {
       dashboard: true,
       containers: true,

@@ -407,6 +407,7 @@ export interface UserDetails extends User {
   activityHistory: UserActivity[];
   permissionSummary: PermissionSummary;
   loginHistory: LoginRecord[];
+  createdByName?: string; // Name of the user who created this user
 }
 
 export interface YardAssignment {

@@ -12,6 +12,7 @@ import { useConfirm } from './hooks/useConfirm';
 // Lazy load components for better performance
 const LoginForm = lazy(() => import('./components/Auth/LoginForm').then(module => ({ default: module.LoginForm })));
 const ResetPasswordPage = lazy(() => import('./components/Auth/ResetPasswordPage').then(module => ({ default: module.ResetPasswordPage })));
+const InitialAdminSetup = lazy(() => import('./components/Auth/InitialAdminSetup').then(module => ({ default: module.InitialAdminSetup })));
 const ProtectedApp = lazy(() => import('./components/Layout/ProtectedApp'));
 
 function App() {

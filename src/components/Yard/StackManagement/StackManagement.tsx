@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
+import StackSoftDeleteService from '../../../services/api/stackSoftDeleteService';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
 import { clientPoolService } from '../../../services/api';
@@ -8,10 +9,13 @@ import { StackManagementHeader } from './StackManagementHeader';
 import { StackManagementFilters } from './StackManagementFilters';
 import { StackConfigurationTable } from './StackConfigurationTable';
 import { StackFormModal } from './StackFormModal';
-import { StackConfigurationRules } from './StackConfigurationRules';
-import { StackPairingInfo } from './StackPairingInfo';
+import { StackConfigurationHelpDialog } from './StackConfigurationHelpDialog';
+import { StackSummaryCards } from './StackSummaryCards';
+import { StackSummaryCardsSkeleton } from './StackSummaryCardsSkeleton';
 import { StackClientAssignmentModal } from './StackClientAssignmentModal';
 import { handleError } from '../../../services/errorHandling';
+import { StackCreationSuccess } from './StackCreationSuccess';
+import { StackTableSkeleton } from './StackTableSkeleton';
 import { LoadingSpinner } from '../../Common';
 import { useToast } from '../../../hooks/useToast';
 import { useConfirm } from '../../../hooks/useConfirm';
@@ -19,12 +23,16 @@ import { useConfirm } from '../../../hooks/useConfirm';
 export const StackManagement: React.FC = () => {
   const [stacks, setStacks] = useState<YardStack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedStack, setSelectedStack] = useState<YardStack | null>(null);
   const [showStackForm, setShowStackForm] = useState(false);
   const [showClientAssignment, setShowClientAssignment] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [sectionFilter, setSectionFilter] = useState('all');
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [createdStackNumber, setCreatedStackNumber] = useState<number>(0);
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
 
   const { user } = useAuth();
   const { currentYard, refreshYards } = useYard();
@@ -37,15 +45,27 @@ export const StackManagement: React.FC = () => {
     }
   }, [currentYard]);
 
-  const loadStacks = async () => {
+  const loadStacks = async (showRefreshIndicator = false) => {
     try {
-      setLoading(true);
+      if (showRefreshIndicator) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       if (!currentYard?.id) {
         setStacks([]);
         return;
       }
-      const data = await stackService.getAll(currentYard.id);
+      
+      // Use the new method that includes container stats
+      const data = await stackService.getByYardIdWithStats(currentYard.id, false);
       setStacks(data || []);
+      
+      // Show success message for manual refresh
+      if (showRefreshIndicator) {
+        toast.success('Stack configuration refreshed successfully!');
+      }
     } catch (error) {
       handleError(error, 'StackManagement.loadStacks');
       // Set empty array to prevent infinite loading
@@ -53,7 +73,18 @@ export const StackManagement: React.FC = () => {
       toast.error('Error loading stacks: ' + (error as Error).message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  // Manual refresh function
+  const handleRefresh = async () => {
+    await loadStacks(true);
+  };
+
+  // Show help dialog
+  const handleShowHelp = () => {
+    setShowHelpDialog(true);
   };
 
   const handleCreateStack = async () => {
@@ -83,18 +114,27 @@ export const StackManagement: React.FC = () => {
   };
 
   const handleDeleteStack = async (stackId: string) => {
+    // Get stack info for better messaging
+    const stack = stacks.find(s => s.id === stackId);
+    const stackNumber = stack?.stackNumber || 'Unknown';
+    
     confirm({
-      title: 'Delete Stack',
-      message: 'Are you sure you want to delete this stack? This action cannot be undone.',
-      confirmText: 'Delete',
+      title: 'Soft Delete Stack',
+      message: `Are you sure you want to soft delete Stack S${String(stackNumber).padStart(2, '0')}? This will deactivate the stack and all its locations, but preserve all data for potential recovery. You can reactivate it later if needed.`,
+      confirmText: 'Soft Delete',
       cancelText: 'Cancel',
       variant: 'danger',
       onConfirm: async () => {
         try {
-          await stackService.delete(stackId);
-          // Remove from local state to update UI immediately
-          setStacks(prev => prev.filter(s => s.id !== stackId));
-          toast.success('Stack deleted successfully!');
+          const result = await StackSoftDeleteService.softDeleteStack(stackId, user?.email);
+          
+          if (result.success) {
+            // Remove from local state to update UI immediately
+            setStacks(prev => prev.filter(s => s.id !== stackId));
+            toast.success(`Stack S${String(stackNumber).padStart(2, '0')} soft deleted successfully! You can reactivate it later if needed.`);
+          } else {
+            toast.error(result.message || 'Failed to soft delete stack');
+          }
         } catch (error) {
           handleError(error, 'StackManagement.handleDeleteStack');
           toast.error('Error deleting stack: ' + (error as Error).message);
@@ -114,8 +154,20 @@ export const StackManagement: React.FC = () => {
           ...stackData,
           yardId: currentYard?.id
         }, user?.id || '');
+        
+        // Add the new stack to the list immediately for better UX
         setStacks(prev => [...prev, newStack]);
+        
+        // Show success notification
+        setCreatedStackNumber(newStack.stackNumber);
+        setShowSuccessNotification(true);
+        
         toast.success('Stack created successfully!');
+        
+        // Refresh the list in the background to get updated stats
+        setTimeout(() => {
+          loadStacks(false);
+        }, 500);
       }
       setShowStackForm(false);
       setSelectedStack(null);
@@ -246,12 +298,32 @@ export const StackManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner 
-          fullScreen={false}
-          size='sm'
-          message="Loading Stacks..."
+      <div className="space-y-6">
+        <StackManagementHeader
+          onCreateStack={() => {}}
+          hasChanges={false}
+          onSave={() => {}}
+          onReset={() => {}}
+          onRefresh={() => {}}
+          onShowHelp={() => {}}
+          isRefreshing={false}
         />
+
+        <StackManagementFilters
+          searchTerm=""
+          onSearchChange={() => {}}
+          statusFilter="all"
+          onStatusFilterChange={() => {}}
+          sectionFilter="all"
+          onSectionFilterChange={() => {}}
+          sections={[]}
+        />
+
+        <StackSummaryCardsSkeleton />
+
+        <div className="w-full">
+          <StackTableSkeleton rows={8} />
+        </div>
       </div>
     );
   }
@@ -263,6 +335,9 @@ export const StackManagement: React.FC = () => {
         hasChanges={false}
         onSave={() => {}}
         onReset={() => {}}
+        onRefresh={handleRefresh}
+        onShowHelp={handleShowHelp}
+        isRefreshing={refreshing}
       />
 
       <StackManagementFilters
@@ -275,21 +350,17 @@ export const StackManagement: React.FC = () => {
         sections={sections}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <StackConfigurationTable
-            stacks={filteredStacks}
-            onEditStack={handleEditStack}
-            onDeleteStack={handleDeleteStack}
-            onContainerSizeChange={handleContainerSizeChange}
-            onAssignClient={handleAssignClient}
-          />
-        </div>
+      <StackSummaryCards stacks={stacks} />
 
-        <div className="space-y-6">
-          <StackConfigurationRules />
-          <StackPairingInfo stacks={stacks} />
-        </div>
+      <div className="w-full">
+        <StackConfigurationTable
+          stacks={filteredStacks}
+          onEditStack={handleEditStack}
+          onDeleteStack={handleDeleteStack}
+          onContainerSizeChange={handleContainerSizeChange}
+          onAssignClient={handleAssignClient}
+          isRefreshing={refreshing}
+        />
       </div>
 
       {showStackForm && currentYard && currentYard.sections && currentYard.sections.length > 0 && (
@@ -337,6 +408,19 @@ export const StackManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Help Dialog */}
+      <StackConfigurationHelpDialog
+        isOpen={showHelpDialog}
+        onClose={() => setShowHelpDialog(false)}
+      />
+
+      {/* Success Notification */}
+      <StackCreationSuccess
+        show={showSuccessNotification}
+        stackNumber={createdStackNumber}
+        onClose={() => setShowSuccessNotification(false)}
+      />
     </div>
   );
 };

@@ -1126,6 +1126,8 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           operations={filteredOperations}
           searchTerm={searchTerm}
           selectedFilter={selectedFilter}
+          onClearSearch={() => setSearchTerm('')}
+          onClearFilter={() => setSelectedFilter('all')}
         />
       </div>
 

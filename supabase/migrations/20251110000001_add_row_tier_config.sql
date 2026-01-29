@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_stacks_row_tier_config ON stacks USING GIN (row_t
 COMMENT ON COLUMN stacks.row_tier_config IS 
 'Per-row tier configuration as JSON array: [{"row": 1, "maxTiers": 5}, {"row": 2, "maxTiers": 4}, ...]';
 
--- Example: Update Stack 01 (depot-tantarelli) with custom row-tier config
+-- Example: Update Stack 01 () with custom row-tier config
 -- Row 1: 5 tiers, Row 2: 4 tiers, Row 3: 5 tiers, Row 4: 5 tiers
 UPDATE stacks
 SET row_tier_config = '[
@@ -39,7 +39,7 @@ SET row_tier_config = '[
   {"row": 3, "maxTiers": 5},
   {"row": 4, "maxTiers": 5}
 ]'::jsonb
-WHERE yard_id = 'depot-tantarelli' 
+WHERE yard_id = '2554a779-a14b-45ed-a1e1-684e2fd9b614' 
   AND stack_number = 1;
 
 -- Function to calculate capacity based on row_tier_config

@@ -89,6 +89,16 @@ export interface YardStack {
   isBufferZone?: boolean; // True if this is a buffer zone for damaged containers
   bufferZoneType?: 'damage' | 'maintenance' | 'quarantine' | 'inspection';
   damageTypesSupported?: string[]; // Types of damage this buffer zone can handle
+  // Container statistics
+  containerStats?: {
+    size20ft: number;
+    size40ft: number;
+    damaged: number;
+    maintenance: number;
+    cleaning: number;
+    full: number;
+    empty: number;
+  };
 }
 
 export interface YardPosition {
