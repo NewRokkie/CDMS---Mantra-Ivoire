@@ -3,6 +3,7 @@ import { Building, MapPin, Users, Settings, Edit, Trash2 } from 'lucide-react';
 import { Yard } from '../../../types';
 import { DataDisplayModal } from '../../Common/Modal/DataDisplayModal';
 import { DataSection, ModalAction } from '../../Common/Modal/types';
+import { StackCapacityCalculator } from '../../../utils/stackCapacityCalculator';
 
 import { RadialGauge } from './Depot View/RadialGauge';
 import { GlassCard } from './Depot View/GlassCard';
@@ -26,7 +27,10 @@ export const DepotDetailModal: React.FC<Props> = ({
 
   if (!depot) return null;
 
-  const occupancyRate = depot.totalCapacity ? (depot.currentOccupancy / depot.totalCapacity) * 100 : 0;
+  // Calculate effective capacity using the new logic
+  const allStacks = depot.sections.flatMap(section => section.stacks);
+  const effectiveCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
+  const occupancyRate = effectiveCapacity ? (depot.currentOccupancy / effectiveCapacity) * 100 : 0;
 
   // Define data sections for different tabs
   const overviewSection: DataSection = {
@@ -39,7 +43,7 @@ export const DepotDetailModal: React.FC<Props> = ({
       description: depot.description || '-',
       layout: depot.layout,
       status: depot.isActive ? 'Active' : 'Inactive',
-      totalCapacity: depot.totalCapacity?.toLocaleString() || '0',
+      totalCapacity: effectiveCapacity?.toLocaleString() || '0',
       currentOccupancy: depot.currentOccupancy?.toLocaleString() || '0',
       occupancyRate: `${occupancyRate.toFixed(1)}%`
     },
@@ -73,7 +77,7 @@ export const DepotDetailModal: React.FC<Props> = ({
       layout: depot.layout || '-',
       location: depot.location || '-',
       timezone: depot.timezone || '-',
-      capacity: depot.totalCapacity?.toString() || '0'
+      capacity: effectiveCapacity?.toString() || '0'
     },
     layout: 'grid'
   };
@@ -178,7 +182,7 @@ export const DepotDetailModal: React.FC<Props> = ({
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
                 <div className="text-3xl font-bold text-blue-600 animate-count">
-                  {depot.totalCapacity?.toLocaleString() || '0'}
+                  {effectiveCapacity?.toLocaleString() || '0'}
                 </div>
                 <div className="text-xs text-gray-600 mt-1">Total Capacity</div>
               </div>

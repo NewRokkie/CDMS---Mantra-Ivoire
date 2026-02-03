@@ -38,6 +38,9 @@ export interface CodecoMessageData {
   gateInDate?: string;
   gateInTime?: string;
   
+  // Equipment Reference for client identification
+  equipmentReference?: string;
+  
   // Damage Assessment
   damageReported?: boolean;
   damageType?: string;
@@ -270,6 +273,16 @@ export class CodecoGenerator {
         tag: 'RFF',
         elements: [
           `ABO:${data.weighbridgeIdSno}` // ABO = Proforma invoice number (used for sequence)
+        ]
+      });
+    }
+
+    // Equipment Reference - for client identification of container transfers
+    if (data.equipmentReference) {
+      this.segments.push({
+        tag: 'RFF',
+        elements: [
+          `EQ:${data.equipmentReference}` // EQ = Equipment reference number
         ]
       });
     }

@@ -24,6 +24,7 @@ export interface GateInFormData {
   clientCode: string;
   clientName: string;
   bookingReference: string;
+  equipmentReference: string; // Equipment reference for EDI transmission
   containerNumber: string;
   containerNumberConfirmation: string; // Confirmation field for container number
   secondContainerNumber: string; // For when quantity is 2

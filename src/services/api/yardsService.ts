@@ -3,6 +3,7 @@ import { Yard, YardContext, YardOperationLog, YardStats } from '../../types/yard
 import { Container } from '../../types';
 import { stackService } from './stackService';
 import { locationManagementService } from './locationManagementService';
+import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
 
 /**
  * Yards Service - Gestion principale des yards avec intégration StackService
@@ -390,7 +391,8 @@ export class YardsService {
         yard.currentOccupancy = availabilitySummary.occupiedLocations;
       } catch (locationError) {
         // Fallback to stack-based calculation
-        yard.totalCapacity = stacks.reduce((sum, stack) => sum + stack.capacity, 0);
+        // Use effective capacity calculation that handles 40ft pairing logic
+        yard.totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(stacks);
         yard.currentOccupancy = stacks.reduce((sum, stack) => sum + stack.currentOccupancy, 0);
       }
 
@@ -516,7 +518,8 @@ export class YardsService {
     } catch (error) {
       // Fallback to stack-based calculation if location service fails
       const stacks = await stackService.getByYardId(yardId);
-      const totalCapacity = stacks.reduce((sum, stack) => sum + stack.capacity, 0);
+      // Use effective capacity calculation that handles 40ft pairing logic
+      const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(stacks);
       const currentOccupancy = stacks.reduce((sum, stack) => sum + stack.currentOccupancy, 0);
       const occupancyRate = totalCapacity > 0 ? (currentOccupancy / totalCapacity) * 100 : 0;
 

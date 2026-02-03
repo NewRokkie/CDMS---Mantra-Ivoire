@@ -12,6 +12,7 @@ export interface GateInOperation {
   driverName: string;
   truckNumber?: string; // Changed from vehicleNumber to truckNumber
   bookingNumber?: string;
+  equipmentReference?: string; // Equipment reference for EDI transmission
   classification?: 'divers' | 'alimentaire';
   damageReported: boolean;
   damageDescription?: string;

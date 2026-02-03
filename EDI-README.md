@@ -25,12 +25,14 @@ Système complet de conversion XML SAP → EDI CODECO conforme à la norme **UN/
 1. **Container Number** - Inclus dans segment EQD (Equipment Details)
 2. **Date et Heure d'entrée** - Inclus dans segments DTM avec qualifier 132 (Arrival date/time)
 3. **Damaged or Not** - Inclus dans segments FTX avec statut détaillé des dommages
+4. **Equipment Reference** - Inclus dans segment RFF avec qualifier EQ (Equipment reference number)
 
 ### ✅ Champs requis pour Gate Out EDI CODECO
 
 1. **Container Number** - Inclus dans segment EQD (Equipment Details)
 2. **Date et Heure sortie** - Inclus dans segments DTM avec qualifier 133 (Departure date/time)
 3. **Booking Number** - Inclus dans segments RFF (Reference) et FTX (Free Text)
+4. **Equipment Reference** - Inclus dans segment RFF avec qualifier EQ (Equipment reference number)
 
 ### 🔧 Améliorations techniques
 
@@ -90,6 +92,7 @@ const gateInData = {
   containerNumber: 'MSKU1234567',        // REQUIS
   truckArrivalDate: '2024-01-26',        // REQUIS: Date d'entrée
   truckArrivalTime: '14:30',             // REQUIS: Heure d'entrée
+  equipmentReference: 'BOOKING123456',   // NOUVEAU: Référence équipement pour identification client
   damageAssessment: {                    // REQUIS: Damaged or Not
     hasDamage: false,
     assessedBy: 'Operator',

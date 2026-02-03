@@ -38,6 +38,9 @@ interface GateInCodecoData {
   status: 'FULL' | 'EMPTY';
   classification: 'divers' | 'alimentaire';
   
+  // Equipment Reference for EDI transmission
+  equipmentReference?: string;
+  
   // Damage Assessment (completed during assignment stage)
   damageAssessment?: {
     hasDamage: boolean;
@@ -262,6 +265,9 @@ class GateInCodecoService {
       // Gate In specific fields - REQUIRED: Date et Heure d'entrée
       gateInDate: gateInData.truckArrivalDate.replace(/-/g, ''),
       gateInTime: gateInData.truckArrivalTime.replace(/:/g, '') + '00', // Add seconds if not present
+      
+      // Equipment Reference for client identification
+      equipmentReference: gateInData.equipmentReference,
       
       // Damage assessment fields - REQUIRED: Damaged or Not
       damageReported: hasDamage,

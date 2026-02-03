@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings } from 'lucide-react';
+import { Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings, Plus, Minus } from 'lucide-react';
 import { Yard, YardStack } from '../../../types';
 import { yardsService } from '../../../services/api/yardsService';
 import { FormModal } from '../../Common/Modal/FormModal';
@@ -35,6 +35,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [rowValidationWarning, setRowValidationWarning] = useState<string | null>(null);
+  const [suggestedStackNumber, setSuggestedStackNumber] = useState<number>(1);
 
   // Initialize form data
   useEffect(() => {
@@ -56,12 +57,13 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         rowTierConfig: hasCustomRowTiers && selectedStack.rowTierConfig ? selectedStack.rowTierConfig : []
       });
     } else if (yard?.sections && yard.sections.length > 0) {
-      // Reset for new stack
+      // Reset for new stack - always get fresh suggested number when modal opens
       const firstSection = yard.sections[0];
 
       let suggestedNumber = 1;
       try {
-        if (firstSection && yard.id) {
+        if (firstSection && yard.id && isOpen) {
+          // Force fresh calculation by calling the service directly
           suggestedNumber = yardsService.getNextStackNumber(yard.id, firstSection.id);
         }
       } catch (error) {
@@ -74,7 +76,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         sectionId: firstSection?.id || '',
         containerSize: '20ft',
         stackType: 'regular',
-        rows: 4,
+        rows: 5,
         maxTiers: 5,
         useCustomRowTiers: false,
         rowTierConfig: []
@@ -86,7 +88,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         sectionId: '',
         containerSize: '20ft',
         stackType: 'regular',
-        rows: 4,
+        rows: 5,
         maxTiers: 5,
         useCustomRowTiers: false,
         rowTierConfig: []
@@ -270,8 +272,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     return uniformCapacity;
   };
 
-  const generateDefaultRowTierConfig = () => {
-    const config = [];
+  const generateDefaultRowTierConfig = (): Array<{ row: number; maxTiers: number }> => {
+    const config: Array<{ row: number; maxTiers: number }> = [];
     for (let i = 1; i <= formData.rows; i++) {
       config.push({ row: i, maxTiers: formData.maxTiers });
     }
@@ -304,20 +306,47 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       : 'Limited to 20ft containers only, used for special operations';
   };
 
-  const getLayoutSuggestions = () => {
-    if (yard?.layout === 'tantarelli') {
-      return {
-        stackNumbers: 'Odd numbers only (1, 3, 5, 7, etc.)',
-        dimensions: '20ft: 12m × 6m, 40ft: 24m × 6m',
-        positioning: 'Follow existing section patterns'
-      };
+  // Recalculate suggested stack number whenever section changes
+  useEffect(() => {
+    if (!selectedStack && yard?.id && formData.sectionId && isOpen) {
+      try {
+        const suggested = yardsService.getNextStackNumber(yard.id, formData.sectionId);
+        setSuggestedStackNumber(suggested);
+        
+        // Auto-update the stack number field if it's currently using the old suggested number
+        // or if it's the initial load (stackNumber is 0)
+        if (formData.stackNumber === 0 || formData.stackNumber === suggestedStackNumber) {
+          setFormData(prev => ({ ...prev, stackNumber: suggested }));
+        }
+      } catch (error) {
+        handleError(error, 'StackFormModal.recalculateSuggestedNumber');
+        setSuggestedStackNumber(1);
+      }
+    } else {
+      setSuggestedStackNumber(1);
     }
-    return {
-      stackNumbers: 'Sequential numbers (1, 2, 3, 4, etc.)',
-      dimensions: 'Yirima: 12m × 6m',
-      positioning: 'Grid-based layout'
-    };
-  };
+  }, [yard?.id, formData.sectionId, selectedStack, isOpen]);
+
+  // Synchronize rowTierConfig when rows change and custom tier configuration is enabled
+  useEffect(() => {
+    if (formData.useCustomRowTiers) {
+      const currentRowCount = formData.rows;
+      const configRowCount = formData.rowTierConfig.length;
+      
+      if (currentRowCount !== configRowCount) {
+        const newConfig: Array<{ row: number; maxTiers: number }> = [];
+        for (let i = 1; i <= currentRowCount; i++) {
+          // Try to preserve existing config for this row, otherwise use default maxTiers
+          const existingConfig = formData.rowTierConfig.find(c => c.row === i);
+          newConfig.push({ 
+            row: i, 
+            maxTiers: existingConfig?.maxTiers || formData.maxTiers 
+          });
+        }
+        setFormData(prev => ({ ...prev, rowTierConfig: newConfig }));
+      }
+    }
+  }, [formData.rows, formData.useCustomRowTiers, formData.maxTiers]);
 
   // Validate form on data changes (skip initial validation when form is being initialized)
   useEffect(() => {
@@ -326,8 +355,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       validateForm();
     }
   }, [formData]);
-
-  const suggestions = getLayoutSuggestions();
 
   return (
     <FormModal
@@ -344,19 +371,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       autoSave={true}
     >
       <div className="depot-step-spacing">
-        {/* Layout Guidelines */}
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-          <h4 className="depot-section-header">
-            <Grid3X3 className="depot-section-icon text-blue-500" />
-            {yard?.layout === 'tantarelli' ? 'Tantarelli' : 'Yirima'} Layout Guidelines
-          </h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <div><strong>Stack Numbers:</strong> {suggestions.stackNumbers}</div>
-            <div><strong>Dimensions:</strong> {suggestions.dimensions}</div>
-            <div><strong>Positioning:</strong> {suggestions.positioning}</div>
-          </div>
-        </div>
-
         {/* Basic Stack Information */}
         <div className="depot-section">
           <h4 className="depot-section-header">
@@ -369,22 +383,46 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Stack Number *
               </label>
-              <input
-                type="number"
-                required
-                min="1"
-                max="999"
-                value={formData.stackNumber || ''}
-                onChange={(e) => handleInputChange('stackNumber', parseInt(e.target.value) || 0)}
-                className={`depot-input ${errors.stackNumber ? 'error' : ''}`}
-                placeholder="Enter stack number"
-                disabled={!!selectedStack} // Don't allow changing stack number when editing
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="999"
+                  value={formData.stackNumber || ''}
+                  onChange={(e) => handleInputChange('stackNumber', parseInt(e.target.value) || 0)}
+                  className={`depot-input flex-1 ${errors.stackNumber ? 'error' : ''}`}
+                  placeholder="Enter stack number"
+                  disabled={!!selectedStack} // Don't allow changing stack number when editing
+                />
+                {!selectedStack && suggestedStackNumber > 0 && formData.stackNumber !== suggestedStackNumber && (
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('stackNumber', suggestedStackNumber)}
+                    className="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap"
+                    title={`Use suggested number: ${suggestedStackNumber}`}
+                  >
+                    Use {suggestedStackNumber}
+                  </button>
+                )}
+              </div>
               {errors.stackNumber && <p className="mt-1 text-sm text-red-600">{errors.stackNumber}</p>}
               {yard?.layout === 'tantarelli' && !selectedStack && (
-                <p className="mt-1 text-xs text-blue-600">
-                  Suggested: {yard?.id && formData.sectionId ? yardsService.getNextStackNumber(yard.id, formData.sectionId) : 'N/A'}
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs text-blue-600">
+                    Suggested: {suggestedStackNumber > 0 ? suggestedStackNumber : 'N/A'}
+                  </p>
+                  {suggestedStackNumber > 0 && formData.stackNumber !== suggestedStackNumber && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800">
+                      Different from suggested
+                    </span>
+                  )}
+                  {suggestedStackNumber > 0 && formData.stackNumber === suggestedStackNumber && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800">
+                      Using suggested
+                    </span>
+                  )}
+                </div>
               )}
             </div>
 
@@ -402,15 +440,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   value={formData.sectionId}
                   onChange={(e) => {
                     handleInputChange('sectionId', e.target.value);
-                    // Update suggested stack number when section changes
-                    if (e.target.value && yard?.id) {
-                      try {
-                        const suggested = yardsService.getNextStackNumber(yard.id, e.target.value);
-                        handleInputChange('stackNumber', suggested);
-                      } catch (error) {
-                        handleError(error, 'StackFormModal.updateStackNumber');
-                      }
-                    }
+                    // The suggested number will be automatically recalculated and applied by the useEffect
                   }}
                   className={`depot-select ${errors.sectionId ? 'error' : ''}`}
                 >
@@ -587,127 +617,388 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             Capacity Configuration
           </h4>
 
-          <div className="depot-form-grid">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rows *
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                max="10"
-                value={formData.rows}
-                onChange={(e) => handleInputChange('rows', parseInt(e.target.value) || 1)}
-                className={`depot-input ${errors.rows || rowValidationWarning ? 'error' : ''}`}
-                placeholder="4"
-              />
-              {errors.rows && <p className="mt-1 text-sm text-red-600">{errors.rows}</p>}
-              {rowValidationWarning && (
-                <div className="mt-2 flex items-start p-2 bg-red-50 border border-red-200 rounded">
-                  <AlertTriangle className="h-4 w-4 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-700">{rowValidationWarning}</p>
+          {/* Modern Capacity Configuration Cards */}
+          <div className="space-y-6">
+            {/* Rows and Tiers Configuration */}
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-emerald-100 rounded-xl">
+                  <Grid3X3 className="h-5 w-5 text-emerald-600" />
                 </div>
-              )}
-              <p className="mt-1 text-xs text-gray-600">Number of container rows (depth)</p>
-              {selectedStack && (
-                <p className="mt-1 text-xs text-blue-600">
-                  Current: {selectedStack.rows} rows. Reducing rows will be validated against existing containers.
-                </p>
-              )}
-            </div>
+                <div>
+                  <h5 className="font-semibold text-slate-900">Stack Dimensions</h5>
+                  <p className="text-sm text-slate-600">Configure the physical layout of your stack</p>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Tiers *
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                max="8"
-                value={formData.maxTiers}
-                onChange={(e) => handleInputChange('maxTiers', parseInt(e.target.value) || 1)}
-                className={`depot-input ${errors.maxTiers ? 'error' : ''}`}
-                placeholder="5"
-              />
-              {errors.maxTiers && <p className="mt-1 text-sm text-red-600">{errors.maxTiers}</p>}
-              <p className="mt-1 text-xs text-gray-600">Maximum stacking height</p>
-            </div>
-          </div>
-
-          {/* Custom Row-Tier Configuration Toggle */}
-          <div className="mt-4">
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.useCustomRowTiers}
-                onChange={(e) => {
-                  const useCustom = e.target.checked;
-                  setFormData(prev => ({
-                    ...prev,
-                    useCustomRowTiers: useCustom,
-                    rowTierConfig: useCustom ? generateDefaultRowTierConfig() : []
-                  }));
-                }}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Use custom tier heights per row
-              </span>
-            </label>
-            <p className="mt-1 ml-7 text-xs text-gray-600">
-              Configure different maximum tier heights for each row (e.g., Row 1: 5 tiers, Row 2: 4 tiers)
-            </p>
-          </div>
-
-          {/* Custom Row-Tier Configuration Grid */}
-          {formData.useCustomRowTiers && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h5 className="text-sm font-semibold text-blue-900 mb-3">Per-Row Tier Configuration</h5>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Array.from({ length: formData.rows }, (_, i) => i + 1).map(rowNum => {
-                  const rowConfig = formData.rowTierConfig.find(c => c.row === rowNum);
-                  const currentTiers = rowConfig?.maxTiers || formData.maxTiers;
-                  
-                  return (
-                    <div key={rowNum} className="bg-white p-3 rounded-lg border border-blue-300">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Row {rowNum}
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="8"
-                        value={currentTiers}
-                        onChange={(e) => updateRowTierConfig(rowNum, parseInt(e.target.value) || 1)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">{currentTiers} tiers</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Rows Configuration */}
+                <div className="bg-white rounded-xl p-5 border-2 border-blue-200 hover:border-blue-300 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Grid3X3 className="h-5 w-5 text-blue-600" />
+                      <span className="font-semibold text-gray-900">Rows (Depth)</span>
                     </div>
-                  );
-                })}
-              </div>
-              <div className="mt-3 text-xs text-blue-800">
-                💡 Tip: Different rows can have different heights based on ground conditions or equipment reach
-              </div>
-            </div>
-          )}
+                    <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">1-7</span>
+                  </div>
 
-          {/* Capacity Display */}
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Total Capacity:</span>
-              <span className="text-lg font-bold text-gray-900">
-                {calculateCapacity()} containers
-              </span>
+                  <div className="flex items-center justify-between space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('rows', Math.max(1, formData.rows - 1))}
+                      disabled={formData.rows <= 1}
+                      className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Decrease rows"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+
+                    <input
+                      type="number"
+                      min="1"
+                      max="7"
+                      value={formData.rows}
+                      onChange={(e) => handleInputChange('rows', parseInt(e.target.value) || 1)}
+                      className={`flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        errors.rows || rowValidationWarning ? 'border-red-300 bg-red-50' : ''
+                      }`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('rows', Math.min(7, formData.rows + 1))}
+                      disabled={formData.rows >= 7}
+                      className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Increase rows"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {errors.rows && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {errors.rows}
+                    </p>
+                  )}
+                  
+                  {rowValidationWarning && (
+                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-red-700">{rowValidationWarning}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3 space-y-1">
+                    <p className="text-xs text-slate-600">Container rows from front to back</p>
+                    {selectedStack && (
+                      <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                        Current: {selectedStack.rows} rows
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tiers Configuration */}
+                <div className="bg-white rounded-xl p-5 border-2 border-green-200 hover:border-green-300 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-5 w-5 text-green-600" />
+                      <span className="font-semibold text-gray-900">Max Tiers (Height)</span>
+                    </div>
+                    <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">1-5</span>
+                  </div>
+
+                  <div className="flex items-center justify-between space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('maxTiers', Math.max(1, formData.maxTiers - 1))}
+                      disabled={formData.maxTiers <= 1}
+                      className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Decrease max tiers"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+
+                    <input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={formData.maxTiers}
+                      onChange={(e) => handleInputChange('maxTiers', parseInt(e.target.value) || 1)}
+                      className={`flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        errors.maxTiers ? 'border-red-300 bg-red-50' : ''
+                      }`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('maxTiers', Math.min(5, formData.maxTiers + 1))}
+                      disabled={formData.maxTiers >= 5}
+                      className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Increase max tiers"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {errors.maxTiers && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {errors.maxTiers}
+                    </p>
+                  )}
+
+                  <p className="mt-3 text-xs text-slate-600">Maximum containers stacked vertically</p>
+                </div>
+              </div>
+
+              {/* Enhanced Stack Layout Preview */}
+              <div className="mt-6 p-4 bg-white rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-slate-700">Stack Layout Preview</span>
+                  <div className="text-xs text-slate-500">
+                    {formData.useCustomRowTiers ? 'Custom Layout' : `${formData.rows} × ${formData.maxTiers}`}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-center py-4">
+                  <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(formData.rows, 12)}, 1fr)` }}>
+                    {formData.useCustomRowTiers && formData.rowTierConfig.length > 0 ? (
+                      // Custom tier layout
+                      formData.rowTierConfig.map((rowConfig) => (
+                        Array.from({ length: rowConfig.maxTiers }, (_, tierIndex) => (
+                          <div
+                            key={`${rowConfig.row}-${tierIndex}`}
+                            className="w-4 h-4 bg-emerald-200 border border-emerald-300 rounded-sm"
+                            title={`Row ${rowConfig.row}, Tier ${tierIndex + 1}`}
+                            style={{
+                              gridColumn: rowConfig.row,
+                              gridRow: -(rowConfig.maxTiers - tierIndex)
+                            }}
+                          />
+                        ))
+                      )).flat()
+                    ) : (
+                      // Uniform layout
+                      Array.from({ length: Math.min(formData.rows * formData.maxTiers, 96) }, (_, i) => {
+                        const row = Math.floor(i / formData.maxTiers) + 1;
+                        const tier = (i % formData.maxTiers) + 1;
+                        return (
+                          <div
+                            key={i}
+                            className="w-4 h-4 bg-emerald-200 border border-emerald-300 rounded-sm"
+                            title={`Row ${row}, Tier ${tier}`}
+                          />
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-gray-600 mt-1">
-              {formData.useCustomRowTiers ? (
-                <>Custom configuration: {formData.rowTierConfig.map(c => `R${c.row}:${c.maxTiers}`).join(', ')}</>
-              ) : (
-                <>{formData.rows} rows × {formData.maxTiers} tiers = {calculateCapacity()} container positions</>
-              )}
+          </div>
+
+          {/* Advanced Custom Tier Configuration */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={formData.useCustomRowTiers}
+                    onChange={(e) => {
+                      const useCustom = e.target.checked;
+                      setFormData(prev => ({
+                        ...prev,
+                        useCustomRowTiers: useCustom,
+                        rowTierConfig: useCustom ? generateDefaultRowTierConfig() : []
+                      }));
+                    }}
+                    className="w-5 h-5 text-blue-600 border-2 border-blue-300 rounded-lg focus:ring-4 focus:ring-blue-100 transition-all duration-200"
+                  />
+                  {formData.useCustomRowTiers && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h5 className="font-semibold text-slate-900">Custom Tier Configuration</h5>
+                  {formData.useCustomRowTiers && (
+                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                      Advanced
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-600 mb-4">
+                  Configure different maximum tier heights for each row based on ground conditions or equipment limitations
+                </p>
+
+                {formData.useCustomRowTiers && (
+                  <div className="space-y-2">
+                    <div className="bg-white rounded-xl border border-blue-200">
+
+                      {/* Table Rows */}
+                      <div className="divide-y divide-slate-100">
+                        {Array.from({ length: formData.rows }, (_, i) => i + 1).map(rowNum => {
+                          const rowConfig = formData.rowTierConfig.find(c => c.row === rowNum);
+                          const currentTiers = rowConfig?.maxTiers || formData.maxTiers;
+                          
+                          return (
+                            <div key={rowNum} className="grid grid-cols-3 gap-4 px-4 py-4 hover:bg-slate-50 transition-colors">
+                              {/* Row Name Column */}
+                              <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <Package className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-slate-900">
+                                    R{rowNum}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Tiers Column */}
+                              <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-slate-700">
+                                    H-{currentTiers}
+                                  </span>
+                                </div>
+                                {/* Visual tier representation */}
+                                <div className="flex items-center space-x-1">
+                                  {Array.from({ length: Math.min(currentTiers, 5) }, (_, i) => (
+                                    <div
+                                      key={i}
+                                      className="w-3 h-2 bg-blue-400 rounded-sm"
+                                      title={`Tier ${i + 1}`}
+                                    />
+                                  ))}
+                                  {currentTiers > 5 && (
+                                    <span className="text-xs text-slate-500 ml-1">+{currentTiers - 5}</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Actions Column */}
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => updateRowTierConfig(rowNum, Math.max(1, currentTiers - 1))}
+                                  disabled={currentTiers <= 1}
+                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                  aria-label={`Decrease tiers for row ${rowNum}`}
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </button>
+
+                                <div className="w-16">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="5"
+                                    value={currentTiers}
+                                    onChange={(e) => updateRowTierConfig(rowNum, parseInt(e.target.value) || 1)}
+                                    className="w-full text-center py-1 px-2 text-sm font-medium bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => updateRowTierConfig(rowNum, Math.min(5, currentTiers + 1))}
+                                  disabled={currentTiers >= 5}
+                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                  aria-label={`Increase tiers for row ${rowNum}`}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Capacity Display */}
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-emerald-100 rounded-xl">
+                <Package className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <h5 className="font-semibold text-slate-900">Total Stack Capacity</h5>
+                <p className="text-sm text-slate-600">Maximum container positions available</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-emerald-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">📦</span>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-bold text-slate-900">
+                      {calculateCapacity()}
+                    </div>
+                    <div className="text-sm text-slate-600">Container positions</div>
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  <div className="text-sm font-medium text-slate-700 mb-1">Configuration</div>
+                  <div className="text-xs text-slate-500">
+                    {formData.useCustomRowTiers ? 'Custom tiers' : 'Uniform layout'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                  <span className="text-sm text-slate-600">Layout</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formData.rows} rows × {formData.maxTiers} tiers
+                  </span>
+                </div>
+
+                {formData.useCustomRowTiers && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-slate-700 mb-2">Custom Configuration:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.rowTierConfig.map((config) => (
+                        <div key={config.row} className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs">
+                          <span className="font-medium">R{config.row}</span>
+                          <span>:</span>
+                          <span>{config.maxTiers}T</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-slate-200">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>Calculation</span>
+                    <span>
+                      {formData.useCustomRowTiers 
+                        ? `${formData.rowTierConfig.map(c => c.maxTiers).join(' + ')} = ${calculateCapacity()}`
+                        : `${formData.rows} × ${formData.maxTiers} = ${calculateCapacity()}`
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

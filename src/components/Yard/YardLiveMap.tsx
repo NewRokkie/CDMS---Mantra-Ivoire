@@ -4,6 +4,7 @@ import { Container } from '../../types';
 import { Yard, YardStack } from '../../types/yard';
 import { useAuth } from '../../hooks/useAuth';
 import { StackDetailsModal } from './StackDetailsModal';
+import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
 
 // Helper function to calculate virtual location for 40ft containers
 const getVirtualLocation = (container: Container, getStackConfiguration: (stackNum: number) => any): string => {
@@ -83,7 +84,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     if (!yard) return [];
     return yard.sections.map((section, index) => {
       const stacks = section.stacks;
-      const totalCapacity = stacks.reduce((sum, s) => sum + s.capacity, 0);
+      // Use effective capacity calculation that handles 40ft pairing logic
+      const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(stacks);
       const occupied = stacks.reduce((sum, s) => sum + s.currentOccupancy, 0);
       const zoneName = `Zone ${String.fromCharCode(65 + index)}`;
       return {
@@ -358,9 +360,14 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     const inDepot = allContainers.filter(c => c.status === 'in_depot').length;
     const maintenance = allContainers.filter(c => c.status === 'maintenance').length;
     const damaged = allContainers.filter(c => c.damage && c.damage.length > 0).length;
-    const occupancyRate = yard ? ((yard.currentOccupancy / yard.totalCapacity) * 100) : 0;
+    
+    // Calculate effective capacity using our new logic instead of relying on yard.totalCapacity
+    const allStacks = yard ? yard.sections.flatMap(section => section.stacks) : [];
+    const effectiveCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
+    
+    const occupancyRate = effectiveCapacity > 0 ? ((yard?.currentOccupancy || 0) / effectiveCapacity * 100) : 0;
 
-    return { total, inDepot, maintenance, damaged, occupancyRate };
+    return { total, inDepot, maintenance, damaged, occupancyRate, effectiveCapacity };
   }, [allContainers, yard]);
 
   const stacksData = useMemo(() => {
@@ -825,7 +832,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                   {yard.name} - Live Map
                 </h1>
                 <p className="text-xs text-gray-600">
-                  {yard.code} • {yard.currentOccupancy}/{yard.totalCapacity} ({stats.occupancyRate.toFixed(1)}%)
+                  {yard.code} • {yard.currentOccupancy}/{stats.effectiveCapacity} ({stats.occupancyRate.toFixed(1)}%)
                 </p>
               </div>
             </div>
@@ -884,7 +891,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[10px] text-gray-600 font-medium uppercase">Empty</div>
-                <div className="text-lg font-bold text-gray-900">{yard.totalCapacity - yard.currentOccupancy}</div>
+                <div className="text-lg font-bold text-gray-900">{stats.effectiveCapacity - yard.currentOccupancy}</div>
               </div>
               <MapPin className="h-5 w-5 text-gray-600 opacity-50" />
             </div>

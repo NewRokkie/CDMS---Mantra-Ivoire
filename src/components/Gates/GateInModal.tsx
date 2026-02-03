@@ -318,6 +318,24 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       </div>
                     )}
 
+                    {/* Equipment Reference - Free text field for EDI transmission */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Equipment Reference
+                        <span className="text-xs text-gray-500 ml-1">(for EDI client identification)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.equipmentReference}
+                        onChange={(e) => handleInputChange('equipmentReference', e.target.value)}
+                        className="depot-input"
+                        placeholder="e.g., Booking number, reference code..."
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Optional reference sent to clients via EDI to help identify container transfers
+                      </p>
+                    </div>
+
                     {/* Container Numbers with Confirmation */}
                     <div className="depot-field-separator">
                       {/* First Container Number */}
@@ -529,6 +547,12 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                         <div className="font-medium">{formData.bookingReference}</div>
                       </div>
                     )}
+                    {formData.equipmentReference && (
+                      <div className="md:col-span-2">
+                        <span className="text-gray-600">Equipment Reference:</span>
+                        <div className="font-medium">{formData.equipmentReference}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -667,6 +691,12 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       <div className="md:col-span-2">
                         <span className="text-gray-600">Booking Reference:</span>
                         <div className="font-medium">{formData.bookingReference}</div>
+                      </div>
+                    )}
+                    {formData.equipmentReference && (
+                      <div className="md:col-span-2">
+                        <span className="text-gray-600">Equipment Reference:</span>
+                        <div className="font-medium">{formData.equipmentReference}</div>
                       </div>
                     )}
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { YardStack } from '../../../types/yard';
-import { stackService } from '../../../services/api';
+import { stackService, yardsService } from '../../../services/api';
 import StackSoftDeleteService from '../../../services/api/stackSoftDeleteService';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
@@ -33,6 +33,7 @@ export const StackManagement: React.FC = () => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [createdStackNumber, setCreatedStackNumber] = useState<number>(0);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
+  const [formRefreshKey, setFormRefreshKey] = useState(0);
 
   const { user } = useAuth();
   const { currentYard, refreshYards } = useYard();
@@ -163,6 +164,15 @@ export const StackManagement: React.FC = () => {
         setShowSuccessNotification(true);
         
         toast.success('Stack created successfully!');
+        
+        // Refresh the yardsService cache to update stack suggestions
+        if (currentYard?.id) {
+          await yardsService.refreshYardData(currentYard.id);
+          // Also refresh the yard context to get updated yard data
+          await refreshYards();
+          // Force form to refresh with new data when reopened
+          setFormRefreshKey(prev => prev + 1);
+        }
         
         // Refresh the list in the background to get updated stats
         setTimeout(() => {
@@ -365,6 +375,7 @@ export const StackManagement: React.FC = () => {
 
       {showStackForm && currentYard && currentYard.sections && currentYard.sections.length > 0 && (
         <StackFormModal
+          key={`stack-form-${formRefreshKey}`}
           isOpen={showStackForm}
           onClose={() => {
             setShowStackForm(false);

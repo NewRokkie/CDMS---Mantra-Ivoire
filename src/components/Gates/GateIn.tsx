@@ -132,6 +132,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     clientCode: '',
     clientName: '',
     bookingReference: '',
+    equipmentReference: '', // Equipment reference for EDI transmission
     containerNumber: '',
     containerNumberConfirmation: '',
     secondContainerNumber: '',
@@ -404,6 +405,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
         truckArrivalDate: truckArrivalDate,
         truckArrivalTime: truckArrivalTime,
+        equipmentReference: formData.equipmentReference, // Equipment reference for EDI transmission
         weight: undefined,
         operatorId: user?.id || 'unknown',
         operatorName: user?.name || 'Unknown Operator',

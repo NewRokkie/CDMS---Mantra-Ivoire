@@ -33,9 +33,10 @@ import { exportToExcel, formatDateShortForExport, formatTimeForExport } from '..
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { reportService, containerService } from '../../services/api';
+import { reportService, containerService, stackService } from '../../services/api';
 import type { ContainerStats, GateStats } from '../../services/api/reportService';
 import { handleError } from '../../services/errorHandling';
+import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
 
 type FilterType = 'customer' | 'yard' | 'type' | 'damage' | 'classification' | null;
 
@@ -164,13 +165,27 @@ export const DashboardOverview: React.FC = () => {
   const pieColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#60A5FA'];
 
   // Get multi-depot data for managers
-  const getMultiDepotData = useCallback((allContainersForMultiDepot: any[]) => {
-
+  const getMultiDepotData = useCallback(async (allContainersForMultiDepot: any[]) => {
     const allDepots = availableYards;
+    
+    // Calculate effective capacity for each depot using StackCapacityCalculator
+    const depotCapacities = new Map<string, number>();
+    
+    for (const depot of allDepots) {
+      try {
+        const stacks = await stackService.getByYardId(depot.id);
+        const effectiveCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(stacks);
+        depotCapacities.set(depot.id, effectiveCapacity);
+      } catch (error) {
+        console.warn(`Failed to calculate capacity for depot ${depot.code}:`, error);
+        depotCapacities.set(depot.id, depot.totalCapacity); // Fallback to stored capacity
+      }
+    }
+
     const globalStats = {
       totalDepots: allDepots.length,
       activeDepots: allDepots.filter(d => d.isActive).length,
-      totalCapacity: allDepots.reduce((sum, d) => sum + d.totalCapacity, 0),
+      totalCapacity: Array.from(depotCapacities.values()).reduce((sum, capacity) => sum + capacity, 0),
       totalOccupancy: allDepots.reduce((sum, d) => sum + d.currentOccupancy, 0),
       averageUtilization: 0
     };
@@ -183,14 +198,15 @@ export const DashboardOverview: React.FC = () => {
         c.yardId === depot.id
       );
       const inDepotContainers = depotContainers.filter(c => c.status === 'in_depot').length;
-      const utilizationRate = depot.totalCapacity > 0 ? (inDepotContainers / depot.totalCapacity) * 100 : 0;
+      const effectiveCapacity = depotCapacities.get(depot.id) || depot.totalCapacity;
+      const utilizationRate = effectiveCapacity > 0 ? (inDepotContainers / effectiveCapacity) * 100 : 0;
 
       return {
         id: depot.id,
         name: depot.name,
         code: depot.code,
         location: depot.location,
-        capacity: depot.totalCapacity,
+        capacity: effectiveCapacity, // Use effective capacity instead of depot.totalCapacity
         occupancy: inDepotContainers,
         utilizationRate,
         containers: depotContainers.length,
@@ -203,9 +219,16 @@ export const DashboardOverview: React.FC = () => {
     });
 
     return { globalStats, depotPerformance };
-  }, [availableYards, allContainersForMultiDepot]);
+  }, [availableYards]);
 
-  const multiDepotData = useMemo(() => getMultiDepotData(allContainersForMultiDepot), [getMultiDepotData, allContainersForMultiDepot]);
+  const [multiDepotData, setMultiDepotData] = useState<{ globalStats: any; depotPerformance: any[] } | null>(null);
+
+  // Calculate multi-depot data when availableYards or allContainersForMultiDepot changes
+  useEffect(() => {
+    if (availableYards.length > 0 && allContainersForMultiDepot.length >= 0) {
+      getMultiDepotData(allContainersForMultiDepot).then(setMultiDepotData);
+    }
+  }, [getMultiDepotData, availableYards, allContainersForMultiDepot]);
 
   // Calculate statistics (memoized for performance)
   const stats = useMemo(() => {

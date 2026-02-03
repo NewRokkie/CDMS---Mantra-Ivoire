@@ -11,6 +11,7 @@ import { DesktopOnlyMessage } from '../../Common/DesktopOnlyMessage';
 import { handleError } from '../../../services/errorHandling';
 import { useToast } from '../../../hooks/useToast';
 import { useConfirm } from '../../../hooks/useConfirm';
+import { StackCapacityCalculator } from '../../../utils/stackCapacityCalculator';
 
 export const DepotManagement: React.FC = () => {
   const [depots, setDepots] = useState<Yard[]>([]);
@@ -39,6 +40,12 @@ export const DepotManagement: React.FC = () => {
 
   const canManageDepots = user?.role === 'admin' || user?.role === 'supervisor';
 
+  // Calculate effective capacity for a depot using the new logic
+  const calculateDepotEffectiveCapacity = (depot: Yard): number => {
+    const allStacks = depot.sections.flatMap(section => section.stacks);
+    return StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
+  };
+
   useEffect(() => {
     loadDepots();
   }, []);
@@ -50,8 +57,8 @@ export const DepotManagement: React.FC = () => {
 
       setDepots(availableDepots);
 
-      // Calculate stats
-      const totalCapacity = availableDepots.reduce((sum, depot) => sum + depot.totalCapacity, 0);
+      // Calculate stats using effective capacity logic
+      const totalCapacity = availableDepots.reduce((sum, depot) => sum + calculateDepotEffectiveCapacity(depot), 0);
       const totalOccupancy = availableDepots.reduce((sum, depot) => sum + depot.currentOccupancy, 0);
       const activeDepots = availableDepots.filter(depot => depot.isActive).length;
 
@@ -365,10 +372,11 @@ export const DepotManagement: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredDepots.map((depot) => {
-
-                const utilizationRate = depot.totalCapacity === 0
+                // Calculate effective capacity for this depot
+                const effectiveCapacity = calculateDepotEffectiveCapacity(depot);
+                const utilizationRate = effectiveCapacity === 0
                     ? 0
-                    : (depot.currentOccupancy / depot.totalCapacity) * 100;
+                    : (depot.currentOccupancy / effectiveCapacity) * 100;
 
                 return (
                   <tr key={depot.id} className="hover:bg-gray-50 transition-colors">
@@ -390,13 +398,13 @@ export const DepotManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{depot.currentOccupancy} / {depot.totalCapacity}</div>
+                      <div className="text-sm text-gray-900">{depot.currentOccupancy} / {effectiveCapacity}</div>
                       <div className="text-sm text-gray-500">containers</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-1">
-                          <div className={`text-sm font-medium ${getUtilizationColor(depot.currentOccupancy, depot.totalCapacity)}`}>
+                          <div className={`text-sm font-medium ${getUtilizationColor(depot.currentOccupancy, effectiveCapacity)}`}>
                             {utilizationRate.toFixed(1)}%
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2 mt-1">

@@ -7,6 +7,7 @@ import { clientPoolService, clientService } from '../../services/api';
 import { handleError } from '../../services/errorHandling';
 import { StackSelectionModal } from './StackSelectionModal';
 import { useToast } from '../../hooks/useToast';
+import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
 
 interface ClientPoolFormProps {
   isOpen: boolean;
@@ -126,15 +127,11 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
   }, [isOpen, yard, selectedPool]);
 
   const calculateTotalCapacity = (stackIds: string[]): number => {
-    let totalCapacity = 0;
     const allStacks = yard.sections.flatMap(section => section.stacks);
-    stackIds.forEach(stackId => {
-      const stack = allStacks.find(s => s.id === stackId);
-      if (stack) {
-        totalCapacity += stack.rows * stack.maxTiers;
-      }
-    });
-    return totalCapacity;
+    const selectedStacks = stackIds.map(stackId => allStacks.find(s => s.id === stackId)).filter(Boolean) as YardStack[];
+    
+    // Use the new capacity calculator that handles 40ft pairing logic
+    return StackCapacityCalculator.calculateTotalEffectiveCapacity(selectedStacks);
   };
 
   const getAllStacks = (): YardStack[] => {
@@ -568,7 +565,7 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
             isSpecialStack: stack.isSpecialStack || false,
             isVirtual: false, // All shown stacks are physical
             currentOccupancy: stack.currentOccupancy || 0,
-            maxCapacity: (stack.rows || 6) * (stack.maxTiers || 4)
+            maxCapacity: stack.capacity || (stack.rows || 6) * (stack.maxTiers || 4) // Use real capacity from database
           }))}
         initialSelectedStacks={Array.from(selectedStacks)}
         excludeStackIds={excludedStackIds}
