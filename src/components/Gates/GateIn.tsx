@@ -138,6 +138,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     secondContainerNumber: '',
     secondContainerNumberConfirmation: '',
     classification: 'divers', // Default to 'divers'
+    transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
     bookingType: 'EXPORT',
     driverName: '',
     truckNumber: '',
@@ -256,6 +257,13 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         clientName: selectedClient.name
       }));
     }
+  };
+
+  const handleTransactionTypeChange = (transactionType: 'Retour Livraison' | 'Transfert (IN)') => {
+    setFormData(prev => ({
+      ...prev,
+      transactionType
+    }));
   };
 
   // Memoized validation check for current step (safe for render-time calls)
@@ -481,12 +489,14 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       clientCode: '',
       clientName: '',
       bookingReference: '',
+      equipmentReference: '', // Equipment reference for EDI transmission
       bookingType: 'EXPORT',
       containerNumber: '',
       containerNumberConfirmation: '',
       secondContainerNumber: '',
       secondContainerNumberConfirmation: '',
       classification: 'divers', // Default to 'divers'
+      transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
       driverName: '',
       truckNumber: '',
       transportCompany: '',
@@ -803,7 +813,12 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       // Calculate durations for each operation
       const dataToExport = await Promise.all(
         filteredOperations.map(async (op) => {
-          let durations = {};
+          let durations: any = {
+            totalDuration: null,
+            damageAssessmentDuration: null,
+            locationAssignmentDuration: null,
+            ediProcessingDuration: null
+          };
           
           // Calculate time tracking durations if operation is completed
           if (op.status === 'completed' && op.id) {
@@ -836,11 +851,12 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
             createdAt: formatDateForExport(op.createdAt),
             updatedAt: formatDateForExport(op.updatedAt),
             notes: op.notes || '',
+            transactionType: op.transactionType || 'Retour Livraison', // Default value for existing records
             // Time tracking metrics
-            totalDuration: formatDurationForExport(durations.totalDuration),
-            damageAssessmentDuration: formatDurationForExport(durations.damageAssessmentDuration),
-            locationAssignmentDuration: formatDurationForExport(durations.locationAssignmentDuration),
-            ediProcessingDuration: formatDurationForExport(durations.ediProcessingDuration),
+            totalDuration: formatDurationForExport(durations?.totalDuration),
+            damageAssessmentDuration: formatDurationForExport(durations?.damageAssessmentDuration),
+            locationAssignmentDuration: formatDurationForExport(durations?.locationAssignmentDuration),
+            ediProcessingDuration: formatDurationForExport(durations?.ediProcessingDuration),
             // Additional time tracking fields
             damageAssessmentStarted: formatDateForExport(op.damage_assessment_started),
             damageAssessmentCompleted: formatDateForExport(op.damage_assessment_completed),
@@ -851,8 +867,6 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           };
         })
       );
-
-      const { formatDurationForExport } = await import('../../utils/excelExport');
 
       exportToExcel({
         filename: `gate_in_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
@@ -867,6 +881,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           { header: 'Client', key: 'clientName', width: 25 },
           { header: 'Code Client', key: 'clientCode', width: 15 },
           { header: 'Classification', key: 'classification', width: 15 },
+          { header: 'Transaction', key: 'transactionType', width: 18 },
           { header: 'Chauffeur', key: 'driverName', width: 20 },
           { header: 'Camion', key: 'truckNumber', width: 15 },
           { header: 'Transporteur', key: 'transportCompany', width: 25 },
@@ -1154,6 +1169,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           handleQuantityChange={handleQuantityChange}
           handleStatusChange={handleStatusChange}
           handleClientChange={handleClientChange}
+          handleTransactionTypeChange={handleTransactionTypeChange}
 
           clients={clients}
           submissionError={submissionError}

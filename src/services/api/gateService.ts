@@ -28,6 +28,7 @@ export interface GateInData {
   operatorName: string;
   yardId: string;
   classification?: 'divers' | 'alimentaire';
+  transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // Transaction type for reports
   equipmentReference?: string; // Equipment reference for EDI transmission
   damageReported?: boolean; // Keep for backward compatibility during migration
   damageDescription?: string;
@@ -273,6 +274,7 @@ export class GateService {
           truck_arrival_time: data.truckArrivalTime || new Date().toTimeString().slice(0, 5), // Store truck arrival time
           assigned_location: null,
           classification: data.classification || 'divers',
+          transaction_type: data.transactionType || 'Retour Livraison', // Transaction type for reports
           equipment_reference: data.equipmentReference, // Equipment reference for EDI transmission
           damage_reported: data.damageAssessment?.hasDamage || data.damageReported || false,
           damage_description: data.damageAssessment?.damageDescription || data.damageDescription,

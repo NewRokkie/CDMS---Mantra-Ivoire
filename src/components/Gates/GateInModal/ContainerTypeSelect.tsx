@@ -70,7 +70,7 @@ function getDropdownOptions(containerSize: '20ft' | '40ft', isHighCube: boolean 
           key: `${opt.value}-40HC-${idx}`,
           value: opt.value,
           iso: c,
-          label: opt.label + ' (High Cube)',
+          label: opt.label,
           code: c,
           isHighCube: true,
         }));

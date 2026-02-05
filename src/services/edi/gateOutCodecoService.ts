@@ -207,7 +207,7 @@ class GateOutCodecoService {
   }
 
   /**
-   * Mappe les données Gate Out vers le format CODECO pour un conteneur spécifique
+   * Mappe les données Gate Out vers le format CODECO client pour un conteneur spécifique
    */
   private mapGateOutToCodecoData(
     gateOutData: GateOutCodecoData,
@@ -221,47 +221,69 @@ class GateOutCodecoService {
       return date.toISOString().slice(0, 10).replace(/-/g, '');
     };
     const formatTime = (date: Date): string => {
-      return date.toTimeString().slice(0, 8).replace(/:/g, '');
-    };
-    const formatDateTime = (date: Date): string => {
-      return formatDate(date) + formatTime(date);
+      return date.toTimeString().slice(0, 5).replace(/:/g, '');
     };
 
+    // Extract operation date and time
+    const operationDate = gateOutData.completedAt || gateOutData.createdAt;
+
     return {
-      sender: yardInfo.companyCode || 'DEPOT',
-      receiver: yardInfo.plant || 'SYSTEM',
-      companyCode: yardInfo.companyCode || 'DEPOT',
-      plant: yardInfo.plant || 'SYSTEM',
-      customer: yardInfo.customer || gateOutData.clientCode,
-      // Booking information - REQUIRED: Booking Number included in weighbridge ID
+      // Header Information - REQUIRED for client format
+      sender: yardInfo.companyCode || 'MANTRA',         // Company name
+      receiver: gateOutData.clientName,                 // Client Name
+      companyCode: yardInfo.companyCode || 'MANTRA',    // Company Code
+      plant: yardInfo.plant || 'DEPOT-01',              // Yard/Depot Code
+      customer: gateOutData.clientName,                 // Client Name
+      
+      // Container Information - REQUIRED
+      containerNumber: containerNumber,
+      containerSize: containerSize.replace('ft', ''),
+      containerType: 'FL', // Assume full for gate out
+      
+      // Transport Information
+      transportCompany: gateOutData.transportCompany,
+      vehicleNumber: gateOutData.vehicleNumber,
+      
+      // Operation Information
+      operationType: 'GATE_OUT',
+      operationDate: formatDate(operationDate).slice(2), // YYMMDD format
+      operationTime: formatTime(operationDate) + '02', // HHMM + seconds
+      
+      // Reference Information
+      bookingReference: gateOutData.bookingNumber, // Booking number for Gate Out
+      equipmentReference: undefined, // Equipment reference not used for Gate Out
+      
+      // Location Information
+      locationCode: 'CIABJ', // Default location code
+      locationDetails: 'CIABJ32:STO:ZZZ', // Default location details
+      
+      // Operator Information
+      operatorName: gateOutData.operatorName,
+      operatorId: gateOutData.operatorId,
+      yardId: gateOutData.yardId,
+      
+      // Backward compatibility fields
       weighbridgeId: `${gateOutData.bookingNumber}_${Date.now().toString().slice(-4)}`,
       weighbridgeIdSno: '00001',
       transporter: gateOutData.transportCompany,
-      containerNumber: containerNumber,
-      containerSize: containerSize.replace('ft', ''),
-      design: '001', // Default design
-      type: containerType === 'reefer' ? '03' : '02', // 02 = Gate Out, 03 = Reefer Gate Out
-      color: '#000000', // Default color
-      cleanType: '001', // Standard clean type for Gate Out
-      status: '06', // 06 = Gate Out status
+      design: '001',
+      type: '02', // Gate Out type
+      color: '#000000',
+      cleanType: '001',
+      status: '06', // Gate Out status
       deviceNumber: `DEV${Date.now().toString().slice(-8)}`,
-      vehicleNumber: gateOutData.vehicleNumber,
       createdDate: formatDate(gateOutData.createdAt),
-      createdTime: formatTime(gateOutData.createdAt),
+      createdTime: formatTime(gateOutData.createdAt) + '00',
       createdBy: gateOutData.operatorName,
       changedDate: gateOutData.completedAt ? formatDate(gateOutData.completedAt) : undefined,
-      changedTime: gateOutData.completedAt ? formatTime(gateOutData.completedAt) : undefined,
+      changedTime: gateOutData.completedAt ? formatTime(gateOutData.completedAt) + '00' : undefined,
       changedBy: gateOutData.completedAt ? gateOutData.operatorName : undefined,
       numOfEntries: '1', // One container per message
-      
-      // Gate Out specific fields - REQUIRED: Date et Heure sortie
-      gateInDate: gateOutData.gateOutDate.replace(/-/g, ''), // Use gate out date
-      gateInTime: gateOutData.gateOutTime.replace(/:/g, '') + (gateOutData.gateOutTime.length === 5 ? '00' : ''), // Add seconds if not present
-      
-      // No damage assessment for Gate Out (containers leaving are assumed processed)
-      damageReported: false,
+      gateInDate: formatDate(operationDate), // Use gate out date
+      gateInTime: formatTime(operationDate) + '00', // Use gate out time
+      damageReported: false, // No damage assessment for gate out
       damageAssessedBy: gateOutData.operatorName,
-      damageAssessedAt: formatDateTime(now)
+      damageAssessedAt: formatDate(now) + formatTime(now) + '00'
     };
   }
 

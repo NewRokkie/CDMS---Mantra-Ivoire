@@ -58,13 +58,24 @@ export const GateOut: React.FC = () => {
       try {
         setLoading(true);
         const [ordersData, containersData, operationsData] = await Promise.all([
-          bookingReferenceService.getAll().catch(err => { handleError(err, 'GateOut.loadOrders'); return []; }),
-          containerService.getAll().catch(err => { handleError(err, 'GateOut.loadContainers'); return []; }),
-          gateService.getGateOutOperations().catch(err => { handleError(err, 'GateOut.loadOperations'); return []; })
+          bookingReferenceService.getAll().catch(err => {
+            handleError(err, 'GateOut.loadOrders');
+            return [];
+          }),
+          containerService.getAll().catch(err => {
+            handleError(err, 'GateOut.loadContainers');
+            return [];
+          }),
+          gateService.getGateOutOperations().catch(err => {
+            handleError(err, 'GateOut.loadOperations');
+            return [];
+          })
         ]);
-        setReleaseOrders(ordersData || []);
-        setContainers(containersData || []);
-        setGateOutOperations(operationsData || []);
+
+        // Ensure we have arrays before setting state
+        setReleaseOrders(Array.isArray(ordersData) ? ordersData : []);
+        setContainers(Array.isArray(containersData) ? containersData : []);
+        setGateOutOperations(Array.isArray(operationsData) ? operationsData : []);
       } catch (error) {
         handleError(error, 'GateOut.loadData');
         setReleaseOrders([]);
@@ -78,27 +89,42 @@ export const GateOut: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!currentYard) return;
+    if (!currentYard?.id) return;
 
     const unsubscribeGateOut = realtimeService.subscribeToGateOutOperations(
       currentYard.id,
       async (payload) => {
-        const operations = await gateService.getGateOutOperations();
-        setGateOutOperations(operations);
+        try {
+          const operations = await gateService.getGateOutOperations();
+          setGateOutOperations(Array.isArray(operations) ? operations : []);
+        } catch (error) {
+          console.error('Error fetching gate out operations:', error);
+          handleError(error, 'GateOut.realtimeUpdate');
+        }
       }
     );
 
     const unsubscribeBookingReferences = realtimeService.subscribeToBookingReferences(
       async (payload) => {
-        const orders = await bookingReferenceService.getAll();
-        setReleaseOrders(orders);
+        try {
+          const orders = await bookingReferenceService.getAll();
+          setReleaseOrders(Array.isArray(orders) ? orders : []);
+        } catch (error) {
+          console.error('Error fetching booking references:', error);
+          handleError(error, 'GateOut.realtimeUpdate');
+        }
       }
     );
 
     const unsubscribeContainers = realtimeService.subscribeToContainers(
       async (payload) => {
-        const containers = await containerService.getAll();
-        setContainers(containers);
+        try {
+          const containers = await containerService.getAll();
+          setContainers(Array.isArray(containers) ? containers : []);
+        } catch (error) {
+          console.error('Error fetching containers:', error);
+          handleError(error, 'GateOut.realtimeUpdate');
+        }
       }
     );
 
@@ -116,28 +142,32 @@ export const GateOut: React.FC = () => {
 
   // Combine all operations for unified display with robust date handling
   const allOperations = [...pendingOperations, ...completedOperations].sort((a, b) => {
-    const dateA = typeof a.date === 'string' ? new Date(a.date) : a.date;
-    const dateB = typeof b.date === 'string' ? new Date(b.date) : b.date;
+    const dateA = a.date ? (typeof a.date === 'string' ? new Date(a.date) : a.date) : new Date(0);
+    const dateB = b.date ? (typeof b.date === 'string' ? new Date(b.date) : b.date) : new Date(0);
     return dateB.getTime() - dateA.getTime();
   });
 
   // Calculate dynamic statistics with robust date handling
   const today = new Date().toDateString();
   const todaysGateOuts = completedOperations.filter(op => {
-    const opDate = typeof op.date === 'string' ? new Date(op.date) : op.date;
+    const opDate = op.date ? (typeof op.date === 'string' ? new Date(op.date) : op.date) : new Date();
     return opDate.toDateString() === today;
   }).length;
-  const containersProcessed = completedOperations.reduce((sum, op) => sum + op.processedContainers, 0);
-  const issuesReported = completedOperations.filter(op => op.status === 'completed' && op.notes?.toLowerCase().includes('issue')).length;
+  const containersProcessed = completedOperations.reduce((sum, op) => sum + (op.processedContainers || 0), 0);
+  const issuesReported = completedOperations.filter(op =>
+    op.status === 'completed' &&
+    op.notes &&
+    op.notes.toLowerCase().includes('issue')
+  ).length;
 
   // Filter operations based on search term and selected filter
   const filteredOperations = allOperations.filter(operation => {
     const matchesSearch = !searchTerm ||
-      operation.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      operation.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      operation.clientCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      operation.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      operation.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      (operation.bookingNumber && operation.bookingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (operation.clientName && operation.clientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (operation.clientCode && operation.clientCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (operation.driverName && operation.driverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (operation.vehicleNumber && operation.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesFilter = selectedFilter === 'all' || operation.status === selectedFilter;
 
@@ -149,8 +179,8 @@ export const GateOut: React.FC = () => {
       // Calculate durations for each operation
       const dataToExport = await Promise.all(
         filteredOperations.map(async (op) => {
-          let durations = {};
-          
+          let durations: any = {};
+
           // Calculate time tracking durations if operation is completed
           if (op.status === 'completed' && op.id) {
             try {
@@ -161,9 +191,15 @@ export const GateOut: React.FC = () => {
             }
           }
 
+          // Find the associated booking to get transaction type
+          const associatedBooking = releaseOrders.find(booking => 
+            booking.id === op.bookingReferenceId || booking.bookingNumber === op.bookingNumber
+          );
+
           return {
             bookingNumber: op.bookingNumber || '',
             bookingType: op.bookingType || '',
+            transactionType: associatedBooking?.transactionType || 'Positionnement', // Default to 'Positionnement'
             clientName: op.clientName || '',
             clientCode: op.clientCode || '',
             status: op.status || '',
@@ -177,7 +213,7 @@ export const GateOut: React.FC = () => {
             operatorName: op.operatorName || '',
             createdDate: formatDateShortForExport(op.createdAt || op.date),
             createdTime: formatTimeForExport(op.createdAt || op.date),
-            updatedAt: formatDateShortForExport(op.updatedAt),
+            updatedAt: formatDateShortForExport(op.updatedAt || op.createdAt || op.date),
             notes: op.notes || '',
             // Time tracking metrics
             totalDuration: formatDurationForExport(durations.totalDuration),
@@ -192,14 +228,13 @@ export const GateOut: React.FC = () => {
         })
       );
 
-      const { formatDurationForExport } = await import('../../utils/excelExport');
-
       exportToExcel({
         filename: `gate_out_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
         sheetName: 'Gate Out Operations',
         columns: [
           { header: 'Numéro Booking', key: 'bookingNumber', width: 20 },
           { header: 'Type Booking', key: 'bookingType', width: 15 },
+          { header: 'Transaction', key: 'transactionType', width: 18 },
           { header: 'Client', key: 'clientName', width: 25 },
           { header: 'Code Client', key: 'clientCode', width: 15 },
           { header: 'Statut', key: 'status', width: 15 },
@@ -241,7 +276,7 @@ export const GateOut: React.FC = () => {
     // Validate yard operation
     const yardValidation = validateYardOperation('gate_out');
     if (!yardValidation.isValid) {
-      setError(`Cannot perform gate out: ${yardValidation.message}`);
+      setError(`Cannot perform gate out: ${yardValidation.message || 'Invalid yard operation'}`);
       return;
     }
 
@@ -261,12 +296,12 @@ export const GateOut: React.FC = () => {
       // Create pending gate out operation in database
       const result = await gateService.createPendingGateOut({
         bookingReferenceId: data.booking.id,
-        transportCompany: data.transportCompany,
-        driverName: data.driverName,
-        vehicleNumber: data.vehicleNumber,
-        notes: data.notes,
+        transportCompany: data.transportCompany || '-',
+        driverName: data.driverName || '-',
+        vehicleNumber: data.vehicleNumber || '-',
+        notes: data.notes || '-',
         operatorId: user.id,
-        operatorName: user.name,
+        operatorName: user.name || 'System',
         yardId: currentYard.id
       });
 
@@ -282,7 +317,7 @@ export const GateOut: React.FC = () => {
       setShowForm(false);
       setSuccessMessage(`Gate Out operation created for booking ${data.booking.bookingNumber || data.booking.id}`);
     } catch (error) {
-      setError(`Error creating gate out operation: ${error}`);
+      setError(`Error creating gate out operation: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsProcessing(false);
     }
@@ -317,7 +352,7 @@ export const GateOut: React.FC = () => {
       const result = await gateService.updateGateOutOperation(operation.id, {
         containerIds,
         operatorId: user.id,
-        operatorName: user.name
+        operatorName: user.name || 'System'
       });
 
       if (!result.success) {
@@ -329,10 +364,14 @@ export const GateOut: React.FC = () => {
       try {
         // Import Gate Out CODECO service
         const { gateOutCodecoService } = await import('../../services/edi/gateOutCodecoService');
-        
-        // Find the booking reference
-        const booking = releaseOrders.find(order => order.id === operation.bookingReferenceId);
-        
+
+        // Find the booking reference using bookingReferenceId if available, otherwise fall back to bookingNumber
+        const booking = operation.bookingNumber
+          ? releaseOrders.find(order => order.id === operation.bookingNumber)
+          : operation.bookingNumber
+            ? releaseOrders.find(order => order.bookingNumber === operation.bookingNumber)
+            : null;
+
         if (booking && selectedContainers.length > 0) {
           // Create Gate Out CODECO data with all required fields
           const gateOutCodecoData = gateOutCodecoService.createGateOutCodecoDataFromOperation(
@@ -348,7 +387,7 @@ export const GateOut: React.FC = () => {
           const yardInfo = {
             companyCode: currentYard?.code || 'DEPOT',
             plant: currentYard?.id || 'SYSTEM',
-            customer: booking.clientCode
+            customer: booking.clientCode || 'UNKNOWN'
           };
 
           // Generate and transmit CODECO for Gate Out
@@ -356,7 +395,7 @@ export const GateOut: React.FC = () => {
             gateOutCodecoData,
             yardInfo
           );
-          
+
           if (codecoResult.success) {
             logger.info('Gate Out CODECO transmitted successfully', 'GateOut', {
               bookingNumber: booking.bookingNumber,
@@ -396,7 +435,7 @@ export const GateOut: React.FC = () => {
 
       setSuccessMessage(statusMessage);
     } catch (error) {
-      setError(`Error completing operation: ${error}`);
+      setError(`Error completing operation: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsProcessing(false);
     }

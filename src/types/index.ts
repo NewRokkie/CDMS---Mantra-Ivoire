@@ -279,6 +279,7 @@ export interface BookingReference {
   clientCode?: string;
   clientName: string;
   bookingType: 'IMPORT' | 'EXPORT';
+  transactionType?: 'Positionnement' | 'Transfert (OUT)'; // Transaction type for Gate Out reports
   containerQuantities: ContainerQuantityBySize;
   totalContainers: number;
   maxQuantityThreshold: number;

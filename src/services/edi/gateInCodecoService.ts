@@ -3,9 +3,8 @@
  * Intègre les données de Gate In avec l'évaluation des dommages
  */
 
-import { CodecoGenerator, parseGateInOperation, CodecoMessageData } from './codecoGenerator';
-import { ediManagementService } from './ediManagement';
-import { EDITransmissionLog } from '../../types/edi';
+import { CodecoGenerator, CodecoMessageData } from './codecoGenerator';
+import { ediManagementService, EDITransmissionLog } from './ediManagement';
 import { logger } from '../../utils/logger';
 
 interface GateInCodecoData {
@@ -148,6 +147,14 @@ class GateInCodecoService {
       // Transmit via EDI management service
       const transmissionLog = await ediManagementService.processGateIn(ediContainerData);
 
+      if (!transmissionLog) {
+        return {
+          success: false,
+          error: 'Failed to create transmission log',
+          userMessage: `Failed to transmit EDI CODECO for container ${gateInData.containerNumber}`
+        };
+      }
+
       logger.info('CODECO transmitted successfully', 'GateInCodecoService', {
         containerNumber: gateInData.containerNumber,
         transmissionId: transmissionLog.id,
@@ -215,7 +222,7 @@ class GateInCodecoService {
   }
 
   /**
-   * Mappe les données Gate In vers le format CODECO
+   * Mappe les données Gate In vers le format CODECO client
    */
   private mapGateInToCodecoData(
     gateInData: GateInCodecoData,
@@ -226,56 +233,75 @@ class GateInCodecoService {
       return date.toISOString().slice(0, 10).replace(/-/g, '');
     };
     const formatTime = (date: Date): string => {
-      return date.toTimeString().slice(0, 8).replace(/:/g, '');
-    };
-    const formatDateTime = (date: Date): string => {
-      return formatDate(date) + formatTime(date);
+      return date.toTimeString().slice(0, 5).replace(/:/g, '');
     };
 
-    // Extract damage assessment information
-    const damageAssessment = gateInData.damageAssessment;
-    const hasDamage = damageAssessment?.hasDamage || false;
+    // Extract operation date and time
+    const operationDate = gateInData.truckArrivalDate ? 
+      new Date(gateInData.truckArrivalDate + 'T' + (gateInData.truckArrivalTime || '00:00')) : 
+      gateInData.createdAt;
 
     return {
-      sender: yardInfo.companyCode || 'DEPOT',
-      receiver: yardInfo.plant || 'SYSTEM',
-      companyCode: yardInfo.companyCode || 'DEPOT',
-      plant: yardInfo.plant || 'SYSTEM',
-      customer: yardInfo.customer || gateInData.clientCode,
+      // Header Information - REQUIRED for client format
+      sender: yardInfo.companyCode || 'MANTRA',         // Company name
+      receiver: gateInData.clientName,                  // Client Name
+      companyCode: yardInfo.companyCode || 'MANTRA',    // Company Code
+      plant: yardInfo.plant || 'DEPOT-01',              // Yard/Depot Code
+      customer: gateInData.clientName,                  // Client Name
+      
+      // Container Information - REQUIRED
+      containerNumber: gateInData.containerNumber,
+      containerSize: gateInData.containerSize.replace('ft', ''),
+      containerType: gateInData.status === 'EMPTY' ? 'EM' : 'FL', // EM = Empty, FL = Full
+      
+      // Transport Information
+      transportCompany: gateInData.transportCompany,
+      vehicleNumber: gateInData.truckNumber,
+      
+      // Operation Information
+      operationType: 'GATE_IN',
+      operationDate: formatDate(operationDate).slice(2), // YYMMDD format (260205)
+      operationTime: formatTime(operationDate) + '02', // HHMM + seconds (0302)
+      
+      // Reference Information
+      bookingReference: undefined, // Don't use equipment reference as booking reference
+      equipmentReference: gateInData.equipmentReference, // Use actual equipment reference from Gate In
+      
+      // Location Information
+      locationCode: 'CIABJ', // Default location code
+      locationDetails: 'CIABJ32:STO:ZZZ', // Default location details
+      
+      // Operator Information
+      operatorName: gateInData.operatorName,
+      operatorId: gateInData.operatorId,
+      yardId: gateInData.yardId,
+      
+      // Backward compatibility fields
       weighbridgeId: `WB${gateInData.yardId}${Date.now().toString().slice(-6)}`,
       weighbridgeIdSno: '00001',
       transporter: gateInData.transportCompany,
-      containerNumber: gateInData.containerNumber,
-      containerSize: gateInData.containerSize.replace('ft', ''),
-      design: '001', // Default design
-      type: gateInData.containerType === 'reefer' ? '03' : '01', // 01 = General purpose, 03 = Reefer
-      color: '#000000', // Default color
-      cleanType: gateInData.classification === 'alimentaire' ? '002' : '001', // 002 = Food grade, 001 = Standard
-      status: gateInData.status === 'FULL' ? '05' : '04', // 05 = Full, 04 = Empty
+      design: '001',
+      type: gateInData.containerType === 'reefer' ? '03' : '01',
+      color: '#000000',
+      cleanType: gateInData.classification === 'alimentaire' ? '002' : '001',
+      status: gateInData.status === 'FULL' ? '05' : '04',
       deviceNumber: `DEV${Date.now().toString().slice(-8)}`,
-      vehicleNumber: gateInData.truckNumber,
       createdDate: formatDate(gateInData.createdAt),
-      createdTime: formatTime(gateInData.createdAt),
+      createdTime: formatTime(gateInData.createdAt) + '00',
       createdBy: gateInData.operatorName,
       changedDate: gateInData.updatedAt ? formatDate(gateInData.updatedAt) : undefined,
-      changedTime: gateInData.updatedAt ? formatTime(gateInData.updatedAt) : undefined,
+      changedTime: gateInData.updatedAt ? formatTime(gateInData.updatedAt) + '00' : undefined,
       changedBy: gateInData.updatedAt ? gateInData.operatorName : undefined,
       numOfEntries: gateInData.containerQuantity.toString(),
-      
-      // Gate In specific fields - REQUIRED: Date et Heure d'entrée
       gateInDate: gateInData.truckArrivalDate.replace(/-/g, ''),
-      gateInTime: gateInData.truckArrivalTime.replace(/:/g, '') + '00', // Add seconds if not present
-      
-      // Equipment Reference for client identification
-      equipmentReference: gateInData.equipmentReference,
-      
-      // Damage assessment fields - REQUIRED: Damaged or Not
-      damageReported: hasDamage,
-      damageType: damageAssessment?.damageType || (hasDamage ? 'GENERAL' : undefined),
-      damageDescription: damageAssessment?.damageDescription,
-      damageAssessedBy: damageAssessment?.assessedBy || gateInData.operatorName,
-      damageAssessedAt: damageAssessment?.assessedAt ? formatDateTime(damageAssessment.assessedAt) : 
-                        (hasDamage ? formatDateTime(now) : undefined)
+      gateInTime: gateInData.truckArrivalTime.replace(/:/g, '') + '00',
+      damageReported: gateInData.damageAssessment?.hasDamage || false,
+      damageType: gateInData.damageAssessment?.damageType || (gateInData.damageAssessment?.hasDamage ? 'GENERAL' : undefined),
+      damageDescription: gateInData.damageAssessment?.damageDescription,
+      damageAssessedBy: gateInData.damageAssessment?.assessedBy || gateInData.operatorName,
+      damageAssessedAt: gateInData.damageAssessment?.assessedAt ? 
+        formatDate(gateInData.damageAssessment.assessedAt) + formatTime(gateInData.damageAssessment.assessedAt) + '00' : 
+        (gateInData.damageAssessment?.hasDamage ? formatDate(now) + formatTime(now) + '00' : undefined)
     };
   }
 

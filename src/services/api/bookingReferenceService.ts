@@ -55,6 +55,7 @@ export class BookingReferenceService {
         client_code: order.clientCode,
         client_name: order.clientName,
         booking_type: order.bookingType,
+        transaction_type: order.transactionType, // Add transaction type
         container_quantities: order.containerQuantities,
         total_containers: order.totalContainers,
         remaining_containers: order.remainingContainers,
@@ -86,6 +87,7 @@ export class BookingReferenceService {
     if (updates.clientCode) updateData.client_code = updates.clientCode;
     if (updates.clientName) updateData.client_name = updates.clientName;
     if (updates.bookingType) updateData.booking_type = updates.bookingType;
+    if (updates.transactionType) updateData.transaction_type = updates.transactionType; // Add transaction type
     if (updates.containerQuantities) updateData.container_quantities = updates.containerQuantities;
     if (updates.totalContainers !== undefined) updateData.total_containers = updates.totalContainers;
     if (updates.remainingContainers !== undefined) updateData.remaining_containers = updates.remainingContainers;
@@ -142,6 +144,7 @@ export class BookingReferenceService {
       clientCode: data.client_code,
       clientName: data.client_name,
       bookingType: data.booking_type,
+      transactionType: data.transaction_type, // Add transaction type mapping
       containerQuantities: data.container_quantities,
       totalContainers: data.total_containers,
       maxQuantityThreshold: data.max_quantity_threshold,

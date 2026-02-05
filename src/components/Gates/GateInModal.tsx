@@ -9,6 +9,7 @@ import { ContainerTypeSelect, containerTypeOptions } from './GateInModal/Contain
 import { Switch } from './GateInModal/Switch';
 import { ContainerNumberInput } from './GateInModal/ContainerNumberInput';
 import { AlimentaireSwitch } from './GateInModal/AlimentaireSwitch';
+import { TransactionSwitch } from './GateInModal/TransactionSwitch';
 import { formatContainerNumberForDisplay } from './utils';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 
@@ -29,6 +30,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   handleQuantityChange,
   handleStatusChange,
   handleClientChange,
+  handleTransactionTypeChange,
   clients,
   submissionError,
   validationErrors = [],
@@ -80,6 +82,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
         handleQuantityChange={handleQuantityChange}
         handleStatusChange={handleStatusChange}
         handleClientChange={handleClientChange}
+        handleTransactionTypeChange={handleTransactionTypeChange}
       />
     </MultiStepModal>
   );
@@ -102,6 +105,7 @@ interface GateInFormContentProps {
   handleQuantityChange: (quantity: any) => void;
   handleStatusChange: (isFull: boolean) => void;
   handleClientChange: (clientId: string, clientName: string, clientCode: string) => void;
+  handleTransactionTypeChange: (transactionType: 'Retour Livraison' | 'Transfert (IN)') => void;
 }
 
 const GateInFormContent: React.FC<GateInFormContentProps> = ({
@@ -118,7 +122,8 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
   handleHighCubeChange,
   handleQuantityChange,
   handleStatusChange,
-  handleClientChange
+  handleClientChange,
+  handleTransactionTypeChange
 }) => {
   return (
     <>
@@ -241,22 +246,31 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       </div>
                     </div>
 
-                    {/* Quantity - Second Row */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Quantity *
-                      </label>
-                      <Switch
-                        checked={formData.containerQuantity === 2}
-                        onChange={(isDouble) => handleQuantityChange(isDouble ? 2 : 1)}
-                        label=""
-                        leftLabel="Single (1)"
-                        rightLabel="Double (2)"
-                        disabled={formData.containerSize === '40ft'}
-                      />
-                      {formData.containerSize === '40ft' && (
-                        <p className="text-xs text-gray-500 mt-2">40ft containers limited to single quantity</p>
-                      )}
+                    {/* Quantity and Transaction - Side by Side */}
+                    <div className="depot-form-grid">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Quantity *
+                        </label>
+                        <Switch
+                          checked={formData.containerQuantity === 2}
+                          onChange={(isDouble) => handleQuantityChange(isDouble ? 2 : 1)}
+                          label=""
+                          leftLabel="Single (1)"
+                          rightLabel="Double (2)"
+                          disabled={formData.containerSize === '40ft'}
+                        />
+                        {formData.containerSize === '40ft' && (
+                          <p className="text-xs text-gray-500 mt-2">40ft containers limited to single quantity</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <TransactionSwitch
+                          value={formData.transactionType}
+                          onChange={handleTransactionTypeChange}
+                        />
+                      </div>
                     </div>
 
                     {/* Container Status and Classification - Side by Side on Desktop */}
@@ -517,21 +531,25 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       </div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Driver:</span>
-                      <div className="font-medium">{formData.driverName || 'Not specified'}</div>
+                      <span className="text-gray-600">Transaction:</span>
+                      <div className="font-medium">{formData.transactionType}</div>
                     </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-gray-600">Driver:</span>
+                      <div className="font-medium">{formData.driverName || 'Not specified'}</div>
+                    </div>
                     <div>
                       <span className="text-gray-600">Truck:</span>
                       <div className="font-medium">{formData.truckNumber || 'Not specified'}</div>
                     </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Transport Company:</span>
                       <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
                     </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-600">Arrival Date:</span>
                       <div className="font-medium">{formData.truckArrivalDate || 'Not specified'}</div>
@@ -628,6 +646,10 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       <div>
                         <span className="text-gray-600">Classification:</span>
                         <div className="font-medium capitalize">{formData.classification}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Transaction:</span>
+                        <div className="font-medium">{formData.transactionType}</div>
                       </div>
                     </div>
 

@@ -1,54 +1,67 @@
 /**
  * CODECO (Container Discharge/Loading Order) Message Generator
- * Based on UN/EDIFACT D.96A specification
- * Reference: https://service.unece.org/trade/untdid/d00b/trmd/codeco_c.htm
+ * Based on UN/EDIFACT D.95B specification matching client reference format
+ * Reference format: UNB+UNOA:1+MANTRA+ONEY+260205:1428+MANTRA0205'
  */
 
 export interface CodecoMessageData {
-  // Header Information
-  sender: string;
-  receiver: string;
-  companyCode: string;
-  plant: string;
-  customer: string;
+  // Header Information - REQUIRED for client format
+  sender: string;           // Company name (e.g., MANTRA)
+  receiver: string;         // Client Name (e.g., ONEY, PIL, etc...)
+  companyCode: string;      // Company Code (MANTRA)
+  plant: string;            // Yard/Depot Code (e.g., DEPOT-01)
+  customer: string;         // Client Name (e.g., ONEY, PIL, etc...)
   
-  // Container Information
-  weighbridgeId: string;
-  weighbridgeIdSno: string;
-  transporter: string;
-  containerNumber: string;
-  containerSize: string;
-  design: string;
-  type: string;
-  color?: string;
-  cleanType: string;
-  status: string;
-  deviceNumber?: string;
+  // Container Information - REQUIRED
+  containerNumber: string;  // TRHU6875483
+  containerSize: string;    // 40 (for 40ft)
+  containerType: string;    // EM (Empty)
+  
+  // Transport Information
+  transportCompany: string;
   vehicleNumber: string;
   
-  // Dates and Times
-  createdDate: string;
-  createdTime: string;
-  createdBy: string;
+  // Operation Information
+  operationType: 'GATE_IN' | 'GATE_OUT';
+  operationDate: string;    // 20260205
+  operationTime: string;    // 0302
+  
+  // Reference Information
+  bookingReference?: string;     // ABJG00064400
+  equipmentReference?: string;   // Equipment Reference(EQR Ref No)
+  
+  // Location Information
+  locationCode: string;     // CIABJ
+  locationDetails: string;  // CIABJ32:STO:ZZZ
+  
+  // Operator Information
+  operatorName: string;
+  operatorId: string;
+  yardId: string;
+  
+  // Additional fields for backward compatibility
+  weighbridgeId?: string;
+  weighbridgeIdSno?: string;
+  transporter?: string;
+  design?: string;
+  type?: string;
+  color?: string;
+  cleanType?: string;
+  status?: string;
+  deviceNumber?: string;
+  createdDate?: string;
+  createdTime?: string;
+  createdBy?: string;
   changedDate?: string;
   changedTime?: string;
   changedBy?: string;
-  
-  // Gate In specific fields
   gateInDate?: string;
   gateInTime?: string;
-  
-  // Equipment Reference for client identification
-  equipmentReference?: string;
-  
-  // Damage Assessment
   damageReported?: boolean;
   damageType?: string;
   damageDescription?: string;
   damageAssessedBy?: string;
   damageAssessedAt?: string;
-  
-  // Additional
   numOfEntries?: string;
 }
 
@@ -69,24 +82,23 @@ export class CodecoGenerator {
   }
 
   /**
-   * Generate complete CODECO message from SAP XML data
+   * Generate complete CODECO message matching client reference format
    */
   public generateFromSAPData(data: CodecoMessageData): string {
     this.segments = [];
 
-    // Build message structure according to CODECO specification
+    // Build message structure according to client reference format
     this.addInterchangeHeader(data);
     this.addMessageHeader();
     this.addBeginningOfMessage(data);
-    this.addDateTimePeriod(data);
+    this.addFreeText();
+    this.addTransportDetails();
     this.addNameAndAddress(data);
-    this.addReferences(data);
-    this.addTransportDetails(data);
     this.addEquipmentDetails(data);
-    this.addEquipmentDates(data);
-    this.addMeasurements(data);
-    this.addDimensions(data);
-    this.addFreeText(data);
+    this.addReferences(data);
+    this.addDateTimePeriod(data);
+    this.addLocationDetails(data);
+    this.addControlCount();
     this.addMessageTrailer();
     this.addInterchangeTrailer();
 
@@ -95,7 +107,7 @@ export class CodecoGenerator {
 
   /**
    * UNB - Interchange Header
-   * Mandatory, max 1 occurrence
+   * Format: UNB+UNOA:1+MANTRA+ClientName+260205:1428+MANTRA0205'
    */
   private addInterchangeHeader(data: CodecoMessageData): void {
     const timestamp = new Date();
@@ -105,485 +117,275 @@ export class CodecoGenerator {
     this.segments.push({
       tag: 'UNB',
       elements: [
-        'UNOC:3',                    // Syntax identifier and version
-        `${data.sender}:ZZ`,         // Sender identification
-        `${data.receiver}:ZZ`,       // Recipient identification
+        'UNOA:1',                    // Syntax identifier and version (UNOA:1 for ASCII)
+        data.sender || data.companyCode,  // Sender identification (Depot Code - MANTRA)
+        data.receiver,                    // Recipient identification (Client Name)
         `${date}:${time}`,           // Date and time of preparation
-        this.interchangeRef,         // Interchange control reference
-        '',                          // Recipient's reference/password
-        'CODECO',                    // Application reference
-        '',                          // Priority code
-        '',                          // Acknowledgement request
-        '',                          // Interchange agreement identifier
-        ''                           // Test indicator
+        this.interchangeRef          // Interchange control reference (MANTRA0205)
       ]
     });
   }
 
   /**
    * UNH - Message Header
-   * Mandatory, max 1 occurrence
+   * Format: UNH+COD02051428+CODECO:D:95B:UN:ITG14'
    */
   private addMessageHeader(): void {
     this.segments.push({
       tag: 'UNH',
       elements: [
-        this.messageRefNumber,       // Message reference number
-        'CODECO:D:96A:UN:EANCOM'    // Message identifier (CODECO, version D.96A)
+        this.messageRefNumber,       // Message reference number (COD02051428)
+        'CODECO:D:95B:UN:ITG14'     // Message identifier (CODECO, version D.95B)
       ]
     });
   }
 
   /**
    * BGM - Beginning of Message
-   * Mandatory, max 1 occurrence
-   * Code 393 = Container movement report
+   * Format: BGM+36+TRHU687548302051428+9'
    */
   private addBeginningOfMessage(data: CodecoMessageData): void {
+    const docNumber = `${data.containerNumber}${this.formatDate(new Date(), 'DDMMYYHHMM')}`;
+    
     this.segments.push({
       tag: 'BGM',
       elements: [
-        '393',                       // Document name code (393 = Container movement report)
-        data.weighbridgeId,          // Document number
-        '9',                         // Message function code (9 = Original)
-        ''                           // Response type code
+        '36',                        // Document name code (36 = Container movement report)
+        docNumber,                   // Document number (TRHU687548302051428)
+        '9'                          // Message function code (9 = Original)
       ]
     });
   }
 
   /**
-   * DTM - Date/Time/Period
-   * Conditional, max 9 occurrences
+   * FTX - Free Text
+   * Format: FTX+AAI+++text' (optional additional segments)
    */
-  private addDateTimePeriod(data: CodecoMessageData): void {
-    // Document date/time (137)
-    const docDateTime = `${data.createdDate}${data.createdTime}`;
+  private addFreeText(): void {
+    // General information - REQUIRED
     this.segments.push({
-      tag: 'DTM',
+      tag: 'FTX',
       elements: [
-        `137:${docDateTime}:204`     // 137 = Document date/time, 204 = CCYYMMDDHHMMSS
+        'AAI'                        // Text subject qualifier (AAI = General information)
       ]
     });
 
-    // Message date/time (current)
-    const now = new Date();
-    const msgDateTime = this.formatDateTime(now, 'CCYYMMDDHHMMSS');
-    this.segments.push({
-      tag: 'DTM',
-      elements: [
-        `137:${msgDateTime}:204`
-      ]
-    });
+    // OPTIONAL: Operator information (commented out to match client format)
+    // Uncomment if needed for internal tracking
+    // if (data.operatorName) {
+    //   this.segments.push({
+    //     tag: 'FTX',
+    //     elements: [
+    //       'AAI',                     // Text subject qualifier
+    //       '',
+    //       '',
+    //       `Created by: ${data.operatorName}` // Operator name
+    //     ]
+    //   });
+    // }
 
-    // Gate operation date/time - use appropriate qualifier based on operation type
-    if (data.gateInDate && data.gateInTime) {
-      const gateDateTime = `${data.gateInDate}${data.gateInTime}`;
-      // Determine if this is Gate In or Gate Out based on status
-      const isGateOut = data.status === '06' || data.type === '02';
-      const qualifier = isGateOut ? '133' : '132'; // 133 = Departure, 132 = Arrival
-      
-      this.segments.push({
-        tag: 'DTM',
-        elements: [
-          `${qualifier}:${gateDateTime}:204` // Gate In/Out date/time
-        ]
-      });
-    }
-  }
-
-  /**
-   * NAD - Name and Address
-   * Conditional, max 9 occurrences
-   * Party qualifier codes: CA=Carrier, TO=Terminal operator, FR=Freight forwarder, SH=Shipper
-   */
-  private addNameAndAddress(data: CodecoMessageData): void {
-    // Terminal Operator (Yard/Plant)
-    this.segments.push({
-      tag: 'NAD',
-      elements: [
-        'TO',                        // Party qualifier (TO = Terminal operator)
-        `${data.plant}:160:ZZZ`,    // Party identification (160 = Carrier code)
-        '',                          // Name and address
-        '',                          // Party name
-        '',                          // Street
-        '',                          // City name
-        '',                          // Country subdivision
-        '',                          // Postal code
-        ''                           // Country code
-      ]
-    });
-
-    // Freight Forwarder/Transporter
-    if (data.transporter) {
-      this.segments.push({
-        tag: 'NAD',
-        elements: [
-          'FR',                      // Party qualifier (FR = Freight forwarder)
-          `${data.transporter}:172:ZZZ`, // Party identification
-          '',
-          data.transporter           // Party name
-        ]
-      });
-    }
-
-    // Shipper/Customer
-    this.segments.push({
-      tag: 'NAD',
-      elements: [
-        'SH',                        // Party qualifier (SH = Shipper)
-        `${data.customer}:160:ZZZ`, // Party identification
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        ''
-      ]
-    });
-
-    // Carrier (Company)
-    this.segments.push({
-      tag: 'NAD',
-      elements: [
-        'CA',                        // Party qualifier (CA = Carrier)
-        `${data.companyCode}:172:ZZZ`, // Party identification
-        '',
-        data.companyCode             // Party name
-      ]
-    });
-  }
-
-  /**
-   * RFF - Reference
-   * Conditional, max 9 occurrences
-   */
-  private addReferences(data: CodecoMessageData): void {
-    // Weighbridge reference (or booking reference for Gate Out)
-    this.segments.push({
-      tag: 'RFF',
-      elements: [
-        `AAO:${data.weighbridgeId}` // AAO = Delivery order number (or booking reference)
-      ]
-    });
-
-    // Weighbridge sequence number
-    if (data.weighbridgeIdSno) {
-      this.segments.push({
-        tag: 'RFF',
-        elements: [
-          `ABO:${data.weighbridgeIdSno}` // ABO = Proforma invoice number (used for sequence)
-        ]
-      });
-    }
-
-    // Equipment Reference - for client identification of container transfers
-    if (data.equipmentReference) {
-      this.segments.push({
-        tag: 'RFF',
-        elements: [
-          `EQ:${data.equipmentReference}` // EQ = Equipment reference number
-        ]
-      });
-    }
-
-    // Device number
-    if (data.deviceNumber) {
-      this.segments.push({
-        tag: 'RFF',
-        elements: [
-          `AES:${data.deviceNumber}` // AES = Serial number
-        ]
-      });
-    }
-
-    // Created by reference
-    this.segments.push({
-      tag: 'RFF',
-      elements: [
-        `AHP:${data.createdBy}`      // AHP = Responsible person
-      ]
-    });
-
-    // Booking reference (if different from weighbridge ID and contains booking info)
-    if (data.weighbridgeId && data.weighbridgeId.includes('_') && !data.weighbridgeId.startsWith('WB')) {
-      const bookingNumber = data.weighbridgeId.split('_')[0];
-      if (bookingNumber && bookingNumber !== data.weighbridgeId) {
-        this.segments.push({
-          tag: 'RFF',
-          elements: [
-            `CR:${bookingNumber}` // CR = Customer reference (booking number)
-          ]
-        });
-      }
-    }
+    // OPTIONAL: Damage assessment information (commented out to match client format)
+    // Uncomment if needed for damage reporting
+    // if (data.damageReported) {
+    //   const damageText = data.damageDescription 
+    //     ? `Damage: ${data.damageType || 'GENERAL'} - ${data.damageDescription}`
+    //     : `Damage: ${data.damageType || 'GENERAL'}`;
+    //   
+    //   this.segments.push({
+    //     tag: 'FTX',
+    //     elements: [
+    //       'AAI',                     // Text subject qualifier
+    //       '',
+    //       '',
+    //       damageText                 // Damage information
+    //     ]
+    //   });
+    // }
   }
 
   /**
    * TDT - Details of Transport
-   * Conditional, max 9 occurrences
+   * Format: TDT+1++3+31'
    */
-  private addTransportDetails(data: CodecoMessageData): void {
-    if (data.vehicleNumber) {
-      this.segments.push({
-        tag: 'TDT',
-        elements: [
-          '20',                      // Transport stage qualifier (20 = Main carriage)
-          '',                        // Conveyance reference number
-          '3',                       // Mode of transport (3 = Road transport)
-          '',                        // Transport means
-          '',                        // Carrier
-          '',                        // Transit direction
-          '',                        // Excess transportation information
-          '',                        // Transport identification
-          data.vehicleNumber         // Transport means identification
-        ]
-      });
-    }
+  private addTransportDetails(): void {
+    this.segments.push({
+      tag: 'TDT',
+      elements: [
+        '1',                         // Transport stage qualifier (1 = Pre-carriage)
+        '',                          // Conveyance reference number (empty)
+        '3',                         // Mode of transport (3 = Road transport)
+        '31'                         // Transport means (31 = Truck)
+      ]
+    });
+  }
+
+  /**
+   * NAD - Name and Address segments
+   * Format: NAD+MS+MANTRA', NAD+CF+DEPOT-01:160:20', NAD+CR+ONEY' (optional)
+   */
+  private addNameAndAddress(data: CodecoMessageData): void {
+    // Message sender (MS) - Company Code
+    this.segments.push({
+      tag: 'NAD',
+      elements: [
+        'MS',                        // Party qualifier (MS = Message sender)
+        data.sender || data.companyCode  // Party identification (Company Code - MANTRA)
+      ]
+    });
+
+    // Consignee/Freight forwarder (CF) - Yard/Depot Code
+    this.segments.push({
+      tag: 'NAD',
+      elements: [
+        'CF',                        // Party qualifier (CF = Consignee/Freight forwarder)
+        `${data.plant}:160:20`       // Party identification (Yard/Depot Code:160:20)
+      ]
+    });
+
+    // Carrier (CR) - Client Name (OPTIONAL - not in standard client format)
+    // Uncomment if needed for specific clients
+    // this.segments.push({
+    //   tag: 'NAD',
+    //   elements: [
+    //     'CR',                        // Party qualifier (CR = Carrier)
+    //     data.customer                // Party identification (Client Name)
+    //   ]
+    // });
   }
 
   /**
    * EQD - Equipment Details
-   * Mandatory in equipment group, max 9999 occurrences
+   * Format: EQD+CN+TRHU6875483+40EM:102:5+++4'
    */
   private addEquipmentDetails(data: CodecoMessageData): void {
-    // Determine ISO container type code based on size and type
-    const isoCode = this.getISOContainerCode(data.containerSize, data.type);
-    
-    // Full/Empty indicator: 4=Empty, 5=Full
-    const fullEmptyIndicator = data.status === '01' ? '4' : '5';
+    // Determine container type code
+    const sizeType = `${data.containerSize}${data.containerType || 'EM'}`;
     
     this.segments.push({
       tag: 'EQD',
       elements: [
         'CN',                        // Equipment qualifier (CN = Container)
-        data.containerNumber,        // Equipment identification number
-        `${isoCode}:102:5`,         // Equipment size and type (102 = Size and type, 5 = ISO code)
-        '',                          // Equipment supplier
-        fullEmptyIndicator,          // Equipment status (4=Empty, 5=Full)
-        fullEmptyIndicator           // Full/empty indicator
+        data.containerNumber,        // Equipment identification number (TRHU6875483)
+        `${sizeType}:102:5`,        // Equipment size and type (40EM:102:5)
+        '',                          // Equipment supplier (empty)
+        '',                          // Equipment status (empty)
+        '4'                          // Equipment status code (4 = Empty)
       ]
     });
   }
 
   /**
-   * MEA - Measurements
-   * Conditional, max 9 occurrences per equipment
+   * RFF - Reference segments
+   * Format: RFF+BN:ABJG00064400', RFF+BN:EQR-2025-001234' (only for ONEY)
    */
-  private addMeasurements(data: CodecoMessageData): void {
-    // Container size as measurement
-    const sizeInFeet = parseInt(data.containerSize);
-    
-    // Add tare weight (typical for container size)
-    const tareWeight = sizeInFeet === 20 ? '2300' : '3900'; // kg
-    this.segments.push({
-      tag: 'MEA',
-      elements: [
-        'AAE',                       // Measurement purpose (AAE = Measurement)
-        'T',                         // Measurement dimension (T = Tare weight)
-        `KGM:${tareWeight}`         // Measure unit and value (KGM = Kilogram)
-      ]
-    });
+  private addReferences(data: CodecoMessageData): void {
+    // Booking reference
+    if (data.bookingReference) {
+      this.segments.push({
+        tag: 'RFF',
+        elements: [
+          `BN:${data.bookingReference}`  // BN = Booking reference
+        ]
+      });
+    }
+
+    // Equipment reference - only for ONEY client
+    if (data.equipmentReference && data.customer && data.customer.toUpperCase().includes('ONEY')) {
+      this.segments.push({
+        tag: 'RFF',
+        elements: [
+          `BN:${data.equipmentReference}`  // BN = Equipment reference (only for ONEY)
+        ]
+      });
+    }
   }
 
   /**
-   * DIM - Dimensions
-   * Conditional, max 9 occurrences per equipment
+   * DTM - Date/Time/Period
+   * Format: DTM+203:202602050302:203'
    */
-  private addDimensions(data: CodecoMessageData): void {
-    const size = parseInt(data.containerSize);
+  private addDateTimePeriod(data: CodecoMessageData): void {
+    // Format: YYMMDDHHMMSS (202602050302)
+    const operationDateTime = `20${data.operationDate}${data.operationTime.slice(0, 4)}`; // Remove seconds for this format
     
-    // Standard container dimensions
-    const length = size === 20 ? '6058' : '12192'; // mm
-    const width = '2438';  // mm (standard)
-    const height = '2591'; // mm (standard)
-    
-    this.segments.push({
-      tag: 'DIM',
-      elements: [
-        '5',                         // Dimension qualifier (5 = External dimensions)
-        `${length}:${width}:${height}` // Dimensions (length:width:height in mm)
-      ]
-    });
-  }
-
-  /**
-   * DTM - Equipment Date/Time
-   * Conditional, max 9 occurrences per equipment
-   */
-  private addEquipmentDates(data: CodecoMessageData): void {
-    // Equipment positioning date/time (7 = Effective date)
-    const eqDateTime = `${data.createdDate}${data.createdTime}`;
     this.segments.push({
       tag: 'DTM',
       elements: [
-        `7:${eqDateTime}:204`        // 7 = Effective date/time
+        `203:${operationDateTime}:203`  // 203 = Transport date/time (203:202602050302:203)
       ]
     });
-
-    // Gate In date/time if available (132 = Arrival date/time)
-    if (data.gateInDate && data.gateInTime) {
-      const gateInDateTime = `${data.gateInDate}${data.gateInTime}`;
-      this.segments.push({
-        tag: 'DTM',
-        elements: [
-          `132:${gateInDateTime}:204` // 132 = Arrival date/time (Gate In)
-        ]
-      });
-    }
-
-    // Last change date/time if available
-    if (data.changedDate && data.changedTime) {
-      const changeDateTime = `${data.changedDate}${data.changedTime}`;
-      this.segments.push({
-        tag: 'DTM',
-        elements: [
-          `182:${changeDateTime}:204` // 182 = Revised date/time
-        ]
-      });
-    }
-
-    // Damage assessment date/time if available
-    if (data.damageAssessedAt) {
-      this.segments.push({
-        tag: 'DTM',
-        elements: [
-          `200:${data.damageAssessedAt}:204` // 200 = Pick-up/collection date/time (used for damage assessment)
-        ]
-      });
-    }
   }
 
   /**
-   * FTX - Free Text
-   * Conditional, max 9 occurrences
+   * LOC - Location Details
+   * Format: LOC+165+CIABJ:139:6+CIABJ31:STO:ZZZ' (PIL) or CIABJ32:STO:ZZZ' (ONEY)
    */
-  private addFreeText(data: CodecoMessageData): void {
-    // Add container attributes as free text
-    const attributes: string[] = [];
+  private addLocationDetails(data: CodecoMessageData): void {
+    // Determine location details based on client name
+    let locationDetails = data.locationDetails;
     
-    if (data.design) attributes.push(`Design:${data.design}`);
-    if (data.cleanType) attributes.push(`CleanType:${data.cleanType}`);
-    if (data.color) attributes.push(`Color:${data.color}`);
-    if (data.numOfEntries) attributes.push(`Entries:${data.numOfEntries}`);
-    
-    if (attributes.length > 0) {
-      this.segments.push({
-        tag: 'FTX',
-        elements: [
-          'AAI',                     // Text subject qualifier (AAI = General information)
-          '',                        // Text function
-          '',                        // Text reference
-          '',                        // Text literal
-          attributes.join('; ')      // Free text
-        ]
-      });
+    // If not explicitly set, determine based on customer (client name)
+    if (!locationDetails || locationDetails === 'CIABJ32:STO:ZZZ') {
+      if (data.customer && data.customer.toUpperCase().includes('PIL')) {
+        locationDetails = 'CIABJ31:STO:ZZZ'; // PIL client
+      } else if (data.customer && data.customer.toUpperCase().includes('ONEY')) {
+        locationDetails = 'CIABJ32:STO:ZZZ'; // ONEY client
+      } else {
+        locationDetails = data.locationDetails || 'CIABJ32:STO:ZZZ'; // Default
+      }
     }
-
-    // Add operation type and status information
-    const isGateOut = data.status === '06' || data.type === '02';
-    const operationType = isGateOut ? 'GATE_OUT' : 'GATE_IN';
-    const statusText = isGateOut ? 'Container departure from depot' : 'Container arrival at depot';
     
     this.segments.push({
-      tag: 'FTX',
+      tag: 'LOC',
       elements: [
-        'AAI',                     // Text subject qualifier (AAI = General information)
-        '',                        // Text function
-        '',                        // Text reference
-        '',                        // Text literal
-        `Operation: ${operationType}; Status: ${statusText}`
+        '165',                       // Location qualifier (165 = Place of positioning)
+        `${data.locationCode}:139:6`, // Location identification (CIABJ:139:6)
+        locationDetails              // Location details (CIABJ31 for PIL, CIABJ32 for ONEY)
       ]
     });
+  }
 
-    // Add damage assessment information if available (mainly for Gate In)
-    if (data.damageReported !== undefined && !isGateOut) {
-      const damageStatus = data.damageReported ? 'DAMAGED' : 'UNDAMAGED';
-      let damageText = `Container Status: ${damageStatus}`;
-      
-      if (data.damageReported && data.damageType) {
-        damageText += `; Damage Type: ${data.damageType}`;
-      }
-      
-      if (data.damageReported && data.damageDescription) {
-        damageText += `; Description: ${data.damageDescription}`;
-      }
-      
-      if (data.damageAssessedBy) {
-        damageText += `; Assessed by: ${data.damageAssessedBy}`;
-      }
-      
-      this.segments.push({
-        tag: 'FTX',
-        elements: [
-          'AAI',                     // Text subject qualifier (AAI = General information)
-          '',                        // Text function
-          '',                        // Text reference
-          '',                        // Text literal
-          damageText                 // Damage assessment information
-        ]
-      });
-    }
-
-    // Add booking information for Gate Out operations
-    if (isGateOut && data.weighbridgeId && data.weighbridgeId.includes('_')) {
-      const bookingNumber = data.weighbridgeId.split('_')[0];
-      if (bookingNumber) {
-        this.segments.push({
-          tag: 'FTX',
-          elements: [
-            'AAI',                     // Text subject qualifier (AAI = General information)
-            '',                        // Text function
-            '',                        // Text reference
-            '',                        // Text literal
-            `Booking Reference: ${bookingNumber}` // Booking number information
-          ]
-        });
-      }
-    }
-
-    // Add changed by information if available
-    if (data.changedBy) {
-      this.segments.push({
-        tag: 'FTX',
-        elements: [
-          'AAI',
-          '',
-          '',
-          '',
-          `Modified by: ${data.changedBy}`
-        ]
-      });
-    }
+  /**
+   * CNT - Control Count
+   * Format: CNT+16:1'
+   */
+  private addControlCount(): void {
+    this.segments.push({
+      tag: 'CNT',
+      elements: [
+        '16:1'                       // Control count (16:1 = Equipment count: 1)
+      ]
+    });
   }
 
   /**
    * UNT - Message Trailer
-   * Mandatory, max 1 occurrence
+   * Format: UNT+12+COD02051428'
    */
   private addMessageTrailer(): void {
-    // Count all segments between UNH and UNT (inclusive)
-    const segmentCount = this.segments.length - 1 + 2; // Exclude UNB, include UNH and UNT
+    // Count all segments between UNH and UNT (inclusive of UNT)
+    // Segments after UNB: all segments - 1 (UNB) + 1 (UNT itself)
+    const segmentCount = this.segments.length - 1 + 1; // Exclude UNB, include UNT
     
     this.segments.push({
       tag: 'UNT',
       elements: [
         segmentCount.toString(),     // Number of segments in message
-        this.messageRefNumber        // Message reference number (same as UNH)
+        this.messageRefNumber        // Message reference number
       ]
     });
   }
 
   /**
    * UNZ - Interchange Trailer
-   * Mandatory, max 1 occurrence
+   * Format: UNZ+1+MANTRA0205'
    */
   private addInterchangeTrailer(): void {
     this.segments.push({
       tag: 'UNZ',
       elements: [
-        '1',                         // Interchange control count (number of messages)
-        this.interchangeRef          // Interchange control reference (same as UNB)
+        '1',                         // Interchange control count (1)
+        this.interchangeRef          // Interchange control reference (MANTRA0205)
       ]
     });
   }
@@ -594,56 +396,56 @@ export class CodecoGenerator {
   private formatMessage(): string {
     return this.segments
       .map(segment => {
-        const elements = segment.elements.filter(e => e !== undefined);
-        return `${segment.tag}+${elements.join('+')}'`;
+        // Keep empty elements to maintain exact client format
+        return `${segment.tag}+${segment.elements.join('+')}'`;
       })
-      .join('\n');
-  }
-
-  /**
-   * Helper: Get ISO container code
-   */
-  private getISOContainerCode(size: string, type: string): string {
-    const sizeCode = size === '20' ? '22' : '45';
-    
-    // Type mapping (simplified)
-    const typeMap: Record<string, string> = {
-      '01': 'G1', // General purpose
-      '02': 'G1', // General purpose
-      '03': 'R1', // Reefer
-      '04': 'U1', // Open top
-      '05': 'P1', // Flat rack
-    };
-    
-    const typeCode = typeMap[type] || 'G1';
-    return `${sizeCode}${typeCode}`;
+      .join('');
   }
 
   /**
    * Helper: Generate message reference number
+   * Format: COD + DDMMYYHHMM (COD02051428)
    */
   private generateMessageRef(): string {
-    return Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+    const now = new Date();
+    const dd = now.getDate().toString().padStart(2, '0');
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+    const yy = now.getFullYear().toString().slice(-2);
+    const hh = now.getHours().toString().padStart(2, '0');
+    const min = now.getMinutes().toString().padStart(2, '0');
+    
+    return `COD${dd}${mm}${yy}${hh}${min}`;
   }
 
   /**
    * Helper: Generate interchange reference
+   * Format: SENDER + MMDD (MANTRA0205)
    */
   private generateInterchangeRef(timestamp: Date): string {
-    return this.formatDateTime(timestamp, 'CCYYMMDDHHMMSS');
+    const mm = (timestamp.getMonth() + 1).toString().padStart(2, '0');
+    const dd = timestamp.getDate().toString().padStart(2, '0');
+    
+    return `MANTRA${mm}${dd}`;
   }
 
   /**
    * Helper: Format date
    */
-  private formatDate(date: Date, format: 'YYMMDD' | 'CCYYMMDD'): string {
+  private formatDate(date: Date, format: 'YYMMDD' | 'CCYYMMDD' | 'DDMMYYHHMM'): string {
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
     
     if (format === 'YYMMDD') {
       return `${year.toString().slice(-2)}${month}${day}`;
+    } else if (format === 'CCYYMMDD') {
+      return `${year}${month}${day}`;
+    } else if (format === 'DDMMYYHHMM') {
+      return `${day}${month}${year.toString().slice(-2)}${hours}${minutes}`;
     }
+    
     return `${year}${month}${day}`;
   }
 
@@ -660,17 +462,10 @@ export class CodecoGenerator {
     }
     return `${hours}${minutes}${seconds}`;
   }
-
-  /**
-   * Helper: Format date and time
-   */
-  private formatDateTime(date: Date, format: 'CCYYMMDDHHMMSS'): string {
-    return this.formatDate(date, 'CCYYMMDD') + this.formatTime(date, 'HHMMSS');
-  }
 }
 
 /**
- * Parse SAP XML to CodecoMessageData
+ * Parse SAP XML to CodecoMessageData (updated for client reference format)
  */
 export function parseSAPXML(xmlContent: string): CodecoMessageData {
   const parser = new DOMParser();
@@ -681,24 +476,59 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
     return element?.textContent?.trim() || '';
   };
 
+  const now = new Date();
+  const formatDate = (date: Date): string => {
+    return date.toISOString().slice(0, 10).replace(/-/g, '').slice(2); // YYMMDD
+  };
+  const formatTime = (date: Date): string => {
+    return date.toTimeString().slice(0, 5).replace(/:/g, '') + '02'; // HHMM + seconds
+  };
+
   return {
-    sender: getText('Company_Code') || 'SENDER',
-    receiver: getText('Plant') || 'RECEIVER',
-    companyCode: getText('Company_Code'),
-    plant: getText('Plant'),
-    customer: getText('Customer'),
+    // Header Information - REQUIRED for client format
+    sender: getText('Company_Code') || 'MANTRA',        // Company name
+    receiver: getText('Customer') || 'CLIENT',          // Client Name
+    companyCode: getText('Company_Code') || 'MANTRA',   // Company Code
+    plant: getText('Plant') || 'DEPOT',                 // Yard/Depot Code
+    customer: getText('Customer') || 'CLIENT',          // Client Name
+    
+    // Container Information - REQUIRED
+    containerNumber: getText('Container_Number'),
+    containerSize: getText('Container_Size'),
+    containerType: getText('Status') === '04' ? 'EM' : 'FL', // EM = Empty, FL = Full
+    
+    // Transport Information
+    transportCompany: getText('Transporter'),
+    vehicleNumber: getText('Vehicle_Number'),
+    
+    // Operation Information
+    operationType: getText('Type') === '02' ? 'GATE_OUT' : 'GATE_IN',
+    operationDate: formatDate(now),
+    operationTime: formatTime(now),
+    
+    // Reference Information
+    bookingReference: getText('Booking_Number') || '-',
+    equipmentReference: 'EQR Ref No',
+    
+    // Location Information
+    locationCode: 'CIABJ',
+    locationDetails: 'CIABJ32:STO:ZZZ',
+    
+    // Operator Information
+    operatorName: getText('Created_By') || 'SYSTEM',
+    operatorId: 'SYS001',
+    yardId: 'YARD01',
+    
+    // Backward compatibility fields
     weighbridgeId: getText('Weighbridge_ID'),
     weighbridgeIdSno: getText('Weighbridge_ID_SNO'),
     transporter: getText('Transporter'),
-    containerNumber: getText('Container_Number'),
-    containerSize: getText('Container_Size'),
     design: getText('Design'),
     type: getText('Type'),
     color: getText('Color'),
     cleanType: getText('Clean_Type'),
     status: getText('Status'),
     deviceNumber: getText('Device_Number'),
-    vehicleNumber: getText('Vehicle_Number'),
     createdDate: getText('Created_Date'),
     createdTime: getText('Created_Time'),
     createdBy: getText('Created_By'),
@@ -706,10 +536,8 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
     changedTime: getText('Changed_Time'),
     changedBy: getText('Changed_By'),
     numOfEntries: getText('Num_Of_Entries'),
-    // Gate In specific fields
     gateInDate: getText('Gate_In_Date'),
     gateInTime: getText('Gate_In_Time'),
-    // Damage assessment fields
     damageReported: getText('Damage_Reported') === 'true' || getText('Damage_Reported') === '1',
     damageType: getText('Damage_Type'),
     damageDescription: getText('Damage_Description'),
@@ -720,7 +548,7 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
 
 /**
  * Parse Gate In Operation data to CodecoMessageData
- * This function converts Gate In operation data to the format expected by the CODECO generator
+ * This function converts Gate In operation data to the client reference format
  */
 export function parseGateInOperation(
   operation: any,
@@ -731,54 +559,162 @@ export function parseGateInOperation(
     return date.toISOString().slice(0, 10).replace(/-/g, '');
   };
   const formatTime = (date: Date): string => {
-    return date.toTimeString().slice(0, 8).replace(/:/g, '');
-  };
-  const formatDateTime = (date: Date): string => {
-    return formatDate(date) + formatTime(date);
+    return date.toTimeString().slice(0, 5).replace(/:/g, '');
   };
 
-  // Extract damage assessment information
-  const damageAssessment = operation.damageAssessment || {};
-  const hasDamage = damageAssessment.hasDamage || operation.damageReported || false;
+  // Extract operation date and time
+  const operationDate = operation.gateInDate ? 
+    new Date(operation.gateInDate) : 
+    (operation.truckArrivalDate ? 
+      new Date(operation.truckArrivalDate + 'T' + (operation.truckArrivalTime || '00:00')) : 
+      now);
 
   return {
-    sender: yardInfo.companyCode || 'DEPOT',
-    receiver: yardInfo.plant || 'SYSTEM',
-    companyCode: yardInfo.companyCode || 'DEPOT',
-    plant: yardInfo.plant || 'SYSTEM',
-    customer: yardInfo.customer || operation.clientCode || 'UNKNOWN',
+    // Header Information - REQUIRED for client format
+    sender: yardInfo.companyCode || 'MANTRA',           // Company name
+    receiver: operation.clientName || 'CLIENT',         // Client Name
+    companyCode: yardInfo.companyCode || 'MANTRA',      // Company Code
+    plant: yardInfo.plant || 'DEPOT',                   // Yard/Depot Code
+    customer: operation.clientName || 'CLIENT',         // Client Name
+    
+    // Container Information - REQUIRED
+    containerNumber: operation.containerNumber,
+    containerSize: operation.containerSize?.replace('ft', '') || '40',
+    containerType: operation.fullEmpty === 'EMPTY' ? 'EM' : 'FL', // EM = Empty, FL = Full
+    
+    // Transport Information
+    transportCompany: operation.transportCompany || 'UNKNOWN',
+    vehicleNumber: operation.truckNumber || operation.vehicleNumber || 'UNKNOWN',
+    
+    // Operation Information
+    operationType: 'GATE_IN',
+    operationDate: formatDate(operationDate).slice(2), // YYMMDD format (260205)
+    operationTime: formatTime(operationDate) + '02', // HHMM + seconds (0302)
+    
+    // Reference Information
+    bookingReference: operation.bookingReference || operation.bookingNumber, // Booking reference for FULL containers or Gate Out
+    equipmentReference: operation.equipmentReference, // Use actual equipment reference from Gate In
+    
+    // Location Information
+    locationCode: 'CIABJ', // Default location code
+    locationDetails: 'CIABJ32:STO:ZZZ', // Default location details
+    
+    // Operator Information
+    operatorName: operation.operatorName || 'SYSTEM',
+    operatorId: operation.operatorId || 'SYS001',
+    yardId: operation.yardId || 'YARD01',
+    
+    // Backward compatibility fields
     weighbridgeId: `WB${operation.id || now.getTime()}`,
     weighbridgeIdSno: '00001',
-    transporter: operation.transportCompany || 'UNKNOWN',
-    containerNumber: operation.containerNumber,
-    containerSize: operation.containerSize?.replace('ft', '') || '20',
-    design: '001', // Default design
-    type: operation.containerType === 'reefer' ? '03' : '01', // 01 = General purpose, 03 = Reefer
-    color: '#000000', // Default color
-    cleanType: operation.classification === 'alimentaire' ? '002' : '001', // 002 = Food grade, 001 = Standard
-    status: operation.status === 'FULL' || operation.fullEmpty === 'FULL' ? '05' : '04', // 05 = Full, 04 = Empty
+    transporter: operation.transportCompany,
+    design: '001',
+    type: operation.containerType === 'reefer' ? '03' : '01',
+    color: '#000000',
+    cleanType: operation.classification === 'alimentaire' ? '002' : '001',
+    status: operation.status === 'FULL' || operation.fullEmpty === 'FULL' ? '05' : '04',
     deviceNumber: operation.deviceNumber || `DEV${now.getTime()}`,
-    vehicleNumber: operation.truckNumber || operation.vehicleNumber || 'UNKNOWN',
     createdDate: formatDate(operation.createdAt ? new Date(operation.createdAt) : now),
-    createdTime: formatTime(operation.createdAt ? new Date(operation.createdAt) : now),
+    createdTime: formatTime(operation.createdAt ? new Date(operation.createdAt) : now) + '00',
     createdBy: operation.operatorName || operation.createdBy || 'SYSTEM',
     changedDate: operation.updatedAt ? formatDate(new Date(operation.updatedAt)) : undefined,
-    changedTime: operation.updatedAt ? formatTime(new Date(operation.updatedAt)) : undefined,
+    changedTime: operation.updatedAt ? formatTime(new Date(operation.updatedAt)) + '00' : undefined,
     changedBy: operation.updatedBy || undefined,
     numOfEntries: operation.containerQuantity?.toString() || '1',
-    // Gate In specific fields
     gateInDate: operation.gateInDate ? formatDate(new Date(operation.gateInDate)) : 
                 operation.truckArrivalDate ? operation.truckArrivalDate.replace(/-/g, '') :
                 formatDate(now),
-    gateInTime: operation.gateInTime ? operation.gateInTime.replace(/:/g, '') :
+    gateInTime: operation.gateInTime ? operation.gateInTime.replace(/:/g, '') + '00' :
                 operation.truckArrivalTime ? operation.truckArrivalTime.replace(/:/g, '') + '00' :
-                formatTime(now),
-    // Damage assessment fields
-    damageReported: hasDamage,
-    damageType: damageAssessment.damageType || (hasDamage ? 'GENERAL' : undefined),
-    damageDescription: damageAssessment.damageDescription || operation.damageDescription,
-    damageAssessedBy: damageAssessment.assessedBy || operation.operatorName,
-    damageAssessedAt: damageAssessment.assessedAt ? formatDateTime(new Date(damageAssessment.assessedAt)) : 
-                      (hasDamage ? formatDateTime(now) : undefined)
+                formatTime(now) + '00',
+    damageReported: operation.damageAssessment?.hasDamage || operation.damageReported || false,
+    damageType: operation.damageAssessment?.damageType || (operation.damageReported ? 'GENERAL' : undefined),
+    damageDescription: operation.damageAssessment?.damageDescription || operation.damageDescription,
+    damageAssessedBy: operation.damageAssessment?.assessedBy || operation.operatorName,
+    damageAssessedAt: operation.damageAssessment?.assessedAt ? 
+      formatDate(new Date(operation.damageAssessment.assessedAt)) + formatTime(new Date(operation.damageAssessment.assessedAt)) + '00' : 
+      (operation.damageReported ? formatDate(now) + formatTime(now) + '00' : undefined)
+  };
+}
+
+/**
+ * Parse Gate Out Operation data to CodecoMessageData
+ * This function converts Gate Out operation data to the client reference format
+ */
+export function parseGateOutOperation(
+  operation: any,
+  container: any,
+  yardInfo: { companyCode: string; plant: string; customer?: string }
+): CodecoMessageData {
+  const now = new Date();
+  const formatDate = (date: Date): string => {
+    return date.toISOString().slice(0, 10).replace(/-/g, '');
+  };
+  const formatTime = (date: Date): string => {
+    return date.toTimeString().slice(0, 5).replace(/:/g, '');
+  };
+
+  // Extract operation date and time
+  const operationDate = operation.completedAt ? 
+    new Date(operation.completedAt) : 
+    now;
+
+  return {
+    // Header Information - REQUIRED for client format
+    sender: yardInfo.companyCode || 'MANTRA',           // Company name
+    receiver: operation.clientName || container.clientName || 'CLIENT', // Client Name
+    companyCode: yardInfo.companyCode || 'MANTRA',      // Company Code
+    plant: yardInfo.plant || 'DEPOT',                   // Yard/Depot Code
+    customer: operation.clientName || container.clientName || 'CLIENT', // Client Name
+    
+    // Container Information - REQUIRED
+    containerNumber: container.number,
+    containerSize: container.size?.replace('ft', '') || '40',
+    containerType: 'FL', // Assume full for gate out
+    
+    // Transport Information
+    transportCompany: operation.transportCompany || 'UNKNOWN',
+    vehicleNumber: operation.vehicleNumber || operation.truckNumber || 'UNKNOWN',
+    
+    // Operation Information
+    operationType: 'GATE_OUT',
+    operationDate: formatDate(operationDate).slice(2), // YYMMDD format
+    operationTime: formatTime(operationDate) + '02', // HHMM + seconds
+    
+    // Reference Information
+    bookingReference: operation.bookingNumber || '-',
+    equipmentReference: operation.equipmentReference || 'EQR Ref No',
+    
+    // Location Information
+    locationCode: 'CIABJ', // Default location code
+    locationDetails: 'CIABJ32:STO:ZZZ', // Default location details
+    
+    // Operator Information
+    operatorName: operation.operatorName || 'SYSTEM',
+    operatorId: operation.operatorId || 'SYS001',
+    yardId: operation.yardId || 'YARD01',
+    
+    // Backward compatibility fields
+    weighbridgeId: operation.bookingNumber || '-',
+    weighbridgeIdSno: '00001',
+    transporter: operation.transportCompany,
+    design: '001',
+    type: '02', // Gate Out type
+    color: '#000000',
+    cleanType: '001',
+    status: '06', // Gate Out status
+    deviceNumber: `DEV${Date.now().toString().slice(-8)}`,
+    createdDate: formatDate(operation.createdAt ? new Date(operation.createdAt) : now),
+    createdTime: formatTime(operation.createdAt ? new Date(operation.createdAt) : now) + '00',
+    createdBy: operation.operatorName || 'SYSTEM',
+    changedDate: operation.completedAt ? formatDate(new Date(operation.completedAt)) : undefined,
+    changedTime: operation.completedAt ? formatTime(new Date(operation.completedAt)) + '00' : undefined,
+    changedBy: operation.completedAt ? operation.operatorName : undefined,
+    numOfEntries: '1',
+    gateInDate: formatDate(operationDate), // Use gate out date
+    gateInTime: formatTime(operationDate) + '00', // Use gate out time
+    damageReported: false, // No damage assessment for gate out
+    damageAssessedBy: operation.operatorName,
+    damageAssessedAt: formatDate(now) + formatTime(now) + '00'
   };
 }

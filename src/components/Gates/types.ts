@@ -33,6 +33,9 @@ export interface GateInFormData {
   // Container Classification (replaces damage status)
   classification: 'divers' | 'alimentaire';
 
+  // Transaction Type (for Excel reports)
+  transactionType: 'Retour Livraison' | 'Transfert (IN)';
+
   // Step 2: Transport Details
   driverName: string;
   truckNumber: string;
@@ -91,6 +94,7 @@ export interface GateInModalProps {
   handleQuantityChange: (quantity: 1 | 2) => void;
   handleStatusChange: (isFullStatus: boolean) => void;
   handleClientChange: (clientId: string) => void;
+  handleTransactionTypeChange: (transactionType: 'Retour Livraison' | 'Transfert (IN)') => void;
   // handleStackSelect?: (stackId: string, formattedLocation: string) => void; // Removed - stack selection moved to pending operations
   // handleDamageAssessment?: (assessment: DamageAssessment) => void; // Moved to pending operations
   clients: Array<{ id: string; code: string; name: string }>;
@@ -144,6 +148,7 @@ export interface GateInOperation {
   ediTransmitted?: boolean;
   ediTransmissionDate?: Date;
   containerId?: string;
+  transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // For Excel reports
 }
 
 export interface PendingGateOut {
