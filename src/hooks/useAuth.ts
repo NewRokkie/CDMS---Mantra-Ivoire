@@ -24,6 +24,9 @@ interface AuthContextType {
   updatePassword: (newPassword: string) => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
+  authError: string | null;
+  isDatabaseConnected: boolean;
+  retryConnection: () => void;
   hasModuleAccess: (module: keyof ModuleAccess) => boolean;
   canViewAllData: () => boolean;
   getClientFilter: () => string | null;
@@ -32,6 +35,9 @@ interface AuthContextType {
   getSyncStatus: () => SyncStatus;
   onSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
   offSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
+  hasAdminUsers: () => Promise<boolean>;
+  needsInitialSetup: boolean;
+  checkInitialSetup: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,6 +56,9 @@ export const useAuthProvider = () => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isDatabaseConnected, setIsDatabaseConnected] = useState(true);
+  const [needsInitialSetup, setNeedsInitialSetup] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     isHealthy: true,
     inconsistencyCount: 0,
@@ -63,7 +72,7 @@ export const useAuthProvider = () => {
   const syncStatusCallbacks = useRef<((status: SyncStatus) => void)[]>([]);
 
   // Mettre à jour à la fois l'état et les refs
-  const setAuthState = useCallback((newUser: AppUser | null, loading: boolean, authenticated: boolean) => {
+  const setAuthState = useCallback((newUser: AppUser | null, loading: boolean, authenticated: boolean, error: string | null = null, dbConnected: boolean = true, initialSetup: boolean = false) => {
     // Éviter les mises à jour inutiles
     if (userRef.current?.id === newUser?.id &&
         isLoadingRef.current === loading &&
@@ -78,23 +87,65 @@ export const useAuthProvider = () => {
     setUser(newUser);
     setIsLoading(loading);
     setIsAuthenticated(authenticated);
+    setAuthError(error);
+    setIsDatabaseConnected(dbConnected);
+    setNeedsInitialSetup(initialSetup);
   }, []);
+
+  // Database connection test with timeout
+  const testDatabaseConnection = async (timeoutMs: number = 10000): Promise<boolean> => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1)
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
+
+      if (error) {
+        logger.error('Database connection test failed', 'useAuth.testDatabaseConnection', error);
+        return false;
+      }
+
+      return true;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        logger.error('Database connection timeout', 'useAuth.testDatabaseConnection');
+        return false;
+      }
+      logger.error('Database connection test error', 'useAuth.testDatabaseConnection', error);
+      return false;
+    }
+  };
 
   // Load user profile with enhanced module access handling
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {
     try {
+      // Use a more direct query to avoid RLS recursion issues
       const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
+        .eq('is_deleted', false)
+        .eq('active', true)
         .maybeSingle();
 
       if (error) {
+        // Check if this is the infinite recursion error
+        if (error.message?.includes('infinite recursion detected in policy')) {
+          logger.error('RLS infinite recursion detected - database policies need to be fixed', 'useAuth.loadUserProfile', error);
+          throw new Error('Database configuration error. Please contact support.');
+        }
         handleError(error, 'useAuth.loadUserProfile');
         return null;
       }
 
       if (!users) {
+        logger.warn('User profile not found for authenticated user', 'useAuth.loadUserProfile', { authUserId: authUser.id });
         return null;
       }
 
@@ -159,14 +210,22 @@ export const useAuthProvider = () => {
     }
   };
 
-  // Version stable de checkSession
+  // Version stable de checkSession avec database connection check
   const checkSession = useCallback(async () => {
     try {
+      // First test database connection
+      const isDbConnected = await testDatabaseConnection(8000); // 8 second timeout
+      
+      if (!isDbConnected) {
+        setAuthState(null, false, false, 'Database connection failed. The database may be paused or unreachable.', false);
+        return;
+      }
+
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
         handleError(error, 'useAuth.checkSession');
-        setAuthState(null, false, false);
+        setAuthState(null, false, false, 'Authentication service error');
         return;
       }
 
@@ -189,14 +248,25 @@ export const useAuthProvider = () => {
             });
           }
         } else {
-          setAuthState(null, false, false);
+          setAuthState(null, false, false, 'User profile not found');
         }
       } else {
-        setAuthState(null, false, false);
+        // No session - check if we need initial setup
+        try {
+          const hasAdmins = await userService.hasAdminUsers();
+          if (!hasAdmins) {
+            setAuthState(null, false, false, null, true, true); // needsInitialSetup = true
+          } else {
+            setAuthState(null, false, false);
+          }
+        } catch (error) {
+          // If we can't check for admins, assume normal login flow
+          setAuthState(null, false, false);
+        }
       }
     } catch (error) {
       handleError(error, 'useAuth.checkSession');
-      setAuthState(null, false, false);
+      setAuthState(null, false, false, 'Session check failed');
     }
   }, [setAuthState]);
 
@@ -291,10 +361,18 @@ export const useAuthProvider = () => {
     };
   }, [checkSession]);
 
-  // login optimisé
+  // login optimisé avec database connection check
   const login = async (email: string, password: string) => {
     try {
       setAuthState(userRef.current, true, isAuthenticatedRef.current);
+
+      // Test database connection first
+      const isDbConnected = await testDatabaseConnection(8000);
+      
+      if (!isDbConnected) {
+        setAuthState(null, false, false, 'Database connection failed. The database may be paused or unreachable.', false);
+        throw new Error('Database connection failed. Please try again later or contact support.');
+      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -327,8 +405,30 @@ export const useAuthProvider = () => {
       });
     } catch (error: any) {
       handleError(error, 'useAuth.login');
-      setAuthState(null, false, false);
+      setAuthState(null, false, false, error.message);
       throw error;
+    }
+  };
+
+  // Check if admin users exist
+  const hasAdminUsers = async (): Promise<boolean> => {
+    try {
+      return await userService.hasAdminUsers();
+    } catch (error) {
+      handleError(error, 'useAuth.hasAdminUsers');
+      throw error;
+    }
+  };
+
+  // Check if initial setup is needed
+  const checkInitialSetup = async (): Promise<void> => {
+    try {
+      const hasAdmins = await userService.hasAdminUsers();
+      setNeedsInitialSetup(!hasAdmins);
+    } catch (error) {
+      handleError(error, 'useAuth.checkInitialSetup');
+      // On error, assume setup is not needed to avoid blocking normal flow
+      setNeedsInitialSetup(false);
     }
   };
 
@@ -467,6 +567,13 @@ export const useAuthProvider = () => {
     }
   }, []);
 
+  // Retry connection function
+  const retryConnection = useCallback(() => {
+    setAuthError(null);
+    setIsDatabaseConnected(true);
+    checkSession();
+  }, [checkSession]);
+
   // Update sync status and notify callbacks
   const updateSyncStatus = useCallback((newStatus: SyncStatus) => {
     setSyncStatus(newStatus);
@@ -487,6 +594,9 @@ export const useAuthProvider = () => {
     updatePassword,
     isLoading,
     isAuthenticated,
+    authError,
+    isDatabaseConnected,
+    retryConnection,
     hasModuleAccess,
     canViewAllData,
     getClientFilter,
@@ -494,7 +604,10 @@ export const useAuthProvider = () => {
     refreshModuleAccess,
     getSyncStatus,
     onSyncStatusChange,
-    offSyncStatusChange
+    offSyncStatusChange,
+    hasAdminUsers,
+    needsInitialSetup,
+    checkInitialSetup
   };
 };
 

@@ -4,10 +4,12 @@ import { ClientSearchField } from '../Common/ClientSearchField';
 import { ContainerQuantityBySize, Client } from '../../types';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { clientService } from '../../services/api';
+import { TransactionOutSwitch } from './TransactionOutSwitch';
 
 interface BookingReferenceFormData {
   bookingNumber: string;
   bookingType: 'IMPORT' | 'EXPORT';
+  transactionType: 'Positionnement' | 'Transfert (OUT)';
   clientId: string;
   clientCode: string;
   clientName: string;
@@ -42,6 +44,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   const [formData, setFormData] = useState<BookingReferenceFormData>({
     bookingNumber: '',
     bookingType: 'EXPORT',
+    transactionType: 'Positionnement', // Default to 'Positionnement'
     clientId: '',
     clientCode: '',
     clientName: '',
@@ -177,6 +180,14 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     }
   };
 
+  const handleTransactionTypeChange = (transactionType: 'Positionnement' | 'Transfert (OUT)') => {
+    setFormData(prev => ({
+      ...prev,
+      transactionType
+    }));
+    triggerAutoSave();
+  };
+
   const triggerAutoSave = () => {
     setAutoSaving(true);
     setTimeout(() => setAutoSaving(false), 1000);
@@ -235,6 +246,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
         handleInputChange={handleInputChange}
         handleQuantityChange={handleQuantityChange}
         handleClientSelect={handleClientSelect}
+        handleTransactionTypeChange={handleTransactionTypeChange}
       />
     </MultiStepModal>
   );
@@ -250,6 +262,7 @@ interface ReleaseOrderFormContentProps {
   handleInputChange: (field: keyof BookingReferenceFormData, value: any) => void;
   handleQuantityChange: (size: keyof ContainerQuantityBySize, value: number) => void;
   handleClientSelect: (clientId: string) => void;
+  handleTransactionTypeChange: (transactionType: 'Positionnement' | 'Transfert (OUT)') => void;
 }
 
 const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
@@ -259,7 +272,8 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
   clients,
   handleInputChange,
   handleQuantityChange,
-  handleClientSelect
+  handleClientSelect,
+  handleTransactionTypeChange
 }) => {
   const getContainerBreakdownText = (): string => {
     const parts = [];
@@ -325,6 +339,14 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                     <ArrowRight className="h-4 w-4 text-blue-500 ml-auto" />
                   </label>
                 </div>
+              </div>
+
+              {/* Transaction Type */}
+              <div>
+                <TransactionOutSwitch
+                  value={formData.transactionType}
+                  onChange={handleTransactionTypeChange}
+                />
               </div>
 
               {/* Booking Reference Number */}

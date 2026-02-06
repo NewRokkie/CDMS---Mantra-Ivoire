@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User as UserIcon, Mail, Phone, Building, Shield, MapPin, Check, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, Building, Shield, AlertCircle } from 'lucide-react';
 import type { User } from '../../types';
-import { useYard } from '../../hooks/useYard';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { useUserManagementRetry } from '../../hooks/useRetry';
 import { FormModal } from '../Common/Modal/FormModal';
@@ -31,7 +30,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   loading = false
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { availableYards } = useYard();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -40,7 +38,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     department: '',
     company: '',
     role: 'operator' as User['role'],
-    yardAssignments: [] as string[],
     isActive: true,
     password: ''
   });
@@ -99,7 +96,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     
     // Validate all fields
     Object.keys(formData).forEach(field => {
-      if (field !== 'yardAssignments' && field !== 'isActive' && field !== 'role') {
+      if (field !== 'isActive' && field !== 'role') {
         const error = validateField(field, formData[field as keyof typeof formData]);
         if (error) {
           errors[field] = error;
@@ -126,7 +123,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         department: selectedUser.department || '',
         company: selectedUser.company || '',
         role: selectedUser.role,
-        yardAssignments: selectedUser.yardAssignments || [],
         isActive: selectedUser.isActive,
         password: '' // Never pre-fill password
       });
@@ -139,7 +135,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         department: '',
         company: '',
         role: 'operator',
-        yardAssignments: [],
         isActive: true,
         password: ''
       });
@@ -191,29 +186,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         [field]: error
       }
     }));
-  };
-
-  const handleYardAssignmentToggle = (yardId: string, triggerAutoSave?: () => void) => {
-    setFormData(prev => ({
-      ...prev,
-      yardAssignments: prev.yardAssignments.includes(yardId)
-        ? prev.yardAssignments.filter(id => id !== yardId)
-        : [...prev.yardAssignments, yardId]
-    }));
-    if (triggerAutoSave) {
-      triggerAutoSave();
-    }
-  };
-
-  const handleSelectAllYards = (triggerAutoSave?: () => void) => {
-    const allYardIds = availableYards.map(yard => yard.id);
-    setFormData(prev => ({
-      ...prev,
-      yardAssignments: prev.yardAssignments.length === allYardIds.length ? [] : allYardIds
-    }));
-    if (triggerAutoSave) {
-      triggerAutoSave();
-    }
   };
 
   // Use retry mechanism for form submission
@@ -288,7 +260,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         onClose={onClose}
         onSubmit={handleFormSubmit}
         title={selectedUser ? 'Edit User' : 'Create New User'}
-        subtitle={selectedUser ? 'Update user information and yard assignments' : 'Add a new user to the system'}
+        subtitle={selectedUser ? 'Update user information and permissions' : 'Add a new user to the system'}
         icon={UserIcon}
         size="lg"
         submitLabel={selectedUser ? 'Update User' : 'Create User'}
@@ -303,12 +275,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         <UserFormContent
           formData={formData}
           validation={validation}
-          availableYards={availableYards}
           selectedUser={selectedUser}
           onInputChange={handleInputChange}
           onFieldBlur={handleFieldBlur}
-          onYardAssignmentToggle={handleYardAssignmentToggle}
-          onSelectAllYards={handleSelectAllYards}
           getRoleDescription={getRoleDescription}
         />
       </FormModal>
@@ -320,12 +289,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 interface UserFormContentProps {
   formData: any;
   validation: FormValidationState;
-  availableYards: any[];
   selectedUser?: User | null;
   onInputChange: (field: string, value: any, triggerAutoSave?: () => void) => void;
   onFieldBlur: (field: string) => void;
-  onYardAssignmentToggle: (yardId: string, triggerAutoSave?: () => void) => void;
-  onSelectAllYards: (triggerAutoSave?: () => void) => void;
   getRoleDescription: (role: User['role']) => string;
   triggerAutoSave?: () => void;
   showNotification?: (type: 'success' | 'error' | 'warning' | 'info', message: string) => void;
@@ -334,12 +300,9 @@ interface UserFormContentProps {
 const UserFormContent: React.FC<UserFormContentProps> = ({
   formData,
   validation,
-  availableYards,
   selectedUser,
   onInputChange,
   onFieldBlur,
-  onYardAssignmentToggle,
-  onSelectAllYards,
   getRoleDescription,
   triggerAutoSave
 }) => {
@@ -531,99 +494,6 @@ const UserFormContent: React.FC<UserFormContentProps> = ({
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Yard Assignments */}
-      <div className="depot-section">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-600 text-white rounded-lg">
-              <MapPin className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-green-900">Yard Assignments (Optional)</h4>
-              <p className="text-sm text-green-700">
-                Select which yards this user can access ({formData.yardAssignments.length} selected). You can assign yards later if needed.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => onSelectAllYards(triggerAutoSave)}
-            className="text-sm font-medium text-green-600 hover:text-green-800 px-3 py-1 hover:bg-green-100 rounded-md transition-colors"
-          >
-            {formData.yardAssignments.length === availableYards.length ? 'Deselect All' : 'Select All'}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3">
-          {availableYards.map((yard) => {
-            const isSelected = formData.yardAssignments.includes(yard.id);
-            const occupancyRate = (yard.currentOccupancy / yard.totalCapacity) * 100;
-
-            return (
-              <div
-                key={yard.id}
-                onClick={() => onYardAssignmentToggle(yard.id, triggerAutoSave)}
-                className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
-                  isSelected
-                    ? 'border-green-500 bg-green-100 shadow-md'
-                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      <Building className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium text-gray-900">{yard.name}</span>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          {yard.code}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600">{yard.location}</div>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <div className="text-xs text-gray-500">
-                          {yard.currentOccupancy}/{yard.totalCapacity} containers
-                        </div>
-                        <div className={`text-xs px-2 py-1 rounded-full ${
-                          occupancyRate >= 90 ? 'bg-red-100 text-red-600' :
-                          occupancyRate >= 75 ? 'bg-orange-100 text-orange-600' :
-                          'bg-green-100 text-green-600'
-                        }`}>
-                          {occupancyRate.toFixed(0)}%
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Selection Indicator */}
-                  {isSelected && (
-                    <div className="flex-shrink-0">
-                      <div className="bg-green-500 text-white rounded-full p-1 animate-scale-in">
-                        <Check className="h-3 w-3" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {availableYards.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-            <p className="text-sm">No yards available</p>
-            <p className="text-xs">Contact administrator to set up yards</p>
-          </div>
-        )}
       </div>
 
       {/* Status */}

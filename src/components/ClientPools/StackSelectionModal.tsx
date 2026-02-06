@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Check, Grid3X3, Package, Loader, AlertTriangle } from 'lucide-react';
 import { stackService } from '../../services/api';
 import { handleError } from '../../services/errorHandling';
+import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
 
 interface Stack {
   id: string;
@@ -89,7 +90,7 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
           isSpecialStack: stack.isSpecialStack || false,
           isVirtual: false, // All remaining stacks are physical
           currentOccupancy: stack.currentOccupancy || 0,
-          maxCapacity: (stack.rows || 6) * (stack.maxTiers || 4)
+          maxCapacity: stack.capacity || (stack.rows || 6) * (stack.maxTiers || 4) // Use real capacity from database
         }));
 
       setStacks(transformedStacks);
@@ -162,11 +163,14 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       stacks: filteredStacks.filter(s => s.sectionId === sectionId)
     }));
 
-  // Calculate total capacity
-  const totalCapacity = Array.from(selectedStackIds).reduce((sum, stackId) => {
-    const stack = stacks.find(s => s.id === stackId);
-    return sum + (stack?.maxCapacity || 0);
-  }, 0);
+  // Calculate total capacity using effective capacity logic
+  const selectedStacks = Array.from(selectedStackIds).map(stackId => stacks.find(s => s.id === stackId)).filter(Boolean);
+  const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(selectedStacks.map(stack => ({
+    ...stack,
+    capacity: stack.maxCapacity,
+    containerSize: stack.containerSize,
+    isVirtual: stack.isVirtual
+  })));
 
   if (!isOpen) return null;
 

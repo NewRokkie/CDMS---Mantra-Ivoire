@@ -1,6 +1,7 @@
 import React from 'react';
 import { Yard } from '../../../../types';
 import { GlassCard } from './GlassCard';
+import { StackCapacityCalculator } from '../../../../utils/stackCapacityCalculator';
 
 interface Props {
   depot: Yard;
@@ -8,10 +9,9 @@ interface Props {
 
 export const StructureTab: React.FC<Props> = ({ depot }) => {
   const totalStacks = depot.sections.reduce((acc, s) => acc + s.stacks.length, 0);
-  const totalCapacity = depot.sections.reduce(
-    (acc, s) => acc + s.stacks.reduce((sum, st) => sum + st.capacity, 0),
-    0
-  );
+  // Calculate effective capacity using the new logic
+  const allStacks = depot.sections.flatMap(section => section.stacks);
+  const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">

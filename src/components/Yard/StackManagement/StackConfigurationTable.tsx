@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Shield, Trash2, Users } from 'lucide-react';
+import { Settings, Shield, Trash2, Users, RefreshCw } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
 
@@ -9,6 +9,7 @@ interface StackConfigurationTableProps {
   onDeleteStack: (stackId: string) => void;
   onContainerSizeChange?: (stackId: string, yardId: string, stackNumber: number, newSize: '20ft' | '40ft') => void;
   onAssignClient?: (stack: YardStack) => void;
+  isRefreshing?: boolean;
 }
 
 export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = ({
@@ -16,7 +17,8 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
   onEditStack,
   onDeleteStack,
   onContainerSizeChange,
-  onAssignClient
+  onAssignClient,
+  isRefreshing = false
 }) => {
   const getAdjacentStackNumber = (stackNumber: number): number | null => {
     return stackService.getAdjacentStackNumber(stackNumber);
@@ -41,7 +43,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden relative">
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">Stack Configuration</h3>
         <p className="text-sm text-gray-600">Configure container size assignments for each stack (paired stacks will be updated together)</p>
@@ -111,7 +113,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">{stack.sectionName || 'Main Section'}</span>
+                    <span className="text-sm text-gray-900">{stack.sectionName || 'Zone A'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-lg ${
@@ -134,11 +136,37 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {stack.currentOccupancy}/{stack.capacity}
-                      <span className="text-xs text-gray-500 ml-2">
-                        ({stack.capacity > 0 ? Math.round((stack.currentOccupancy / stack.capacity) * 100) : 0}%)
-                      </span>
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-900 font-medium">
+                        {stack.currentOccupancy}/{stack.capacity}
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({stack.capacity > 0 ? Math.round((stack.currentOccupancy / stack.capacity) * 100) : 0}%)
+                        </span>
+                      </div>
+                      {stack.containerStats && (
+                        <div className="flex flex-wrap gap-1 text-xs">
+                          {stack.containerStats.size20ft > 0 && (
+                            <span className="inline-flex px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                              20ft: {stack.containerStats.size20ft}
+                            </span>
+                          )}
+                          {stack.containerStats.size40ft > 0 && (
+                            <span className="inline-flex px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
+                              40ft: {stack.containerStats.size40ft}
+                            </span>
+                          )}
+                          {stack.containerStats.damaged > 0 && (
+                            <span className="inline-flex px-1.5 py-0.5 bg-red-100 text-red-700 rounded">
+                              Damaged: {stack.containerStats.damaged}
+                            </span>
+                          )}
+                          {stack.containerStats.maintenance > 0 && (
+                            <span className="inline-flex px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded">
+                              Maint: {stack.containerStats.maintenance}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -217,6 +245,16 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
           </tbody>
         </table>
       </div>
+      
+      {/* Refreshing Overlay */}
+      {isRefreshing && (
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+          <div className="flex items-center space-x-3 text-blue-600">
+            <RefreshCw className="h-5 w-5 animate-spin" />
+            <span className="text-sm font-medium">Refreshing stack data...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

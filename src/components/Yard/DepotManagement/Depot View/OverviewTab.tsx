@@ -4,13 +4,17 @@ import { GlassCard } from './GlassCard';
 import { Badge } from './Badge';
 import { RadialGauge } from './RadialGauge';
 import { clsx } from 'clsx';
+import { StackCapacityCalculator } from '../../../../utils/stackCapacityCalculator';
 
 interface Props {
   depot: Yard;
 }
 
 export const OverviewTab: React.FC<Props> = ({ depot }) => {
-  const rate = depot.totalCapacity ? (depot.currentOccupancy / depot.totalCapacity) * 100 : 0;
+  // Calculate effective capacity using the new logic
+  const allStacks = depot.sections.flatMap(section => section.stacks);
+  const effectiveCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
+  const rate = effectiveCapacity ? (depot.currentOccupancy / effectiveCapacity) * 100 : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -26,7 +30,7 @@ export const OverviewTab: React.FC<Props> = ({ depot }) => {
         <h3 className="card-title text-green-700">Capacity</h3>
         <RadialGauge value={rate} />
         <div className="mt-4 grid grid-cols-2 gap-4 text-center">
-          <Counter label="Total" value={depot.totalCapacity} color="text-blue-600" />
+          <Counter label="Total" value={effectiveCapacity} color="text-blue-600" />
           <Counter label="Occupied" value={depot.currentOccupancy} color="text-green-600" />
         </div>
       </GlassCard>

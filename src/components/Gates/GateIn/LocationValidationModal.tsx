@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Loader, Package, MapPin, Clock } from 'lucide-react';
+import { Save, Loader, Package, MapPin, Clock, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 import { StandardModal } from '../../Common/Modal/StandardModal';
 import { DamageAssessmentModal } from '../GateInModal/DamageAssessmentModal';
 import { StackSelectionButton } from '../GateInModal/StackSelectionButton';
@@ -8,6 +8,7 @@ import { TimePicker } from '../../Common/TimePicker';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
 import { DamageAssessment } from '../types';
+import { bufferZoneService } from '../../../services/bufferZoneService';
 
 interface LocationData {
   id: string;
@@ -67,6 +68,8 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   
   // Damage Assessment State
   const [showDamageAssessment, setShowDamageAssessment] = useState(false);
+  const [damageAssessment, setDamageAssessment] = useState<DamageAssessment | null>(null);
+  const [assessmentCompleted, setAssessmentCompleted] = useState(false);
 
   const [notificationFn, setNotificationFn] = useState<((type: 'success' | 'error' | 'warning' | 'info', message: string, options?: { autoHide?: boolean; duration?: number }) => void) | null>(null);
 
@@ -82,6 +85,8 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
       setSelectedStackId('');
       setSelectedStackLocation('');
       setShowDamageAssessment(false);
+      setDamageAssessment(null);
+      setAssessmentCompleted(false);
       // Set default system date and time
       const now = new Date();
       setTruckDepartureDate(now.toISOString().split('T')[0]);
@@ -100,11 +105,19 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   // Normalize container size (20FT → 20ft, 40FT → 40ft)
   const normalizedSize = operation.containerSize?.toLowerCase().replace('ft', 'ft') as '20ft' | '40ft';
 
+  const handleStartDamageAssessment = () => {
+    setError('');
+    // L'évaluation des dommages est maintenant la première étape
+    // Pas besoin de sélection de stack préalable
+    setShowDamageAssessment(true);
+  };
+
   const handleComplete = async () => {
     setError('');
 
-    if (!selectedStackId || !selectedStackLocation) {
-      const errorMsg = 'Please select a stack location for the container.';
+    // Vérification de l'évaluation des dommages (obligatoire)
+    if (!assessmentCompleted || !damageAssessment) {
+      const errorMsg = 'L\'évaluation des dommages doit être complétée avant de finaliser l\'opération.';
       setError(errorMsg);
       if (notificationFn) {
         notificationFn('error', errorMsg, { autoHide: false });
@@ -112,8 +125,88 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
       return;
     }
 
-    // Show damage assessment modal before completing
-    setShowDamageAssessment(true);
+    // Si pas de dommages, vérifier la sélection de stack
+    if (!damageAssessment.hasDamage && (!selectedStackId || !selectedStackLocation)) {
+      const errorMsg = 'Veuillez sélectionner un emplacement pour le conteneur en bon état.';
+      setError(errorMsg);
+      if (notificationFn) {
+        notificationFn('error', errorMsg, { autoHide: false });
+      }
+      return;
+    }
+
+    // Procéder à la finalisation
+    await finalizeOperation();
+  };
+
+  const finalizeOperation = async () => {
+    if (!damageAssessment) return;
+
+    let finalLocation = selectedStackLocation;
+    let finalStackId = selectedStackId;
+    let ediShouldTransmit = true; // Par défaut, EDI est transmis
+
+    // Si le conteneur est endommagé, l'assigner à une zone tampon
+    if (damageAssessment.hasDamage && currentYard?.id) {
+      try {
+        if (notificationFn) {
+          notificationFn('info', 'Assignation automatique en zone tampon pour conteneur endommagé...', { autoHide: false });
+        }
+
+        const bufferStack = await bufferZoneService.getOrCreateBufferStack(
+          currentYard.id,
+          operation.containerSize as '20ft' | '40ft',
+          damageAssessment.damageType || 'general'
+        );
+
+        finalStackId = bufferStack.id;
+        finalLocation = `BUFFER-S${String(bufferStack.stackNumber).padStart(4, '0')}-R01-H01`;
+        ediShouldTransmit = false; // EDI en PENDING pour conteneurs endommagés
+
+        if (notificationFn) {
+          notificationFn('warning', `Conteneur assigné à la zone tampon: ${finalLocation} (EDI en attente)`, { autoHide: false });
+        }
+      } catch (bufferError) {
+        const errorMsg = `Erreur lors de l'assignation en zone tampon: ${bufferError instanceof Error ? bufferError.message : 'Erreur inconnue'}`;
+        setError(errorMsg);
+        if (notificationFn) {
+          notificationFn('error', errorMsg, { autoHide: false });
+        }
+        return;
+      }
+    } else {
+      // Conteneur en bon état - EDI automatique
+      if (notificationFn) {
+        notificationFn('info', `Assignation à l'emplacement sélectionné: ${finalLocation} (EDI automatique)`, { autoHide: false });
+      }
+    }
+    
+    // Finaliser l'opération avec les données complètes
+    const locationData = {
+      assignedLocation: finalLocation,
+      stackId: finalStackId,
+      truckDepartureDate: truckDepartureDate || new Date().toISOString().split('T')[0],
+      truckDepartureTime: truckDepartureTime || new Date().toTimeString().slice(0, 5),
+      damageAssessment: damageAssessment,
+      isBufferZone: damageAssessment.hasDamage,
+      ediShouldTransmit: ediShouldTransmit // Nouveau flag pour contrôler l'EDI
+    };
+
+    try {
+      await onComplete(operation, locationData);
+      if (notificationFn) {
+        const successMsg = damageAssessment.hasDamage 
+          ? `Opération terminée! Conteneur en zone tampon: ${finalLocation} (EDI en attente de traitement manuel)`
+          : `Opération terminée! Conteneur assigné: ${finalLocation} (EDI transmis automatiquement)`;
+        notificationFn('success', successMsg);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Échec de l\'opération';
+      setError(errorMsg);
+      if (notificationFn) {
+        notificationFn('error', errorMsg, { autoHide: false });
+      }
+    }
   };
 
   const handleStackSelect = (stackId: string, formattedLocation: string) => {
@@ -124,32 +217,23 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
 
 
 
-  const isFormValid = selectedStackId && selectedStackLocation;
+  // Validation : Évaluation complétée + (si pas de dommages, stack sélectionné)
+  const isFormValid = assessmentCompleted && (
+    damageAssessment?.hasDamage || // Si endommagé, pas besoin de stack
+    (selectedStackId && selectedStackLocation) // Si OK, stack requis
+  );
 
   // Damage Assessment Handlers
-  const handleDamageAssessmentComplete = async (assessment: DamageAssessment) => {
+  const handleDamageAssessmentComplete = (assessment: DamageAssessment) => {
     setShowDamageAssessment(false);
+    setDamageAssessment(assessment);
+    setAssessmentCompleted(true);
     
-    // Complete the operation with the assessment
-    const locationData = {
-      assignedLocation: selectedStackLocation,
-      stackId: selectedStackId,
-      truckDepartureDate: truckDepartureDate || new Date().toISOString().split('T')[0],
-      truckDepartureTime: truckDepartureTime || new Date().toTimeString().slice(0, 5),
-      damageAssessment: assessment
-    };
-
-    try {
-      await onComplete(operation, locationData);
-      if (notificationFn) {
-        notificationFn('success', 'Operation completed successfully!');
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to complete operation';
-      setError(errorMsg);
-      if (notificationFn) {
-        notificationFn('error', errorMsg, { autoHide: false });
-      }
+    if (notificationFn) {
+      const message = assessment.hasDamage 
+        ? `⚠️ Dommages détectés (${assessment.damageType}). Le conteneur sera assigné en zone tampon lors de la finalisation.`
+        : '✅ Aucun dommage détecté. Le conteneur sera assigné à l\'emplacement sélectionné.';
+      notificationFn(assessment.hasDamage ? 'warning' : 'success', message);
     }
   };
 
@@ -160,10 +244,14 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   // Validation Summary Component
   const ValidationSummary = () => (
     <div className="text-xs sm:text-sm text-gray-600 hidden sm:block">
-      {isFormValid ? (
-        <span className="text-green-600 font-medium">✓ Ready to complete</span>
+      {!assessmentCompleted ? (
+        <span className="text-orange-600">Étape 1: Évaluation des dommages requise</span>
+      ) : damageAssessment?.hasDamage ? (
+        <span className="text-red-600 font-medium">✓ Zone tampon - Prêt à finaliser</span>
+      ) : !selectedStackId ? (
+        <span className="text-blue-600">Étape 2: Sélection d'emplacement requise</span>
       ) : (
-        <span>Please select a stack location</span>
+        <span className="text-green-600 font-medium">✓ Prêt à finaliser l'opération</span>
       )}
     </div>
   );
@@ -194,8 +282,8 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                <span className="sm:hidden">Complete</span>
-                <span className="hidden sm:inline">Complete Operation</span>
+                <span className="sm:hidden">Finaliser</span>
+                <span className="hidden sm:inline">Finaliser l'Opération</span>
               </>
             )}
           </button>
@@ -285,19 +373,125 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
               </div>
             </div>
 
-            {/* Stack Selection */}
+            {/* Damage Assessment Section - ÉTAPE 1 */}
             <div>
-              <StackSelectionButton
-                selectedStack={selectedStackLocation}
-                onStackSelect={handleStackSelect}
-                containerSize={normalizedSize}
-                containerQuantity={operation.containerQuantity as 1 | 2}
-                yardId={currentYard?.id || ''}
-                required={true}
-                error={error && !selectedStackId ? error : undefined}
-                clientCode={operation.clientCode}
-              />
+              <div className="bg-orange-50 rounded-lg p-4 mb-4 border border-orange-200">
+                <div className="flex items-center space-x-2 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  <h4 className="font-semibold text-orange-900">Étape 1: Évaluation des Dommages</h4>
+                </div>
+                <p className="text-sm text-orange-700 mb-3">
+                  L'évaluation des dommages détermine le processus d'assignation du conteneur.
+                </p>
+                
+                {!assessmentCompleted ? (
+                  <button
+                    onClick={handleStartDamageAssessment}
+                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span>Effectuer l'Évaluation des Dommages</span>
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className={`flex items-center space-x-2 p-3 rounded-lg ${
+                      damageAssessment?.hasDamage 
+                        ? 'bg-red-100 border border-red-200' 
+                        : 'bg-green-100 border border-green-200'
+                    }`}>
+                      {damageAssessment?.hasDamage ? (
+                        <>
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                          <div>
+                            <p className="font-medium text-red-800">Dommages Détectés</p>
+                            <p className="text-sm text-red-700">
+                              Type: {damageAssessment.damageType} - {damageAssessment.damageDescription}
+                            </p>
+                            <p className="text-xs text-red-600 mt-1">
+                              → Assignation automatique en zone tampon (EDI en attente)
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <div>
+                            <p className="font-medium text-green-800">Aucun Dommage Détecté</p>
+                            <p className="text-sm text-green-700">
+                              Le conteneur est en bon état
+                            </p>
+                            <p className="text-xs text-green-600 mt-1">
+                              → Sélection d'emplacement requise (EDI automatique)
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={handleStartDamageAssessment}
+                      className="text-sm text-orange-600 hover:text-orange-800 underline"
+                    >
+                      Modifier l'évaluation
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Stack Selection - ÉTAPE 2 (Seulement si pas de dommages) */}
+            {assessmentCompleted && !damageAssessment?.hasDamage && (
+              <div>
+                <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MapPin className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-900">Étape 2: Sélection d'Emplacement</h4>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Sélectionnez l'emplacement final pour ce conteneur en bon état.
+                  </p>
+                </div>
+
+                <StackSelectionButton
+                  selectedStack={selectedStackLocation}
+                  onStackSelect={handleStackSelect}
+                  containerSize={normalizedSize}
+                  containerQuantity={operation.containerQuantity as 1 | 2}
+                  yardId={currentYard?.id || ''}
+                  required={true}
+                  error={error && !selectedStackId ? error : undefined}
+                  clientCode={operation.clientCode}
+                />
+              </div>
+            )}
+
+            {/* Zone Tampon Info (Si dommages détectés) */}
+            {assessmentCompleted && damageAssessment?.hasDamage && (
+              <div>
+                <div className="bg-red-50 rounded-lg p-4 mb-4 border border-red-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Shield className="h-5 w-5 text-red-600" />
+                    <h4 className="font-semibold text-red-900">Assignation en Zone Tampon</h4>
+                  </div>
+                  <div className="text-sm text-red-700 space-y-2">
+                    <p>
+                      <strong>Conteneur endommagé détecté :</strong> {damageAssessment.damageType}
+                    </p>
+                    <p>
+                      <strong>Description :</strong> {damageAssessment.damageDescription}
+                    </p>
+                    <div className="bg-red-100 rounded-lg p-3 mt-3">
+                      <p className="font-medium text-red-800">Processus automatique :</p>
+                      <ul className="text-xs text-red-700 mt-1 space-y-1">
+                        <li>• Assignation automatique en zone tampon</li>
+                        <li>• EDI marqué comme PENDING (non transmis)</li>
+                        <li>• Traitement manuel requis avant transmission EDI</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Time Tracking - Only for Admin Users */}
             {canManageTimeTracking && (

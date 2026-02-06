@@ -52,6 +52,6 @@ SELECT
   LEAST(stack1_id::text, stack2_id::text) as normalized_stack1,
   GREATEST(stack1_id::text, stack2_id::text) as normalized_stack2
 FROM virtual_stack_pairs 
-WHERE yard_id = 'eb5474e5-705d-448f-b16b-05eebfd4f894'
+WHERE yard_id = '2554a779-a14b-45ed-a1e1-684e2fd9b614'
   AND is_active = true
 ORDER BY created_at;

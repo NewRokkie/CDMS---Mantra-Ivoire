@@ -279,6 +279,7 @@ export interface BookingReference {
   clientCode?: string;
   clientName: string;
   bookingType: 'IMPORT' | 'EXPORT';
+  transactionType?: 'Positionnement' | 'Transfert (OUT)'; // Transaction type for Gate Out reports
   containerQuantities: ContainerQuantityBySize;
   totalContainers: number;
   maxQuantityThreshold: number;
@@ -407,6 +408,7 @@ export interface UserDetails extends User {
   activityHistory: UserActivity[];
   permissionSummary: PermissionSummary;
   loginHistory: LoginRecord[];
+  createdByName?: string; // Name of the user who created this user
 }
 
 export interface YardAssignment {

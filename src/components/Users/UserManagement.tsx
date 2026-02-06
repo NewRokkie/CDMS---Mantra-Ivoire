@@ -222,7 +222,6 @@ const UserManagementContent: React.FC = () => {
           department: userData.department,
           company: userData.company,
           role: userData.role,
-          yardAssignments: userData.yardAssignments,
           isActive: userData.isActive,
           moduleAccess: getModuleAccessForRole(userData.role),
           updatedBy: currentUser?.id
@@ -238,7 +237,6 @@ const UserManagementContent: React.FC = () => {
           department: userData.department,
           company: userData.company,
           role: userData.role,
-          yardAssignments: userData.yardAssignments || [],
           isActive: userData.isActive,
           createdAt: new Date(),
           createdBy: currentUser?.id || 'System',

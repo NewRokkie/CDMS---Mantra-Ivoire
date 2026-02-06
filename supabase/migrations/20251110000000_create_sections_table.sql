@@ -100,12 +100,12 @@ CREATE POLICY "Only admins can delete sections"
     )
   );
 
--- Insert default sections for existing depot-tantarelli yard
+-- Insert default sections for existing  yard
 INSERT INTO sections (id, yard_id, name, position_x, position_y, position_z, width, length, color)
 VALUES
-  ('zone-a', 'depot-tantarelli', 'Zone A', 0, 0, 0, 400, 120, '#3b82f6'),
-  ('zone-b', 'depot-tantarelli', 'Zone B', 0, 140, 0, 400, 100, '#f59e0b'),
-  ('zone-c', 'depot-tantarelli', 'Zone C', 0, 260, 0, 400, 140, '#10b981')
+  ('zone-a', '', 'Zone A', 0, 0, 0, 400, 120, '#3b82f6'),
+  ('zone-b', '', 'Zone B', 0, 140, 0, 400, 100, '#f59e0b'),
+  ('zone-c', '', 'Zone C', 0, 260, 0, 400, 140, '#10b981')
 ON CONFLICT (id) DO NOTHING;
 
 -- Update existing stacks to assign them to sections based on their stack numbers
@@ -128,5 +128,5 @@ SET
     WHEN stack_number >= 61 AND stack_number <= 103 THEN 'Zone C'
     ELSE section_name
   END
-WHERE yard_id = 'depot-tantarelli'
+WHERE yard_id = '2554a779-a14b-45ed-a1e1-684e2fd9b614'
   AND section_id IS NULL;

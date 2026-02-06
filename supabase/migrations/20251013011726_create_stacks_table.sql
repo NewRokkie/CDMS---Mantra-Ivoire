@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS stacks (
   yard_id TEXT NOT NULL,
   stack_number INTEGER NOT NULL,
   section_id TEXT,
-  section_name TEXT NOT NULL DEFAULT 'Main Section',
+  section_name TEXT NOT NULL DEFAULT 'Zone A',
   rows INTEGER NOT NULL DEFAULT 6,
   max_tiers INTEGER NOT NULL DEFAULT 4,
   capacity INTEGER NOT NULL DEFAULT 0,

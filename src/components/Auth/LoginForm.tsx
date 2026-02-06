@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Eye, EyeOff, Loader, User, Lock,
-  ArrowRight, Shield, Warehouse, Ship, Package
+  ArrowRight, Warehouse, Ship, Shield
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { InitialAdminSetup } from './InitialAdminSetup';
 
 // Constants for image paths
 const IMAGE_PATHS = {
@@ -12,38 +13,6 @@ const IMAGE_PATHS = {
   LOGO_WHITE: '/assets/logo_white.png',
   LOGO_MANTRA: '/assets/logo_mantra.png'
 } as const;
-
-// Demo accounts configuration
-const DEMO_ACCOUNTS = [
-  {
-    email: 'admin@depot.com',
-    role: 'Administrator',
-    description: 'Full system access',
-    icon: Shield,
-    color: 'bg-[#A0C800] hover:bg-[#8bb400]'
-  },
-  {
-    email: 'supervisor@depot.com',
-    role: 'Supervisor',
-    description: 'Operations oversight',
-    icon: Warehouse,
-    color: 'bg-[#698714] hover:bg-[#5a7511]'
-  },
-  {
-    email: 'operator@depot.com',
-    role: 'Operator',
-    description: 'Daily operations',
-    icon: Package,
-    color: 'bg-[#A0C800] hover:bg-[#8bb400]'
-  },
-  {
-    email: 'client@shipping.com',
-    role: 'Client Portal',
-    description: 'View containers',
-    icon: Ship,
-    color: 'bg-[#698714] hover:bg-[#5a7511]'
-  }
-] as const;
 
 // Features list for the left panel
 const FEATURES_LIST = [
@@ -67,13 +36,26 @@ export const LoginForm: React.FC = React.memo(() => {
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-  const { login, resetPassword, isLoading, isAuthenticated } = useAuth();
+  const { login, resetPassword, isLoading, isAuthenticated, authError, isDatabaseConnected, needsInitialSetup, checkInitialSetup } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  // Check for initial setup on component mount
+  useEffect(() => {
+    if (isDatabaseConnected && !isLoading && !isAuthenticated) {
+      checkInitialSetup();
+    }
+  }, [isDatabaseConnected, isLoading, isAuthenticated, checkInitialSetup]);
+
+  // Handle admin creation completion
+  const handleAdminCreated = () => {
+    // Refresh the initial setup check
+    checkInitialSetup();
+  };
 
   const validateForm = (): boolean => {
     let isValid = true;
@@ -130,28 +112,6 @@ export const LoginForm: React.FC = React.memo(() => {
     }
   }, [isSubmitting, email, password, login, navigate]);
 
-  const handleDemoLogin = React.useCallback(async (demoEmail: string, demoPassword: string) => {
-    if (isSubmitting) return;
-
-    // Clear previous errors
-    setError('');
-    setEmailError('');
-    setPasswordError('');
-
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setIsSubmitting(true);
-
-    try {
-      await login(demoEmail, demoPassword);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Échec de la connexion démo. Veuillez réessayer.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [isSubmitting, login, navigate]);
-
   const handleForgotPassword = React.useCallback(() => {
     setShowForgotPassword(true);
     // Clear both contexts
@@ -198,8 +158,12 @@ export const LoginForm: React.FC = React.memo(() => {
     }
   }, [isResetting, resetEmail, resetPassword]);
 
-
   const isProcessing = React.useMemo(() => isLoading || isSubmitting, [isLoading, isSubmitting]);
+
+  // Show initial admin setup if needed (after all hooks are declared)
+  if (needsInitialSetup) {
+    return <InitialAdminSetup onAdminCreated={handleAdminCreated} />;
+  }
 
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-br from-[#2E2E2E] to-[#3A3A3A] flex animate-fade-in">
@@ -265,17 +229,17 @@ export const LoginForm: React.FC = React.memo(() => {
       </div>
 
       {/* Right Column - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 pb-28 lg:pb-8 bg-white animate-slide-in-up">
-        <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,520px)_260px] gap-6 items-start">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white animate-slide-in-up">
+        <div className="w-full max-w-lg mx-auto">
           {/* Login Card */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 animate-scale-in">
-            <div className="text-center mb-8">
-              <img src={IMAGE_PATHS.LOGO_MANTRA} alt="Logo" className="mx-auto mb-2 h-20" />
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Bienvenue</h1>
-              <p className="text-gray-600" id="login-description">Connectez-vous à votre compte</p>
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-10 animate-scale-in">
+            <div className="text-center mb-10">
+              <img src={IMAGE_PATHS.LOGO_MANTRA} alt="Logo" className="mx-auto mb-4 h-24" />
+              <h1 className="text-3xl font-bold text-gray-900 mb-3">Bienvenue</h1>
+              <p className="text-gray-600 text-lg" id="login-description">Connectez-vous à votre compte</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6" aria-labelledby="login-description">
+            <form onSubmit={handleSubmit} className="space-y-8" aria-labelledby="login-description">
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -290,7 +254,7 @@ export const LoginForm: React.FC = React.memo(() => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#A0C800] focus:border-[#A0C800] transition-all duration-200 hover:border-gray-400 focus:shadow-lg focus:shadow-[#A0C800]/20"
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-4 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#A0C800] focus:border-[#A0C800] transition-all duration-200 hover:border-gray-400 focus:shadow-lg focus:shadow-[#A0C800]/20 text-lg"
                     placeholder="Entrez votre email"
                     required
                     disabled={isProcessing}
@@ -322,7 +286,7 @@ export const LoginForm: React.FC = React.memo(() => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl pl-12 pr-12 py-3 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#A0C800] focus:border-[#A0C800] transition-all duration-200 hover:border-gray-400 focus:shadow-lg focus:shadow-[#A0C800]/20"
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-12 py-4 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#A0C800] focus:border-[#A0C800] transition-all duration-200 hover:border-gray-400 focus:shadow-lg focus:shadow-[#A0C800]/20 text-lg"
                     placeholder="Entrez votre mot de passe"
                     required
                     disabled={isProcessing}
@@ -359,11 +323,24 @@ export const LoginForm: React.FC = React.memo(() => {
                 </div>
               )}
 
+              {/* Database Connection Warning */}
+              {!isDatabaseConnected && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 animate-bounce-in" role="alert" aria-live="assertive" aria-atomic="true">
+                  <p className="text-sm text-yellow-700 font-medium flex items-center">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Database connection issue. The database may be paused or unreachable.
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1">
+                    Please try again later or contact support if the issue persists.
+                  </p>
+                </div>
+              )}
+
               {/* Login Button */}
               <button
                 type="submit"
                 disabled={isProcessing}
-                className="w-full bg-[#A0C800] text-white py-3 px-6 rounded-xl hover:bg-[#8bb400] focus:ring-2 focus:ring-[#A0C800] focus:ring-offset-2 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 interactive touch-target"
+                className="w-full bg-[#A0C800] text-white py-4 px-8 rounded-xl hover:bg-[#8bb400] focus:ring-2 focus:ring-[#A0C800] focus:ring-offset-2 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 interactive touch-target text-lg"
                 aria-label={isProcessing ? "Connexion en cours" : "Se connecter"}
               >
                 {isProcessing ? (
@@ -469,73 +446,6 @@ export const LoginForm: React.FC = React.memo(() => {
 
 
 
-          </div>
-
-          {/* Demo Sidebar (Desktop) */}
-          <aside className="hidden lg:block sticky top-8 self-start w-[260px]">
-            <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">Accès Démo (temporaire)</h3>
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                {DEMO_ACCOUNTS.map((account, index) => {
-                  const IconComponent = account.icon;
-                  return (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleDemoLogin(account.email, 'demo123')}
-                      disabled={isProcessing}
-                      className={`${account.color} text-white px-3 py-2 rounded-lg hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-left`}
-                      aria-label={`Connexion démo ${account.role}`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <div className="bg-white/20 p-1 rounded-md">
-                          <IconComponent className="h-4 w-4 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-xs font-semibold leading-tight">{account.role}</div>
-                          <div className="text-[10px] opacity-90 leading-tight">{account.description}</div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] text-gray-500 mt-3">
-                Mot de passe démo: <span className="font-mono text-gray-700">demo123</span>
-              </p>
-            </div>
-          </aside>
-
-          {/* Demo Bottom Bar (Mobile) */}
-          <div className="lg:hidden fixed bottom-4 inset-x-4 z-30">
-            <div className="bg-white/95 backdrop-blur rounded-2xl border border-gray-200 shadow-2xl p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-gray-800">Accès Démo (temp.)</span>
-                <span className="text-[10px] text-gray-500">mdp: demo123</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_ACCOUNTS.map((account, index) => {
-                  const IconComponent = account.icon;
-                  return (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleDemoLogin(account.email, 'demo123')}
-                      disabled={isProcessing}
-                      className={`${account.color} text-white px-2 py-2 rounded-lg text-left disabled:opacity-50`}
-                      aria-label={`Connexion démo ${account.role}`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <IconComponent className="h-4 w-4 text-white" />
-                        <span className="text-[11px] font-semibold truncate">{account.role}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           {/* Mobile Footer */}

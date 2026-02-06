@@ -32,12 +32,16 @@ interface MobileOperationsTableProps {
   operations: Operation[];
   searchTerm: string;
   selectedFilter: string;
+  onClearSearch?: () => void;
+  onClearFilter?: () => void;
 }
 
 export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
   operations,
   searchTerm,
-  selectedFilter
+  selectedFilter,
+  onClearSearch,
+  onClearFilter
 }) => {
   // Filter operations based on selected filter
   const getFilteredOperations = () => {
@@ -366,21 +370,33 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
           ))}
         </div>
 
-        {/* Loading / Empty State - Common components */}
+        {/* Empty State - No Operations Available */}
         {filteredOperations.length === 0 && (
-          <div className="px-4 py-6">
-            <div className="flex items-center justify-center mb-6">
-              <LoadingSpinner size="md" />
-            </div>
-
-            {/* Desktop: use TableSkeleton for table-like placeholder */}
-            <div className="hidden lg:block">
-              <TableSkeleton rows={2} columns={6} />
-            </div>
-
-            {/* Mobile: reuse TableSkeleton with fewer columns/rows to simulate cards */}
-            <div className="lg:hidden space-y-3">
-              <TableSkeleton rows={2} columns={2} />
+          <div className="px-4 py-12 lg:py-16 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="p-4 bg-gray-100 rounded-full">
+                <Package className="h-12 w-12 text-gray-400" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-gray-900">No Operations Available</h3>
+                <p className="text-gray-500 max-w-md">
+                  {searchTerm || selectedFilter !== 'all' 
+                    ? 'No operations match your current search or filter criteria.'
+                    : 'No gate in operations have been recorded yet. Create your first operation to get started.'
+                  }
+                </p>
+              </div>
+              {(searchTerm || selectedFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    onClearSearch?.();
+                    onClearFilter?.();
+                  }}
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                >
+                  Clear filters to see all operations
+                </button>
+              )}
             </div>
           </div>
         )}

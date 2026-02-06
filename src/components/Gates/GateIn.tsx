@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, stackService, realtimeService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
-import { generateStackLocations } from '../../utils/locationHelpers';
+
 import { stackPairingService } from '../../services/api/stackPairingService';
 // import moment from 'moment'; // Commented out - not used in current code
 import { CardSkeleton } from '../Common/CardSkeleton';
@@ -19,8 +19,10 @@ import { isValidContainerTypeAndSize } from './GateInModal/ContainerTypeSelect';
 import { ValidationService } from '../../services/validationService';
 import { GateInError, handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
-import { exportToExcel, formatDateForExport } from '../../utils/excelExport';
+import { exportToExcel, formatDateForExport, formatDurationForExport } from '../../utils/excelExport';
 import { useToast } from '../../hooks/useToast';
+import { BufferZoneStats } from './BufferZoneStats';
+import { BufferZoneManagement } from './BufferZoneManagement';
 
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
@@ -42,6 +44,7 @@ export const GateIn: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showBufferZoneManagement, setShowBufferZoneManagement] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -129,11 +132,13 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     clientCode: '',
     clientName: '',
     bookingReference: '',
+    equipmentReference: '', // Equipment reference for EDI transmission
     containerNumber: '',
     containerNumberConfirmation: '',
     secondContainerNumber: '',
     secondContainerNumberConfirmation: '',
     classification: 'divers', // Default to 'divers'
+    transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
     bookingType: 'EXPORT',
     driverName: '',
     truckNumber: '',
@@ -252,6 +257,13 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         clientName: selectedClient.name
       }));
     }
+  };
+
+  const handleTransactionTypeChange = (transactionType: 'Retour Livraison' | 'Transfert (IN)') => {
+    setFormData(prev => ({
+      ...prev,
+      transactionType
+    }));
   };
 
   // Memoized validation check for current step (safe for render-time calls)
@@ -401,6 +413,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
         truckArrivalDate: truckArrivalDate,
         truckArrivalTime: truckArrivalTime,
+        equipmentReference: formData.equipmentReference, // Equipment reference for EDI transmission
         weight: undefined,
         operatorId: user?.id || 'unknown',
         operatorName: user?.name || 'Unknown Operator',
@@ -476,12 +489,14 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       clientCode: '',
       clientName: '',
       bookingReference: '',
+      equipmentReference: '', // Equipment reference for EDI transmission
       bookingType: 'EXPORT',
       containerNumber: '',
       containerNumberConfirmation: '',
       secondContainerNumber: '',
       secondContainerNumberConfirmation: '',
       classification: 'divers', // Default to 'divers'
+      transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
       driverName: '',
       truckNumber: '',
       transportCompany: '',
@@ -591,6 +606,11 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         updateData.damage_reported = locationData.damageAssessment.hasDamage;
         updateData.damage_description = locationData.damageAssessment.damageDescription || null;
         updateData.damage_assessment = JSON.stringify(locationData.damageAssessment);
+        
+        // Marquer si c'est une zone tampon
+        if (locationData.isBufferZone) {
+          updateData.notes = `ZONE TAMPON - ${locationData.damageAssessment.damageType || 'Dommage détecté'}`;
+        }
       }
 
       const { error: updateError } = await supabase
@@ -602,54 +622,118 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
       }
 
-      // 5. Process EDI transmission after successful container assignment
+      // 5. Process EDI transmission conditionally
       let ediResult = null;
-      try {
-        // Import EDI management service
-        const { ediManagementService } = await import('../../services/edi/ediManagement');
-        
-        // Prepare EDI container data
-        const ediContainerData = {
-          containerNumber: operation.containerNumber,
-          size: operation.containerSize as '20ft' | '40ft' | '45ft',
-          type: (operation.containerType || 'dry') as 'dry' | 'reefer' | 'tank' | 'flat_rack' | 'open_top',
-          clientName: operation.clientName,
-          clientCode: operation.clientCode,
-          transporter: operation.transportCompany || 'Unknown',
-          vehicleNumber: operation.truckNumber || 'Unknown',
-          userName: user?.name || 'System',
-          containerLoadStatus: (operation.fullEmpty || operation.status || 'FULL') as 'FULL' | 'EMPTY',
-          timestamp: new Date(),
-          location: locationData.assignedLocation,
-          yardId: currentYard?.id
-        };
+      let ediStatus = 'not_attempted';
+      
+      // EDI seulement si pas de dommages (ediShouldTransmit = true)
+      if (locationData.ediShouldTransmit !== false) {
+        try {
+          // Import enhanced Gate In CODECO service
+          const { gateInCodecoService } = await import('../../services/edi/gateInCodecoService');
+          
+          // Prepare Gate In CODECO data with all required fields
+          const gateInCodecoData = {
+            // Container Information - REQUIRED: Container Number
+            containerNumber: operation.containerNumber,
+            containerSize: operation.containerSize as '20ft' | '40ft',
+            containerType: operation.containerType || 'dry',
+            containerQuantity: operation.containerQuantity || 1,
+            secondContainerNumber: operation.secondContainerNumber,
+            
+            // Client Information
+            clientCode: operation.clientCode,
+            clientName: operation.clientName,
+            
+            // Transport Information
+            transportCompany: operation.transportCompany || 'Unknown',
+            driverName: operation.driverName || 'Unknown',
+            truckNumber: operation.truckNumber || 'Unknown',
+            // REQUIRED: Date et Heure d'entrée
+            truckArrivalDate: operation.truckArrivalDate || new Date().toISOString().split('T')[0],
+            truckArrivalTime: operation.truckArrivalTime || new Date().toTimeString().slice(0, 5),
+            
+            // Gate In Operation Details
+            operatorName: user?.name || 'System',
+            operatorId: user?.id || 'system',
+            yardId: currentYard?.id || 'unknown',
+            createdAt: operation.createdAt ? new Date(operation.createdAt) : new Date(),
+            updatedAt: new Date(),
+            
+            // Container Status
+            status: (operation.fullEmpty || operation.status || 'FULL') as 'FULL' | 'EMPTY',
+            classification: (operation.classification || 'divers') as 'divers' | 'alimentaire',
+            
+            // REQUIRED: Damaged or Not - Damage Assessment
+            damageAssessment: locationData.damageAssessment ? {
+              hasDamage: locationData.damageAssessment.hasDamage,
+              damageType: locationData.damageAssessment.damageType,
+              damageDescription: locationData.damageAssessment.damageDescription,
+              assessedBy: user?.name || 'System',
+              assessedAt: new Date()
+            } : {
+              hasDamage: false,
+              assessedBy: user?.name || 'System',
+              assessedAt: new Date()
+            },
+            
+            // Location Assignment
+            assignedLocation: locationData.assignedLocation
+          };
 
-        // Process EDI transmission
-        ediResult = await ediManagementService.processGateIn(ediContainerData);
-        
-        if (ediResult) {
-          // Update gate_in_operation with EDI transmission info
+          // Yard information for EDI
+          const yardInfo = {
+            companyCode: currentYard?.code || 'DEPOT',
+            plant: currentYard?.id || 'SYSTEM',
+            customer: operation.clientCode
+          };
+
+          // Generate and transmit CODECO with damage assessment
+          const codecoResult = await gateInCodecoService.generateAndTransmitCodeco(
+            gateInCodecoData,
+            yardInfo
+          );
+          
+          if (codecoResult.success && codecoResult.transmissionLog) {
+            ediResult = codecoResult.transmissionLog;
+            
+            // Update gate_in_operation with EDI transmission info
+            await supabase
+              .from('gate_in_operations')
+              .update({
+                edi_transmitted: true,
+                edi_transmission_date: new Date().toISOString(),
+                edi_log_id: ediResult.id
+              })
+              .eq('id', operation.id);
+            ediStatus = 'transmitted';
+          } else {
+            throw new Error(codecoResult.error || 'CODECO generation failed');
+          }
+        } catch (ediError) {
+          // EDI transmission failed, but don't fail the entire operation
+          console.error('EDI CODECO transmission failed:', ediError);
+          
+          // Update gate_in_operation to indicate EDI failure
           await supabase
             .from('gate_in_operations')
             .update({
-              edi_transmitted: true,
-              edi_transmission_date: new Date().toISOString(),
-              edi_log_id: ediResult.id
+              edi_transmitted: false,
+              edi_error_message: ediError instanceof Error ? ediError.message : 'EDI CODECO transmission failed'
             })
             .eq('id', operation.id);
+          ediStatus = 'failed';
         }
-      } catch (ediError) {
-        // EDI transmission failed, but don't fail the entire operation
-        console.error('EDI transmission failed:', ediError);
-        
-        // Update gate_in_operation to indicate EDI failure
+      } else {
+        // Conteneur endommagé - EDI en PENDING
         await supabase
           .from('gate_in_operations')
           .update({
             edi_transmitted: false,
-            edi_error_message: ediError instanceof Error ? ediError.message : 'EDI transmission failed'
+            edi_error_message: 'EDI en attente - Conteneur endommagé nécessite traitement manuel'
           })
           .eq('id', operation.id);
+        ediStatus = 'pending_manual';
       }
 
       // 6. Update local state
@@ -676,10 +760,26 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       }
 
       // 8. Show success message with EDI status
-      const damageStatus = locationData.damageAssessment?.hasDamage ? 'with damage reported' : 'in good condition';
-      const ediStatus = ediResult ? '✓ EDI transmitted' : '⚠ EDI transmission failed';
+      const damageStatus = locationData.damageAssessment?.hasDamage 
+        ? 'assigné en zone tampon (endommagé)' 
+        : 'en bon état';
       
-      toast.success(`Container ${operation.containerNumber}${operation.containerQuantity === 2 ? ` and ${operation.secondContainerNumber}` : ''} successfully assigned to ${locationData.assignedLocation} (${damageStatus}) - ${ediStatus}`);
+      let ediStatusMessage = '';
+      switch (ediStatus) {
+        case 'transmitted':
+          ediStatusMessage = '✓ EDI transmis automatiquement';
+          break;
+        case 'failed':
+          ediStatusMessage = '⚠ Transmission EDI échouée';
+          break;
+        case 'pending_manual':
+          ediStatusMessage = '⏳ EDI en attente (traitement manuel requis)';
+          break;
+        default:
+          ediStatusMessage = '• EDI non tenté';
+      }
+      
+      toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné avec succès à ${locationData.assignedLocation} (${damageStatus}) - ${ediStatusMessage}`);
       setActiveView('overview');
     } catch (error) {
       handleError(error, 'GateIn.handleLocationValidation');
@@ -708,57 +808,112 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     return matchesSearch && matchesFilter;
   });
 
-  const handleExportGateIn = () => {
-    const dataToExport = filteredOperations.map(op => ({
-      containerNumber: op.containerNumber || '',
-      secondContainerNumber: op.secondContainerNumber || '',
-      containerSize: op.containerSize || '',
-      containerType: op.containerType || '',
-      status: op.status || '',
-      fullEmpty: op.fullEmpty || op.status || '', // Use fullEmpty or status as fallback
-      clientName: op.clientName || '',
-      clientCode: op.clientCode || '',
-      classification: op.classification || '',
-      driverName: op.driverName || '',
-      truckNumber: op.truckNumber || '',
-      transportCompany: op.transportCompany || '',
-      assignedLocation: op.assignedLocation || '',
-      truckArrivalDate: formatDateForExport(op.truckArrivalDate),
-      truckArrivalTime: op.truckArrivalTime || '',
-      yardName: currentYard?.name || '',
-      operatorName: op.operatorName || '',
-      createdAt: formatDateForExport(op.createdAt),
-      updatedAt: formatDateForExport(op.updatedAt),
-      notes: op.notes || ''
-    }));
+  const handleExportGateIn = async () => {
+    try {
+      // Calculate durations for each operation
+      const dataToExport = await Promise.all(
+        filteredOperations.map(async (op) => {
+          let durations: any = {
+            totalDuration: null,
+            damageAssessmentDuration: null,
+            locationAssignmentDuration: null,
+            ediProcessingDuration: null
+          };
+          
+          // Calculate time tracking durations if operation is completed
+          if (op.status === 'completed' && op.id) {
+            try {
+              const { gateTimeTrackingService } = await import('../../services/api/gateTimeTrackingService');
+              durations = await gateTimeTrackingService.calculateGateInDurations(op.id);
+            } catch (error) {
+              console.warn('Failed to calculate durations for operation:', op.id, error);
+            }
+          }
 
-    exportToExcel({
-      filename: `gate_in_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
-      sheetName: 'Gate In Operations',
-      columns: [
-        { header: 'Numéro Conteneur', key: 'containerNumber', width: 20 },
-        { header: '2ème Conteneur', key: 'secondContainerNumber', width: 20 },
-        { header: 'Taille', key: 'containerSize', width: 12 },
-        { header: 'Type', key: 'containerType', width: 15 },
-        { header: 'Statut', key: 'status', width: 15 },
-        { header: 'Plein/Vide', key: 'fullEmpty', width: 12 },
-        { header: 'Client', key: 'clientName', width: 25 },
-        { header: 'Code Client', key: 'clientCode', width: 15 },
-        { header: 'Classification', key: 'classification', width: 15 },
-        { header: 'Chauffeur', key: 'driverName', width: 20 },
-        { header: 'Camion', key: 'truckNumber', width: 15 },
-        { header: 'Transporteur', key: 'transportCompany', width: 25 },
-        { header: 'Emplacement', key: 'assignedLocation', width: 20 },
-        { header: 'Date Arrivée', key: 'truckArrivalDate', width: 20 },
-        { header: 'Heure Arrivée', key: 'truckArrivalTime', width: 15 },
-        { header: 'Dépôt', key: 'yardName', width: 20 },
-        { header: 'Opérateur', key: 'operatorName', width: 20 },
-        { header: 'Date Création', key: 'createdAt', width: 20 },
-        { header: 'Date Modification', key: 'updatedAt', width: 20 },
-        { header: 'Notes', key: 'notes', width: 30 }
-      ],
-      data: dataToExport
-    });
+          return {
+            containerNumber: op.containerNumber || '',
+            secondContainerNumber: op.secondContainerNumber || '',
+            containerSize: op.containerSize || '',
+            containerType: op.containerType || '',
+            status: op.status || '',
+            fullEmpty: op.fullEmpty || op.status || '', // Use fullEmpty or status as fallback
+            clientName: op.clientName || '',
+            clientCode: op.clientCode || '',
+            classification: op.classification || '',
+            driverName: op.driverName || '',
+            truckNumber: op.truckNumber || '',
+            transportCompany: op.transportCompany || '',
+            assignedLocation: op.assignedLocation || '',
+            truckArrivalDate: formatDateForExport(op.truckArrivalDate),
+            truckArrivalTime: op.truckArrivalTime || '',
+            yardName: currentYard?.name || '',
+            operatorName: op.operatorName || '',
+            createdAt: formatDateForExport(op.createdAt),
+            updatedAt: formatDateForExport(op.updatedAt),
+            notes: op.notes || '',
+            transactionType: op.transactionType || 'Retour Livraison', // Default value for existing records
+            // Time tracking metrics
+            totalDuration: formatDurationForExport(durations?.totalDuration),
+            damageAssessmentDuration: formatDurationForExport(durations?.damageAssessmentDuration),
+            locationAssignmentDuration: formatDurationForExport(durations?.locationAssignmentDuration),
+            ediProcessingDuration: formatDurationForExport(durations?.ediProcessingDuration),
+            // Additional time tracking fields
+            damageAssessmentStarted: formatDateForExport(op.damage_assessment_started),
+            damageAssessmentCompleted: formatDateForExport(op.damage_assessment_completed),
+            locationAssignmentStarted: formatDateForExport(op.location_assignment_started),
+            locationAssignmentCompleted: formatDateForExport(op.location_assignment_completed),
+            ediProcessingStarted: formatDateForExport(op.edi_processing_started),
+            ediTransmissionDate: formatDateForExport(op.edi_transmission_date)
+          };
+        })
+      );
+
+      exportToExcel({
+        filename: `gate_in_operations_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        sheetName: 'Gate In Operations',
+        columns: [
+          { header: 'Numéro Conteneur', key: 'containerNumber', width: 20 },
+          { header: '2ème Conteneur', key: 'secondContainerNumber', width: 20 },
+          { header: 'Taille', key: 'containerSize', width: 12 },
+          { header: 'Type', key: 'containerType', width: 15 },
+          { header: 'Statut', key: 'status', width: 15 },
+          { header: 'Plein/Vide', key: 'fullEmpty', width: 12 },
+          { header: 'Client', key: 'clientName', width: 25 },
+          { header: 'Code Client', key: 'clientCode', width: 15 },
+          { header: 'Classification', key: 'classification', width: 15 },
+          { header: 'Transaction', key: 'transactionType', width: 18 },
+          { header: 'Chauffeur', key: 'driverName', width: 20 },
+          { header: 'Camion', key: 'truckNumber', width: 15 },
+          { header: 'Transporteur', key: 'transportCompany', width: 25 },
+          { header: 'Emplacement', key: 'assignedLocation', width: 20 },
+          { header: 'Date Arrivée', key: 'truckArrivalDate', width: 20 },
+          { header: 'Heure Arrivée', key: 'truckArrivalTime', width: 15 },
+          { header: 'Dépôt', key: 'yardName', width: 20 },
+          { header: 'Opérateur', key: 'operatorName', width: 20 },
+          { header: 'Date Création', key: 'createdAt', width: 20 },
+          { header: 'Date Modification', key: 'updatedAt', width: 20 },
+          { header: 'Notes', key: 'notes', width: 30 },
+          // Time tracking columns
+          { header: 'Durée Totale', key: 'totalDuration', width: 15 },
+          { header: 'Durée Évaluation Dommages', key: 'damageAssessmentDuration', width: 25 },
+          { header: 'Durée Attribution Emplacement', key: 'locationAssignmentDuration', width: 25 },
+          { header: 'Durée Traitement EDI', key: 'ediProcessingDuration', width: 20 },
+          // Detailed timestamps
+          { header: 'Début Évaluation Dommages', key: 'damageAssessmentStarted', width: 25 },
+          { header: 'Fin Évaluation Dommages', key: 'damageAssessmentCompleted', width: 25 },
+          { header: 'Début Attribution Emplacement', key: 'locationAssignmentStarted', width: 25 },
+          { header: 'Fin Attribution Emplacement', key: 'locationAssignmentCompleted', width: 25 },
+          { header: 'Début Traitement EDI', key: 'ediProcessingStarted', width: 20 },
+          { header: 'Date Transmission EDI', key: 'ediTransmissionDate', width: 20 }
+        ],
+        data: dataToExport
+      });
+
+      toast.success('Export Gate In completed successfully');
+    } catch (error) {
+      console.error('Error exporting Gate In data:', error);
+      toast.error('Failed to export Gate In data');
+    }
   };
 
 
@@ -854,8 +1009,8 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
 
       {/* Unified Responsive Statistics */}
       <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
-        {/* Mobile: 2x2 Grid | Tablet+: 4x1 Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        {/* Mobile: 2x2 Grid | Tablet+: 5x1 Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
           {/* Today's Gate Ins */}
           <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
@@ -895,7 +1050,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
             </div>
           </div>
 
-          {/* Damaged Containers */}
+          {/* Alimentaire Containers */}
           <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
               <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
@@ -906,6 +1061,11 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
                 <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Alimentaire Containers</p>
               </div>
             </div>
+          </div>
+
+          {/* Buffer Zone Stats */}
+          <div onClick={() => setShowBufferZoneManagement(true)} className="cursor-pointer">
+            <BufferZoneStats />
           </div>
         </div>
 
@@ -983,6 +1143,8 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           operations={filteredOperations}
           searchTerm={searchTerm}
           selectedFilter={selectedFilter}
+          onClearSearch={() => setSearchTerm('')}
+          onClearFilter={() => setSelectedFilter('all')}
         />
       </div>
 
@@ -1007,6 +1169,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           handleQuantityChange={handleQuantityChange}
           handleStatusChange={handleStatusChange}
           handleClientChange={handleClientChange}
+          handleTransactionTypeChange={handleTransactionTypeChange}
 
           clients={clients}
           submissionError={submissionError}
@@ -1014,6 +1177,12 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           validationWarnings={validationWarnings}
         />
       )}
+
+      {/* Buffer Zone Management Modal */}
+      <BufferZoneManagement
+        isOpen={showBufferZoneManagement}
+        onClose={() => setShowBufferZoneManagement(false)}
+      />
 
       {/* Processing Spinner Overlay */}
       {isProcessing && (

@@ -13,6 +13,7 @@
 import { supabase } from './supabaseClient';
 import { ErrorHandler, GateInError } from '../errorHandling';
 import { Location } from '../../types/location';
+import { logger } from '../../utils/logger';
 
 export interface LocationIdGenerationRequest {
   yardId: string;
@@ -24,6 +25,7 @@ export interface LocationIdGenerationRequest {
   clientPoolId?: string;
   isVirtual?: boolean;
   virtualStackPairId?: string;
+  rowTierConfig?: Array<{ row: number; maxTiers: number }>;
 }
 
 export interface BulkLocationGenerationRequest {
@@ -34,6 +36,7 @@ export interface BulkLocationGenerationRequest {
   tiers: number;
   containerSize?: '20ft' | '40ft';
   clientPoolId?: string;
+  rowTierConfig?: Array<{ row: number; maxTiers: number }>;
 }
 
 export interface LocationIdValidationResult {
@@ -42,6 +45,27 @@ export interface LocationIdValidationResult {
 }
 
 export class LocationIdGeneratorService {
+  /**
+   * Get maximum tiers for a specific row based on row_tier_config
+   * 
+   * @param row - Row number (1-based)
+   * @param defaultTiers - Default number of tiers if no custom config
+   * @param rowTierConfig - Custom row-tier configuration
+   * @returns Maximum tiers for the specified row
+   */
+  private getMaxTiersForRow(
+    row: number, 
+    defaultTiers: number, 
+    rowTierConfig?: Array<{ row: number; maxTiers: number }>
+  ): number {
+    if (!rowTierConfig || rowTierConfig.length === 0) {
+      return defaultTiers;
+    }
+
+    const rowConfig = rowTierConfig.find(config => config.row === row);
+    return rowConfig ? rowConfig.maxTiers : defaultTiers;
+  }
+
   /**
    * Generate a single location ID in SXXRXHX format
    * Requirements: 2.1, 2.2 - Format generation with zero-padded stack numbers
@@ -158,7 +182,30 @@ export class LocationIdGeneratorService {
   }
 
   /**
-   * Check if a location ID already exists in the database
+   * Check if an active location ID already exists in the database
+   * Requirements: 2.2 - Uniqueness constraints for active locations
+   * 
+   * @param locationId - Location ID to check
+   * @returns True if active location ID exists, false otherwise
+   */
+  async activeLocationIdExists(locationId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('location_id', locationId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Check if a location ID already exists in the database (active or inactive)
    * Requirements: 2.2 - Uniqueness constraints
    * 
    * @param locationId - Location ID to check
@@ -180,18 +227,68 @@ export class LocationIdGeneratorService {
   }
 
   /**
+   * Reactivate an inactive location or create a new one
+   * 
+   * @param locationId - Location ID to reactivate or create
+   * @param locationData - Location data for creation
+   * @returns Location record
+   */
+  private async reactivateOrCreateLocation(locationId: string, locationData: any): Promise<any> {
+    // First, try to reactivate an existing inactive location
+    const { data: existingLocation, error: fetchError } = await supabase
+      .from('locations')
+      .select('*')
+      .eq('location_id', locationId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (existingLocation) {
+      if (!existingLocation.is_active) {
+        // Reactivate the existing location with updated data
+        const { data: reactivatedData, error: updateError } = await supabase
+          .from('locations')
+          .update({
+            ...locationData,
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingLocation.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        return reactivatedData;
+      } else {
+        // Location is already active, return it
+        return existingLocation;
+      }
+    } else {
+      // Create new location
+      const { data: newData, error: insertError } = await supabase
+        .from('locations')
+        .insert(locationData)
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return newData;
+    }
+  }
+
+  /**
    * Ensure location ID uniqueness before creation
    * Requirements: 2.2 - Location ID uniqueness across the entire yard system
    * 
    * @param locationId - Location ID to validate
-   * @throws Error if location ID already exists
+   * @throws Error if location ID already exists and is active
    */
   async ensureUniqueness(locationId: string): Promise<void> {
-    const exists = await this.locationIdExists(locationId);
+    const exists = await this.activeLocationIdExists(locationId);
     if (exists) {
       throw new GateInError({
         code: 'LOCATION_ID_EXISTS',
-        message: `Location ID ${locationId} already exists`,
+        message: `Active location ID ${locationId} already exists`,
         severity: 'error',
         retryable: false,
         userMessage: `Location ${locationId} already exists in the system`
@@ -209,20 +306,17 @@ export class LocationIdGeneratorService {
   async generateLocationsForStack(request: LocationIdGenerationRequest): Promise<Location[]> {
     try {
       const locations: Location[] = [];
-      const locationInserts: any[] = [];
+      const locationPromises: Promise<any>[] = [];
 
       // Generate location IDs for all row/tier combinations
+      // Use row_tier_config if available, otherwise use uniform tiers
       for (let row = 1; row <= request.rows; row++) {
-        for (let tier = 1; tier <= request.tiers; tier++) {
+        const maxTiersForRow = this.getMaxTiersForRow(row, request.tiers, request.rowTierConfig);
+        
+        for (let tier = 1; tier <= maxTiersForRow; tier++) {
           const locationId = this.generateLocationId(request.stackNumber, row, tier);
 
-          // Check if location already exists
-          const exists = await this.locationIdExists(locationId);
-          if (exists) {
-            continue;
-          }
-
-          locationInserts.push({
+          const locationData = {
             location_id: locationId,
             stack_id: request.stackId,
             yard_id: request.yardId,
@@ -235,20 +329,27 @@ export class LocationIdGeneratorService {
             container_size: request.containerSize || null,
             client_pool_id: request.clientPoolId || null,
             is_active: true
-          });
+          };
+
+          // Use reactivateOrCreateLocation to handle both new and existing locations
+          locationPromises.push(this.reactivateOrCreateLocation(locationId, locationData));
         }
       }
 
-      // Bulk insert all locations
-      if (locationInserts.length > 0) {
-        const { data, error } = await supabase
-          .from('locations')
-          .insert(locationInserts)
-          .select();
+      // Process all locations
+      if (locationPromises.length > 0) {
+        try {
+          const locationResults = await Promise.all(locationPromises);
+          locations.push(...locationResults.map(this.mapToLocation));
 
-        if (error) throw error;
+          logger.info('LocationIdGeneratorService', 
+            `Generated/reactivated ${locations.length} locations for stack ${request.stackNumber}`);
 
-        locations.push(...(data || []).map(this.mapToLocation));
+        } catch (error) {
+          logger.error('LocationIdGeneratorService', 
+            `Error generating locations for stack ${request.stackNumber}`, error);
+          throw error;
+        }
       }
 
       return locations;
@@ -278,7 +379,8 @@ export class LocationIdGeneratorService {
           tiers: request.tiers,
           containerSize: request.containerSize,
           clientPoolId: request.clientPoolId,
-          isVirtual: false
+          isVirtual: false,
+          rowTierConfig: request.rowTierConfig
         });
 
         allLocations.push(...locations);
@@ -298,7 +400,8 @@ export class LocationIdGeneratorService {
    * @param yardId - Yard ID
    * @param stackNumber - Stack number
    * @param newRows - New number of rows
-   * @param newTiers - New number of tiers
+   * @param newTiers - New number of tiers (used as default if no row config)
+   * @param rowTierConfig - Optional row-specific tier configuration
    * @returns Array of updated/created location records
    */
   async updateLocationsForStackConfiguration(
@@ -306,7 +409,8 @@ export class LocationIdGeneratorService {
     yardId: string,
     stackNumber: number,
     newRows: number,
-    newTiers: number
+    newTiers: number,
+    rowTierConfig?: Array<{ row: number; maxTiers: number }>
   ): Promise<Location[]> {
     try {
 
@@ -329,7 +433,9 @@ export class LocationIdGeneratorService {
 
       // Check all possible positions in new configuration
       for (let row = 1; row <= newRows; row++) {
-        for (let tier = 1; tier <= newTiers; tier++) {
+        const maxTiersForRow = this.getMaxTiersForRow(row, newTiers, rowTierConfig);
+        
+        for (let tier = 1; tier <= maxTiersForRow; tier++) {
           const key = `${row}-${tier}`;
           const existingLocation = existingMap.get(key);
 

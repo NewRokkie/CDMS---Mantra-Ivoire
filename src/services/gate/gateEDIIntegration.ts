@@ -239,6 +239,13 @@ class GateEDIIntegrationService {
       containerSize: data.size,
       vehicleNumber: data.vehicleNumber,
       createdBy: data.operatorName,
+      // Enhanced fields for Gate In
+      gateInDate: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
+      gateInTime: new Date().toTimeString().slice(0, 8).replace(/:/g, ''),
+      damageReported: false, // Will be updated during damage assessment
+      damageType: undefined,
+      damageDescription: undefined,
+      damageAssessedBy: data.operatorName
     };
   }
 

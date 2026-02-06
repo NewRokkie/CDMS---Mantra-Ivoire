@@ -712,31 +712,35 @@ export class UserService {
       throw new Error('Email is required');
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          *,
-          user_module_access!fk_user_module_access_user (
-            module_permissions
-          )
-        `)
-        .eq('is_deleted', false) // Use composite index (is_deleted, active, email)
-        .eq('active', true)
-        .eq('email', email.trim().toLowerCase())
-        .maybeSingle();
+    return this.withRetry(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select(`
+            *,
+            user_module_access!fk_user_module_access_user (
+              module_permissions
+            )
+          `)
+          .eq('is_deleted', false) // Use composite index (is_deleted, active, email)
+          .eq('active', true)
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
 
-      if (error) {
-        throw new Error(`Failed to fetch user by email: ${error.message}`);
+        if (error) {
+          const serviceError = this.handleSupabaseError(error, 'fetch user by email');
+          throw new Error(serviceError.message);
+        }
+        
+        return data ? this.mapToUser(data) : null;
+      } catch (error) {
+        logger.error(`Error fetching user by email`, 'UserService', { email, error });
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('An unexpected error occurred while fetching user by email');
       }
-      
-      return data ? this.mapToUser(data) : null;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('An unexpected error occurred while fetching user by email');
-    }
+    }, 'get user by email');
   }
 
   /**
@@ -1263,7 +1267,7 @@ export class UserService {
         // Parallel execution of detail fetching for better performance
         logger.debug(`Fetching user details in parallel`, 'UserService', { userId: id });
         
-        const [yardDetails, activityHistory, loginHistory] = await Promise.all([
+        const [yardDetails, activityHistory, loginHistory, createdByName] = await Promise.all([
           this.getUserYardDetails(user.yardIds || []).catch(error => {
             logger.warn(`Failed to fetch yard details for user`, 'UserService', { userId: id, error });
             return [] as YardAssignment[]; // Return empty array on error
@@ -1275,6 +1279,10 @@ export class UserService {
           this.getUserLoginHistory(id).catch(error => {
             logger.warn(`Failed to fetch login history for user`, 'UserService', { userId: id, error });
             return [] as LoginRecord[]; // Return empty array on error
+          }),
+          this.getUserName(user.createdBy).catch(error => {
+            logger.warn(`Failed to fetch creator name for user`, 'UserService', { userId: id, createdBy: user.createdBy, error });
+            return undefined; // Return undefined on error
           })
         ]);
 
@@ -1302,7 +1310,8 @@ export class UserService {
           yardDetails,
           activityHistory,
           permissionSummary,
-          loginHistory
+          loginHistory,
+          createdByName
         };
 
         logger.info(`User details retrieved successfully`, 'UserService', {
@@ -1588,6 +1597,350 @@ export class UserService {
       // Return empty array instead of throwing to prevent getUserDetails from failing
       return [];
     }
+  }
+
+  /**
+   * Get user name by ID for display purposes
+   * @param userId - The user ID to get the name for
+   * @returns Promise<string | undefined> - The user's name or undefined if not found
+   */
+  private async getUserName(userId: string): Promise<string | undefined> {
+    if (!userId?.trim() || userId === 'System') {
+      return undefined;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', userId)
+        .eq('is_deleted', false)
+        .single();
+
+      if (error) {
+        logger.warn(`Failed to fetch user name`, 'UserService', { userId, error });
+        return undefined;
+      }
+
+      return data?.name;
+    } catch (error) {
+      logger.warn(`Error fetching user name`, 'UserService', { userId, error });
+      return undefined;
+    }
+  }
+
+  /**
+   * Check if any admin users exist in the system
+   * Used for initial setup to determine if admin creation is needed
+   */
+  async hasAdminUsers(): Promise<boolean> {
+    const operationId = `check-admin-users-${Date.now()}`;
+    logger.info(`Checking for existing admin users`, 'UserService', { operationId });
+
+    return this.withRetry(async () => {
+      try {
+        // First try using the database function to bypass RLS issues
+        const { data, error } = await supabase.rpc('has_admin_users');
+
+        if (error) {
+          logger.warn(`Database function failed, falling back to direct query`, 'UserService', { error });
+          
+          // Fallback to direct count query
+          const fallbackResult = await supabase
+            .from('users')
+            .select('id', { count: 'exact', head: true })
+            .eq('role', 'admin')
+            .eq('active', true)
+            .eq('is_deleted', false);
+
+          if (fallbackResult.error) {
+            // If both methods fail, assume no admins exist to allow initial setup
+            logger.warn(`Both admin check methods failed, assuming no admins exist`, 'UserService', { 
+              functionError: error,
+              fallbackError: fallbackResult.error 
+            });
+            
+            return false;
+          }
+
+          const hasAdmins = (fallbackResult.count || 0) > 0;
+          
+          logger.info(`Admin users check completed (fallback)`, 'UserService', {
+            operationId,
+            hasAdmins,
+            adminCount: fallbackResult.count || 0
+          });
+
+          return hasAdmins;
+        }
+
+        const hasAdmins = data === true;
+        
+        logger.info(`Admin users check completed (function)`, 'UserService', {
+          operationId,
+          hasAdmins,
+          functionResult: data
+        });
+
+        return hasAdmins;
+      } catch (error) {
+        logger.error(`Error checking for admin users`, 'UserService', { operationId, error });
+        
+        // On any error, return false to allow initial setup
+        // This is safer than blocking the application
+        logger.warn(`Returning false due to error - allowing initial setup`, 'UserService', { operationId });
+        return false;
+      }
+    }, 'check admin users');
+  }
+
+  /**
+   * Create initial admin user for system bootstrap
+   * This method bypasses normal validation for initial setup
+   */
+  async createInitialAdmin(
+    adminData: {
+      name: string;
+      email: string;
+      password: string;
+    },
+    auditContext?: { ipAddress?: string; userAgent?: string }
+  ): Promise<{ user: User; authUser: any }> {
+    const operationId = `create-initial-admin-${Date.now()}`;
+    logger.info(`Creating initial admin user`, 'UserService', {
+      operationId,
+      email: adminData.email,
+      name: adminData.name
+    });
+
+    return this.withRetry(async () => {
+      // First check if any admin users already exist
+      const hasAdmins = await this.hasAdminUsers();
+      if (hasAdmins) {
+        throw new Error('Admin users already exist. Initial setup is not allowed.');
+      }
+
+      // Validate input data
+      const validationResult = this.validateUserData({
+        name: adminData.name,
+        email: adminData.email,
+        role: 'admin',
+        createdBy: 'System'
+      }, 'create');
+      this.throwIfValidationFails(validationResult, 'Initial admin creation');
+
+      // Additional password validation
+      if (!adminData.password || adminData.password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+
+      // Check if email already exists in database
+      const existingUser = await this.getByEmail(adminData.email);
+      if (existingUser) {
+        throw new Error('A user with this email already exists in the database');
+      }
+
+      // Note: We can't easily check for existing auth users from client-side
+      // The signup will fail with a proper error if the user already exists
+
+      // Create auth user first using regular signup (not admin API)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: adminData.email.trim().toLowerCase(),
+        password: adminData.password,
+        options: {
+          data: {
+            name: adminData.name.trim(),
+            role: 'admin'
+          }
+        }
+      });
+
+      if (authError) {
+        logger.error(`Failed to create auth user for initial admin`, 'UserService', { authError });
+        throw new Error(`Failed to create authentication account: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        throw new Error('Failed to create authentication account: No user returned');
+      }
+
+      // Note: With signUp, the user might need email confirmation depending on Supabase settings
+      // For initial admin, we'll proceed regardless of confirmation status
+
+      // Create complete module access for admin (all modules enabled)
+      const completeModuleAccess: ModuleAccess = ALL_MODULES.reduce((acc, moduleKey) => {
+        acc[moduleKey] = true; // Admin gets access to all modules
+        return acc;
+      }, {} as ModuleAccess);
+
+      // Create user record in database
+      const userData = {
+        auth_user_id: authData.user.id,
+        name: adminData.name.trim(),
+        email: adminData.email.trim().toLowerCase(),
+        role: 'admin',
+        yard_ids: [],
+        module_access: completeModuleAccess, // Legacy field for backward compatibility
+        active: true,
+        is_deleted: false,
+        created_by: 'System',
+        created_at: new Date().toISOString()
+      };
+
+      const { data: userRecord, error: userError } = await supabase
+        .from('users')
+        .insert(userData)
+        .select()
+        .single();
+
+      if (userError) {
+        // If user creation fails, we can't easily clean up the auth user without admin API
+        // Log the issue for manual cleanup if needed
+        logger.error(`Failed to create user record after auth user creation`, 'UserService', { 
+          userError,
+          authUserId: authData.user.id,
+          email: authData.user.email,
+          message: 'Manual cleanup may be required in Supabase Auth dashboard'
+        });
+        
+        const serviceError = this.handleSupabaseError(userError, 'create initial admin user record');
+        throw new Error(serviceError.message);
+      }
+
+      if (!userRecord) {
+        throw new Error('Failed to create initial admin user: No data returned');
+      }
+
+      // Create module access record in user_module_access table (this is the source of truth)
+      try {
+        // Try to insert with the user's own ID as updated_by (now nullable)
+        const { error: moduleAccessError } = await supabase
+          .from('user_module_access')
+          .insert({
+            user_id: userRecord.id,
+            module_permissions: completeModuleAccess,
+            updated_by: userRecord.id // This should work now that updated_by is nullable
+          });
+
+        if (moduleAccessError) {
+          logger.error(`Failed to create module access record for initial admin`, 'UserService', { 
+            moduleAccessError,
+            userId: userRecord.id,
+            authUserId: authData.user.id,
+            email: authData.user.email,
+            message: 'Manual cleanup may be required in Supabase Auth dashboard'
+          });
+          
+          // Clean up the user record, but we can't clean up auth user without admin API
+          try {
+            await supabase.from('users').delete().eq('id', userRecord.id);
+          } catch (cleanupError) {
+            logger.error(`Failed to cleanup user record after module access creation failure`, 'UserService', { cleanupError });
+          }
+          
+          throw new Error(`Failed to set module permissions: ${moduleAccessError.message}`);
+        }
+
+        logger.info(`Module access record created successfully for initial admin`, 'UserService', {
+          userId: userRecord.id,
+          moduleCount: Object.keys(completeModuleAccess).length,
+          enabledModules: Object.values(completeModuleAccess).filter(Boolean).length
+        });
+      } catch (error) {
+        logger.error(`Error creating module access record`, 'UserService', { error, userId: userRecord.id });
+        throw error;
+      }
+
+      // Log audit entry
+      await this.logAuditEntry({
+        entityType: 'user',
+        entityId: userRecord.id,
+        action: 'create',
+        changes: { 
+          created: userData,
+          operationId,
+          isInitialAdmin: true,
+          authUserId: authData.user.id,
+          moduleAccess: completeModuleAccess,
+          enabledModules: Object.keys(completeModuleAccess).filter(key => completeModuleAccess[key as keyof ModuleAccess])
+        },
+        userId: 'System',
+        userName: 'System',
+        timestamp: new Date(),
+        ipAddress: auditContext?.ipAddress,
+        userAgent: auditContext?.userAgent
+      });
+
+      logger.info(`Initial admin user created successfully`, 'UserService', {
+        operationId,
+        userId: userRecord.id,
+        authUserId: authData.user.id,
+        email: userRecord.email,
+        name: userRecord.name,
+        totalModules: Object.keys(completeModuleAccess).length,
+        enabledModules: Object.values(completeModuleAccess).filter(Boolean).length
+      });
+
+      // Create an initial yard for the admin user
+      try {
+        const { data: yardData, error: yardError } = await supabase
+          .from('yards')
+          .insert({
+            name: 'Default Yard',
+            code: 'MAIN',
+            description: 'Default yard created during initial setup',
+            is_active: true,
+            created_by: userRecord.id,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (yardError) {
+          logger.warn(`Failed to create initial yard for admin`, 'UserService', { 
+            yardError,
+            userId: userRecord.id 
+          });
+          // Don't fail the entire process if yard creation fails
+        } else if (yardData) {
+          // Update the user to assign them to this yard
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              yard_ids: [yardData.id],
+              updated_at: new Date().toISOString(),
+              updated_by: userRecord.id
+            })
+            .eq('id', userRecord.id);
+
+          if (updateError) {
+            logger.warn(`Failed to assign initial yard to admin`, 'UserService', { 
+              updateError,
+              userId: userRecord.id,
+              yardId: yardData.id
+            });
+          } else {
+            logger.info(`Initial yard created and assigned to admin`, 'UserService', {
+              userId: userRecord.id,
+              yardId: yardData.id,
+              yardName: yardData.name,
+              yardCode: yardData.code
+            });
+          }
+        }
+      } catch (yardCreationError) {
+        logger.warn(`Error during initial yard creation`, 'UserService', { 
+          yardCreationError,
+          userId: userRecord.id
+        });
+        // Don't fail the entire process if yard creation fails
+      }
+
+      return {
+        user: this.mapToUser(userRecord),
+        authUser: authData.user
+      };
+    }, 'create initial admin');
   }
 
   private mapToUser(data: any): User {

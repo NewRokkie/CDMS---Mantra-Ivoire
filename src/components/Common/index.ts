@@ -4,5 +4,9 @@ export { LoadingSpinner } from './LoadingSpinner';
 export { TableSkeleton } from './TableSkeleton';
 export { CardSkeleton } from './CardSkeleton';
 
+// Display Components
+export { ContactDisplay } from './ContactDisplay';
+export { AddressDisplay } from './AddressDisplay';
+
 // This allows importing like:
-// import { FullScreenLoader, TableSkeleton } from '../Common';
+// import { FullScreenLoader, TableSkeleton, ContactDisplay } from '../Common';

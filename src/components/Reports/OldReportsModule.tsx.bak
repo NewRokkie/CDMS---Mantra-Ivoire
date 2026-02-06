@@ -230,7 +230,7 @@ export const ReportsModule: React.FC = () => {
 
   // Mock available yards for managers
   const availableYards = [
-    { id: 'depot-tantarelli', name: 'Tantarelli Depot', code: 'TAN', currentOccupancy: 850, totalCapacity: 1200 },
+    { id: '', name: 'Tantarelli Depot', code: 'TAN', currentOccupancy: 850, totalCapacity: 1200 },
     { id: 'depot-vridi', name: 'Vridi Terminal', code: 'VRI', currentOccupancy: 650, totalCapacity: 900 },
     { id: 'depot-san-pedro', name: 'San Pedro Port', code: 'SPP', currentOccupancy: 420, totalCapacity: 800 }
   ];

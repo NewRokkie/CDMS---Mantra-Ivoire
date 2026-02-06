@@ -44,7 +44,7 @@ const AccessDenied: React.FC = () => (
 );
 
 const ProtectedApp: React.FC = () => {
-  const { user, hasModuleAccess, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, hasModuleAccess, isLoading: authLoading, isAuthenticated, authError, isDatabaseConnected, retryConnection } = useAuth();
   const yardProvider = useYardProvider();
   const { hasPermissionUpdate } = useModuleAccessSync();
   const [activeModule, setActiveModule] = useState('dashboard');
@@ -84,7 +84,22 @@ const ProtectedApp: React.FC = () => {
 
   // Check authentication first - redirect to login if not authenticated
   if (authLoading) {
-    return <FullScreenLoader message="Authenticating..." submessage="Please wait" />;
+    let message = "Authenticating...";
+    let submessage = "Please wait";
+    let showDatabaseWarning = false;
+    let onRetry = undefined;
+
+    if (!isDatabaseConnected) {
+      message = "Database Connection Issue";
+      submessage = "The database appears to be paused or unreachable. Please try again later.";
+      showDatabaseWarning = true;
+      onRetry = retryConnection;
+    } else if (authError) {
+      message = "Authentication Error";
+      submessage = authError;
+    }
+
+    return <FullScreenLoader message={message} submessage={submessage} showDatabaseWarning={showDatabaseWarning} onRetry={onRetry} />;
   }
 
   if (!isAuthenticated || !user) {
@@ -104,7 +119,8 @@ const ProtectedApp: React.FC = () => {
 
   // If there is no current yard selected, do not allow using the application.
   // Show a blocking screen that forces the user to refresh yards or open Yard Management.
-  if (!yardProvider.currentYard) {
+  // Exception: Allow access to yard management even without a current yard
+  if (!yardProvider.currentYard && activeModule !== 'yard-management' && activeModule !== 'depot-management') {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-6">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
@@ -123,7 +139,7 @@ const ProtectedApp: React.FC = () => {
           )}
 
           <div className="flex flex-col gap-3 justify-center">
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 justify-evenly">
               <button
                 onClick={handleRefreshYards}
                 disabled={isRefreshing}
@@ -134,11 +150,11 @@ const ProtectedApp: React.FC = () => {
               </button>
               {hasModuleAccess('yard') && (
                 <button
-                  onClick={() => setActiveModule('yard-management')}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-5 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200"
+                  onClick={() => setActiveModule('depot-management')}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-3 text-white font-medium hover:bg-green-700 transition-all duration-200 hover:-translate-y-0.5 shadow hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
                   <Settings />
-                  Open Yard Management
+                  Create Yard
                 </button>
               )}
             </div>
