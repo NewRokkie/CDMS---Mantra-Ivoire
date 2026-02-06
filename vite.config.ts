@@ -24,4 +24,8 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  server: {
+    host: true, // Listen on all addresses, including 0.0.0.0
+    port: parseInt(process.env.PORT || '3000', 10), // Use PORT environment variable
+  },
 });

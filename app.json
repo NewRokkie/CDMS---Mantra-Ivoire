@@ -1,0 +1,47 @@
+{
+  "name": "CDMS - Container Depot Management System",
+  "description": "Container Depot Management System with integrated EDI capabilities for CODECO messages",
+  "repository": "https://github.com/your-repo/cdms",
+  "logo": "https://cdn.jsdelivr.net/npm/@heroicons/react@2.0.16/esm/academic-cap-solid.js",
+  "keywords": ["react", "vite", "typescript", "edi", "container", "depot", "management"],
+  "image": "heroku/nodejs",
+  "env": {
+    "NODE_ENV": {
+      "description": "Set the node environment to production",
+      "value": "production"
+    },
+    "IS_HEROKU": {
+      "description": "Flag to indicate the app is running on Heroku",
+      "value": "true"
+    },
+    "ENABLE_SFTP": {
+      "description": "Enable SFTP functionality (set to true to enable)",
+      "value": "false",
+      "required": false
+    },
+    "EDI_TIMEOUT": {
+      "description": "EDI processing timeout in milliseconds",
+      "value": "30000",
+      "required": false
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level",
+      "value": "info",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "addons": [
+    "heroku-postgresql:hobby-dev"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}

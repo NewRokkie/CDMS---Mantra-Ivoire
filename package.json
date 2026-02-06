@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "start": "vite --host 0.0.0.0 --port $PORT",
+    "heroku-postbuild": "npm run build",
     "test:services": "tsx src/services/api/__tests__/testServices.ts",
     "test:reports": "tsx src/services/api/__tests__/testReportService.ts",
     "test:user-form-validation": "tsx src/components/Users/__tests__/UserFormModal.validation.test.ts",
