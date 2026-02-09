@@ -631,17 +631,17 @@ export const DashboardOverview: React.FC = () => {
               <div className="flex items-center gap-1 sm:gap-2 bg-white border border-gray-100 rounded-lg p-1 sm:p-2">
                 <button
                   onClick={() => setViewMode('current')}
-                  className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition ${viewMode === 'current' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
+                  className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition ${viewMode === 'current' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
                 >
-                  <Building className="inline h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Current Depot</span>
+                  <Building className="h-4 w-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Current</span>
                 </button>
                 <button
                   onClick={() => setViewMode('global')}
-                  className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition ${viewMode === 'global' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
+                  className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition ${viewMode === 'global' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
                 >
-                  <Globe className="inline h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">All Depots</span>
+                  <Globe className="h-4 w-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Global</span>
                 </button>
               </div>
             )}
@@ -651,8 +651,8 @@ export const DashboardOverview: React.FC = () => {
               className="flex items-center gap-1 sm:gap-2 bg-white border border-gray-100 px-2 sm:px-3 py-2 rounded-lg hover:shadow-sm"
               title="Refresh data"
             >
-              {isRefreshing ? <Spinner className="w-4 h-4" /> : <RefreshCw className="h-4 w-4 text-gray-600" />}
-              <span className="hidden sm:inline text-xs sm:text-sm text-gray-700">Rafraîchir</span>
+              {isRefreshing ? <Spinner className="w-4 h-4" /> : <RefreshCw className="h-4 w-4 text-gray-600 flex-shrink-0" />}
+              <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Rafraîchir</span>
             </button>
 
             <button
@@ -660,8 +660,8 @@ export const DashboardOverview: React.FC = () => {
               className="flex items-center gap-1 sm:gap-2 bg-white border border-gray-100 px-2 sm:px-3 py-2 rounded-lg hover:shadow-sm"
               title="Export filtered data to CSV"
             >
-              {isExporting ? <Spinner className="w-4 h-4" /> : <DownloadCloud className="h-4 w-4 text-gray-600" />}
-              <span className="hidden sm:inline text-xs sm:text-sm text-gray-700">CSV</span>
+              {isExporting ? <Spinner className="w-4 h-4" /> : <DownloadCloud className="h-4 w-4 text-gray-600 flex-shrink-0" />}
+              <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">CSV</span>
             </button>
 
             <button
@@ -669,8 +669,8 @@ export const DashboardOverview: React.FC = () => {
               className="flex items-center gap-1 sm:gap-2 bg-green-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-green-700 hover:shadow-sm"
               title="Export filtered data to Excel"
             >
-              {isExporting ? <Spinner className="w-4 h-4" /> : <Download className="h-4 w-4" />}
-              <span className="hidden sm:inline text-xs sm:text-sm">Excel</span>
+              {isExporting ? <Spinner className="w-4 h-4" /> : <Download className="h-4 w-4 flex-shrink-0" />}
+              <span className="text-xs sm:text-sm whitespace-nowrap">Excel</span>
             </button>
           </div>
         </header>
