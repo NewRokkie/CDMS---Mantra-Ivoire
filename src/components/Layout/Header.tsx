@@ -128,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
           />
 
           {/* Mobile Menu Panel */}
-          <div className="lg:hidden fixed top-[10px] left-0 right-0 bottom-0 bg-white z-[60] overflow-y-auto animate-slideDown">
+          <div className="lg:hidden fixed top-[0px] left-0 right-0 bottom-0 bg-white z-[60] overflow-y-auto animate-slideDown">
             <div className="px-4 py-6 space-y-6">
               {/* Close Button */}
               <div className="flex justify-end">
