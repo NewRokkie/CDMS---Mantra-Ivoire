@@ -136,13 +136,12 @@ export const EDIFileProcessor: React.FC<EDIFileProcessorProps> = ({ onProcessCom
     try {
       updateProgress?.(10);
 
-      // Check if internal EDI service is available
+      // First check if API is available
       try {
         await ediConversionService.checkHealth();
         updateProgress?.(20);
       } catch (healthError) {
         console.warn('Internal EDI service health check failed:', healthError);
-        // Continue with processing since we're using internal implementation
         updateProgress?.(20);
       }
 

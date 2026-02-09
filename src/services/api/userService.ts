@@ -745,9 +745,10 @@ export class UserService {
 
   /**
    * Create user with enhanced validation, error handling, and audit logging
+   * Creates both auth user and database user record
    */
   async create(
-    user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>,
+    user: Omit<User, 'id' | 'createdAt' | 'updatedAt'> & { password?: string },
     auditContext?: { ipAddress?: string; userAgent?: string }
   ): Promise<User> {
     const operationId = `create-user-${Date.now()}`;
@@ -763,6 +764,16 @@ export class UserService {
       const validationResult = this.validateUserData(user, 'create');
       this.throwIfValidationFails(validationResult, 'User creation');
 
+      // Validate password if provided
+      if (user.password) {
+        if (user.password.length < 6) {
+          throw new Error('Password must be at least 6 characters long');
+        }
+        if (user.password.length > 128) {
+          throw new Error('Password must be less than 128 characters');
+        }
+      }
+
       // Check if email already exists with optimized query
       logger.debug(`Checking for existing user with email`, 'UserService', { email: user.email });
       const existingUser = await this.getByEmail(user.email);
@@ -777,7 +788,39 @@ export class UserService {
         return acc;
       }, {} as ModuleAccess);
 
+      // Create auth user first if password is provided
+      let authUserId: string | undefined;
+      if (user.password) {
+        logger.debug(`Creating auth user`, 'UserService', { email: user.email });
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: user.email.trim().toLowerCase(),
+          password: user.password,
+          options: {
+            data: {
+              name: user.name.trim(),
+              role: user.role
+            }
+          }
+        });
+
+        if (authError) {
+          logger.error(`Failed to create auth user`, 'UserService', { authError });
+          throw new Error(`Failed to create authentication account: ${authError.message}`);
+        }
+
+        if (!authData.user) {
+          throw new Error('Failed to create authentication account: No user returned');
+        }
+
+        authUserId = authData.user.id;
+        logger.info(`Auth user created successfully`, 'UserService', { 
+          authUserId,
+          email: user.email 
+        });
+      }
+
       const userData = {
+        auth_user_id: authUserId,
         name: user.name.trim(),
         email: user.email.trim().toLowerCase(),
         role: user.role,
@@ -795,6 +838,15 @@ export class UserService {
         .single();
 
       if (error) {
+        // If user creation fails and we created an auth user, log for manual cleanup
+        if (authUserId) {
+          logger.error(`Failed to create user record after auth user creation`, 'UserService', { 
+            error,
+            authUserId,
+            email: user.email,
+            message: 'Manual cleanup may be required in Supabase Auth dashboard'
+          });
+        }
         const serviceError = this.handleSupabaseError(error, 'create user');
         throw new Error(serviceError.message);
       }

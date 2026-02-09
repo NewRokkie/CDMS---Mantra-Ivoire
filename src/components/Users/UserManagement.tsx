@@ -229,7 +229,7 @@ const UserManagementContent: React.FC = () => {
         showSuccess('User updated successfully', 'The user information has been updated.');
       } else {
         // Create new user
-        const newUser: User = {
+        const newUser: any = {
           id: Date.now().toString(),
           name: userData.name,
           email: userData.email,
@@ -240,7 +240,8 @@ const UserManagementContent: React.FC = () => {
           isActive: userData.isActive,
           createdAt: new Date(),
           createdBy: currentUser?.id || 'System',
-          moduleAccess: getModuleAccessForRole(userData.role)
+          moduleAccess: getModuleAccessForRole(userData.role),
+          password: userData.password // Include password for auth user creation
         };
         await addUser(newUser);
         showSuccess('User created successfully', 'The new user has been added to the system.');
