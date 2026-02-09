@@ -621,56 +621,56 @@ export const DashboardOverview: React.FC = () => {
     <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <header className="flex items-center justify-between">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Dashboard Overview</h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {isManager || isAdmin && (
-              <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-lg p-2">
+              <div className="flex items-center gap-1 sm:gap-2 bg-white border border-gray-100 rounded-lg p-1 sm:p-2">
                 <button
                   onClick={() => setViewMode('current')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition ${viewMode === 'current' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
+                  className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition ${viewMode === 'current' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
                 >
-                  <Building className="inline h-4 w-4 mr-2" />
-                  <span className="hidden lg:inline">Current Depot</span>
+                  <Building className="inline h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Current Depot</span>
                 </button>
                 <button
                   onClick={() => setViewMode('global')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition ${viewMode === 'global' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
+                  className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition ${viewMode === 'global' ? 'bg-gray-100 text-gray-900' : 'text-gray-600'}`}
                 >
-                  <Globe className="inline h-4 w-4 mr-2" />
-                  <span className="hidden lg:inline">All Depots</span>
+                  <Globe className="inline h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">All Depots</span>
                 </button>
               </div>
             )}
 
             <button
               onClick={handleRefresh}
-              className="flex items-center gap-2 bg-white border border-gray-100 px-3 py-2 rounded-lg hover:shadow-sm"
+              className="flex items-center gap-1 sm:gap-2 bg-white border border-gray-100 px-2 sm:px-3 py-2 rounded-lg hover:shadow-sm"
               title="Refresh data"
             >
               {isRefreshing ? <Spinner className="w-4 h-4" /> : <RefreshCw className="h-4 w-4 text-gray-600" />}
-              <span className="hidden lg:inline text-sm text-gray-700">Rafraîchir</span>
+              <span className="hidden sm:inline text-xs sm:text-sm text-gray-700">Rafraîchir</span>
             </button>
 
             <button
               onClick={exportCSV}
-              className="flex items-center gap-2 bg-white border border-gray-100 px-3 py-2 rounded-lg hover:shadow-sm"
+              className="flex items-center gap-1 sm:gap-2 bg-white border border-gray-100 px-2 sm:px-3 py-2 rounded-lg hover:shadow-sm"
               title="Export filtered data to CSV"
             >
               {isExporting ? <Spinner className="w-4 h-4" /> : <DownloadCloud className="h-4 w-4 text-gray-600" />}
-              <span className="hidden lg:inline text-sm text-gray-700">Export CSV</span>
+              <span className="hidden sm:inline text-xs sm:text-sm text-gray-700">CSV</span>
             </button>
 
             <button
               onClick={exportExcel}
-              className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 hover:shadow-sm"
+              className="flex items-center gap-1 sm:gap-2 bg-green-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-green-700 hover:shadow-sm"
               title="Export filtered data to Excel"
             >
               {isExporting ? <Spinner className="w-4 h-4" /> : <Download className="h-4 w-4" />}
-              <span className="hidden lg:inline text-sm">Export Excel</span>
+              <span className="hidden sm:inline text-xs sm:text-sm">Excel</span>
             </button>
           </div>
         </header>
@@ -1031,15 +1031,78 @@ export const DashboardOverview: React.FC = () => {
         {/* Depot Performance Table - Only for Admin and Supervisor */}
         {(isAdmin || isManager) && multiDepotData && (
           <Card>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
               <div>
                 <h3 className="text-lg font-semibold">Depot Performance Comparison</h3>
-                <p className="text-sm text-gray-500">Individual depot metrics and performance indicators</p>
+                <p className="text-xs sm:text-sm text-gray-500">Individual depot metrics and performance indicators</p>
               </div>
-              <div className="text-sm text-gray-400">Depots: {multiDepotData.globalStats.totalDepots}</div>
+              <div className="text-xs sm:text-sm text-gray-400">Depots: {multiDepotData.globalStats.totalDepots}</div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="block lg:hidden space-y-4">
+              {multiDepotData.depotPerformance.map((depot) => (
+                <div key={depot.id} className="border border-gray-100 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-md bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                      <Building className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{depot.name}</div>
+                      <div className="text-xs text-gray-400">{depot.code}</div>
+                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs rounded-full flex-shrink-0 ${depot.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {depot.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Capacity</div>
+                      <div className="font-medium">{depot.occupancy.toLocaleString()} / {depot.capacity.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Containers</div>
+                      <div className="font-medium">{depot.containers}</div>
+                      <div className="text-xs text-gray-400">{depot.inDepot} in depot</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-gray-500">Utilization</span>
+                      <span className={`text-sm font-medium ${
+                        depot.utilizationRate >= 90 ? 'text-red-600' :
+                        depot.utilizationRate >= 75 ? 'text-orange-600' :
+                        depot.utilizationRate >= 25 ? 'text-green-600' : 'text-blue-600'
+                      }`}>{depot.utilizationRate.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full ${
+                          depot.utilizationRate >= 90 ? 'bg-red-500' :
+                          depot.utilizationRate >= 75 ? 'bg-orange-500' :
+                          depot.utilizationRate >= 25 ? 'bg-green-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.min(depot.utilizationRate, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="text-xs text-gray-500">Efficiency</span>
+                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                      depot.efficiency >= 95 ? 'bg-green-50 text-green-700' :
+                      depot.efficiency >= 85 ? 'bg-blue-50 text-blue-700' :
+                      depot.efficiency >= 75 ? 'bg-yellow-50 text-yellow-800' : 'bg-red-50 text-red-700'
+                    }`}>{depot.efficiency}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
