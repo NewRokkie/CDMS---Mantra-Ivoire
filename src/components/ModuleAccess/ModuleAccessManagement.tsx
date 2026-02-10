@@ -807,8 +807,9 @@ export const ModuleAccessManagement: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            <div className="divide-y divide-gray-200 h-96 lg:h-[500px] overflow-y-auto scrollbar-none">
+            
+            {filteredUsers.length > 0 && (
+              <div className="divide-y divide-gray-200 h-96 lg:h-[500px] overflow-y-auto scrollbar-none">
               {filteredUsers.map((user) => {
                 // Determine if user is selected based on current mode
                 const isSelected = selectionMode === 'single'
@@ -898,7 +899,8 @@ export const ModuleAccessManagement: React.FC = () => {
                   </button>
                 );
               })}
-            </div>
+              </div>
+            )}
 
             {filteredUsers.length === 0 && (
               <div className="text-center py-8 lg:py-12">

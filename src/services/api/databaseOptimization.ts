@@ -282,7 +282,7 @@ export class DatabasePerformanceMonitor {
    * Log performance report
    */
   static logPerformanceReport(): void {
-    logger.info('Information', 'ComponentName', this.getPerformanceReport());
+    logger.info('Information', 'databaseOptimization.ts', this.getPerformanceReport());
   }
 }
 

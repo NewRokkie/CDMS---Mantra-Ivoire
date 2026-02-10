@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Save,
-  Users,
-  Server,
-  AlertCircle,
-  Search
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
@@ -16,6 +13,7 @@ interface EDIClientModalProps {
   editingClient: any;
   availableClients: any[];
   serverConfigs: any[];
+  configuredClients?: string[]; // Array of client codes that already have EDI configured
 }
 
 export const EDIClientModal: React.FC<EDIClientModalProps> = ({
@@ -24,7 +22,8 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
   onSave,
   editingClient,
   availableClients,
-  serverConfigs
+  serverConfigs,
+  configuredClients = []
 }) => {
   const [formData, setFormData] = useState({
     clientCode: '',
@@ -36,7 +35,6 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
     priority: 'normal' as 'high' | 'normal' | 'low',
     notes: ''
   });
-  const [searchTerm, setSearchTerm] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const toast = useToast();
 
@@ -66,7 +64,6 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
         });
       }
       setValidationErrors([]);
-      setSearchTerm('');
     }
   }, [isOpen, editingClient, serverConfigs]);
 
@@ -100,18 +97,21 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
   };
 
   const handleClientSelect = (client: any) => {
+    const isConfigured = configuredClients.includes(client.code);
+    
+    if (isConfigured && !editingClient) {
+      toast.warning(`${client.name} already has EDI configured. Edit it from the Client EDI Settings tab.`);
+      return;
+    }
+    
     setFormData({
       ...formData,
       clientCode: client.code,
       clientName: client.name
     });
-    setSearchTerm('');
   };
 
-  const filteredClients = availableClients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const isClientConfigured = (clientCode: string) => configuredClients.includes(clientCode);
 
   if (!isOpen) return null;
 
@@ -152,39 +152,32 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
           {!editingClient && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Client
+                Select Client *
               </label>
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search clients..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              {searchTerm && (
-                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg mb-4">
-                  {filteredClients.slice(0, 10).map((client) => (
-                    <button
-                      key={client.code}
-                      type="button"
-                      onClick={() => handleClientSelect(client)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+              <select
+                value={formData.clientCode}
+                onChange={(e) => {
+                  const selectedClient = availableClients.find(c => c.code === e.target.value);
+                  if (selectedClient) {
+                    handleClientSelect(selectedClient);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select a client...</option>
+                {availableClients.map((client) => {
+                  const configured = isClientConfigured(client.code);
+                  return (
+                    <option 
+                      key={client.code} 
+                      value={client.code}
+                      disabled={configured}
                     >
-                      <div className="font-medium text-gray-900">{client.name}</div>
-                      <div className="text-sm text-gray-600">{client.code}</div>
-                    </button>
-                  ))}
-                  {filteredClients.length === 0 && (
-                    <div className="px-4 py-3 text-gray-500 text-center">
-                      No clients found
-                    </div>
-                  )}
-                </div>
-              )}
+                      {client.name} ({client.code}) {configured ? '- Already Configured' : ''}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
           )}
 
@@ -192,28 +185,27 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Client Code *
+                Client Code
               </label>
               <input
                 type="text"
                 value={formData.clientCode}
-                onChange={(e) => setFormData({ ...formData, clientCode: e.target.value })}
-                disabled={!!editingClient}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-                placeholder="CLIENT001"
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                placeholder="Select a client first"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Client Name *
+                Client Name
               </label>
               <input
                 type="text"
                 value={formData.clientName}
-                onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Client Name"
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                placeholder="Select a client first"
               />
             </div>
 

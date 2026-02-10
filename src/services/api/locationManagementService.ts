@@ -103,7 +103,7 @@ export class LocationManagementService {
         
         return location;
       } catch (error) {
-        logger.error('LocationManagementService.getById error:', 'ComponentName', error);
+        logger.error('LocationManagementService.getById error:', 'locationManagementService.ts', error);
         throw ErrorHandler.createGateInError(error);
       }
     }, { locationId: id });
@@ -150,7 +150,7 @@ export class LocationManagementService {
         
         return location;
       } catch (error) {
-        logger.error('LocationManagementService.getByLocationId error:', 'ComponentName', error);
+        logger.error('LocationManagementService.getByLocationId error:', 'locationManagementService.ts', error);
         throw ErrorHandler.createGateInError(error);
       }
     }, { locationId });
@@ -264,7 +264,7 @@ export class LocationManagementService {
         
         return locations;
       } catch (error) {
-        logger.error('LocationManagementService.getAvailableLocations error:', 'ComponentName', error);
+        logger.error('LocationManagementService.getAvailableLocations error:', 'locationManagementService.ts', error);
         throw ErrorHandler.createGateInError(error);
       }
     }, { yardId: query.yardId, containerSize: query.containerSize, clientPoolId: query.clientPoolId });
@@ -414,7 +414,7 @@ export class LocationManagementService {
         
         return locations;
       } catch (error) {
-        logger.error('LocationManagementService.getByStackId error:', 'ComponentName', error);
+        logger.error('LocationManagementService.getByStackId error:', 'locationManagementService.ts', error);
         throw ErrorHandler.createGateInError(error);
       }
     }, { stackId });
@@ -597,7 +597,7 @@ export class LocationManagementService {
         
         return statistics;
       } catch (error) {
-        logger.error('LocationManagementService.getYardStatistics error:', 'ComponentName', error);
+        logger.error('LocationManagementService.getYardStatistics error:', 'locationManagementService.ts', error);
         throw ErrorHandler.createGateInError(error);
       }
     }, { yardId });
@@ -644,7 +644,7 @@ export class LocationManagementService {
         
         return statistics;
       } catch (error) {
-        logger.error('LocationManagementService.getStackStatistics error:', 'ComponentName', error);
+        logger.error('LocationManagementService.getStackStatistics error:', 'locationManagementService.ts', error);
         throw ErrorHandler.createGateInError(error);
       }
     }, { stackId });

@@ -70,14 +70,14 @@ export class PerformanceMonitoringService {
 
     // Log slow queries
     if (metric.duration > this.slowQueryThreshold) {
-      logger.warn(`🐌 SLOW QUERY: ${metric.operation} took ${metric.duration}ms`, 'ComponentName', metric.metadata);
+      logger.warn(`🐌 SLOW QUERY: ${metric.operation} took ${metric.duration}ms`, 'performanceMonitoringService.ts', metric.metadata);
     } else if (metric.duration > this.warningThreshold) {
-      logger.warn(`⚠️ WARNING: ${metric.operation} took ${metric.duration}ms`, 'ComponentName', metric.metadata);
+      logger.warn(`⚠️ WARNING: ${metric.operation} took ${metric.duration}ms`, 'performanceMonitoringService.ts', metric.metadata);
     }
 
     // Log errors
     if (!metric.success) {
-      logger.error(`ERROR: ${metric.operation} failed after ${metric.duration}ms`, 'ComponentName', metric.error);
+      logger.error(`ERROR: ${metric.operation} failed after ${metric.duration}ms`, 'performanceMonitoringService.ts', metric.error);
     }
   }
 
@@ -310,7 +310,7 @@ export class PerformanceMonitoringService {
    * Log performance report to console
    */
   logPerformanceReport(timeWindowMinutes?: number): void {
-    logger.info('Information', 'ComponentName', this.getPerformanceReport(timeWindowMinutes))
+    logger.info('Information', 'performanceMonitoringService.ts', this.getPerformanceReport(timeWindowMinutes))
   }
 
   /**

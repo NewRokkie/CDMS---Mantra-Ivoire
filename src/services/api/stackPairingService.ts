@@ -133,7 +133,7 @@ class StackPairingService {
   ): Promise<void> {
     try {
       if (!pairing.firstStackId || !pairing.secondStackId) {
-        logger.warn('Stack pairing missing stack IDs, cannot create virtual locations', 'ComponentName');
+        logger.warn('Stack pairing missing stack IDs, cannot create virtual locations', 'stackPairingService.ts');
         return;
       }
 
@@ -155,10 +155,10 @@ class StackPairingService {
           rows,
           tiers
         });
-        logger.info('Information', 'ComponentName', `✅ Created virtual locations for pairing S${String(pairing.firstStackNumber).padStart(2, '0')} + S${String(pairing.secondStackNumber).padStart(2, '0')}`);
+        logger.info('Information', 'stackPairingService.ts', `✅ Created virtual locations for pairing S${String(pairing.firstStackNumber).padStart(2, '0')} + S${String(pairing.secondStackNumber).padStart(2, '0')}`);
       }
     } catch (error) {
-      logger.error('Failed to ensure virtual locations:', 'ComponentName', error)
+      logger.error('Failed to ensure virtual locations:', 'stackPairingService.ts', error)
     }
   }
 
@@ -177,14 +177,14 @@ class StackPairingService {
   ): Promise<void> {
     try {
       const pairings = await this.getAll(yardId);
-      logger.info('Information', 'ComponentName', `🔄 Syncing virtual locations for ${pairings.length} pairings in yard ${yardId}`)
+      logger.info('Information', 'stackPairingService.ts', `🔄 Syncing virtual locations for ${pairings.length} pairings in yard ${yardId}`)
 
       for (const pairing of pairings) {
         await this.ensureVirtualLocations(pairing, defaultRows, defaultTiers);
       }
-      logger.info('Information', 'ComponentName', `✅ Completed virtual location sync for yard ${yardId}`)
+      logger.info('Information', 'stackPairingService.ts', `✅ Completed virtual location sync for yard ${yardId}`)
     } catch (error) {
-      logger.error('Failed to sync virtual locations:', 'ComponentName', error)
+      logger.error('Failed to sync virtual locations:', 'stackPairingService.ts', error)
       throw error;
     }
   }

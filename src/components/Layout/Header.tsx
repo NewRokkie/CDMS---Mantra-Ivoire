@@ -128,8 +128,19 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
           />
 
           {/* Mobile Menu Panel */}
-          <div className="lg:hidden fixed top-[73px] left-0 right-0 bottom-0 bg-white z-[60] overflow-y-auto animate-slideDown">
+          <div className="lg:hidden fixed top-[0px] left-0 right-0 bottom-0 bg-white z-[60] overflow-y-auto animate-slideDown">
             <div className="px-4 py-6 space-y-6">
+              {/* Close Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                  aria-label="Close menu"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
               {/* User Profile Card */}
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200 shadow-lg">
                 <div className="flex items-center space-x-4">

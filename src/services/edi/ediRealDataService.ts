@@ -416,6 +416,81 @@ class EDIRealDataService {
   }
 
   /**
+   * Create or update client EDI settings in edi_client_settings table
+   */
+  async saveClientEDISettings(data: {
+    clientCode: string;
+    clientName: string;
+    ediEnabled: boolean;
+    enableGateIn: boolean;
+    enableGateOut: boolean;
+    serverId: string;
+    priority: 'high' | 'normal' | 'low';
+    notes?: string;
+  }): Promise<void> {
+    try {
+      const client = await ediDatabaseService.getClientByCodeOrName(data.clientCode);
+      if (!client) {
+        throw new Error(`Client with code ${data.clientCode} not found`);
+      }
+
+      // Check if settings already exist by client_id (unique constraint)
+      const { data: existingSettings, error: checkError } = await supabase
+        .from('edi_client_settings')
+        .select('id')
+        .eq('client_id', client.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error(`Failed to check existing settings: ${checkError.message}`);
+      }
+
+      const settingsData = {
+        client_id: client.id,
+        client_code: data.clientCode,
+        client_name: data.clientName,
+        edi_enabled: data.ediEnabled,
+        enable_gate_in: data.enableGateIn,
+        enable_gate_out: data.enableGateOut,
+        server_config_id: data.serverId || null,
+        priority: data.priority,
+        notes: data.notes || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existingSettings) {
+        // Update existing settings using client_id
+        const { error: updateError } = await supabase
+          .from('edi_client_settings')
+          .update(settingsData)
+          .eq('client_id', client.id);
+
+        if (updateError) {
+          throw new Error(`Failed to update client EDI settings: ${updateError.message}`);
+        }
+      } else {
+        // Insert new settings
+        const { error: insertError } = await supabase
+          .from('edi_client_settings')
+          .insert({
+            ...settingsData,
+            created_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          throw new Error(`Failed to create client EDI settings: ${insertError.message}`);
+        }
+      }
+
+      // Also update clients.auto_edi field for backward compatibility
+      await ediDatabaseService.updateClientEdiStatus(client.id, data.ediEnabled);
+    } catch (error) {
+      console.error('Error saving client EDI settings:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete client EDI configuration completely
    */
   async deleteClientEDI(clientCode: string): Promise<void> {

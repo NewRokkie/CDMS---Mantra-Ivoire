@@ -51,6 +51,11 @@ const EDIManagement: React.FC = () => {
   const { currentYard } = useYard();
   const toast = useToast();
 
+  // Memoize the validation callback to prevent EDIValidator from unmounting
+  const handleValidationComplete = React.useCallback((result: any) => {
+    console.log('EDI Validation completed:', result);
+  }, []);
+
   useEffect(() => {
     loadRealData();
   }, []);
@@ -142,44 +147,32 @@ const EDIManagement: React.FC = () => {
 
   const handleSaveClient = async (clientData: any) => {
     try {
-      if (editingClient) {
-        // Update existing client
-        await ediRealDataService.toggleClientEDI(clientData.clientCode, clientData.ediEnabled);
-        if (clientData.serverId) {
-          // Client assignment is handled through edi_client_settings table now
-          // await ediConfigurationDatabaseService.assignClientToConfiguration(clientData.serverId, clientData.clientName);
-        }
-        toast.success('Client EDI configuration updated');
-      } else {
-        // Create new client configuration
-        await ediRealDataService.toggleClientEDI(clientData.clientCode, true);
-        if (clientData.serverId) {
-          // Client assignment is handled through edi_client_settings table now
-          // await ediConfigurationDatabaseService.assignClientToConfiguration(clientData.serverId, clientData.clientName);
-        }
-        toast.success('Client EDI configuration created');
-      }
+      // Use the new saveClientEDISettings function to properly create/update edi_client_settings
+      await ediRealDataService.saveClientEDISettings({
+        clientCode: clientData.clientCode,
+        clientName: clientData.clientName,
+        ediEnabled: clientData.ediEnabled,
+        enableGateIn: clientData.enableGateIn,
+        enableGateOut: clientData.enableGateOut,
+        serverId: clientData.serverId,
+        priority: clientData.priority,
+        notes: clientData.notes,
+      });
+
+      toast.success(editingClient ? 'Client EDI configuration updated' : 'Client EDI configuration created');
       await loadRealData();
       setShowClientModal(false);
       setEditingClient(null);
     } catch (error) {
-      toast.error('Failed to save client configuration');
+      console.error('Error saving client configuration:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save client configuration');
     }
   };
 
   const canManageEDI = user?.role === 'admin' || user?.role === 'supervisor';
 
-  if (!canManageEDI) {
-    return (
-      <div className="text-center py-12">
-        <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-        <p className="text-gray-600">You don't have permission to access EDI management.</p>
-      </div>
-    );
-  }
-
-  const DesktopContent = () => (
+  // Memoize DesktopContent to prevent unnecessary re-renders and unmounting of child components
+  const DesktopContent = React.useMemo(() => () => (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -556,9 +549,10 @@ const EDIManagement: React.FC = () => {
 
       {activeTab === 'validator' && (
         <div className="space-y-6">
-          <EDIValidator onValidationComplete={(result) => {
-            console.log('EDI Validation completed:', result);
-          }} />
+          <EDIValidator 
+            key="edi-validator-persistent"
+            onValidationComplete={handleValidationComplete}
+          />
         </div>
       )}
 
@@ -680,7 +674,31 @@ const EDIManagement: React.FC = () => {
         </div>
       )}
     </div>
-  );
+  ), [
+    activeTab,
+    realStats,
+    serverConfigs,
+    clientMappings,
+    transmissionLogs,
+    isLoading,
+    isLoadingServers,
+    isLoadingClients,
+    currentYard,
+    clientSearchTerm,
+    togglingClientCode,
+    deletingClientCode,
+    handleValidationComplete
+  ]);
+
+  if (!canManageEDI) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+        <p className="text-gray-600">You don't have permission to access EDI management.</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -714,6 +732,7 @@ const EDIManagement: React.FC = () => {
         editingClient={editingClient}
         availableClients={availableClients}
         serverConfigs={serverConfigs}
+        configuredClients={clientMappings.map(m => m.clientCode)}
       />
     </>
   );

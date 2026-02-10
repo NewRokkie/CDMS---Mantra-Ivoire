@@ -151,8 +151,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleConfigurationItemClick = (itemId: string) => {
     saveScrollPosition();
     setActiveModule(itemId);
-    // Keep dropdown open when selecting a configuration item
-    setIsConfigurationsOpen(true);
+    // Close mobile menu when a configuration item is clicked
+    if (externalSetIsMobileMenuOpen) {
+      externalSetIsMobileMenuOpen(false);
+    }
   };
 
   const handleMainMenuClick = (itemId: string) => {

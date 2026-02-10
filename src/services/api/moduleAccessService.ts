@@ -807,19 +807,19 @@ class ModuleAccessService {
 
     switch (level) {
       case 'error':
-        logger.error(`🔴 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
+        logger.error(`🔴 [${logEntry.level}] ${logEntry.message}`, 'moduleAccessService.ts', logEntry);
         break;
       case 'warn':
-        logger.warn(`🟡 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
+        logger.warn(`🟡 [${logEntry.level}] ${logEntry.message}`, 'moduleAccessService.ts', logEntry);
         break;
       case 'audit':
-        logger.info(`📋 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
+        logger.info(`📋 [${logEntry.level}] ${logEntry.message}`, 'moduleAccessService.ts', logEntry);
         break;
       case 'debug':
-        logger.debug(`🔍 [${logEntry.level}] ${logEntry.message}`, 'ComponentName', { logEntry });
+        logger.debug(`🔍 [${logEntry.level}] ${logEntry.message}`, 'moduleAccessService.ts', { logEntry });
         break;
       default:
-        logger.info(`ℹ️ [${logEntry.level}] ${logEntry.message}`, 'ComponentName', logEntry);
+        logger.info(`ℹ️ [${logEntry.level}] ${logEntry.message}`, 'moduleAccessService.ts', logEntry);
     }
   }
 
