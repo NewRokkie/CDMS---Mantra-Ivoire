@@ -622,104 +622,68 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
       }
 
-      // 5. Process EDI transmission conditionally
-      let ediResult = null;
+      // 5. Process EDI transmission conditionally using new SFTP integration
       let ediStatus = 'not_attempted';
       
       // EDI seulement si pas de dommages (ediShouldTransmit = true)
       if (locationData.ediShouldTransmit !== false) {
         try {
-          // Import enhanced Gate In CODECO service
-          const { gateInCodecoService } = await import('../../services/edi/gateInCodecoService');
+          // Import SFTP integration service
+          const { sftpIntegrationService } = await import('../../services/edi/sftpIntegrationService');
           
-          // Prepare Gate In CODECO data with all required fields
-          const gateInCodecoData = {
-            // Container Information - REQUIRED: Container Number
+          // Prepare Gate In data for SFTP transmission
+          const gateInData = {
             containerNumber: operation.containerNumber,
-            containerSize: operation.containerSize as '20ft' | '40ft',
+            containerSize: operation.containerSize,
             containerType: operation.containerType || 'dry',
-            containerQuantity: operation.containerQuantity || 1,
-            secondContainerNumber: operation.secondContainerNumber,
-            
-            // Client Information
             clientCode: operation.clientCode,
             clientName: operation.clientName,
-            
-            // Transport Information
             transportCompany: operation.transportCompany || 'Unknown',
-            driverName: operation.driverName || 'Unknown',
             truckNumber: operation.truckNumber || 'Unknown',
-            // REQUIRED: Date et Heure d'entrée
-            truckArrivalDate: operation.truckArrivalDate || new Date().toISOString().split('T')[0],
-            truckArrivalTime: operation.truckArrivalTime || new Date().toTimeString().slice(0, 5),
-            
-            // Gate In Operation Details
+            arrivalDate: operation.truckArrivalDate || new Date().toISOString().split('T')[0],
+            arrivalTime: operation.truckArrivalTime || new Date().toTimeString().slice(0, 5),
+            assignedLocation: locationData.assignedLocation,
+            yardId: currentYard?.id || 'unknown',
             operatorName: user?.name || 'System',
             operatorId: user?.id || 'system',
-            yardId: currentYard?.id || 'unknown',
-            createdAt: operation.createdAt ? new Date(operation.createdAt) : new Date(),
-            updatedAt: new Date(),
-            
-            // Container Status
-            status: (operation.fullEmpty || operation.status || 'FULL') as 'FULL' | 'EMPTY',
-            classification: (operation.classification || 'divers') as 'divers' | 'alimentaire',
-            
-            // REQUIRED: Damaged or Not - Damage Assessment
-            damageAssessment: locationData.damageAssessment ? {
-              hasDamage: locationData.damageAssessment.hasDamage,
-              damageType: locationData.damageAssessment.damageType,
-              damageDescription: locationData.damageAssessment.damageDescription,
-              assessedBy: user?.name || 'System',
-              assessedAt: new Date()
-            } : {
-              hasDamage: false,
-              assessedBy: user?.name || 'System',
-              assessedAt: new Date()
-            },
-            
-            // Location Assignment
-            assignedLocation: locationData.assignedLocation
+            damageReported: locationData.damageAssessment?.hasDamage || false,
+            damageType: locationData.damageAssessment?.damageType,
+            damageDescription: locationData.damageAssessment?.damageDescription,
+            damageAssessedBy: user?.name || 'System',
+            damageAssessedAt: new Date().toISOString(),
+            equipmentReference: operation.equipmentReference
           };
 
-          // Yard information for EDI
-          const yardInfo = {
-            companyCode: currentYard?.code || 'DEPOT',
-            plant: currentYard?.id || 'SYSTEM',
-            customer: operation.clientCode
-          };
-
-          // Generate and transmit CODECO with damage assessment
-          const codecoResult = await gateInCodecoService.generateAndTransmitCodeco(
-            gateInCodecoData,
-            yardInfo
-          );
+          // Process Gate In with automatic SFTP transmission
+          const sftpResult = await sftpIntegrationService.processGateInWithSFTP(gateInData);
           
-          if (codecoResult.success && codecoResult.transmissionLog) {
-            ediResult = codecoResult.transmissionLog;
-            
+          if (sftpResult.transmitted) {
             // Update gate_in_operation with EDI transmission info
             await supabase
               .from('gate_in_operations')
               .update({
                 edi_transmitted: true,
                 edi_transmission_date: new Date().toISOString(),
-                edi_log_id: ediResult.id
+                edi_error_message: null
               })
               .eq('id', operation.id);
             ediStatus = 'transmitted';
+          } else if (sftpResult.error) {
+            throw new Error(sftpResult.error);
           } else {
-            throw new Error(codecoResult.error || 'CODECO generation failed');
+            // EDI not enabled for this client
+            ediStatus = 'not_enabled';
           }
         } catch (ediError) {
           // EDI transmission failed, but don't fail the entire operation
-          console.error('EDI CODECO transmission failed:', ediError);
+          console.error('EDI SFTP transmission failed:', ediError);
           
           // Update gate_in_operation to indicate EDI failure
           await supabase
             .from('gate_in_operations')
             .update({
               edi_transmitted: false,
-              edi_error_message: ediError instanceof Error ? ediError.message : 'EDI CODECO transmission failed'
+              edi_error_message: ediError instanceof Error ? ediError.message : 'EDI SFTP transmission failed'
             })
             .eq('id', operation.id);
           ediStatus = 'failed';
@@ -745,8 +709,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               assignedLocation: locationData.assignedLocation,
               completedAt: new Date(),
               status: 'completed',
-              ediTransmitted: ediResult ? true : false,
-              ediLogId: ediResult?.id
+              ediTransmitted: ediStatus === 'transmitted',
             }
           : op
       ));
@@ -756,7 +719,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         const updatedContainers = await containerService.getAll();
         setContainers(updatedContainers);
       } catch (refreshError) {
-        logger.warn('Avertissement', 'ComponentName', refreshError);
+        logger.warn('Avertissement', 'GateIn.tsx', refreshError);
       }
 
       // 8. Show success message with EDI status
@@ -767,13 +730,16 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       let ediStatusMessage = '';
       switch (ediStatus) {
         case 'transmitted':
-          ediStatusMessage = '✓ EDI transmis automatiquement';
+          ediStatusMessage = '✓ EDI transmis automatiquement via SFTP';
           break;
         case 'failed':
           ediStatusMessage = '⚠ Transmission EDI échouée';
           break;
         case 'pending_manual':
           ediStatusMessage = '⏳ EDI en attente (traitement manuel requis)';
+          break;
+        case 'not_enabled':
+          ediStatusMessage = '• EDI non activé pour ce client';
           break;
         default:
           ediStatusMessage = '• EDI non tenté';

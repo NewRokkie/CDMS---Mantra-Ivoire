@@ -46,7 +46,7 @@ The system consists of:
 ## EDI Integration
 
 The EDI system supports:
-- UN/EDIFACT D.96A standard
+- UN/EDIFACT D.95B standard
 - CODECO message generation
 - XML ↔ EDI conversion
 - Gate In/Out EDI transmission

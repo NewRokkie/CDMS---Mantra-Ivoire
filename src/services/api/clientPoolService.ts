@@ -276,7 +276,7 @@ class ClientPoolService {
         notes: data.notes
       };
     } catch (error) {
-      logger.error('ClientPoolService.assignStack error', 'ComponentName', error);
+      logger.error('ClientPoolService.assignStack error', 'clientPoolService.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }

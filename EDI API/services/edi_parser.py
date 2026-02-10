@@ -473,6 +473,38 @@ def validate_edi_format(edi_content: str) -> Tuple[bool, List[str]]:
     if not re.search(r"'", edi_content):
         errors.append("Missing segment terminators (')")
     
+    # Validate UNT segment count
+    unt_match = re.search(r"UNT\+(\d+)\+", edi_content)
+    if unt_match:
+        declared_count = int(unt_match.group(1))
+        # Split into segments and count between UNH and UNT (inclusive)
+        segments = [s.strip() for s in edi_content.split("'") if s.strip()]
+        
+        unh_index = next((i for i, s in enumerate(segments) if s.startswith('UNH')), -1)
+        unt_index = next((i for i, s in enumerate(segments) if s.startswith('UNT')), -1)
+        
+        if unh_index != -1 and unt_index != -1:
+            actual_count = unt_index - unh_index + 1
+            if declared_count != actual_count:
+                errors.append(
+                    f"Segment count mismatch: UNT declares {declared_count}, actual is {actual_count}. "
+                    f"Count should include UNH and UNT segments"
+                )
+    
+    # Validate UNB/UNZ interchange reference matching
+    unb_match = re.search(r"UNB\+[^+]*\+[^+]*\+[^+]*\+[^+]*\+([^+]+)\+", edi_content)
+    unz_match = re.search(r"UNZ\+[^+]*\+([^']+)", edi_content)
+    
+    if unb_match and unz_match:
+        unb_ref = unb_match.group(1)
+        unz_ref = unz_match.group(1)
+        
+        if unb_ref != unz_ref:
+            errors.append(
+                f"Interchange reference mismatch: UNB reference '{unb_ref}' does not match UNZ reference '{unz_ref}'. "
+                f"Interchange control reference in UNZ must match UNB"
+            )
+    
     # Try to parse and catch parsing errors
     try:
         parser = EDIFACTParser()

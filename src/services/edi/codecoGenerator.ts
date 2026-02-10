@@ -9,60 +9,41 @@ export interface CodecoMessageData {
   sender: string;           // Company name (e.g., MANTRA)
   receiver: string;         // Client Name (e.g., ONEY, PIL, etc...)
   companyCode: string;      // Company Code (MANTRA)
-  plant: string;            // Yard/Depot Code (e.g., DEPOT-01)
   customer: string;         // Client Name (e.g., ONEY, PIL, etc...)
   
   // Container Information - REQUIRED
   containerNumber: string;  // TRHU6875483
   containerSize: string;    // 40 (for 40ft)
-  containerType: string;    // EM (Empty)
+  containerType: string;    // EM (Empty) or FL (Full)
   
   // Transport Information
-  transportCompany: string;
-  vehicleNumber: string;
+  transportCompany: string; // Transport company name
+  vehicleNumber: string;    // Vehicle/Truck number
   
   // Operation Information
   operationType: 'GATE_IN' | 'GATE_OUT';
-  operationDate: string;    // 20260205
-  operationTime: string;    // 0302
+  operationDate: string;    // YYMMDD format (e.g., 260205)
+  operationTime: string;    // HHMMSS format (e.g., 030200)
   
   // Reference Information
-  bookingReference?: string;     // ABJG00064400
-  equipmentReference?: string;   // Equipment Reference(EQR Ref No)
+  bookingReference?: string;     // Booking Number for RFF+BN segment
+  equipmentReference?: string;   // Equipment Reference for RFF+EQR segment
   
   // Location Information
   locationCode: string;     // CIABJ
   locationDetails: string;  // CIABJ32:STO:ZZZ
   
   // Operator Information
-  operatorName: string;
-  operatorId: string;
-  yardId: string;
+  operatorName: string;     // Operator name (used for createdBy)
+  operatorId: string;       // Operator ID
+  yardId: string;           // Yard ID
   
-  // Additional fields for backward compatibility
-  weighbridgeId?: string;
-  weighbridgeIdSno?: string;
-  transporter?: string;
-  design?: string;
-  type?: string;
-  color?: string;
-  cleanType?: string;
-  status?: string;
-  deviceNumber?: string;
-  createdDate?: string;
-  createdTime?: string;
-  createdBy?: string;
-  changedDate?: string;
-  changedTime?: string;
-  changedBy?: string;
-  gateInDate?: string;
-  gateInTime?: string;
-  damageReported?: boolean;
-  damageType?: string;
-  damageDescription?: string;
-  damageAssessedBy?: string;
-  damageAssessedAt?: string;
-  numOfEntries?: string;
+  // Damage Information (Optional - for future use)
+  damageReported?: boolean;      // Whether damage was reported
+  damageType?: string;           // Type of damage
+  damageDescription?: string;    // Damage description
+  damageAssessedBy?: string;     // Who assessed the damage
+  damageAssessedAt?: string;     // When damage was assessed
 }
 
 export interface CodecoSegment {
@@ -108,20 +89,30 @@ export class CodecoGenerator {
   /**
    * UNB - Interchange Header
    * Format: UNB+UNOA:1+MANTRA+ClientName+260205:1428+MANTRA0205'
+   * - Syntax: UNOA:1 (ASCII)
+   * - Sender: Sender Code from EDI Configuration
+   * - Receiver: Partner Code from EDI Configuration
+   * - Date/Time: YYMMDD:HHMM
+   * - Control Ref: SenderCode+MMDD (e.g., MANTRA0205)
    */
   private addInterchangeHeader(data: CodecoMessageData): void {
     const timestamp = new Date();
     const date = this.formatDate(timestamp, 'YYMMDD');
     const time = this.formatTime(timestamp, 'HHMM');
     
+    // Generate control reference: SenderCode+MMDD
+    const mm = (timestamp.getMonth() + 1).toString().padStart(2, '0');
+    const dd = timestamp.getDate().toString().padStart(2, '0');
+    const controlRef = `${data.sender || data.companyCode}${mm}${dd}`;
+    
     this.segments.push({
       tag: 'UNB',
       elements: [
-        'UNOA:1',                    // Syntax identifier and version (UNOA:1 for ASCII)
-        data.sender || data.companyCode,  // Sender identification (Depot Code - MANTRA)
-        data.receiver,                    // Recipient identification (Client Name)
-        `${date}:${time}`,           // Date and time of preparation
-        this.interchangeRef          // Interchange control reference (MANTRA0205)
+        'UNOA:1',                         // Syntax identifier (UNOA:1 for ASCII)
+        data.sender || data.companyCode,  // Sender Code from EDI Configuration
+        data.receiver,                    // Partner Code from EDI Configuration
+        `${date}:${time}`,                // Date and time: YYMMDD:HHMM
+        controlRef                        // Control reference: SenderCode+MMDD
       ]
     });
   }
@@ -129,13 +120,15 @@ export class CodecoGenerator {
   /**
    * UNH - Message Header
    * Format: UNH+COD02051428+CODECO:D:95B:UN:ITG14'
+   * - Message Ref: COD+MMDDHHMM (e.g., COD02051428)
+   * - Version: D.95B:UN:ITG14
    */
   private addMessageHeader(): void {
     this.segments.push({
       tag: 'UNH',
       elements: [
-        this.messageRefNumber,       // Message reference number (COD02051428)
-        'CODECO:D:95B:UN:ITG14'     // Message identifier (CODECO, version D.95B)
+        this.messageRefNumber,          // Message reference: COD+MMDDHHMM
+        'CODECO:D:95B:UN:ITG14'        // Message identifier: CODECO version D.95B
       ]
     });
   }
@@ -143,16 +136,26 @@ export class CodecoGenerator {
   /**
    * BGM - Beginning of Message
    * Format: BGM+36+TRHU687548302051428+9'
+   * - Doc Code: 36 (Container movement report)
+   * - Doc Number: ContainerNumber+MMDDHHMM (e.g., TRHU687548302051428)
+   * - Function: 9 (Original)
    */
   private addBeginningOfMessage(data: CodecoMessageData): void {
-    const docNumber = `${data.containerNumber}${this.formatDate(new Date(), 'DDMMYYHHMM')}`;
+    const timestamp = new Date();
+    const mm = (timestamp.getMonth() + 1).toString().padStart(2, '0');
+    const dd = timestamp.getDate().toString().padStart(2, '0');
+    const hh = timestamp.getHours().toString().padStart(2, '0');
+    const min = timestamp.getMinutes().toString().padStart(2, '0');
+    
+    // Document number: ContainerNumber+MMDDHHMM
+    const docNumber = `${data.containerNumber}${mm}${dd}${hh}${min}`;
     
     this.segments.push({
       tag: 'BGM',
       elements: [
-        '36',                        // Document name code (36 = Container movement report)
-        docNumber,                   // Document number (TRHU687548302051428)
-        '9'                          // Message function code (9 = Original)
+        '36',                        // Document name code: 36 (Container movement report)
+        docNumber,                   // Document number: ContainerNumber+MMDDHHMM
+        '9'                          // Message function code: 9 (Original)
       ]
     });
   }
@@ -221,36 +224,29 @@ export class CodecoGenerator {
 
   /**
    * NAD - Name and Address segments
-   * Format: NAD+MS+MANTRA', NAD+CF+DEPOT-01:160:20', NAD+CR+ONEY' (optional)
+   * Format: NAD+MS+SenderCode', NAD+CF+PartnerCode:160:20'
+   * Phase 3: Only 2 NAD segments (removed NAD 3)
    */
   private addNameAndAddress(data: CodecoMessageData): void {
-    // Message sender (MS) - Company Code
+    // NAD 1: Message sender (MS) - Sender Code from EDI Configuration
     this.segments.push({
       tag: 'NAD',
       elements: [
-        'MS',                        // Party qualifier (MS = Message sender)
-        data.sender || data.companyCode  // Party identification (Company Code - MANTRA)
+        'MS',                             // Party qualifier (MS = Message sender)
+        data.sender || data.companyCode   // Sender Code (e.g., MANTRA)
       ]
     });
 
-    // Consignee/Freight forwarder (CF) - Yard/Depot Code
+    // NAD 2: Consignee/Freight forwarder (CF) - Partner Code from EDI Configuration
     this.segments.push({
       tag: 'NAD',
       elements: [
-        'CF',                        // Party qualifier (CF = Consignee/Freight forwarder)
-        `${data.plant}:160:20`       // Party identification (Yard/Depot Code:160:20)
+        'CF',                             // Party qualifier (CF = Consignee/Freight forwarder)
+        `${data.receiver}:160:20`         // Partner Code:160:20 (e.g., ONEY:160:20)
       ]
     });
 
-    // Carrier (CR) - Client Name (OPTIONAL - not in standard client format)
-    // Uncomment if needed for specific clients
-    // this.segments.push({
-    //   tag: 'NAD',
-    //   elements: [
-    //     'CR',                        // Party qualifier (CR = Carrier)
-    //     data.customer                // Party identification (Client Name)
-    //   ]
-    // });
+    // NAD 3: REMOVED as per Phase 3 requirements
   }
 
   /**
@@ -276,25 +272,26 @@ export class CodecoGenerator {
 
   /**
    * RFF - Reference segments
-   * Format: RFF+BN:ABJG00064400', RFF+BN:EQR-2025-001234' (only for ONEY)
+   * Format: RFF+BN:BookingNumber', RFF+EQR:EquipmentReference'
+   * Phase 3: RFF+BN for Booking Number, RFF+EQR for Equipment Reference
    */
   private addReferences(data: CodecoMessageData): void {
-    // Booking reference
+    // RFF 1: Booking reference (BN)
     if (data.bookingReference) {
       this.segments.push({
         tag: 'RFF',
         elements: [
-          `BN:${data.bookingReference}`  // BN = Booking reference
+          `BN:${data.bookingReference}`  // BN = Booking Number
         ]
       });
     }
 
-    // Equipment reference - only for ONEY client
+    // RFF 2: Equipment reference (EQR) - for ONEY client
     if (data.equipmentReference && data.customer && data.customer.toUpperCase().includes('ONEY')) {
       this.segments.push({
         tag: 'RFF',
         elements: [
-          `BN:${data.equipmentReference}`  // BN = Equipment reference (only for ONEY)
+          `EQR:${data.equipmentReference}`  // EQR = Equipment Reference
         ]
       });
     }
@@ -302,16 +299,18 @@ export class CodecoGenerator {
 
   /**
    * DTM - Date/Time/Period
-   * Format: DTM+203:202602050302:203'
+   * Format: DTM+203:CCYYMMDDHHMMSS:203'
+   * Phase 3: Qualifier 203, Format 203, DateTime CCYYMMDDHHMMSS (e.g., 202602050302)
    */
   private addDateTimePeriod(data: CodecoMessageData): void {
-    // Format: YYMMDDHHMMSS (202602050302)
-    const operationDateTime = `20${data.operationDate}${data.operationTime.slice(0, 4)}`; // Remove seconds for this format
+    // Format: CCYYMMDDHHMMSS (202602050302)
+    // Note: operationDate is YYMMDD, operationTime is HHMMSS
+    const operationDateTime = `20${data.operationDate}${data.operationTime.slice(0, 4)}`; // CCYYMMDDHHMMSS (12 digits)
     
     this.segments.push({
       tag: 'DTM',
       elements: [
-        `203:${operationDateTime}:203`  // 203 = Transport date/time (203:202602050302:203)
+        `203:${operationDateTime}:203`  // 203 = Transport date/time, Format 203
       ]
     });
   }
@@ -404,22 +403,27 @@ export class CodecoGenerator {
 
   /**
    * Helper: Generate message reference number
-   * Format: COD + DDMMYYHHMM (COD02051428)
+   * Format: COD + MMDDHHMM (e.g., COD02051428)
+   * - MM: Month (02 for February)
+   * - DD: Day (05)
+   * - HH: Hour (14)
+   * - MM: Minute (28)
    */
   private generateMessageRef(): string {
     const now = new Date();
-    const dd = now.getDate().toString().padStart(2, '0');
     const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-    const yy = now.getFullYear().toString().slice(-2);
+    const dd = now.getDate().toString().padStart(2, '0');
     const hh = now.getHours().toString().padStart(2, '0');
     const min = now.getMinutes().toString().padStart(2, '0');
     
-    return `COD${dd}${mm}${yy}${hh}${min}`;
+    return `COD${mm}${dd}${hh}${min}`;
   }
 
   /**
    * Helper: Generate interchange reference
-   * Format: SENDER + MMDD (MANTRA0205)
+   * Format: SenderCode + MMDD (e.g., MANTRA0205)
+   * Note: This is now generated in addInterchangeHeader() using actual sender code
+   * This method is kept for backward compatibility but not used
    */
   private generateInterchangeRef(timestamp: Date): string {
     const mm = (timestamp.getMonth() + 1).toString().padStart(2, '0');
@@ -481,7 +485,7 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
     return date.toISOString().slice(0, 10).replace(/-/g, '').slice(2); // YYMMDD
   };
   const formatTime = (date: Date): string => {
-    return date.toTimeString().slice(0, 5).replace(/:/g, '') + '02'; // HHMM + seconds
+    return date.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
   };
 
   return {
@@ -489,7 +493,6 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
     sender: getText('Company_Code') || 'MANTRA',        // Company name
     receiver: getText('Customer') || 'CLIENT',          // Client Name
     companyCode: getText('Company_Code') || 'MANTRA',   // Company Code
-    plant: getText('Plant') || 'DEPOT',                 // Yard/Depot Code
     customer: getText('Customer') || 'CLIENT',          // Client Name
     
     // Container Information - REQUIRED
@@ -507,8 +510,8 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
     operationTime: formatTime(now),
     
     // Reference Information
-    bookingReference: getText('Booking_Number') || '-',
-    equipmentReference: 'EQR Ref No',
+    bookingReference: getText('Booking_Number') || undefined,
+    equipmentReference: getText('Equipment_Reference') || undefined,
     
     // Location Information
     locationCode: 'CIABJ',
@@ -517,32 +520,14 @@ export function parseSAPXML(xmlContent: string): CodecoMessageData {
     // Operator Information
     operatorName: getText('Created_By') || 'SYSTEM',
     operatorId: 'SYS001',
-    yardId: 'YARD01',
+    yardId: getText('Yard_ID') || 'YARD01',
     
-    // Backward compatibility fields
-    weighbridgeId: getText('Weighbridge_ID'),
-    weighbridgeIdSno: getText('Weighbridge_ID_SNO'),
-    transporter: getText('Transporter'),
-    design: getText('Design'),
-    type: getText('Type'),
-    color: getText('Color'),
-    cleanType: getText('Clean_Type'),
-    status: getText('Status'),
-    deviceNumber: getText('Device_Number'),
-    createdDate: getText('Created_Date'),
-    createdTime: getText('Created_Time'),
-    createdBy: getText('Created_By'),
-    changedDate: getText('Changed_Date'),
-    changedTime: getText('Changed_Time'),
-    changedBy: getText('Changed_By'),
-    numOfEntries: getText('Num_Of_Entries'),
-    gateInDate: getText('Gate_In_Date'),
-    gateInTime: getText('Gate_In_Time'),
+    // Damage Information (Optional)
     damageReported: getText('Damage_Reported') === 'true' || getText('Damage_Reported') === '1',
-    damageType: getText('Damage_Type'),
-    damageDescription: getText('Damage_Description'),
-    damageAssessedBy: getText('Damage_Assessed_By'),
-    damageAssessedAt: getText('Damage_Assessed_At')
+    damageType: getText('Damage_Type') || undefined,
+    damageDescription: getText('Damage_Description') || undefined,
+    damageAssessedBy: getText('Damage_Assessed_By') || undefined,
+    damageAssessedAt: getText('Damage_Assessed_At') || undefined
   };
 }
 
@@ -556,13 +541,13 @@ export function parseGateInOperation(
 ): CodecoMessageData {
   const now = new Date();
   const formatDate = (date: Date): string => {
-    return date.toISOString().slice(0, 10).replace(/-/g, '');
+    return date.toISOString().slice(0, 10).replace(/-/g, '').slice(2); // YYMMDD
   };
   const formatTime = (date: Date): string => {
-    return date.toTimeString().slice(0, 5).replace(/:/g, '');
+    return date.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
   };
 
-  // Extract operation date and time
+  // Extract operation date and time from operation data or use current time
   const operationDate = operation.gateInDate ? 
     new Date(operation.gateInDate) : 
     (operation.truckArrivalDate ? 
@@ -574,7 +559,6 @@ export function parseGateInOperation(
     sender: yardInfo.companyCode || 'MANTRA',           // Company name
     receiver: operation.clientName || 'CLIENT',         // Client Name
     companyCode: yardInfo.companyCode || 'MANTRA',      // Company Code
-    plant: yardInfo.plant || 'DEPOT',                   // Yard/Depot Code
     customer: operation.clientName || 'CLIENT',         // Client Name
     
     // Container Information - REQUIRED
@@ -588,12 +572,12 @@ export function parseGateInOperation(
     
     // Operation Information
     operationType: 'GATE_IN',
-    operationDate: formatDate(operationDate).slice(2), // YYMMDD format (260205)
-    operationTime: formatTime(operationDate) + '02', // HHMM + seconds (0302)
+    operationDate: formatDate(operationDate), // YYMMDD format
+    operationTime: formatTime(operationDate), // HHMMSS format
     
     // Reference Information
-    bookingReference: operation.bookingReference || operation.bookingNumber, // Booking reference for FULL containers or Gate Out
-    equipmentReference: operation.equipmentReference, // Use actual equipment reference from Gate In
+    bookingReference: operation.bookingReference || operation.bookingNumber || undefined,
+    equipmentReference: operation.equipmentReference || undefined,
     
     // Location Information
     locationCode: 'CIABJ', // Default location code
@@ -604,36 +588,14 @@ export function parseGateInOperation(
     operatorId: operation.operatorId || 'SYS001',
     yardId: operation.yardId || 'YARD01',
     
-    // Backward compatibility fields
-    weighbridgeId: `WB${operation.id || now.getTime()}`,
-    weighbridgeIdSno: '00001',
-    transporter: operation.transportCompany,
-    design: '001',
-    type: operation.containerType === 'reefer' ? '03' : '01',
-    color: '#000000',
-    cleanType: operation.classification === 'alimentaire' ? '002' : '001',
-    status: operation.status === 'FULL' || operation.fullEmpty === 'FULL' ? '05' : '04',
-    deviceNumber: operation.deviceNumber || `DEV${now.getTime()}`,
-    createdDate: formatDate(operation.createdAt ? new Date(operation.createdAt) : now),
-    createdTime: formatTime(operation.createdAt ? new Date(operation.createdAt) : now) + '00',
-    createdBy: operation.operatorName || operation.createdBy || 'SYSTEM',
-    changedDate: operation.updatedAt ? formatDate(new Date(operation.updatedAt)) : undefined,
-    changedTime: operation.updatedAt ? formatTime(new Date(operation.updatedAt)) + '00' : undefined,
-    changedBy: operation.updatedBy || undefined,
-    numOfEntries: operation.containerQuantity?.toString() || '1',
-    gateInDate: operation.gateInDate ? formatDate(new Date(operation.gateInDate)) : 
-                operation.truckArrivalDate ? operation.truckArrivalDate.replace(/-/g, '') :
-                formatDate(now),
-    gateInTime: operation.gateInTime ? operation.gateInTime.replace(/:/g, '') + '00' :
-                operation.truckArrivalTime ? operation.truckArrivalTime.replace(/:/g, '') + '00' :
-                formatTime(now) + '00',
+    // Damage Information (Optional)
     damageReported: operation.damageAssessment?.hasDamage || operation.damageReported || false,
     damageType: operation.damageAssessment?.damageType || (operation.damageReported ? 'GENERAL' : undefined),
-    damageDescription: operation.damageAssessment?.damageDescription || operation.damageDescription,
-    damageAssessedBy: operation.damageAssessment?.assessedBy || operation.operatorName,
+    damageDescription: operation.damageAssessment?.damageDescription || operation.damageDescription || undefined,
+    damageAssessedBy: operation.damageAssessment?.assessedBy || operation.operatorName || undefined,
     damageAssessedAt: operation.damageAssessment?.assessedAt ? 
-      formatDate(new Date(operation.damageAssessment.assessedAt)) + formatTime(new Date(operation.damageAssessment.assessedAt)) + '00' : 
-      (operation.damageReported ? formatDate(now) + formatTime(now) + '00' : undefined)
+      formatDate(new Date(operation.damageAssessment.assessedAt)) + formatTime(new Date(operation.damageAssessment.assessedAt)) : 
+      (operation.damageReported ? formatDate(now) + formatTime(now) : undefined)
   };
 }
 
@@ -648,10 +610,10 @@ export function parseGateOutOperation(
 ): CodecoMessageData {
   const now = new Date();
   const formatDate = (date: Date): string => {
-    return date.toISOString().slice(0, 10).replace(/-/g, '');
+    return date.toISOString().slice(0, 10).replace(/-/g, '').slice(2); // YYMMDD
   };
   const formatTime = (date: Date): string => {
-    return date.toTimeString().slice(0, 5).replace(/:/g, '');
+    return date.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
   };
 
   // Extract operation date and time
@@ -664,7 +626,6 @@ export function parseGateOutOperation(
     sender: yardInfo.companyCode || 'MANTRA',           // Company name
     receiver: operation.clientName || container.clientName || 'CLIENT', // Client Name
     companyCode: yardInfo.companyCode || 'MANTRA',      // Company Code
-    plant: yardInfo.plant || 'DEPOT',                   // Yard/Depot Code
     customer: operation.clientName || container.clientName || 'CLIENT', // Client Name
     
     // Container Information - REQUIRED
@@ -678,12 +639,12 @@ export function parseGateOutOperation(
     
     // Operation Information
     operationType: 'GATE_OUT',
-    operationDate: formatDate(operationDate).slice(2), // YYMMDD format
-    operationTime: formatTime(operationDate) + '02', // HHMM + seconds
+    operationDate: formatDate(operationDate), // YYMMDD format
+    operationTime: formatTime(operationDate), // HHMMSS format
     
     // Reference Information
-    bookingReference: operation.bookingNumber || '-',
-    equipmentReference: operation.equipmentReference || 'EQR Ref No',
+    bookingReference: operation.bookingNumber || undefined,
+    equipmentReference: operation.equipmentReference || undefined,
     
     // Location Information
     locationCode: 'CIABJ', // Default location code
@@ -694,27 +655,9 @@ export function parseGateOutOperation(
     operatorId: operation.operatorId || 'SYS001',
     yardId: operation.yardId || 'YARD01',
     
-    // Backward compatibility fields
-    weighbridgeId: operation.bookingNumber || '-',
-    weighbridgeIdSno: '00001',
-    transporter: operation.transportCompany,
-    design: '001',
-    type: '02', // Gate Out type
-    color: '#000000',
-    cleanType: '001',
-    status: '06', // Gate Out status
-    deviceNumber: `DEV${Date.now().toString().slice(-8)}`,
-    createdDate: formatDate(operation.createdAt ? new Date(operation.createdAt) : now),
-    createdTime: formatTime(operation.createdAt ? new Date(operation.createdAt) : now) + '00',
-    createdBy: operation.operatorName || 'SYSTEM',
-    changedDate: operation.completedAt ? formatDate(new Date(operation.completedAt)) : undefined,
-    changedTime: operation.completedAt ? formatTime(new Date(operation.completedAt)) + '00' : undefined,
-    changedBy: operation.completedAt ? operation.operatorName : undefined,
-    numOfEntries: '1',
-    gateInDate: formatDate(operationDate), // Use gate out date
-    gateInTime: formatTime(operationDate) + '00', // Use gate out time
-    damageReported: false, // No damage assessment for gate out
-    damageAssessedBy: operation.operatorName,
-    damageAssessedAt: formatDate(now) + formatTime(now) + '00'
+    // Damage Information (Optional - no damage assessment for gate out)
+    damageReported: false,
+    damageAssessedBy: operation.operatorName || undefined,
+    damageAssessedAt: formatDate(now) + formatTime(now)
   };
 }

@@ -230,10 +230,10 @@ class GateInCodecoService {
   ): CodecoMessageData {
     const now = new Date();
     const formatDate = (date: Date): string => {
-      return date.toISOString().slice(0, 10).replace(/-/g, '');
+      return date.toISOString().slice(0, 10).replace(/-/g, '').slice(2); // YYMMDD
     };
     const formatTime = (date: Date): string => {
-      return date.toTimeString().slice(0, 5).replace(/:/g, '');
+      return date.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
     };
 
     // Extract operation date and time
@@ -246,7 +246,6 @@ class GateInCodecoService {
       sender: yardInfo.companyCode || 'MANTRA',         // Company name
       receiver: gateInData.clientName,                  // Client Name
       companyCode: yardInfo.companyCode || 'MANTRA',    // Company Code
-      plant: yardInfo.plant || 'DEPOT-01',              // Yard/Depot Code
       customer: gateInData.clientName,                  // Client Name
       
       // Container Information - REQUIRED
@@ -260,12 +259,12 @@ class GateInCodecoService {
       
       // Operation Information
       operationType: 'GATE_IN',
-      operationDate: formatDate(operationDate).slice(2), // YYMMDD format (260205)
-      operationTime: formatTime(operationDate) + '02', // HHMM + seconds (0302)
+      operationDate: formatDate(operationDate), // YYMMDD format
+      operationTime: formatTime(operationDate), // HHMMSS format
       
       // Reference Information
-      bookingReference: undefined, // Don't use equipment reference as booking reference
-      equipmentReference: gateInData.equipmentReference, // Use actual equipment reference from Gate In
+      bookingReference: undefined, // No booking reference for Gate In
+      equipmentReference: gateInData.equipmentReference, // Equipment reference from Gate In
       
       // Location Information
       locationCode: 'CIABJ', // Default location code
@@ -276,32 +275,14 @@ class GateInCodecoService {
       operatorId: gateInData.operatorId,
       yardId: gateInData.yardId,
       
-      // Backward compatibility fields
-      weighbridgeId: `WB${gateInData.yardId}${Date.now().toString().slice(-6)}`,
-      weighbridgeIdSno: '00001',
-      transporter: gateInData.transportCompany,
-      design: '001',
-      type: gateInData.containerType === 'reefer' ? '03' : '01',
-      color: '#000000',
-      cleanType: gateInData.classification === 'alimentaire' ? '002' : '001',
-      status: gateInData.status === 'FULL' ? '05' : '04',
-      deviceNumber: `DEV${Date.now().toString().slice(-8)}`,
-      createdDate: formatDate(gateInData.createdAt),
-      createdTime: formatTime(gateInData.createdAt) + '00',
-      createdBy: gateInData.operatorName,
-      changedDate: gateInData.updatedAt ? formatDate(gateInData.updatedAt) : undefined,
-      changedTime: gateInData.updatedAt ? formatTime(gateInData.updatedAt) + '00' : undefined,
-      changedBy: gateInData.updatedAt ? gateInData.operatorName : undefined,
-      numOfEntries: gateInData.containerQuantity.toString(),
-      gateInDate: gateInData.truckArrivalDate.replace(/-/g, ''),
-      gateInTime: gateInData.truckArrivalTime.replace(/:/g, '') + '00',
+      // Damage Information (Optional)
       damageReported: gateInData.damageAssessment?.hasDamage || false,
       damageType: gateInData.damageAssessment?.damageType || (gateInData.damageAssessment?.hasDamage ? 'GENERAL' : undefined),
       damageDescription: gateInData.damageAssessment?.damageDescription,
       damageAssessedBy: gateInData.damageAssessment?.assessedBy || gateInData.operatorName,
       damageAssessedAt: gateInData.damageAssessment?.assessedAt ? 
-        formatDate(gateInData.damageAssessment.assessedAt) + formatTime(gateInData.damageAssessment.assessedAt) + '00' : 
-        (gateInData.damageAssessment?.hasDamage ? formatDate(now) + formatTime(now) + '00' : undefined)
+        formatDate(gateInData.damageAssessment.assessedAt) + formatTime(gateInData.damageAssessment.assessedAt) : 
+        (gateInData.damageAssessment?.hasDamage ? formatDate(now) + formatTime(now) : undefined)
     };
   }
 

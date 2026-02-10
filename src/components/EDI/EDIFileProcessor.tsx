@@ -221,17 +221,13 @@ export const EDIFileProcessor: React.FC<EDIFileProcessorProps> = ({ onProcessCom
         containersProcessed: 1,
         transmissionsSent: 1,
         errors: [],
-        conversionType: 'XML → EDI (CODECO UN/EDIFACT D.96A)',
+        conversionType: 'XML → EDI (CODECO UN/EDIFACT D.95B)',
         containerNumber: messageData.containerNumber,
         containerSize: messageData.containerSize,
-        containerStatus: messageData.status,
         xmlContent: ediContent,
         xmlFile: ediFileName,
         details: {
-          weighbridgeId: messageData.weighbridgeId,
-          transporter: messageData.transporter,
           vehicleNumber: messageData.vehicleNumber,
-          plant: messageData.plant,
           customer: messageData.customer
         }
       };
@@ -280,17 +276,19 @@ export const EDIFileProcessor: React.FC<EDIFileProcessorProps> = ({ onProcessCom
   };
 
   const downloadSample = () => {
-    // Create sample EDI file content
-    const sampleContent = `UNB+UNOC:3+SENDER:ZZ+RECEIVER:ZZ+${new Date().toISOString().replace(/[-:]/g, '').slice(0, 12)}+1++CODECO'
+    // Create sample EDI file content with proper segment counts and reference matching
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 12);
+    const dateOnly = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const sampleContent = `UNB+UNOC:3+SENDER:ZZ+RECEIVER:ZZ+${timestamp}+REF001++CODECO'
 UNH+1+CODECO:D:95B:UN:ITG12'
 BGM+34+EDI001+9'
-DTM+137:${new Date().toISOString().slice(0, 10).replace(/-/g, '')}:102'
+DTM+137:${dateOnly}:102'
 NAD+CA+MAERSK:172:20'
 EQD+CN+PCIU9507070+22G1:102:5++2+5'
 LOC+147+DEPOT001:139:6'
-DTM+7:${new Date().toISOString().slice(0, 10).replace(/-/g, '')}:102'
+DTM+7:${dateOnly}:102'
 UNT+8+1'
-UNZ+1+1'`;
+UNZ+1+REF001'`;
 
     const blob = new Blob([sampleContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);

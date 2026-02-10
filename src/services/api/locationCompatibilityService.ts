@@ -100,7 +100,7 @@ export class LocationCompatibilityService {
         };
       }
     } catch (error) {
-      logger.error('LocationCompatibilityService.getLocationById error:', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.getLocationById error:', 'locationCompatibilityService.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }
@@ -150,7 +150,7 @@ export class LocationCompatibilityService {
 
       return results;
     } catch (error) {
-      logger.error('LocationCompatibilityService.searchLocations error', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.searchLocations error', 'locationCompatibilityService.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }
@@ -178,7 +178,7 @@ export class LocationCompatibilityService {
 
       return results;
     } catch (error) {
-      logger.error('LocationCompatibilityService.getAllLocations error', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.getAllLocations error', 'locationCompatibilityService.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }
@@ -211,7 +211,7 @@ export class LocationCompatibilityService {
       this.stats.translationFailures++;
       return null;
     } catch (error) {
-      logger.error('LocationCompatibilityService.translateLegacyToUuid error', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.translateLegacyToUuid error', 'locationCompatibilityService.ts', error);
       this.stats.translationFailures++;
       return null;
     }
@@ -245,7 +245,7 @@ export class LocationCompatibilityService {
       this.stats.translationFailures++;
       return null;
     } catch (error) {
-      logger.error('LocationCompatibilityService.translateUuidToLegacy error', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.translateUuidToLegacy error', 'locationCompatibilityService.ts', error);
       this.stats.translationFailures++;
       return null;
     }
@@ -346,7 +346,7 @@ export class LocationCompatibilityService {
         failedBatches
       };
     } catch (error) {
-      logger.error('LocationCompatibilityService.getMigrationProgress error', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.getMigrationProgress error', 'locationCompatibilityService.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }
@@ -402,7 +402,7 @@ export class LocationCompatibilityService {
         count++;
       }
     } catch (error) {
-      logger.error('LocationCompatibilityService.warmupCache error', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.warmupCache error', 'locationCompatibilityService.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }
@@ -523,7 +523,7 @@ export class LocationCompatibilityService {
         failedTranslations
       };
     } catch (error) {
-      logger.error('LocationCompatibilityService.validateBackwardCompatibility error:', 'ComponentName', error);
+      logger.error('LocationCompatibilityService.validateBackwardCompatibility error:', 'locationCompatibilityService.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }

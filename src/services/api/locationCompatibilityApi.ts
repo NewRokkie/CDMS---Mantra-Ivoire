@@ -136,7 +136,7 @@ export class LocationCompatibilityApi {
 
       return await locationCompatibilityService.searchLocations(standardQuery);
     } catch (error) {
-      logger.error('LocationCompatibilityApi.getLocations error:', 'ComponentName', error);
+      logger.error('LocationCompatibilityApi.getLocations error:', 'locationCompatibilityApi.ts', error);
       throw ErrorHandler.createGateInError(error);
     }
   }

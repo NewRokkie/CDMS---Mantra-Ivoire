@@ -6,9 +6,9 @@
  * Gate Out: Container Number, Date et Heure sortie, Booking Number
  */
 
-import { gateInCodecoService } from '../src/services/edi/gateInCodecoService';
-import { gateOutCodecoService } from '../src/services/edi/gateOutCodecoService';
-import { CodecoGenerator, parseGateInOperation } from '../src/services/edi/codecoGenerator';
+import { gateInCodecoService } from '../../src/services/edi/gateInCodecoService';
+import { gateOutCodecoService } from '../../src/services/edi/gateOutCodecoService';
+import { CodecoGenerator, parseGateInOperation } from '../../src/services/edi/codecoGenerator';
 
 // Test data for Gate In operation
 const testGateInData = {
@@ -322,7 +322,7 @@ async function testEnhancedCodecoGeneration() {
     console.log('   • Date et Heure sortie: ✅ Inclus dans segments DTM (qualifier 133)');
     console.log('   • Booking Number: ✅ Inclus dans segments RFF et FTX');
     console.log('\n🎯 CONFORMITÉ:');
-    console.log('   • Conformité UN/EDIFACT D.96A: ✅ Maintenue');
+    console.log('   • Conformité UN/EDIFACT D.95B: ✅ Maintenue');
     console.log('   • Support Gate In complet: ✅');
     console.log('   • Support Gate Out complet: ✅');
 

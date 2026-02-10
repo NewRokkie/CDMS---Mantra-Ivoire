@@ -1,10 +1,10 @@
 /**
  * Service de conversion EDI bidirectionnelle
- * Gère les conversions XML ↔ EDI via l'implémentation interne TypeScript
+ * Gère les conversions XML ↔ EDI via les API Vercel Serverless
  */
 
-import { ediManagementService } from './ediManagement';
-import { EDIContainerData } from '../../types/edi';
+// API base URL - uses Vercel serverless functions
+const API_BASE_URL = '/api/edi';
 
 export interface EDIConversionResponse {
   status: string;
@@ -67,32 +67,25 @@ export interface XMLToEDIResponse {
 
 class EDIConversionService {
   /**
-   * Convertit un contenu EDI en XML
-   * Note: Pour l'instant, cette fonctionnalité n'est pas entièrement implémentée
-   * dans l'implémentation interne. Nous retournons un objet vide avec un message d'avertissement.
+   * Convertit un contenu EDI en XML via l'API Vercel
    */
   async convertEDIToXML(ediContent: string): Promise<EDIConversionResponse> {
     try {
-      // Pour l'instant, nous ne faisons qu'une validation basique et retournons un message
-      const isValid = this.validateEDIFormat(ediContent).isValid;
-      
-      // Extraire les informations de base à partir du contenu EDI
-      const containerInfo = this.extractContainerInfo(ediContent);
-      
-      return {
-        status: 'success',
-        message: 'EDI content validated (internal conversion not fully implemented)',
-        xml_content: `<!-- XML conversion not fully implemented in internal service -->\n<!-- Original EDI content preserved -->\n${ediContent}`,
-        xml_file: `converted_${Date.now()}.xml`,
-        validation_passed: isValid,
-        parsed_edi_data: {
-          container_details: containerInfo.containerNumber ? {
-            container_number: containerInfo.containerNumber,
-            container_size: containerInfo.containerSize || '40',
-            container_status: containerInfo.status || '01'
-          } : undefined
-        }
-      };
+      const response = await fetch(`${API_BASE_URL}/convert-edi-to-xml`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ edi_content: ediContent }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'EDI to XML conversion failed');
+      }
+
+      const result = await response.json();
+      return result as EDIConversionResponse;
     } catch (error) {
       console.error('EDI to XML conversion failed:', error);
       throw new Error(`Conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -122,20 +115,25 @@ class EDIConversionService {
   }
 
   /**
-   * Valide le format EDI sans conversion
+   * Valide le format EDI sans conversion via l'API Vercel
    */
   async validateEDI(ediContent: string): Promise<EDIValidationResponse> {
     try {
-      const validation = this.validateEDIFormat(ediContent);
-      
-      return {
-        status: validation.isValid ? 'success' : 'validation_failed',
-        is_valid: validation.isValid,
-        validation_errors: validation.errors,
-        parsing_errors: [],
-        parsed_data: validation.isValid ? this.extractContainerInfo(ediContent) : null,
-        message: validation.isValid ? 'EDI validation completed' : 'EDI validation failed'
-      };
+      const response = await fetch(`${API_BASE_URL}/validate-edi`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ edi_content: ediContent }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'EDI validation failed');
+      }
+
+      const result = await response.json();
+      return result as EDIValidationResponse;
     } catch (error) {
       console.error('EDI validation failed:', error);
       throw new Error(`Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -143,38 +141,25 @@ class EDIConversionService {
   }
 
   /**
-   * Génère des fichiers CODECO (XML → EDI) en utilisant l'implémentation interne
+   * Génère des fichiers CODECO (XML → EDI) via l'API Vercel
    */
   async generateCODECO(requestData: XMLToEDIRequest): Promise<XMLToEDIResponse> {
     try {
-      // Convertir les données de requête en format compatible avec le service EDI interne
-      const ediData: Omit<EDIContainerData, 'status'> = {
-        containerNumber: requestData.container_number,
-        size: requestData.container_size === '20' ? '20ft' : '40ft',
-        type: 'dry', // Valeur par défaut
-        clientName: requestData.client,
-        transporter: requestData.transporter,
-        vehicleNumber: requestData.vehicle_number,
-        userName: requestData.created_by,
-        containerLoadStatus: 'FULL', // Valeur par défaut
-        timestamp: new Date(),
-        yardId: requestData.yardId,
-      };
+      const response = await fetch(`${API_BASE_URL}/generate-codeco`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
 
-      // Utiliser le service EDI interne pour traiter l'opération Gate In
-      const log = await ediManagementService.processGateIn(ediData);
-      
-      if (!log) {
-        throw new Error('Failed to generate CODECO - EDI processing not enabled');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'CODECO generation failed');
       }
 
-      return {
-        status: 'success',
-        message: 'Files generated and EDI processed successfully',
-        xml_file: `generated_${Date.now()}.xml`,
-        edi_file: log.fileName,
-        uploaded_to_sftp: log.uploadedToSftp
-      };
+      const result = await response.json();
+      return result as XMLToEDIResponse;
     } catch (error) {
       console.error('CODECO generation failed:', error);
       throw new Error(`Generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -182,15 +167,22 @@ class EDIConversionService {
   }
 
   /**
-   * Simule la vérification de la santé du service
+   * Vérifie la santé du service EDI via l'API Vercel
    */
   async checkHealth(): Promise<{ status: string; timestamp: string }> {
     try {
-      // Simuler une vérification de santé - dans une implémentation réelle,
-      // cela pourrait vérifier la disponibilité des services internes
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Health check failed');
+      }
+
+      const result = await response.json();
       return {
-        status: 'healthy',
-        timestamp: new Date().toISOString()
+        status: result.status,
+        timestamp: result.timestamp
       };
     } catch (error) {
       console.error('Health check failed:', error);
