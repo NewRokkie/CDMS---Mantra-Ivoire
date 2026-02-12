@@ -31,6 +31,32 @@ const formatContainerNumberForDisplay = (containerNumber?: string | null): strin
   return num;
 };
 
+// Helper function to format date as DD/MM/YY - HH:MM
+const formatGateInDate = (date?: Date | null): string => {
+  if (!date) return '-';
+  
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  
+  return `${day}/${month}/${year}`;
+};
+
+// Helper function to format date as DD/MM/YY - HH:MM
+const formatGateInTime = (date?: Date | null): string => {
+  if (!date) return '-';
+  
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${hours}:${minutes}`;
+};
 // REMOVED: Mock data now managed by global store
 
 export const ContainerList: React.FC = () => {
@@ -778,12 +804,20 @@ function filterTable(){
                     </td>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {container.location && container.location.includes('Stack') ? (
-                      container.gateInDate ? new Date(container.gateInDate).toLocaleDateString() : '-'
-                    ) : '-'}
+                    <div>
+                        {container.gateInDate ? (<>
+                          <div className="font-medium">{formatGateInDate(container.gateInDate)}</div>
+                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateInDate)}</div>
+                        </>) : '-'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {container.gateOutDate ? new Date(container.gateOutDate).toLocaleDateString() : '-'}
+                    <div>
+                        {container.gateOutDate ? (<>
+                          <div className="font-medium">{formatGateInDate(container.gateOutDate)}</div>
+                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateOutDate)}</div>
+                        </>) : '-'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${

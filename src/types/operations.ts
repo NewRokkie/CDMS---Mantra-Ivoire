@@ -29,6 +29,7 @@ export interface GateInOperation {
   weight?: number;
   temperature?: number;
   assignedLocation?: string;
+  assignedStack?: string; // Stack number extracted from assignedLocation (e.g., "S04")
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
   operationStatus?: 'pending' | 'in_process' | 'completed' | 'cancelled'; // For filtering compatibility
   operatorId: string;

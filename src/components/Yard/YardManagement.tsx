@@ -9,25 +9,32 @@ import { Container } from '../../types';
 import { handleError } from '../../services/errorHandling';
 
 export const YardManagement: React.FC = () => {
-  const { currentYard } = useYard();
+  const { currentYard: contextYard } = useYard();
   const [allContainers, setAllContainers] = useState<Container[]>([]);
+  const [currentYard, setCurrentYard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
-      if (!currentYard) return;
+      if (!contextYard) return;
 
       try {
         setLoading(true);
 
-        const [containers, stacks] = await Promise.all([
+        const [containers, stacks, freshYard] = await Promise.all([
           containerService.getAll(),
-          stackService.getByYardIdWithStats(currentYard.id, false)
+          stackService.getByYardIdWithStats(contextYard.id, false),
+          yardsService.getById(contextYard.id)
         ]);
 
         setAllContainers(containers);
+        setCurrentYard(freshYard);
 
-        await yardsService.refreshYardData(currentYard.id);
+        await yardsService.refreshYardData(contextYard.id);
+        
+        // Get the refreshed yard data
+        const updatedYard = await yardsService.getById(contextYard.id);
+        setCurrentYard(updatedYard);
       } catch (error) {
         handleError(error, 'YardManagement.loadData');
       } finally {
@@ -36,16 +43,19 @@ export const YardManagement: React.FC = () => {
     }
 
     loadData();
-  }, [currentYard?.id]);
+  }, [contextYard?.id]);
 
   useEffect(() => {
-    if (!currentYard) return;
+    if (!contextYard) return;
 
     const unsubscribeStacks = realtimeService.subscribeToStacks(
-      currentYard.id,
+      contextYard.id,
       async (payload) => {
-        const stacks = await stackService.getByYardId(currentYard.id);
-        await yardsService.refreshYardData(currentYard.id);
+        const stacks = await stackService.getByYardId(contextYard.id);
+        await yardsService.refreshYardData(contextYard.id);
+        // Refresh the yard state
+        const updatedYard = await yardsService.getById(contextYard.id);
+        setCurrentYard(updatedYard);
       }
     );
 
@@ -56,11 +66,23 @@ export const YardManagement: React.FC = () => {
       }
     );
 
+    const unsubscribeLocations = realtimeService.subscribeToLocations(
+      contextYard.id,
+      async (payload) => {
+        // Refresh yard data when locations change (occupancy updates)
+        await yardsService.refreshYardData(contextYard.id);
+        // Refresh the yard state
+        const updatedYard = await yardsService.getById(contextYard.id);
+        setCurrentYard(updatedYard);
+      }
+    );
+
     return () => {
       unsubscribeStacks();
       unsubscribeContainers();
+      unsubscribeLocations();
     };
-  }, [currentYard?.id]);
+  }, [contextYard?.id]);
 
   // Filter containers for current yard - be more lenient with yardId matching
   const containers = currentYard
@@ -84,7 +106,23 @@ export const YardManagement: React.FC = () => {
 
       {/* Desktop View */}
       <div className="hidden lg:block">
-        <YardLiveMap yard={currentYard} containers={containers} />
+        {loading ? (
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-gray-600">Loading Yard Management...</p>
+            </div>
+          </div>
+        ) : !currentYard ? (
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-yellow-800 font-medium">No yard selected</p>
+              <p className="text-yellow-600 text-sm mt-2">Please select a yard to continue</p>
+            </div>
+          </div>
+        ) : (
+          <YardLiveMap yard={currentYard} containers={containers} />
+        )}
       </div>
     </>
   );

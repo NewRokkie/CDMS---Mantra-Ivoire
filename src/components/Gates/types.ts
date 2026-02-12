@@ -133,6 +133,7 @@ export interface GateInOperation {
   transportCompany?: string;
   operationStatus?: 'pending' | 'completed';
   assignedLocation?: string;
+  assignedStack?: string; // Stack number extracted from assignedLocation (e.g., "S04")
   truckArrivalDate?: string;
   truckArrivalTime?: string;
   truckDepartureDate?: string;

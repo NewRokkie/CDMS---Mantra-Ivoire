@@ -229,6 +229,7 @@ export interface Container {
   clientCode?: string; // Add client code for filtering
   releaseOrderId?: string;
   classification?: 'divers' | 'alimentaire'; // Container classification
+  transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // Transaction type for Gate In
   damage?: string[];
   auditLogs?: AuditLog[];
   // Enhanced yard management fields

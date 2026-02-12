@@ -367,7 +367,7 @@ export const useGlobalStore = create<GlobalStore>()(
           }
 
           const existingContainer = get().containers.find(
-            c => c.number === data.containerNumber
+            c => c.number === data.containerNumber && !c.isDeleted // Only check active containers
           );
 
           if (existingContainer) {

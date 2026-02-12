@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
-import { gateService, clientService, containerService, stackService, realtimeService } from '../../services/api';
+import { gateService, clientService, containerService, stackService, realtimeService, locationManagementService, yardsService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
 
 import { stackPairingService } from '../../services/api/stackPairingService';
@@ -23,6 +23,13 @@ import { exportToExcel, formatDateForExport, formatDurationForExport } from '../
 import { useToast } from '../../hooks/useToast';
 import { BufferZoneStats } from './BufferZoneStats';
 import { BufferZoneManagement } from './BufferZoneManagement';
+
+// Helper function to extract stack number from location (e.g., "S04R1H1" -> "S04")
+const extractStackNumber = (location: string): string | null => {
+  if (!location) return null;
+  const match = location.match(/^(S[0-9]+)/);
+  return match ? match[1] : null;
+};
 
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
@@ -345,7 +352,9 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     }
 
     // Comprehensive form validation
-    const existingContainerNumbers = containers.map(c => c.number.toUpperCase());
+    const existingContainerNumbers = containers
+      .filter(c => !c.isDeleted) // Only check active (non-deleted) containers
+      .map(c => c.number.toUpperCase());
     const hasTimeTrackingAccess = hasModuleAccess('timeTracking');
     const formValidation = ValidationService.validateGateInForm(formData, undefined, hasTimeTrackingAccess);
     const businessValidation = ValidationService.validateBusinessRules(formData, existingContainerNumbers);
@@ -533,7 +542,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         throw new Error(`Client not found: ${operation.clientCode}`);
       }
 
-      // 2. Check if containers already exist
+      // 2. Check if containers already exist (they should exist in pending state)
       const containerNumbers = [operation.containerNumber];
       if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
         containerNumbers.push(operation.secondContainerNumber);
@@ -541,62 +550,90 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
 
       const { data: existingContainers } = await supabase
         .from('containers')
-        .select('number')
+        .select('id, number, status')
+        .eq('is_deleted', false)
         .in('number', containerNumbers);
 
-      if (existingContainers && existingContainers.length > 0) {
-        const duplicateNumbers = existingContainers.map(c => c.number).join(', ');
-        throw new Error(`Container(s) already exist in the system: ${duplicateNumbers}`);
-      }
+      // For pending operations, containers should already exist with status 'gate_in'
+      // For new operations, containers should NOT exist
+      const isPendingCompletion = existingContainers && existingContainers.length > 0;
+      let finalContainers = existingContainers || [];
 
-      // 3. Create container(s) in containers table
-      const containersToCreate = [
-        {
-          number: operation.containerNumber,
-          type: operation.containerType || 'standard',
-          size: operation.containerSize,
-          status: 'in_depot',
-          location: locationData.assignedLocation,
-          yard_id: currentYard?.id,
-          client_id: client?.id,
-          client_code: operation.clientCode,
-          gate_in_date: new Date().toISOString(),
-          created_by: user?.id
+      if (isPendingCompletion) {
+        // This is completing a pending operation - UPDATE existing containers
+        
+        for (const container of existingContainers) {
+          const { error: updateError } = await supabase
+            .from('containers')
+            .update({
+              status: 'in_depot',
+              location: locationData.assignedLocation,
+              updated_at: new Date().toISOString(),
+              updated_by: user?.id
+            })
+            .eq('id', container.id);
+
+          if (updateError) {
+            throw new Error(`Failed to update container ${container.number}: ${updateError.message}`);
+          }
         }
-      ];
+      } else {
+        // This is a new operation - CREATE containers
+        // This is a new operation - CREATE containers
+        console.log('Creating new containers:', containerNumbers);
+        
+        // 3. Create container(s) in containers table
+        const containersToCreate = [
+          {
+            number: operation.containerNumber,
+            type: operation.containerType || 'standard',
+            size: operation.containerSize,
+            status: 'in_depot',
+            location: locationData.assignedLocation,
+            yard_id: currentYard?.id,
+            client_id: client?.id,
+            client_code: operation.clientCode,
+            gate_in_date: new Date().toISOString(),
+            created_by: user?.id
+          }
+        ];
 
-      // If second container exists
-      if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
-        containersToCreate.push({
-          number: operation.secondContainerNumber,
-          type: operation.containerType || 'standard',
-          size: operation.containerSize,
-          status: 'in_depot',
-          location: locationData.assignedLocation,
-          yard_id: currentYard?.id,
-          client_id: client?.id,
-          client_code: operation.clientCode,
-          gate_in_date: new Date().toISOString(),
-          created_by: user?.id
-        });
-      }
-
-      const { data: createdContainers, error: containerError } = await supabase
-        .from('containers')
-        .insert(containersToCreate)
-        .select();
-
-      if (containerError) {
-        if (containerError.code === '23505') {
-          throw new Error('Container number already exists in the system');
+        // If second container exists
+        if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
+          containersToCreate.push({
+            number: operation.secondContainerNumber,
+            type: operation.containerType || 'standard',
+            size: operation.containerSize,
+            status: 'in_depot',
+            location: locationData.assignedLocation,
+            yard_id: currentYard?.id,
+            client_id: client?.id,
+            client_code: operation.clientCode,
+            gate_in_date: new Date().toISOString(),
+            created_by: user?.id
+          });
         }
-        throw new Error(`Failed to create container: ${containerError.message}`);
+
+        const { data: createdContainers, error: containerError } = await supabase
+          .from('containers')
+          .insert(containersToCreate)
+          .select();
+
+        if (containerError) {
+          if (containerError.code === '23505') {
+            throw new Error('Container number already exists in the system');
+          }
+          throw new Error(`Failed to create container: ${containerError.message}`);
+        }
+
+        finalContainers = createdContainers || [];
       }
 
       // 4. Link container ID to gate_in_operation and include damage assessment
       const updateData: any = {
-        container_id: createdContainers?.[0]?.id,
+        container_id: finalContainers?.[0]?.id,
         assigned_location: locationData.assignedLocation,
+        assigned_stack: extractStackNumber(locationData.assignedLocation), // Extract stack number
         completed_at: new Date().toISOString(),
         status: 'completed'
       };
@@ -620,6 +657,115 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
 
       if (updateError) {
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
+      }
+
+      // 4.5. Update location occupancy in locations table
+      console.log('🔍 Starting location occupancy update for:', locationData.assignedLocation);
+      try {
+        // Parse the location to check if it's a virtual stack
+        const locationMatch = locationData.assignedLocation.match(/S(\d+)R(\d+)H(\d+)/);
+        if (!locationMatch) {
+          console.warn(`Invalid location format: ${locationData.assignedLocation}`);
+        } else {
+          const stackNum = parseInt(locationMatch[1]);
+          const row = locationMatch[2];
+          const tier = locationMatch[3];
+          
+          console.log(`📍 Parsed location: Stack=${stackNum}, Row=${row}, Tier=${tier}`);
+          
+          // Check if this is a virtual stack (even numbers for 40ft)
+          const isVirtualStack = stackNum % 2 === 0;
+          console.log(`🔢 Is virtual stack: ${isVirtualStack}`);
+          
+          if (isVirtualStack) {
+            // For virtual stacks, we need to find the physical stacks
+            // Virtual stack S04 is made from physical stacks S03 and S05
+            const physicalStack1 = stackNum - 1; // S03
+            const physicalStack2 = stackNum + 1; // S05
+            
+            console.log(`🔄 Virtual stack ${stackNum} maps to physical stacks ${physicalStack1} and ${physicalStack2}`);
+            
+            // Try to find a location in the first physical stack
+            const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
+            console.log(`🔍 Checking first physical location: ${physicalLocation1}`);
+            
+            const { data: locationRecord1, error: locationFindError1 } = await supabase
+              .from('locations')
+              .select('id, is_occupied')
+              .eq('location_id', physicalLocation1)
+              .eq('yard_id', currentYard?.id)
+              .maybeSingle();
+            
+            console.log(`📊 First location query result:`, { locationRecord1, error: locationFindError1 });
+            
+            if (!locationFindError1 && locationRecord1 && !locationRecord1.is_occupied) {
+              console.log(`✅ Using first physical location ${physicalLocation1}`);
+              // Use the first physical stack location
+              await locationManagementService.assignLocation({
+                locationId: locationRecord1.id,
+                containerId: finalContainers[0].id,
+                containerSize: operation.containerSize as '20ft' | '40ft',
+                clientPoolId: null
+              });
+              console.log(`✓ Virtual location ${locationData.assignedLocation} mapped to physical ${physicalLocation1} and marked as occupied`);
+            } else {
+              console.log(`⚠️ First location not available, trying second...`);
+              // Try the second physical stack
+              const physicalLocation2 = `S${String(physicalStack2).padStart(2, '0')}R${row}H${tier}`;
+              console.log(`🔍 Checking second physical location: ${physicalLocation2}`);
+              
+              const { data: locationRecord2, error: locationFindError2 } = await supabase
+                .from('locations')
+                .select('id, is_occupied')
+                .eq('location_id', physicalLocation2)
+                .eq('yard_id', currentYard?.id)
+                .maybeSingle();
+              
+              console.log(`📊 Second location query result:`, { locationRecord2, error: locationFindError2 });
+              
+              if (!locationFindError2 && locationRecord2 && !locationRecord2.is_occupied) {
+                console.log(`✅ Using second physical location ${physicalLocation2}`);
+                await locationManagementService.assignLocation({
+                  locationId: locationRecord2.id,
+                  containerId: finalContainers[0].id,
+                  containerSize: operation.containerSize as '20ft' | '40ft',
+                  clientPoolId: null
+                });
+                console.log(`✓ Virtual location ${locationData.assignedLocation} mapped to physical ${physicalLocation2} and marked as occupied`);
+              } else {
+                console.warn(`❌ Both physical locations for virtual ${locationData.assignedLocation} are occupied or not found`);
+              }
+            }
+          } else {
+            console.log(`📍 Physical stack detected, using direct mapping`);
+            // Physical stack - direct mapping
+            const { data: locationRecord, error: locationFindError } = await supabase
+              .from('locations')
+              .select('id')
+              .eq('location_id', locationData.assignedLocation)
+              .eq('yard_id', currentYard?.id)
+              .maybeSingle();
+
+            console.log(`📊 Physical location query result:`, { locationRecord, error: locationFindError });
+
+            if (locationFindError) {
+              console.error('Error finding location:', locationFindError);
+            } else if (locationRecord) {
+              await locationManagementService.assignLocation({
+                locationId: locationRecord.id,
+                containerId: finalContainers[0].id,
+                containerSize: operation.containerSize as '20ft' | '40ft',
+                clientPoolId: null
+              });
+              console.log(`✓ Physical location ${locationData.assignedLocation} marked as occupied`);
+            } else {
+              console.warn(`Physical location ${locationData.assignedLocation} not found in locations table`);
+            }
+          }
+        }
+      } catch (locationError) {
+        console.error('❌ Error updating location occupancy:', locationError);
+        // Don't fail the entire operation if location update fails
       }
 
       // 5. Process EDI transmission conditionally using new SFTP integration
@@ -705,7 +851,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         op.id === operation.id
           ? {
               ...op,
-              containerId: createdContainers?.[0]?.id,
+              containerId: finalContainers?.[0]?.id,
               assignedLocation: locationData.assignedLocation,
               completedAt: new Date(),
               status: 'completed',
@@ -714,10 +860,15 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           : op
       ));
 
-      // 7. Refresh containers list (non-blocking)
+      // 7. Refresh containers list and yard data (non-blocking)
       try {
         const updatedContainers = await containerService.getAll();
         setContainers(updatedContainers);
+        
+        // Refresh yard data to update occupancy
+        if (currentYard?.id) {
+          await yardsService.refreshYardData(currentYard.id);
+        }
       } catch (refreshError) {
         logger.warn('Avertissement', 'GateIn.tsx', refreshError);
       }

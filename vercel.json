@@ -14,7 +14,7 @@
       "destination": "/api/edi/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|favicon\\.svg|manifest.*\\.webmanifest).*)",
       "destination": "/index.html"
     }
   ],

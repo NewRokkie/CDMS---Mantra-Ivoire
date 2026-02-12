@@ -81,8 +81,13 @@ const ProtectedApp: React.FC = () => {
   }
 
   // Show full screen loader while yard context is loading
+  // BUT still provide the YardContext so components don't crash
   if (yardProvider.isLoading) {
-    return <FullScreenLoader message="Loading Yard..." submessage="Initializing your workspace" />;
+    return (
+      <YardContext.Provider value={yardProvider}>
+        <FullScreenLoader message="Loading Yard..." submessage="Initializing your workspace" />
+      </YardContext.Provider>
+    );
   }
 
   // Show error if yard loading failed
@@ -95,9 +100,10 @@ const ProtectedApp: React.FC = () => {
   // Exception: Allow access to yard management even without a current yard
   if (!yardProvider.currentYard && activeModule !== 'yard-management' && activeModule !== 'depot-management') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-6">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
-          <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 mx-auto mb-4">
+      <YardContext.Provider value={yardProvider}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-6">
+          <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
+            <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 mx-auto mb-4">
             <Grid2x2 />
           </div>
 
@@ -146,6 +152,7 @@ const ProtectedApp: React.FC = () => {
           </p>
         </div>
       </div>
+      </YardContext.Provider>
     );
   }
 

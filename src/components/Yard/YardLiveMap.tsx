@@ -358,16 +358,19 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const stats = useMemo(() => {
     const total = allContainers.length;
     const inDepot = allContainers.filter(c => c.status === 'in_depot').length;
-    const maintenance = allContainers.filter(c => c.status === 'maintenance').length;
-    const damaged = allContainers.filter(c => c.damage && c.damage.length > 0).length;
+    const fullContainers = allContainers.filter(c => c.fullEmpty === 'FULL' && c.status === 'in_depot').length;
+    const emptyContainers = allContainers.filter(c => c.fullEmpty === 'EMPTY' && c.status === 'in_depot').length;
     
     // Calculate effective capacity using our new logic instead of relying on yard.totalCapacity
     const allStacks = yard ? yard.sections.flatMap(section => section.stacks) : [];
     const effectiveCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
     
+    // Free space is the number of available locations (capacity - current occupancy)
+    const freeSpace = effectiveCapacity - (yard?.currentOccupancy || 0);
+    
     const occupancyRate = effectiveCapacity > 0 ? ((yard?.currentOccupancy || 0) / effectiveCapacity * 100) : 0;
 
-    return { total, inDepot, maintenance, damaged, occupancyRate, effectiveCapacity };
+    return { total, inDepot, fullContainers, emptyContainers, freeSpace, occupancyRate, effectiveCapacity };
   }, [allContainers, yard]);
 
   const stacksData = useMemo(() => {
@@ -870,20 +873,20 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded px-2 py-1.5 border border-orange-200">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-orange-600 font-medium uppercase">Maintenance</div>
-                <div className="text-lg font-bold text-orange-900">{stats.maintenance}</div>
+                <div className="text-[10px] text-orange-600 font-medium uppercase">Free Space</div>
+                <div className="text-lg font-bold text-orange-900">{stats.freeSpace}</div>
               </div>
-              <AlertTriangle className="h-5 w-5 text-orange-600 opacity-50" />
+              <MapPin className="h-5 w-5 text-orange-600 opacity-50" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded px-2 py-1.5 border border-red-200">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded px-2 py-1.5 border border-purple-200">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-red-600 font-medium uppercase">Damaged</div>
-                <div className="text-lg font-bold text-red-900">{stats.damaged}</div>
+                <div className="text-[10px] text-purple-600 font-medium uppercase">FULL</div>
+                <div className="text-lg font-bold text-purple-900">{stats.fullContainers}</div>
               </div>
-              <AlertTriangle className="h-5 w-5 text-red-600 opacity-50" />
+              <Package className="h-5 w-5 text-purple-600 opacity-50" />
             </div>
           </div>
 
@@ -891,9 +894,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[10px] text-gray-600 font-medium uppercase">Empty</div>
-                <div className="text-lg font-bold text-gray-900">{stats.effectiveCapacity - yard.currentOccupancy}</div>
+                <div className="text-lg font-bold text-gray-900">{stats.emptyContainers}</div>
               </div>
-              <MapPin className="h-5 w-5 text-gray-600 opacity-50" />
+              <Package className="h-5 w-5 text-gray-600 opacity-50" />
             </div>
           </div>
         </div>

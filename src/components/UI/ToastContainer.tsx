@@ -23,7 +23,7 @@ const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 w-full max-w-sm space-y-2">
+    <div className="fixed top-4 right-4 z-50 w-full max-w-md space-y-2">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

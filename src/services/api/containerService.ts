@@ -88,6 +88,8 @@ export class ContainerService {
           gate_in_date: container.gateInDate?.toISOString(),
           gate_out_date: container.gateOutDate?.toISOString(),
           weight: container.weight,
+          classification: container.classification, // Add classification
+          transaction_type: container.transactionType, // Add transaction type
           damage: container.damage || [],
           booking_reference: container.bookingReference,
           seal_number: container.sealNumber,
@@ -134,6 +136,8 @@ export class ContainerService {
       if (updates.gateInDate !== undefined) updateData.gate_in_date = updates.gateInDate?.toISOString();
       if (updates.gateOutDate !== undefined) updateData.gate_out_date = updates.gateOutDate?.toISOString();
       if (updates.weight !== undefined) updateData.weight = updates.weight;
+      if (updates.classification !== undefined) updateData.classification = updates.classification; // Add classification
+      if (updates.transactionType !== undefined) updateData.transaction_type = updates.transactionType; // Add transaction type
       if (updates.damage !== undefined) updateData.damage = updates.damage;
       if (updates.bookingReference !== undefined) updateData.booking_reference = updates.bookingReference;
       if (updates.sealNumber !== undefined) updateData.seal_number = updates.sealNumber;
@@ -875,6 +879,8 @@ export class ContainerService {
       gateInDate: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
       gateOutDate: data.gate_out_date ? new Date(data.gate_out_date) : undefined,
       weight: data.weight,
+      classification: data.classification, // Map classification
+      transactionType: data.transaction_type, // Map transaction type
       damage: data.damage || [],
       auditLogs: data.audit_logs || [], // Map audit logs
       bookingReference: data.booking_reference,

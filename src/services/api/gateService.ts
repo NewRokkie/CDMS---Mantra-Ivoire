@@ -187,7 +187,11 @@ export class GateService {
   private async checkDuplicateContainer(containerNumber: string): Promise<void> {
     const result = await handleAsyncOperation(async () => {
       const existing = await containerService.getAll();
-      return existing.find(c => c.number === containerNumber.trim().toUpperCase());
+      // Only check active (non-deleted) containers
+      return existing.find(c => 
+        c.number === containerNumber.trim().toUpperCase() && 
+        !c.isDeleted
+      );
     }, 'checkDuplicateContainer');
 
     if (!result.success) {
@@ -222,7 +226,7 @@ export class GateService {
         gateInDateTime = new Date();
       }
 
-      return await containerService.create({
+      const container = await containerService.create({
         number: data.containerNumber.trim().toUpperCase(),
         type: data.containerType as any,
         size: data.containerSize as any,
@@ -236,11 +240,14 @@ export class GateService {
         gateInDate: gateInDateTime, // Use actual truck arrival date/time
         weight: data.weight,
         classification: data.classification || 'divers',
+        transactionType: data.transactionType || 'Retour Livraison', // Transaction type
         damage: data.damageAssessment?.hasDamage && data.damageAssessment.damageDescription
           ? [data.damageAssessment.damageDescription]
           : (data.damageReported && data.damageDescription ? [data.damageDescription] : []),
         createdBy: data.operatorName
       } as any);
+
+      return container;
     }, 'createContainer');
 
     if (!result.success) {
@@ -255,13 +262,19 @@ export class GateService {
    */
   private async createGateInOperation(data: GateInData, client: any, container: any): Promise<any> {
     const result = await handleAsyncOperation(async () => {
+      // Ensure second_container_number is NULL (not undefined or empty string) when container_quantity is 1
+      const containerQuantity = data.containerQuantity || 1;
+      const secondContainerNumber = containerQuantity === 2 && data.secondContainerNumber 
+        ? data.secondContainerNumber.trim().toUpperCase() 
+        : null;
+
       const { data: operation, error: opError } = await supabase
         .from('gate_in_operations')
         .insert({
           container_id: container.id,
           container_number: data.containerNumber.trim().toUpperCase(),
-          container_quantity: data.containerQuantity || 1, // Default to 1 if not specified
-          second_container_number: data.secondContainerNumber?.trim().toUpperCase(),
+          container_quantity: containerQuantity,
+          second_container_number: secondContainerNumber,
           client_code: data.clientCode,
           client_name: client.name,
           container_type: data.containerType,
@@ -694,6 +707,7 @@ export class GateService {
       driverName: data.driver_name,
       truckNumber: data.vehicle_number, // Fix: map vehicle_number to truckNumber
       assignedLocation: data.assigned_location,
+      assignedStack: data.assigned_stack, // Map assigned_stack
       classification: data.classification || 'divers', // Fix: default to 'divers' not 'autres'
       damageReported: data.damage_reported,
       damageDescription: data.damage_description,

@@ -101,6 +101,10 @@ class RealtimeService {
   subscribeToClients(callback: ChangeCallback): () => void {
     return this.subscribeToTable('clients', callback);
   }
+
+  subscribeToLocations(yardId: string, callback: ChangeCallback): () => void {
+    return this.subscribeToTable('locations', callback, `yard_id=eq.${yardId}`);
+  }
 }
 
 export const realtimeService = new RealtimeService();
