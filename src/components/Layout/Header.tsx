@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, User, Globe, LogOut, Menu, X, Crown, Star, Eye } from 'lucide-react';
+import { Bell, User, Globe, LogOut, Menu, X, Crown, Star, Eye, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
+import { usePWA } from '../../hooks/usePWA';
+import { useLocation } from 'react-router-dom';
 import { YardSelector } from './YardSelector';
 
 interface HeaderProps {
@@ -12,9 +14,19 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { isInstallable, install } = usePWA();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const getModuleInstallName = () => {
+    const path = location.pathname;
+    if (path.startsWith('/gate-in')) return 'Gate In';
+    if (path.startsWith('/gate-out')) return 'Gate Out';
+    if (path.startsWith('/booking')) return 'Booking';
+    return 'CDMS';
+  };
 
   const handleLogout = () => {
     logout();
@@ -23,9 +35,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
 
   return (
     <>
-      <header className={`bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 relative z-50 ${
-        (isSidebarOpen || isMobileMenuOpen) ? 'lg:block hidden' : 'block'
-      }`}>
+      <header className={`bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 relative z-50 ${(isSidebarOpen || isMobileMenuOpen) ? 'lg:block hidden' : 'block'
+        }`}>
         <div className="flex items-center justify-between">
           {/* Left Section - Logo (Clickable) & Title */}
           <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -54,6 +65,17 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
 
           {/* Right Section - Actions */}
           <div className="flex items-center space-x-2 lg:space-x-4">
+            {/* PWA Install Button */}
+            {isInstallable && (
+              <button
+                onClick={install}
+                className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md animate-bounce-subtle"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden md:inline font-medium text-sm">Install {getModuleInstallName()}</span>
+              </button>
+            )}
+
             {/* Yard Selector - Mobile & Desktop */}
             <div className="lg:block">
               <YardSelector />
@@ -82,12 +104,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               <div className="flex items-center space-x-3 pl-2">
                 <div className="flex items-center space-x-2">
                   <div className="h-8 w-8 border-2 border-green-400 bg-gray-100 rounded-full flex items-center justify-center shadow-md">
-                    { user?.role === 'admin' ? (<Crown className="h-5 w-5 text-red-600" />)
-                        : user?.role === 'supervisor' ? (<Star className="h-5 w-5 text-orange-400" />)
-                            : user?.role === 'operator' ? (<User className="h-5 w-5 text-blue-600" />)
-
-                    : <Eye className="h-5 w-5 text-cyan-600" />
-                    }
+                    {(() => {
+                      switch (user?.role) {
+                        case 'admin': return <Crown className="h-5 w-5 text-red-600" />;
+                        case 'supervisor': return <Star className="h-5 w-5 text-orange-400" />;
+                        case 'operator': return <User className="h-5 w-5 text-blue-600" />;
+                        default: return <Eye className="h-5 w-5 text-cyan-600" />;
+                      }
+                    })()}
                   </div>
                   <div className="text-sm">
                     <p className="font-medium text-gray-900">{user?.name}</p>
@@ -247,6 +271,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
 
         .animate-slideDown {
           animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes bounce-subtle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        .animate-bounce-subtle {
+          animation: bounce-subtle 2s infinite ease-in-out;
         }
       `}</style>
     </>

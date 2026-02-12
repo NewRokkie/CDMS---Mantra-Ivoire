@@ -1,0 +1,24 @@
+{
+    "name": "Booking - CDMS",
+    "short_name": "Booking",
+    "description": "Module for Container Bookings and Release Orders",
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "orientation": "portrait",
+    "id": "cdms-booking",
+    "scope": "/",
+    "start_url": "/booking",
+    "icons": [
+        {
+            "src": "/assets/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

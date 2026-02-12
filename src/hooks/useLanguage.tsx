@@ -1,13 +1,6 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Language } from '../types';
-
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
-}
-
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+import { LanguageContext, LanguageContextType } from '../contexts/LanguageContext';
 
 const translations = {
   en: {
@@ -941,6 +934,11 @@ export const useLanguageProvider = () => {
     setLanguage,
     t
   };
+};
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const languageState = useLanguageProvider();
+  return <LanguageContext.Provider value={ languageState }> { children } </LanguageContext.Provider>;
 };
 
 export { LanguageContext };
