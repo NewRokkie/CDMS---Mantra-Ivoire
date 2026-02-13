@@ -444,8 +444,8 @@ export const GateOut: React.FC = () => {
   if (!canPerformGateOut) return (
     <div className="text-center py-12">
       <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-      <p className="text-gray-600">You don't have permission to perform gate out operations.</p>
+      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.restricted')}</h3>
+      <p className="text-gray-600">{t('common.unauthorized')}</p>
     </div>
   );
 
@@ -469,8 +469,8 @@ export const GateOut: React.FC = () => {
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate Out</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">Container exit management</p>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('gate.out.title')}</h1>
+              <p className="text-sm text-gray-600 hidden lg:block">{t('gate.out.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -499,8 +499,8 @@ export const GateOut: React.FC = () => {
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate Out</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">Container exit management</p>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('gate.out.title')}</h1>
+              <p className="text-sm text-gray-600 hidden lg:block">{t('gate.out.subtitle')}</p>
             </div>
           </div>
 
@@ -511,7 +511,7 @@ export const GateOut: React.FC = () => {
               className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl lg:rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">New Gate Out</span>
+              <span className="text-sm lg:text-base">Gate Out</span>
             </button>
 
             <button
@@ -519,7 +519,7 @@ export const GateOut: React.FC = () => {
               className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <Clock className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">Pending ({pendingOperations.length})</span>
+              <span className="text-sm lg:text-base">{t('gate.out.pending')} ({pendingOperations.length})</span>
             </button>
           </div>
         </div>
@@ -537,7 +537,7 @@ export const GateOut: React.FC = () => {
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{todaysGateOuts}</p>
-                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">Today's Gate Outs</p>
+                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.today')}</p>
               </div>
             </div>
           </div>
@@ -550,7 +550,7 @@ export const GateOut: React.FC = () => {
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">Pending Operations</p>
+                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.pending')}</p>
               </div>
             </div>
           </div>
@@ -563,7 +563,7 @@ export const GateOut: React.FC = () => {
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{containersProcessed}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Containers Processed</p>
+                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.processed')}</p>
               </div>
             </div>
           </div>
@@ -576,7 +576,7 @@ export const GateOut: React.FC = () => {
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{issuesReported}</p>
-                <p className="text-xs font-medium text-red-700 lg:text-gray-500 leading-tight">Issues Reported</p>
+                <p className="text-xs font-medium text-red-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.issues')}</p>
               </div>
             </div>
           </div>
@@ -590,7 +590,7 @@ export const GateOut: React.FC = () => {
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
-                placeholder="Search operations..."
+                placeholder={t('gate.in.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 lg:bg-white focus:bg-white transition-colors"
@@ -617,7 +617,7 @@ export const GateOut: React.FC = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
                   }`}
                 >
-                  {filter === 'all' ? 'All' : filter === 'in_process' ? 'In Process' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('releases.inProcess') : t(`common.status.${filter}`)}
                 </button>
               ))}
             </div>
@@ -628,10 +628,10 @@ export const GateOut: React.FC = () => {
                 onChange={(e) => setSelectedFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
               >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="in_process">In Process</option>
-                <option value="completed">Completed</option>
+                <option value="all">{t('common.all')}</option>
+                <option value="pending">{t('common.status.pending')}</option>
+                <option value="in_process">{t('releases.inProcess')}</option>
+                <option value="completed">{t('common.status.completed')}</option>
               </select>
               {searchTerm && (
                 <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg font-medium">
@@ -641,10 +641,10 @@ export const GateOut: React.FC = () => {
               <button
                 onClick={handleExportGateOut}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                title="Export to Excel"
+                title={t('common.export')}
               >
                 <Download className="h-4 w-4" />
-                <span>Export</span>
+                <span>{t('common.export')}</span>
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import { clientService } from '../../services/api';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
@@ -13,6 +14,7 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 
 export const ClientMasterData: React.FC = () => {
+  const { t } = useLanguage();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
@@ -57,21 +59,6 @@ export const ClientMasterData: React.FC = () => {
     setClients(prev => prev.filter(c => c.id !== id));
   };
 
-  // Debug function to test client service
-  const testClientService = async () => {
-    try {
-      const result = await clientService.testConnection();
-      if (result.success) {
-        toast.success(`Connection test passed: ${result.message}`);
-      } else {
-        toast.error(`Connection test failed: ${result.message}`);
-      }
-      console.log('Client service test result:', result);
-    } catch (error) {
-      toast.error(`Connection test error: ${(error as Error).message}`);
-      console.error('Client service test error:', error);
-    }
-  };
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
@@ -104,14 +91,14 @@ export const ClientMasterData: React.FC = () => {
   const handleDelete = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
     confirm({
-      title: 'Delete Client',
-      message: `Are you sure you want to delete ${client?.name}? This action cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      title: t('clients.delete.title'),
+      message: t('clients.delete.confirm').replace('{client}', client?.name || ''),
+      confirmText: t('clients.delete.title'),
+      cancelText: t('common.cancel'),
       variant: 'danger',
       onConfirm: async () => {
         await deleteClient(clientId);
-        toast.success('Client deleted successfully!');
+        toast.success(t('clients.success.delete'));
       }
     });
   };
@@ -121,16 +108,8 @@ export const ClientMasterData: React.FC = () => {
   const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Client Master Data</h2>
-        <div className="flex items-center space-x-2">
-          {/* Debug button - remove after fixing */}
-          <button
-            onClick={testClientService}
-            className="flex items-center space-x-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
-          >
-            <span>Test Connection</span>
-          </button>
-          
+        <h2 className="text-2xl font-bold text-gray-900">{t('clients.title')}</h2>
+        <div className="flex items-center space-x-2">         
           {canManageClients && (
             <button
               onClick={() => {
@@ -140,7 +119,7 @@ export const ClientMasterData: React.FC = () => {
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              <span>Add Client</span>
+              <span>{t('clients.create')}</span>
             </button>
           )}
         </div>
@@ -154,7 +133,7 @@ export const ClientMasterData: React.FC = () => {
               <Building className="h-5 w-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Total Clients</p>
+              <p className="text-sm font-medium text-gray-500">{t('clients.stats.total')}</p>
               <p className="text-lg font-semibold text-gray-900">{clients.length}</p>
             </div>
           </div>
@@ -166,7 +145,7 @@ export const ClientMasterData: React.FC = () => {
               <Building className="h-5 w-5 text-green-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Active Clients</p>
+              <p className="text-sm font-medium text-gray-500">{t('clients.stats.active')}</p>
               <p className="text-lg font-semibold text-gray-900">
                 {clients.filter(c => c.isActive).length}
               </p>
@@ -183,7 +162,7 @@ export const ClientMasterData: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search clients..."
+                placeholder={t('clients.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -195,15 +174,15 @@ export const ClientMasterData: React.FC = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">{t('common.all')}</option>
+              <option value="active">{t('common.status.active')}</option>
+              <option value="inactive">{t('common.status.inactive')}</option>
             </select>
           </div>
 
           <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Filter className="h-4 w-4" />
-            <span>Advanced Filter</span>
+            <span>{t('common.filter')}</span>
           </button>
         </div>
       </div>
@@ -215,19 +194,19 @@ export const ClientMasterData: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
+                  {t('common.client')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact Information
+                  {t('clients.table.contact')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
+                  {t('common.location')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -237,7 +216,7 @@ export const ClientMasterData: React.FC = () => {
                   <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      <span className="ml-2 text-gray-500">Loading clients...</span>
+                      <span className="ml-2 text-gray-500">{t('common.loading')}</span>
                     </div>
                   </td>
                 </tr>
@@ -246,11 +225,11 @@ export const ClientMasterData: React.FC = () => {
                   <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="text-gray-500">
                       <Building className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-lg font-medium">No clients found</p>
+                      <p className="text-lg font-medium">{t('clients.noClients')}</p>
                       <p className="text-sm">
                         {searchTerm || statusFilter !== 'all' 
-                          ? 'Try adjusting your search or filter criteria.'
-                          : 'Get started by adding your first client.'
+                          ? t('common.tryAdjusting')
+                          : t('clients.noClientsEmpty')
                         }
                       </p>
                     </div>
@@ -297,7 +276,7 @@ export const ClientMasterData: React.FC = () => {
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {client.isActive ? 'Active' : 'Inactive'}
+                        {client.isActive ? t('common.status.active') : t('common.status.inactive')}
                       </span>
                       {client.autoEDI && (
                         <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
@@ -310,7 +289,7 @@ export const ClientMasterData: React.FC = () => {
                         <button
                           onClick={() => handleView(client)}
                           className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
-                          title="View Details"
+                          title={t('common.viewDetails')}
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -319,14 +298,14 @@ export const ClientMasterData: React.FC = () => {
                             <button
                               onClick={() => handleEdit(client)}
                               className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50 transition-colors"
-                              title="Edit Client"
+                              title={t('clients.edit')}
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(client.id)}
                               className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                              title="Delete Client"
+                              title={t('clients.delete.title')}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -355,15 +334,15 @@ export const ClientMasterData: React.FC = () => {
             try {
               if (selectedClient) {
                 await updateClient(selectedClient.id, clientData);
-                toast.success('Client updated successfully!');
+                toast.success(t('clients.success.update'));
               } else {
                 await addClient(clientData);
-                toast.success('Client created successfully!');
+                toast.success(t('clients.success.create'));
               }
               setShowForm(false);
               setSelectedClient(null);
             } catch (error) {
-              toast.error('Error saving client: ' + (error as Error).message);
+              toast.error(t('clients.error.save') + ' ' + (error as Error).message);
             }
           }}
         />

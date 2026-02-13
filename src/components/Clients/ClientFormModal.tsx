@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Building, Mail, Phone, MapPin, Calendar, DollarSign, Clock, User, FileText, Calculator } from 'lucide-react';
 import { Client } from '../../types';
-import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { LoadingOverlay } from '../Common/Modal/components/LoadingOverlay';
 
@@ -9,7 +9,7 @@ interface ClientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedClient?: Client | null;
-  onSubmit: (clientData: any) => Promise<void>;
+  onSubmit: (clientData: Partial<Client>) => Promise<void>;
 }
 
 export const ClientFormModal: React.FC<ClientFormModalProps> = ({
@@ -18,30 +18,25 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
   selectedClient,
   onSubmit
 }) => {
-  const { user } = useAuth();
+  useLanguage();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [useSameAddress, setUseSameAddress] = useState(true);
 
   const [formData, setFormData] = useState({
     name: '',
     code: '',
     email: '',
     phone: '',
+    taxId: '',
     address: {
       street: '',
       city: '',
       state: '',
       zipCode: '',
-      country: 'Côte d\'Ivoire'
-    },
-    billingAddress: {
-      street: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: 'Côte d\'Ivoire'
+      country: "Côte d'Ivoire"
     },
     contactPerson: {
       name: '',
@@ -49,96 +44,160 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       phone: '',
       position: ''
     },
-    taxId: '',
-    currency: 'FCFA',
+    billingAddress: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: "Côte d'Ivoire"
+    },
     creditLimit: 0,
     paymentTerms: 30,
     freeDaysAllowed: 3,
-    dailyStorageRate: 45000, // Updated to match FCFA currency (45000 FCFA instead of 45 USD)
-    isActive: true,
+    dailyStorageRate: 15000,
+    currency: 'FCFA',
     autoEDI: false,
+    isActive: true,
     notes: ''
   });
-
-  const [useSameAddress, setUseSameAddress] = useState(true);
 
   // Initialize form data when editing
   useEffect(() => {
     if (selectedClient) {
-      setIsLoading(true);
-      // Simulate loading client data
-      setTimeout(() => {
-        setFormData({
-          name: selectedClient.name,
-          code: selectedClient.code,
-          email: selectedClient.email,
-          phone: selectedClient.phone,
-          address: selectedClient.address,
-          billingAddress: selectedClient.billingAddress || {
-            street: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            country: 'Côte d\'Ivoire'
-          },
-          contactPerson: selectedClient.contactPerson,
-          taxId: selectedClient.taxId || '',
-          currency: selectedClient.currency,
-          creditLimit: selectedClient.creditLimit !== undefined ? selectedClient.creditLimit : 0,
-          paymentTerms: selectedClient.paymentTerms !== undefined ? selectedClient.paymentTerms : 30,
-          freeDaysAllowed: selectedClient.freeDaysAllowed !== undefined ? selectedClient.freeDaysAllowed : 3,
-          dailyStorageRate: selectedClient.dailyStorageRate !== undefined ? selectedClient.dailyStorageRate : 45000, // Updated default
-          isActive: selectedClient.isActive,
-          autoEDI: selectedClient.autoEDI || false,
-          notes: selectedClient.notes || ''
-        });
-        
-        // Set billing address checkbox state
-        const hasDifferentBillingAddress = selectedClient.billingAddress && 
-          (selectedClient.billingAddress.street !== selectedClient.address.street ||
-           selectedClient.billingAddress.city !== selectedClient.address.city);
-        setUseSameAddress(!hasDifferentBillingAddress);
-        
-        setIsLoading(false);
-      }, 500);
-    } else {
-      setIsLoading(false);
-    }
-  }, [selectedClient]);
-
-  // Handle billing address synchronization
-  useEffect(() => {
-    if (useSameAddress) {
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
+        name: selectedClient.name || '',
+        code: selectedClient.code || '',
+        email: selectedClient.email || '',
+        phone: selectedClient.phone || '',
+        taxId: selectedClient.taxId || '',
+        address: {
+          street: selectedClient.address?.street || '',
+          city: selectedClient.address?.city || '',
+          state: selectedClient.address?.state || '',
+          zipCode: selectedClient.address?.zipCode || '',
+          country: selectedClient.address?.country || "Côte d'Ivoire"
+        },
+        contactPerson: {
+          name: selectedClient.contactPerson?.name || '',
+          email: selectedClient.contactPerson?.email || '',
+          phone: selectedClient.contactPerson?.phone || '',
+          position: selectedClient.contactPerson?.position || ''
+        },
         billingAddress: {
-          ...prev.address
-        }
-      }));
+          street: selectedClient.billingAddress?.street || '',
+          city: selectedClient.billingAddress?.city || '',
+          state: selectedClient.billingAddress?.state || '',
+          zipCode: selectedClient.billingAddress?.zipCode || '',
+          country: selectedClient.billingAddress?.country || "Côte d'Ivoire"
+        },
+        creditLimit: selectedClient.creditLimit || 0,
+        paymentTerms: selectedClient.paymentTerms || 30,
+        freeDaysAllowed: selectedClient.freeDaysAllowed || 3,
+        dailyStorageRate: selectedClient.dailyStorageRate || 15000,
+        currency: selectedClient.currency || 'FCFA',
+        autoEDI: selectedClient.autoEDI || false,
+        isActive: selectedClient.isActive !== undefined ? selectedClient.isActive : true,
+        notes: selectedClient.notes || ''
+      });
+      
+      // Determine if billing address is same as company address
+      const same = !selectedClient.billingAddress || 
+                   (selectedClient.billingAddress.street === selectedClient.address.street &&
+                    selectedClient.billingAddress.city === selectedClient.address.city);
+      setUseSameAddress(same);
+    } else {
+      // Reset form for new client
+      setFormData({
+        name: '',
+        code: '',
+        email: '',
+        phone: '',
+        taxId: '',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: "Côte d'Ivoire"
+        },
+        contactPerson: {
+          name: '',
+          email: '',
+          phone: '',
+          position: ''
+        },
+        billingAddress: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: "Côte d'Ivoire"
+        },
+        creditLimit: 0,
+        paymentTerms: 30,
+        freeDaysAllowed: 3,
+        dailyStorageRate: 15000,
+        currency: 'FCFA',
+        autoEDI: false,
+        isActive: true,
+        notes: ''
+      });
+      setUseSameAddress(true);
     }
-  }, [useSameAddress, formData.address]);
+    setCurrentStep(1);
+    setValidationErrors([]);
+  }, [selectedClient, isOpen]);
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    triggerAutoSave();
+  const handleInputChange = (field: string, value: string | number | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleNestedInputChange = (section: string, field: string, value: any) => {
+  const handleNestedInputChange = (category: 'address' | 'contactPerson' | 'billingAddress', field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [section]: {
-        ...prev[section as keyof typeof prev] as any,
+      [category]: {
+        ...prev[category],
         [field]: value
       }
     }));
-    triggerAutoSave();
   };
 
-  const triggerAutoSave = () => {
-    // Auto-save functionality handled by MultiStepModal
+  const handleNextStep = () => {
+    if (validateStep(currentStep)) {
+      if (currentStep < 3) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        handleFormSubmit();
+      }
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleFormSubmit = async () => {
+    try {
+      setIsLoading(true);
+      
+      const submissionData = { ...formData };
+      if (useSameAddress) {
+        submissionData.billingAddress = { ...formData.address };
+      }
+      
+      await onSubmit(submissionData);
+      onClose();
+    } catch (error) {
+      console.error('Error submitting client form:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('fr-FR').format(value);
   };
 
   const validateStep = (step: number): boolean => {
@@ -146,16 +205,16 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
     switch (step) {
       case 1:
-        if (!formData.name) errors.push('Nom de l\'entreprise requis');
-        if (!formData.code) errors.push('Code client requis');
-        if (!formData.email) errors.push('Email principal requis');
-        if (!formData.phone) errors.push('Téléphone principal requis');
+        if (!formData.name) errors.push(t('clients.form.companyName'));
+        if (!formData.code) errors.push(t('clients.form.code'));
+        if (!formData.email) errors.push(t('clients.form.mainEmail'));
+        if (!formData.phone) errors.push(t('clients.form.mainPhone'));
         break;
       case 2:
-        if (!formData.address.street) errors.push('Adresse complète requise');
-        if (!formData.address.city) errors.push('Ville requise');
-        if (!formData.contactPerson.name) errors.push('Nom de contact requis');
-        if (!formData.contactPerson.email) errors.push('Email de contact requis');
+        if (!formData.address.street) errors.push(t('clients.form.street'));
+        if (!formData.address.city) errors.push(t('clients.form.city'));
+        if (!formData.contactPerson.name) errors.push(t('clients.form.contactName'));
+        if (!formData.contactPerson.email) errors.push(t('clients.form.contactEmail'));
         break;
       case 3:
         // No billing validations needed
@@ -166,67 +225,22 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
     return errors.length === 0;
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep(currentStep)) {
-      throw new Error('Validation failed');
-    }
-
-    // Prepare the client data
-    let clientData = {
-      ...formData,
-      createdBy: user?.name || 'System',
-      updatedBy: user?.name || 'System'
-    };
-
-    // Handle billing address logic
-    if (useSameAddress) {
-      clientData.billingAddress = {
-        ...formData.address
-      };
-    }
-
-    await onSubmit(clientData);
-  };
-
-  const handleNextStep = () => {
-    if (currentStep === 3) {
-      // On the last step, submit the form
-      handleSubmit();
-    } else {
-      // Otherwise, go to next step
-      setCurrentStep(prev => Math.min(3, prev + 1));
-    }
-  };
-
-  const handlePrevStep = () => {
-    setCurrentStep(prev => Math.max(1, prev - 1));
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR').format(amount);
-  };
-
-  // Validate current step when data changes
-  useEffect(() => {
-    validateStep(currentStep);
-  }, [currentStep, formData]); // Include formData to validate when form changes
-
   // Memoize the validation result to prevent infinite re-renders
   const isCurrentStepValid = useMemo(() => {
     const errors: string[] = [];
 
     switch (currentStep) {
       case 1:
-        if (!formData.name) errors.push('Nom de l\'entreprise requis');
-        if (!formData.code) errors.push('Code client requis');
-        if (!formData.email) errors.push('Email principal requis');
-        if (!formData.phone) errors.push('Téléphone principal requis');
+        if (!formData.name) errors.push(t('clients.form.companyName'));
+        if (!formData.code) errors.push(t('clients.form.code'));
+        if (!formData.email) errors.push(t('clients.form.mainEmail'));
+        if (!formData.phone) errors.push(t('clients.form.mainPhone'));
         break;
       case 2:
-        if (!formData.address.street) errors.push('Adresse complète requise');
-        if (!formData.address.city) errors.push('Ville requise');
-        if (!formData.contactPerson.name) errors.push('Nom de contact requis');
-        if (!formData.contactPerson.email) errors.push('Email de contact requis');
+        if (!formData.address.street) errors.push(t('clients.form.street'));
+        if (!formData.address.city) errors.push(t('clients.form.city'));
+        if (!formData.contactPerson.name) errors.push(t('clients.form.contactName'));
+        if (!formData.contactPerson.email) errors.push(t('clients.form.contactEmail'));
         break;
       case 3:
         // No billing validations needed
@@ -234,19 +248,19 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
     }
 
     return errors.length === 0;
-  }, [currentStep, formData]);
+  }, [currentStep, formData, t]);
 
   return (
     <MultiStepModal
       isOpen={isOpen}
       onClose={onClose}
-      title={selectedClient ? 'Modifier Client' : 'Nouveau Client'}
-      subtitle={selectedClient ? `Modification du client ${selectedClient.name}` : 'Création d\'un nouveau client'}
+      title={selectedClient ? t('clients.edit') : t('clients.create')}
+      subtitle={selectedClient ? t('clients.form.subtitle.edit').replace('{client}', selectedClient.name) : t('clients.form.subtitle.create')}
       icon={Building}
       size="xl"
       currentStep={currentStep}
       totalSteps={3}
-      stepLabels={['Informations de base', 'Adresse & Contact', 'Configuration']}
+      stepLabels={[t('clients.form.step.basic'), t('clients.form.step.address'), t('clients.form.step.config')]}
       onNextStep={handleNextStep}
       onPrevStep={handlePrevStep}
       isStepValid={isCurrentStepValid}
@@ -254,7 +268,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       {/* Loading Overlay */}
       <LoadingOverlay
         isLoading={isLoading}
-        message={selectedClient ? 'Chargement des données client...' : 'Initialisation du formulaire...'}
+        message={selectedClient ? t('common.loading') : t('common.loading')}
         overlay={true}
       />
 

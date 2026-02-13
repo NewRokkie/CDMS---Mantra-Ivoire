@@ -30,6 +30,9 @@ import { performanceMonitoringService, trackPerformance } from './performanceMon
 import { logger } from '../../utils/logger';
 
 export class LocationManagementService {
+  // In-flight request deduplication: coalesce concurrent DB queries for the same stackId
+  private inflightStackRequests = new Map<string, Promise<Location[]>>();
+
   /**
    * Get all locations with optional filtering
    * Requirements: 7.1 - Location search and filtering
@@ -388,6 +391,7 @@ export class LocationManagementService {
   /**
    * Get locations by stack ID
    * Requirements: 9.1 - Cache stack locations
+   * Optimized: explicit column select, in-flight request deduplication
    */
   async getByStackId(stackId: string): Promise<Location[]> {
     return trackPerformance('getByStackId', async () => {
@@ -398,26 +402,47 @@ export class LocationManagementService {
           return cached;
         }
 
-        const { data, error } = await supabase
-          .from('locations')
-          .select('*')
-          .eq('stack_id', stackId)
-          .eq('is_active', true)
-          .order('row_number', { ascending: true })
-          .order('tier_number', { ascending: true });
+        // Deduplicate concurrent in-flight requests for the same stackId
+        const inflight = this.inflightStackRequests.get(stackId);
+        if (inflight) {
+          return inflight;
+        }
 
-        if (error) throw error;
-        const locations = (data || []).map(this.mapToLocation);
-        
-        // Cache the result
-        await locationCacheService.cacheStackLocations(stackId, locations);
-        
-        return locations;
+        const fetchPromise = this.fetchStackLocations(stackId);
+        this.inflightStackRequests.set(stackId, fetchPromise);
+
+        try {
+          const locations = await fetchPromise;
+          return locations;
+        } finally {
+          this.inflightStackRequests.delete(stackId);
+        }
       } catch (error) {
         logger.error('LocationManagementService.getByStackId error:', 'locationManagementService.ts', error);
         throw ErrorHandler.createGateInError(error);
       }
     }, { stackId });
+  }
+
+  /**
+   * Internal: fetch stack locations from DB and cache the result
+   */
+  private async fetchStackLocations(stackId: string): Promise<Location[]> {
+    const { data, error } = await supabase
+      .from('locations')
+      .select('id,location_id,stack_id,yard_id,row_number,tier_number,is_virtual,virtual_stack_pair_id,is_occupied,available,container_id,container_number,container_size,client_pool_id,is_active,created_at,updated_at')
+      .eq('stack_id', stackId)
+      .eq('is_active', true)
+      .order('row_number', { ascending: true })
+      .order('tier_number', { ascending: true });
+
+    if (error) throw error;
+    const locations = (data || []).map(this.mapToLocation);
+
+    // Cache the result
+    await locationCacheService.cacheStackLocations(stackId, locations);
+
+    return locations;
   }
 
   /**
@@ -507,6 +532,35 @@ export class LocationManagementService {
 
       if (error) throw error;
       return this.mapToLocation(data);
+    } catch (error) {
+      throw ErrorHandler.createGateInError(error);
+    }
+  }
+
+  /**
+   * Bulk update client_pool_id for all unoccupied locations in a stack.
+   * Replaces the N+1 pattern of getByStackId + loop update.
+   * A single DB round-trip instead of 1 + N.
+   */
+  async updateClientPoolForStack(stackId: string, clientPoolId: string | null): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .update({
+          client_pool_id: clientPoolId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('stack_id', stackId)
+        .eq('is_active', true)
+        .eq('is_occupied', false)
+        .select('id');
+
+      if (error) throw error;
+
+      // Invalidate the stack cache since locations were modified
+      await locationCacheService.invalidateStackCache(stackId);
+
+      return data?.length ?? 0;
     } catch (error) {
       throw ErrorHandler.createGateInError(error);
     }

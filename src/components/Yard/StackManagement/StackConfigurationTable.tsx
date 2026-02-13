@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings, Shield, Trash2, Users, RefreshCw } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
+import { useLanguage } from '../../../hooks/useLanguage';
 
 interface StackConfigurationTableProps {
   stacks: YardStack[];
@@ -20,6 +21,8 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
   onAssignClient,
   isRefreshing = false
 }) => {
+  const { t } = useLanguage();
+
   const getAdjacentStackNumber = (stackNumber: number): number | null => {
     return stackService.getAdjacentStackNumber(stackNumber);
   };
@@ -32,11 +35,11 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
     return (
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Stack Configuration</h3>
-          <p className="text-sm text-gray-600">Configure container size assignments for each stack</p>
+          <h3 className="text-lg font-semibold text-gray-900">{t('stack.configuration')}</h3>
+          <p className="text-sm text-gray-600">{t('stack.configuration.desc')}</p>
         </div>
         <div className="text-center py-12 text-gray-500">
-          No stacks found. Create your first stack to get started.
+          {t('stack.noStacks')}
         </div>
       </div>
     );
@@ -45,33 +48,33 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden relative">
       <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Stack Configuration</h3>
-        <p className="text-sm text-gray-600">Configure container size assignments for each stack (paired stacks will be updated together)</p>
+        <h3 className="text-lg font-semibold text-gray-900">{t('stack.configuration')}</h3>
+        <p className="text-sm text-gray-600">{t('stack.configuration.desc')}</p>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stack
+                {t('stack.table.stack')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Section
+                {t('stack.table.section')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Container Size
+                {t('stack.table.containerSize')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Assigned Client
+                {t('stack.table.assignedClient')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Capacity
+                {t('stack.table.capacity')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('stack.table.actions')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Manage
+                {t('stack.table.manage')}
               </th>
             </tr>
           </thead>
@@ -89,14 +92,14 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                     <div className="flex items-center">
                       <div className="flex items-center space-x-2">
                         <span className="font-medium text-gray-900">
-                          Stack {stack.stackNumber.toString().padStart(2, '0')}
+                          {t('stack.table.stack')} {stack.stackNumber.toString().padStart(2, '0')}
                         </span>
                         {isSpecialStack && (
                           <Shield className="h-4 w-4 text-purple-600" />
                         )}
                         {!isSpecialStack && adjacentStack && !adjacentIsSpecial && (
                           <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                            Pair: {adjacentStack.toString().padStart(2, '0')}
+                            {t('stack.table.pair')}: {adjacentStack.toString().padStart(2, '0')}
                             {adjacentConfig && (
                               <span className={`ml-1 ${adjacentConfig.containerSize === stack.containerSize ? 'text-green-600' : 'text-orange-600'}`}>
                                 ({adjacentConfig.containerSize === stack.containerSize ? '✓' : '⚠'})
@@ -105,8 +108,8 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                           </span>
                         )}
                         {!isSpecialStack && adjacentStack && adjacentIsSpecial && (
-                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded" title="Adjacent stack is special - no pairing">
-                            No pair
+                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded" title={t('stack.table.specialNo40')}>
+                            {t('stack.table.noPair')}
                           </span>
                         )}
                       </div>
@@ -132,7 +135,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">Unassigned</span>
+                      <span className="text-sm text-gray-400">{t('stack.unassigned')}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -157,7 +160,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                           )}
                           {stack.containerStats.damaged > 0 && (
                             <span className="inline-flex px-1.5 py-0.5 bg-red-100 text-red-700 rounded">
-                              Damaged: {stack.containerStats.damaged}
+                              {t('common.damaged')}: {stack.containerStats.damaged}
                             </span>
                           )}
                           {stack.containerStats.maintenance > 0 && (
@@ -198,9 +201,9 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                           }`}
                           title={
                             isSpecialStack
-                              ? 'Special stacks cannot be configured for 40ft'
+                              ? t('stack.table.specialNo40')
                               : adjacentStack
-                              ? `Will also update Stack ${adjacentStack.toString().padStart(2, '0')}`
+                              ? t('stack.table.updatePair').replace('{number}', adjacentStack.toString().padStart(2, '0'))
                               : ''
                           }
                         >
@@ -218,7 +221,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                         <button
                           onClick={() => onAssignClient(stack)}
                           className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
-                          title="Assign to Client Pool"
+                          title={t('stack.assigned')}
                         >
                           <Users className="h-4 w-4" />
                         </button>
@@ -226,14 +229,14 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                       <button
                         onClick={() => onEditStack(stack)}
                         className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                        title="Edit Stack"
+                        title={t('stack.edit')}
                       >
                         <Settings className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => onDeleteStack(stack.id)}
                         className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                        title="Delete Stack"
+                        title={t('stack.delete')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -251,10 +254,11 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
           <div className="flex items-center space-x-3 text-blue-600">
             <RefreshCw className="h-5 w-5 animate-spin" />
-            <span className="text-sm font-medium">Refreshing stack data...</span>
+            <span className="text-sm font-medium">{t('stack.refreshing')}</span>
           </div>
         </div>
       )}
     </div>
   );
 };
+

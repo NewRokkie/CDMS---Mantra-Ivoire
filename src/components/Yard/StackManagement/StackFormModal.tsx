@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings, Plus, Minus } from 'lucide-react';
 import { Yard, YardStack } from '../../../types';
 import { yardsService } from '../../../services/api/yardsService';
 import { FormModal } from '../../Common/Modal/FormModal';
 import { handleError } from '../../../services/errorHandling';
+import { useLanguage } from '../../../hooks/useLanguage';
 
 interface StackFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Partial<YardStack>) => void;
   selectedStack?: YardStack | null;
   yard: Yard;
   isLoading?: boolean;
@@ -22,6 +23,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   yard,
   isLoading = false
 }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     stackNumber: 0,
     sectionId: '',
@@ -97,7 +99,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     setErrors({});
   }, [selectedStack, yard, isOpen]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
     const newValidationErrors: string[] = [];
 
@@ -123,33 +125,25 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       newValidationErrors.push('Rows must be between 1 and 10');
     }
 
-    if (formData.maxTiers <= 0 || formData.maxTiers > 5) {
-      newErrors.maxTiers = 'Max tiers must be between 1 and 8';
-      newValidationErrors.push('Max tiers must be between 1 and 8');
-    }
-
-    // Auto-adjust rows and tiers based on container size
-    if (formData.containerSize === '40ft') {
-      // 40ft containers typically need more space
-      if (formData.rows < 4) {
-        setFormData(prev => ({ ...prev, rows: 4 }));
-      }
+    if (formData.maxTiers <= 0 || formData.maxTiers > 8) {
+      newErrors.maxTiers = t('stack.validation.tiersRange');
+      newValidationErrors.push(t('stack.validation.tiersRange'));
     }
 
     // Special stacks can only be 20ft
     if (formData.stackType === 'special' && formData.containerSize === '40ft') {
-      newErrors.containerSize = 'Special stacks can only accommodate 20ft containers';
-      newValidationErrors.push('Special stacks can only accommodate 20ft containers');
+      newErrors.containerSize = t('stack.validation.specialNo40');
+      newValidationErrors.push(t('stack.validation.specialNo40'));
     }
 
     setErrors(newErrors);
     setValidationErrors(newValidationErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData, selectedStack, t]);
 
-  const handleInputChange = async (field: string, value: any, triggerAutoSave?: () => void) => {
+  const handleInputChange = async (field: string, value: string | number | boolean, triggerAutoSave?: () => void) => {
     // Validate row reduction if editing existing stack
-    if (field === 'rows' && selectedStack && value < formData.rows) {
+    if (field === 'rows' && selectedStack && typeof value === 'number' && value < formData.rows) {
       try {
         const { supabase } = await import('../../../services/api/supabaseClient');
         const { data, error } = await supabase.rpc('validate_row_config_change', {
@@ -170,7 +164,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         setRowValidationWarning(null);
       } catch (error) {
         console.error('Row validation error:', error);
-        setRowValidationWarning('Unable to validate row change. Please try again.');
+        setRowValidationWarning(t('stack.validation.rowChangeError'));
         return;
       }
     }
@@ -185,14 +179,14 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       if (value === '40ft') {
         setFormData(prev => ({
           ...prev,
-          containerSize: value,
+          containerSize: value as '40ft',
           rows: Math.max(prev.rows, 4), // Ensure minimum 4 rows for 40ft
           stackType: 'regular' // Force regular for 40ft
         }));
       } else {
         setFormData(prev => ({
           ...prev,
-          containerSize: value
+          containerSize: value as '20ft'
         }));
       }
     }
@@ -202,13 +196,13 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       if (value === 'special') {
         setFormData(prev => ({
           ...prev,
-          stackType: value,
+          stackType: value as 'special',
           containerSize: '20ft' // Force 20ft for special stacks
         }));
       } else {
         setFormData(prev => ({
           ...prev,
-          stackType: value
+          stackType: value as 'regular'
         }));
       }
     }
@@ -223,6 +217,14 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       triggerAutoSave();
     }
   };
+
+  const calculateCapacity = useCallback(() => {
+    if (formData.useCustomRowTiers && formData.rowTierConfig.length > 0) {
+      // Calculate from custom row-tier config
+      return formData.rowTierConfig.reduce((sum, config) => sum + config.maxTiers, 0);
+    }
+    return formData.rows * formData.maxTiers;
+  }, [formData.rows, formData.maxTiers, formData.useCustomRowTiers, formData.rowTierConfig]);
 
   const handleSubmit = async () => {
     if (!validateForm()) {
@@ -243,42 +245,16 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       isActive: true,
     };
 
-    console.log('🔍 Frontend submitting stack data:', {
-      formData,
-      transformedStackData: stackData,
-      selectedSection: yard?.sections?.find(s => s.id === formData.sectionId)
-    });
-
     onSubmit(stackData);
   };
 
-  const calculateCapacity = () => {
-    if (formData.useCustomRowTiers && formData.rowTierConfig.length > 0) {
-      // Calculate from custom row-tier config
-      const capacity = formData.rowTierConfig.reduce((sum, config) => sum + config.maxTiers, 0);
-      console.log('🔍 Frontend capacity calculation:', {
-        useCustomRowTiers: formData.useCustomRowTiers,
-        rowTierConfig: formData.rowTierConfig,
-        calculatedCapacity: capacity
-      });
-      return capacity;
-    }
-    const uniformCapacity = formData.rows * formData.maxTiers;
-    console.log('🔍 Frontend uniform capacity calculation:', {
-      rows: formData.rows,
-      maxTiers: formData.maxTiers,
-      calculatedCapacity: uniformCapacity
-    });
-    return uniformCapacity;
-  };
-
-  const generateDefaultRowTierConfig = (): Array<{ row: number; maxTiers: number }> => {
+  const generateDefaultRowTierConfig = useCallback((): Array<{ row: number; maxTiers: number }> => {
     const config: Array<{ row: number; maxTiers: number }> = [];
     for (let i = 1; i <= formData.rows; i++) {
       config.push({ row: i, maxTiers: formData.maxTiers });
     }
     return config;
-  };
+  }, [formData.rows, formData.maxTiers]);
 
   const updateRowTierConfig = (row: number, maxTiers: number) => {
     const newConfig = [...formData.rowTierConfig];
@@ -296,14 +272,14 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
   const getContainerSizeDescription = (size: '20ft' | '40ft') => {
     return size === '20ft'
-      ? 'Standard containers, single slot per container'
-      : 'High capacity containers, requires paired stacks';
+      ? t('stack.rules.special')
+      : t('stack.rules.pairing');
   };
 
   const getStackTypeDescription = (type: 'regular' | 'special') => {
     return type === 'regular'
-      ? 'Can accommodate both 20ft and 40ft containers'
-      : 'Limited to 20ft containers only, used for special operations';
+      ? t('stack.form.regularDesc')
+      : t('stack.form.specialDesc');
   };
 
   // Recalculate suggested stack number whenever section changes
@@ -325,7 +301,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     } else {
       setSuggestedStackNumber(1);
     }
-  }, [yard?.id, formData.sectionId, selectedStack, isOpen]);
+  }, [yard?.id, formData.sectionId, selectedStack, isOpen, formData.stackNumber, suggestedStackNumber]);
 
   // Synchronize rowTierConfig when rows change and custom tier configuration is enabled
   useEffect(() => {
@@ -346,7 +322,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         setFormData(prev => ({ ...prev, rowTierConfig: newConfig }));
       }
     }
-  }, [formData.rows, formData.useCustomRowTiers, formData.maxTiers]);
+  }, [formData.rows, formData.useCustomRowTiers, formData.maxTiers, formData.rowTierConfig]);
 
   // Validate form on data changes (skip initial validation when form is being initialized)
   useEffect(() => {
@@ -354,18 +330,18 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     if (formData.stackNumber > 0) {
       validateForm();
     }
-  }, [formData]);
+  }, [formData, validateForm]);
 
   return (
     <FormModal
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={selectedStack ? 'Edit Stack' : 'Create New Stack'}
+      title={selectedStack ? t('stack.edit') : t('stack.create')}
       subtitle={`${yard?.name || 'Yard'} ${yard?.code ? `(${yard.code})` : ''} ${yard?.layout ? `- ${yard.layout} layout` : ''}`}
       icon={Package}
       size="lg"
-      submitLabel={selectedStack ? 'Update Stack' : 'Create Stack'}
+      submitLabel={selectedStack ? t('common.update') : t('common.create')}
       isSubmitting={isLoading}
       validationErrors={validationErrors}
       autoSave={true}
@@ -375,13 +351,13 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         <div className="depot-section">
           <h4 className="depot-section-header">
             <Package className="depot-section-icon text-blue-500" />
-            Stack Information
+            {t('stack.form.information')}
           </h4>
 
           <div className="depot-form-grid">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stack Number *
+                {t('stack.form.number')} *
               </label>
               <div className="flex gap-2">
                 <input
@@ -392,7 +368,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   value={formData.stackNumber || ''}
                   onChange={(e) => handleInputChange('stackNumber', parseInt(e.target.value) || 0)}
                   className={`depot-input flex-1 ${errors.stackNumber ? 'error' : ''}`}
-                  placeholder="Enter stack number"
+                  placeholder={t('stack.form.number')}
                   disabled={!!selectedStack} // Don't allow changing stack number when editing
                 />
                 {!selectedStack && suggestedStackNumber > 0 && formData.stackNumber !== suggestedStackNumber && (
@@ -400,9 +376,9 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     type="button"
                     onClick={() => handleInputChange('stackNumber', suggestedStackNumber)}
                     className="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap"
-                    title={`Use suggested number: ${suggestedStackNumber}`}
+                    title={t('stack.form.useSuggested').replace('{number}', suggestedStackNumber.toString())}
                   >
-                    Use {suggestedStackNumber}
+                    {t('stack.form.useSuggested').replace('{number}', suggestedStackNumber.toString())}
                   </button>
                 )}
               </div>
@@ -410,16 +386,16 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
               {yard?.layout === 'tantarelli' && !selectedStack && (
                 <div className="mt-1 flex items-center gap-2">
                   <p className="text-xs text-blue-600">
-                    Suggested: {suggestedStackNumber > 0 ? suggestedStackNumber : 'N/A'}
+                    {t('stack.form.suggested').replace('{number}', suggestedStackNumber > 0 ? suggestedStackNumber.toString() : 'N/A')}
                   </p>
                   {suggestedStackNumber > 0 && formData.stackNumber !== suggestedStackNumber && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800">
-                      Different from suggested
+                      {t('stack.form.differentFromSuggested')}
                     </span>
                   )}
                   {suggestedStackNumber > 0 && formData.stackNumber === suggestedStackNumber && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800">
-                      Using suggested
+                      {t('stack.form.usingSuggested')}
                     </span>
                   )}
                 </div>
@@ -428,11 +404,11 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Section *
+                {t('stack.form.section')} *
               </label>
               {selectedStack ? (
                 <div className="form-input w-full bg-gray-100 text-gray-700 cursor-not-allowed">
-                  {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
+                  {yard?.sections?.find(s => s.id === formData.sectionId)?.name || t('common.none')}
                 </div>
               ) : (
                 <select
@@ -440,24 +416,23 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   value={formData.sectionId}
                   onChange={(e) => {
                     handleInputChange('sectionId', e.target.value);
-                    // The suggested number will be automatically recalculated and applied by the useEffect
                   }}
                   className={`depot-select ${errors.sectionId ? 'error' : ''}`}
                 >
-                  <option value="">Select section</option>
+                  <option value="">{t('stack.form.selectSection')}</option>
                   {yard?.sections?.map(section => (
                     <option key={section.id} value={section.id}>
-                      {section.name} ({section.stacks.length} stacks)
+                      {section.name} ({section.stacks.length} {t('common.containers')})
                     </option>
                   )) || (
-                    <option value="" disabled>No sections available</option>
+                    <option value="" disabled>{t('stack.form.noSections')}</option>
                   )}
                 </select>
               )}
               {errors.sectionId && <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>}
               {selectedStack && (
                 <p className="mt-1 text-xs text-gray-500">
-                  Section cannot be changed when editing an existing stack
+                  {t('stack.form.sectionImmutable')}
                 </p>
               )}
             </div>
@@ -468,13 +443,13 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         <div className="depot-section">
           <h4 className="depot-section-header">
             <Package className="depot-section-icon text-green-500" />
-            Container Size Configuration
+            {t('stack.form.sizeConfig')}
           </h4>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Container Size *
+                {t('common.size')} *
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -488,8 +463,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">📦</div>
-                    <div className="font-bold text-lg text-gray-900">20ft</div>
-                    <div className="text-sm text-gray-600 mt-1">Standard Size</div>
+                    <div className="font-bold text-lg text-gray-900">{t('stack.size20')}</div>
+                    <div className="text-sm text-gray-600 mt-1">{t('stack.form.20ftDesc')}</div>
                     <div className="text-xs text-gray-500 mt-2">
                       {getContainerSizeDescription('20ft')}
                     </div>
@@ -517,8 +492,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">📦📦</div>
-                    <div className="font-bold text-lg text-gray-900">40ft</div>
-                    <div className="text-sm text-gray-600 mt-1">High Capacity</div>
+                    <div className="font-bold text-lg text-gray-900">{t('stack.size40')}</div>
+                    <div className="text-sm text-gray-600 mt-1">{t('stack.form.40ftDesc')}</div>
                     <div className="text-xs text-gray-500 mt-2">
                       {getContainerSizeDescription('40ft')}
                     </div>
@@ -534,7 +509,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
               </div>
               {formData.stackType === 'special' && (
                 <p className="mt-2 text-xs text-gray-600">
-                  Special stacks are limited to 20ft containers only
+                  {t('stack.form.specialWarning')}
                 </p>
               )}
             </div>
@@ -545,13 +520,13 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         <div className="depot-section">
           <h4 className="depot-section-header">
             <Shield className="depot-section-icon text-blue-500" />
-            Stack Type Configuration
+            {t('stack.form.typeConfig')}
           </h4>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Stack Type *
+                {t('common.type')} *
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -565,8 +540,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">⚙️</div>
-                    <div className="font-bold text-lg text-gray-900">Regular</div>
-                    <div className="text-sm text-gray-600 mt-1">Standard Operations</div>
+                    <div className="font-bold text-lg text-gray-900">{t('stack.regular')}</div>
+                    <div className="text-sm text-gray-600 mt-1">{t('stack.form.regularDesc')}</div>
                     <div className="text-xs text-gray-500 mt-2">
                       {getStackTypeDescription('regular')}
                     </div>
@@ -591,8 +566,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">🛡️</div>
-                    <div className="font-bold text-lg text-gray-900">Special</div>
-                    <div className="text-sm text-gray-600 mt-1">Limited Operations</div>
+                    <div className="font-bold text-lg text-gray-900">{t('stack.special')}</div>
+                    <div className="text-sm text-gray-600 mt-1">{t('stack.form.specialDesc')}</div>
                     <div className="text-xs text-gray-500 mt-2">
                       {getStackTypeDescription('special')}
                     </div>
@@ -614,7 +589,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         <div className="depot-section">
           <h4 className="depot-section-header">
             <Grid3X3 className="depot-section-icon text-green-500" />
-            Capacity Configuration
+            {t('stack.form.capacityConfig')}
           </h4>
 
           {/* Modern Capacity Configuration Cards */}
@@ -626,8 +601,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   <Grid3X3 className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <h5 className="font-semibold text-slate-900">Stack Dimensions</h5>
-                  <p className="text-sm text-slate-600">Configure the physical layout of your stack</p>
+                  <h5 className="font-semibold text-slate-900">{t('stack.form.dimensions')}</h5>
+                  <p className="text-sm text-slate-600">{t('stack.form.dimensionsDesc')}</p>
                 </div>
               </div>
 
@@ -637,7 +612,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
                       <Grid3X3 className="h-5 w-5 text-blue-600" />
-                      <span className="font-semibold text-gray-900">Rows (Depth)</span>
+                      <span className="font-semibold text-gray-900">{t('stack.form.rows')}</span>
                     </div>
                     <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">1-7</span>
                   </div>
@@ -648,7 +623,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       onClick={() => handleInputChange('rows', Math.max(1, formData.rows - 1))}
                       disabled={formData.rows <= 1}
                       className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="Decrease rows"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -669,7 +643,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       onClick={() => handleInputChange('rows', Math.min(7, formData.rows + 1))}
                       disabled={formData.rows >= 7}
                       className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="Increase rows"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -692,12 +665,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   )}
 
                   <div className="mt-3 space-y-1">
-                    <p className="text-xs text-slate-600">Container rows from front to back</p>
-                    {selectedStack && (
-                      <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
-                        Current: {selectedStack.rows} rows
-                      </p>
-                    )}
+                    <p className="text-xs text-slate-600">{t('stack.form.rowsDesc')}</p>
                   </div>
                 </div>
 
@@ -706,9 +674,9 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
                       <Package className="h-5 w-5 text-green-600" />
-                      <span className="font-semibold text-gray-900">Max Tiers (Height)</span>
+                      <span className="font-semibold text-gray-900">{t('stack.form.tiers')}</span>
                     </div>
-                    <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">1-5</span>
+                    <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">1-8</span>
                   </div>
 
                   <div className="flex items-center justify-between space-x-3">
@@ -717,7 +685,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       onClick={() => handleInputChange('maxTiers', Math.max(1, formData.maxTiers - 1))}
                       disabled={formData.maxTiers <= 1}
                       className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="Decrease max tiers"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -725,7 +692,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     <input
                       type="number"
                       min="1"
-                      max="5"
+                      max="8"
                       value={formData.maxTiers}
                       onChange={(e) => handleInputChange('maxTiers', parseInt(e.target.value) || 1)}
                       className={`flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
@@ -735,10 +702,9 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => handleInputChange('maxTiers', Math.min(5, formData.maxTiers + 1))}
-                      disabled={formData.maxTiers >= 5}
+                      onClick={() => handleInputChange('maxTiers', Math.min(8, formData.maxTiers + 1))}
+                      disabled={formData.maxTiers >= 8}
                       className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="Increase max tiers"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -751,16 +717,16 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     </p>
                   )}
 
-                  <p className="mt-3 text-xs text-slate-600">Maximum containers stacked vertically</p>
+                  <p className="mt-3 text-xs text-slate-600">{t('stack.form.tiersDesc')}</p>
                 </div>
               </div>
 
               {/* Enhanced Stack Layout Preview */}
               <div className="mt-6 p-4 bg-white rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-slate-700">Stack Layout Preview</span>
+                  <span className="text-sm font-medium text-slate-700">{t('stack.form.previewLayout')}</span>
                   <div className="text-xs text-slate-500">
-                    {formData.useCustomRowTiers ? 'Custom Layout' : `${formData.rows} × ${formData.maxTiers}`}
+                    {formData.useCustomRowTiers ? t('stack.form.customLayout') : `${formData.rows} × ${formData.maxTiers}`}
                   </div>
                 </div>
                 
@@ -773,7 +739,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                           <div
                             key={`${rowConfig.row}-${tierIndex}`}
                             className="w-4 h-4 bg-emerald-200 border border-emerald-300 rounded-sm"
-                            title={`Row ${rowConfig.row}, Tier ${tierIndex + 1}`}
+                            title={`${t('stack.table.section')} ${rowConfig.row}, ${t('stack.table.capacity')} ${tierIndex + 1}`}
                             style={{
                               gridColumn: rowConfig.row,
                               gridRow: -(rowConfig.maxTiers - tierIndex)
@@ -790,7 +756,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                           <div
                             key={i}
                             className="w-4 h-4 bg-emerald-200 border border-emerald-300 rounded-sm"
-                            title={`Row ${row}, Tier ${tier}`}
+                            title={`${t('stack.table.stack')} ${row}, ${t('stack.table.capacity')} ${tier}`}
                           />
                         );
                       })
@@ -829,7 +795,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
               
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h5 className="font-semibold text-slate-900">Custom Tier Configuration</h5>
+                  <h5 className="font-semibold text-slate-900">{t('stack.form.customTiers')}</h5>
                   {formData.useCustomRowTiers && (
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
                       Advanced
@@ -837,13 +803,12 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   )}
                 </div>
                 <p className="text-sm text-slate-600 mb-4">
-                  Configure different maximum tier heights for each row based on ground conditions or equipment limitations
+                  {t('stack.form.customTiersDesc')}
                 </p>
 
                 {formData.useCustomRowTiers && (
                   <div className="space-y-2">
                     <div className="bg-white rounded-xl border border-blue-200">
-
                       {/* Table Rows */}
                       <div className="divide-y divide-slate-100">
                         {Array.from({ length: formData.rows }, (_, i) => i + 1).map(rowNum => {
@@ -877,7 +842,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                                     <div
                                       key={i}
                                       className="w-3 h-2 bg-blue-400 rounded-sm"
-                                      title={`Tier ${i + 1}`}
                                     />
                                   ))}
                                   {currentTiers > 5 && (
@@ -893,7 +857,6 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                                   onClick={() => updateRowTierConfig(rowNum, Math.max(1, currentTiers - 1))}
                                   disabled={currentTiers <= 1}
                                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                  aria-label={`Decrease tiers for row ${rowNum}`}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
@@ -902,7 +865,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                                   <input
                                     type="number"
                                     min="1"
-                                    max="5"
+                                    max="8"
                                     value={currentTiers}
                                     onChange={(e) => updateRowTierConfig(rowNum, parseInt(e.target.value) || 1)}
                                     className="w-full text-center py-1 px-2 text-sm font-medium bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -911,10 +874,9 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
                                 <button
                                   type="button"
-                                  onClick={() => updateRowTierConfig(rowNum, Math.min(5, currentTiers + 1))}
-                                  disabled={currentTiers >= 5}
+                                  onClick={() => updateRowTierConfig(rowNum, Math.min(8, currentTiers + 1))}
+                                  disabled={currentTiers >= 8}
                                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                  aria-label={`Increase tiers for row ${rowNum}`}
                                 >
                                   <Plus className="h-4 w-4" />
                                 </button>
@@ -937,8 +899,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 <Package className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <h5 className="font-semibold text-slate-900">Total Stack Capacity</h5>
-                <p className="text-sm text-slate-600">Maximum container positions available</p>
+                <h5 className="font-semibold text-slate-900">{t('stack.form.totalCapacity')}</h5>
+                <p className="text-sm text-slate-600">{t('stack.form.capacityDesc')}</p>
               </div>
             </div>
 
@@ -952,44 +914,29 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     <div className="text-3xl font-bold text-slate-900">
                       {calculateCapacity()}
                     </div>
-                    <div className="text-sm text-slate-600">Container positions</div>
+                    <div className="text-sm text-slate-600">{t('stack.form.positions')}</div>
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-sm font-medium text-slate-700 mb-1">Configuration</div>
+                  <div className="text-sm font-medium text-slate-700 mb-1">{t('common.filter')}</div>
                   <div className="text-xs text-slate-500">
-                    {formData.useCustomRowTiers ? 'Custom tiers' : 'Uniform layout'}
+                    {formData.useCustomRowTiers ? t('stack.form.customLayout') : t('stack.form.uniformLayout')}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                  <span className="text-sm text-slate-600">Layout</span>
+                  <span className="text-sm text-slate-600">{t('common.filter')}</span>
                   <span className="text-sm font-medium text-slate-900">
-                    {formData.rows} rows × {formData.maxTiers} tiers
+                    {formData.rows} {t('stack.form.rows')} × {formData.maxTiers} {t('stack.form.tiers')}
                   </span>
                 </div>
 
-                {formData.useCustomRowTiers && (
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium text-slate-700 mb-2">Custom Configuration:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.rowTierConfig.map((config) => (
-                        <div key={config.row} className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs">
-                          <span className="font-medium">R{config.row}</span>
-                          <span>:</span>
-                          <span>{config.maxTiers}T</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <div className="pt-3 border-t border-slate-200">
                   <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>Calculation</span>
+                    <span>{t('stack.form.calculation')}</span>
                     <span>
                       {formData.useCustomRowTiers 
                         ? `${formData.rowTierConfig.map(c => c.maxTiers).join(' + ')} = ${calculateCapacity()}`
@@ -1007,31 +954,31 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         <div className="depot-section">
           <h4 className="depot-section-header">
             <Package className="depot-section-icon text-blue-500" />
-            Stack Preview
+            {t('stack.form.preview')}
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
             <div>
-              <span className="text-gray-600">Stack Number:</span>
+              <span className="text-gray-600">{t('stack.form.number')}:</span>
               <div className="font-medium text-gray-900">S{formData.stackNumber.toString().padStart(2, '0')}</div>
             </div>
             <div>
-              <span className="text-gray-600">Section:</span>
+              <span className="text-gray-600">{t('stack.form.section')}:</span>
               <div className="font-medium text-gray-900">
-                {yard?.sections?.find(s => s.id === formData.sectionId)?.name || 'Not selected'}
+                {yard?.sections?.find(s => s.id === formData.sectionId)?.name || t('common.none')}
               </div>
             </div>
             <div>
-              <span className="text-gray-600">Capacity:</span>
-              <div className="font-medium text-gray-900">{calculateCapacity()} containers</div>
+              <span className="text-gray-600">{t('stack.table.capacity')}:</span>
+              <div className="font-medium text-gray-900">{calculateCapacity()} {t('common.containers')}</div>
             </div>
             <div>
-              <span className="text-gray-600">Container Size:</span>
+              <span className="text-gray-600">{t('stack.table.containerSize')}:</span>
               <div className="font-medium text-gray-900">{formData.containerSize}</div>
             </div>
             <div>
-              <span className="text-gray-600">Type:</span>
+              <span className="text-gray-600">{t('common.type')}:</span>
               <div className="font-medium text-gray-900">
-                {formData.stackType === 'special' ? 'Special' : 'Regular'}
+                {formData.stackType === 'special' ? t('stack.special') : t('stack.regular')}
               </div>
             </div>
           </div>
@@ -1041,7 +988,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             <div className="mt-4 flex items-start p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-yellow-800">
-                <strong>Special Stack:</strong> This stack will be limited to 20ft containers only and cannot accommodate 40ft containers.
+                <strong>{t('stack.special')}:</strong> {t('stack.form.specialNotice')}
               </div>
             </div>
           )}
@@ -1050,7 +997,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
             <div className="mt-4 flex items-start p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <Package className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-blue-800">
-                <strong>40ft Configuration:</strong> This stack will be configured for high-capacity 40ft containers and may require pairing with adjacent stacks.
+                <strong>{t('stack.size40')}:</strong> {t('stack.form.40ftNotice')}
               </div>
             </div>
           )}

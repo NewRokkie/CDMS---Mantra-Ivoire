@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 Container Depot
               </h1>
               <p className="hidden sm:block text-xs lg:text-sm text-gray-600 truncate">
-                {user?.role === 'admin' ? 'Administrator' : user?.role}
+                {user?.role ? t(`users.role.${user.role}`) : ''}
               </p>
             </div>
           </div>
@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md animate-bounce-subtle"
               >
                 <Download className="h-4 w-4" />
-                <span className="hidden md:inline font-medium text-sm">Install {getModuleInstallName()}</span>
+                <span className="hidden md:inline font-medium text-sm">{t('common.install')} {getModuleInstallName()}</span>
               </button>
             )}
 
@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                   </div>
                   <div className="text-sm">
                     <p className="font-medium text-gray-900">{user?.name}</p>
-                    <p className="text-xs text-gray-600 capitalize">{user?.role}</p>
+                    <p className="text-xs text-gray-600 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
 
@@ -173,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                   </div>
                   <div className="flex-1">
                     <p className="text-lg font-bold text-gray-900">{user?.name}</p>
-                    <p className="text-sm text-blue-800 capitalize font-medium">{user?.role}</p>
+                    <p className="text-sm text-blue-800 capitalize font-medium">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
               </div>
@@ -181,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               {/* Quick Actions Grid */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide px-1">
-                  Quick Actions
+                  {t('common.quickActions')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {/* Language Switcher */}
@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       </span>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-600 font-medium">3 New</p>
+                      <p className="text-xs text-gray-600 font-medium">3 {t('common.newNotifications')}</p>
                     </div>
                   </button>
                 </div>
@@ -229,13 +229,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95 font-bold"
               >
                 <LogOut className="h-5 w-5" />
-                <span>Sign Out</span>
+                <span>{t('nav.logout')}</span>
               </button>
 
               {/* App Info */}
               <div className="pt-6 border-t border-gray-200">
                 <p className="text-xs text-gray-500 text-center">
-                  Container Depot Management v1.0
+                  {t('common.appFooter')}
                 </p>
               </div>
             </div>

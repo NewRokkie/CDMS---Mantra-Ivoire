@@ -4,6 +4,7 @@ import { PendingGateOut } from '../types';
 import { validateContainerNumber, formatContainerNumberForDisplay } from '../utils';
 import { useGlobalStore } from '../../../store/useGlobalStore';
 import { Container } from '../../../types';
+import { useLanguage } from '../../../hooks/useLanguage';
 
 // Local interface for ContainerInput since it's GateOut-specific
 interface ContainerInput {
@@ -39,6 +40,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   isProcessing
 }) => {
   const { hasModuleAccess } = useAuth();
+  const { t } = useLanguage();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
   const { containers } = useGlobalStore();
 
@@ -63,24 +65,16 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
     if (!container) {
       return { 
         isValid: false, 
-        message: 'Container not found in yard', 
+        message: t('gate.out.error.containerNotFound'), 
         container: null 
       };
     }
 
     // Check if container has 'in_depot' status
     if (container.status !== 'in_depot') {
-      const statusLabels: Record<Container['status'], string> = {
-        'gate_in': 'Gate In (not yet placed)',
-        'in_depot': 'In Depot',
-        'gate_out': 'Gate Out Pending',
-        'out_depot': 'Already out of depot',
-        'maintenance': 'In Maintenance',
-        'cleaning': 'In Cleaning'
-      };
       return { 
         isValid: false, 
-        message: `Invalid status: ${statusLabels[container.status]}`, 
+        message: t('gate.out.error.invalidStatus').replace('{status}', container.status), 
         container 
       };
     }
@@ -140,7 +134,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
    if (firstContainerSize === '40ft' && validInputs.length > 1) {
      return {
        isValid: false,
-       error: 'Truck capacity exceeded: 40ft containers require full truck capacity (1 container max)'
+       error: t('gate.out.truckRules.40ft')
      };
    }
 
@@ -152,7 +146,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
      if (secondContainerSize === '40ft') {
        return {
          isValid: false,
-         error: 'Invalid combination: Cannot load 40ft container after 20ft container'
+         error: t('gate.out.truckRules.mix')
        };
      }
    }
@@ -331,9 +325,9 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-gray-900">Complete Gate Out</h3>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">{t('gate.out.completion.title')}</h3>
                 <p className="text-xs sm:text-sm text-gray-600">
-                  {operation.bookingNumber || operation.id} - {operation.remainingContainers} containers remaining
+                  {operation.bookingNumber || operation.id} - {operation.remainingContainers} {t('common.containers')} remaining
                 </p>
               </div>
             </div>
@@ -352,22 +346,22 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
             {/* Operation Summary */}
             <div className="bg-blue-50 rounded-xl p-4 sm:p-6 border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3 text-sm sm:text-base">Operation Details</h4>
+              <h4 className="font-semibold text-blue-900 mb-3 text-sm sm:text-base">{t('gate.out.summary')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div>
-                  <span className="text-blue-700">Booking:</span>
+                  <span className="text-blue-700">{t('nav.bookingReference')}:</span>
                   <div className="font-medium break-all">{operation.bookingNumber || 'N/A'}</div>
                 </div>
                 <div>
-                  <span className="text-blue-700">Client:</span>
+                  <span className="text-blue-700">{t('common.client')}:</span>
                   <div className="font-medium break-words">{operation.clientName || 'Unknown Client'}</div>
                 </div>
                 <div>
-                  <span className="text-blue-700">Driver:</span>
+                  <span className="text-blue-700">{t('gate.out.form.driver')}:</span>
                   <div className="font-medium break-words">{operation.driverName || 'N/A'}</div>
                 </div>
                 <div>
-                  <span className="text-blue-700">Vehicle:</span>
+                  <span className="text-blue-700">{t('gate.out.form.vehicle')}:</span>
                   <div className="font-medium break-all">{operation.truckNumber || 'N/A'}</div>
                 </div>
               </div>
@@ -376,10 +370,10 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
             {/* Container Number Inputs */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Container Numbers</h4>
+                <h4 className="font-semibold text-gray-900 text-sm sm:text-base">{t('gate.out.completion.containers')}</h4>
                 <div className="flex items-center space-x-2">
                   <span className="text-xs sm:text-sm text-gray-600">
-                   {containerInputs.filter(input => input.isValid).length}/{Math.min(getMaxContainers(), 2)} containers
+                   {containerInputs.filter(input => input.isValid).length}/{Math.min(getMaxContainers(), 2)} {t('common.containers')}
                   </span>
                  {containerInputs.length < getMaxContainers() && shouldEnableSecondField() && (
                     <button
@@ -398,12 +392,12 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                <div className="flex items-center space-x-2 mb-2">
                  <Package className="h-4 w-4 text-blue-600" />
-                 <span className="text-sm font-medium text-blue-900">Truck Capacity Rules</span>
+                 <span className="text-sm font-medium text-blue-900">{t('gate.out.truckRules.title')}</span>
                </div>
                <div className="text-xs text-blue-800 space-y-1">
-                 <div>• Maximum 1 container of 40ft per truck</div>
-                 <div>• Maximum 2 containers of 20ft per truck</div>
-                 <div>• Cannot mix 20ft and 40ft containers in same truck</div>
+                 <div>• {t('gate.out.truckRules.40ft')}</div>
+                 <div>• {t('gate.out.truckRules.20ft')}</div>
+                 <div>• {t('gate.out.truckRules.mix')}</div>
                </div>
              </div>
 
@@ -422,7 +416,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                }`}>
                   <div className="flex items-center justify-between">
                    <div className="flex items-center space-x-2">
-                     <h5 className="font-medium text-gray-900 text-sm sm:text-base">Container {index + 1}</h5>
+                     <h5 className="font-medium text-gray-900 text-sm sm:text-base">{t('common.container')} {index + 1}</h5>
                      {index === 0 && containerInputs[0].isValid && containerInputs[0].containerData && (
                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                          getContainerSize(containerInputs[0].containerData) === '40ft'
@@ -434,7 +428,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                      )}
                      {index === 1 && !shouldEnableSecondField() && (
                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                         Disabled (40ft truck full)
+                         {t('gate.out.truckRules.disabled40ft')}
                        </span>
                      )}
                    </div>
@@ -452,7 +446,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                        Container Number *
+                        {t('gate.in.form.containerNumber')} *
                       </label>
                       <div className="relative">
                         <input
@@ -495,7 +489,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                        Confirm Container Number *
+                        {t('gate.out.completion.confirm')} *
                       </label>
                       <div className="relative">
                         <input
@@ -515,7 +509,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                               ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500 py-4 sm:py-3'
                               : 'py-4 sm:py-3'
                           }`}
-                          placeholder="Confirm container number"
+                          placeholder={t('gate.out.completion.confirm')}
                           maxLength={11}
                         />
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -558,36 +552,36 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                       <div className="flex items-center mb-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
                         <span className="text-xs sm:text-sm font-medium text-green-800">
-                          Container Validated
+                          {t('gate.out.success.validated')}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-green-700">Number:</span>
+                          <span className="text-green-700">{t('gate.in.form.containerNumber')}:</span>
                           <div className="font-medium text-green-900 break-all">
                             {formatContainerNumberForDisplay(input.containerNumber)}
                           </div>
                         </div>
                         <div>
-                          <span className="text-green-700">Size:</span>
+                          <span className="text-green-700">{t('gate.in.form.containerSize')}:</span>
                           <div className="font-medium text-green-900">
                             {input.containerData.size}
                           </div>
                         </div>
                         <div>
-                          <span className="text-green-700">Type:</span>
+                          <span className="text-green-700">{t('gate.in.form.containerType')}:</span>
                           <div className="font-medium text-green-900 capitalize">
                             {input.containerData.type.replace('_', ' ')}
                           </div>
                         </div>
                         <div>
-                          <span className="text-green-700">Location:</span>
+                          <span className="text-green-700">{t('common.location')}:</span>
                           <div className="font-medium text-green-900">
                             {input.containerData.location}
                           </div>
                         </div>
                         <div className="col-span-2">
-                          <span className="text-green-700">Client:</span>
+                          <span className="text-green-700">{t('common.client')}:</span>
                           <div className="font-medium text-green-900">
                             {input.containerData.clientName}
                           </div>
@@ -607,7 +601,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                     <Calendar className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-purple-900">Gate Out Date & Time</h4>
+                    <h4 className="font-semibold text-purple-900">{t('gate.out.completion.gateOutTime')}</h4>
                     <p className="text-sm text-purple-700">Manual time tracking (Admin only) - Defaults to current system time</p>
                   </div>
                 </div>
@@ -615,7 +609,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-purple-800 mb-2">
-                      Gate Out Date
+                      {t('common.date')}
                     </label>
                     <DatePicker
                       value={gateOutDate}
@@ -626,7 +620,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-purple-800 mb-2">
-                      Gate Out Time
+                      {t('common.time')}
                     </label>
                     <TimePicker
                       value={gateOutTime}
@@ -661,7 +655,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                 className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
               >
                 <span className="sm:hidden">✕</span>
-                <span className="hidden sm:inline">Cancel</span>
+                <span className="hidden sm:inline">{t('common.cancel')}</span>
               </button>
               <button
                 onClick={handleSubmit}
@@ -677,7 +671,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                   <>
                     <Save className="h-4 w-4" />
                     <span className="sm:hidden">Complete</span>
-                    <span className="hidden sm:inline">Complete Gate Out</span>
+                    <span className="hidden sm:inline">{t('gate.out.completion.submit')}</span>
                   </>
                 )}
               </button>

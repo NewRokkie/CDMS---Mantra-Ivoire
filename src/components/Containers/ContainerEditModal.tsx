@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { BasicInformationStep } from './ContainerEditModal/BasicInformationStep';
 import { LocationAssignmentStep } from './ContainerEditModal/LocationAssignmentStep';
@@ -45,6 +46,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   onSave,
 }) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const canEditContainers = user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'operator';
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -76,7 +78,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
 
   const handleSubmit = async () => {
     if (!canEditContainers) {
-      throw new Error('You do not have permission to edit containers.');
+      throw new Error(t('containers.edit.noPermission'));
     }
 
     try {
@@ -200,11 +202,11 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   const isStepValid = validationErrors.length === 0 && !isValidating;
 
   const stepLabels = [
-    'Basic Information',
-    'Location Assignment',
-    'Client Information',
-    'Damage Assessment',
-    'Review & Confirm'
+    t('containers.edit.steps.basic'),
+    t('containers.edit.steps.location'),
+    t('containers.edit.steps.client'),
+    t('containers.edit.steps.damage'),
+    t('containers.edit.steps.review')
   ];
 
   const handleNextStep = () => {
@@ -240,7 +242,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     <MultiStepModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Edit Container"
+      title={t('containers.edit.title')}
       icon={Package}
       currentStep={currentStep}
       totalSteps={5}
@@ -255,7 +257,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
       {/* Show validation errors */}
       {validationErrors.length > 0 && (
         <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h4 className="text-sm font-semibold text-red-900 mb-2">Validation Errors:</h4>
+          <h4 className="text-sm font-semibold text-red-900 mb-2">{t('containers.edit.validationErrors')}</h4>
           <ul className="list-disc list-inside space-y-1">
             {validationErrors.map((error, index) => (
               <li key={index} className="text-sm text-red-700">{error}</li>
@@ -267,7 +269,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
       {/* Show validating indicator */}
       {isValidating && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-700">Validating...</p>
+          <p className="text-sm text-blue-700">{t('containers.edit.validating')}</p>
         </div>
       )}
     </MultiStepModal>

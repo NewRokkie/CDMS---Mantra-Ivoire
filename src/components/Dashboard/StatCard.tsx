@@ -1,5 +1,6 @@
 import React from 'react';
-import { DivideIcon as LucideIcon } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface StatCardProps {
   title: string;
@@ -46,6 +47,7 @@ const colorClasses = {
 };
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, color }) => {
+  const { t } = useLanguage();
   const classes = colorClasses[color];
 
   return (
@@ -59,7 +61,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, tr
               <span className={`text-sm font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                 {trend.isPositive ? '+' : ''}{trend.value}%
               </span>
-              <span className="text-xs text-gray-500 ml-1">vs last month</span>
+              <span className="text-xs text-gray-500 ml-1">{t('dashboard.stats.vsLastMonth')}</span>
             </div>
           )}
         </div>

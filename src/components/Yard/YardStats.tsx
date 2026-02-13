@@ -1,6 +1,7 @@
 import React from 'react';
 import { Package, TrendingUp, AlertTriangle, Wrench, Building, BarChart3, Activity, Clock, Users } from 'lucide-react';
 import { Yard } from '../../types';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface YardStatsProps {
   stats: {
@@ -16,6 +17,8 @@ interface YardStatsProps {
 }
 
 export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
+  const { t } = useLanguage();
+
   const formatPercentage = (value: number) => {
     return `${value.toFixed(1)}%`;
   };
@@ -29,14 +32,14 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium text-gray-900">Yard Statistics</h3>
+      <h3 className="text-sm font-medium text-gray-900">{t('yard.stats.title')}</h3>
       
       <div className="space-y-3">
       {/* Total Containers */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-600">Total Containers</p>
+            <p className="text-xs font-medium text-gray-600">{t('dashboard.stats.containers')}</p>
             <p className="text-xl font-bold text-gray-900">{stats.totalContainers}</p>
           </div>
           <div className="p-2 bg-blue-100 rounded-lg">
@@ -49,7 +52,7 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-600">Occupancy Rate</p>
+            <p className="text-xs font-medium text-gray-600">{t('dashboard.stats.occupancy')}</p>
             <p className="text-xl font-bold text-gray-900">{formatPercentage(stats.occupancyRate)}</p>
           </div>
           <div className={`p-2 rounded-lg ${getOccupancyColor(stats.occupancyRate)}`}>
@@ -74,7 +77,7 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-600">Active Containers</p>
+            <p className="text-xs font-medium text-gray-600">{t('yard.stats.activeContainers')}</p>
             <p className="text-xl font-bold text-gray-900">{stats.inDepot}</p>
           </div>
           <div className="p-2 bg-green-100 rounded-lg">
@@ -87,7 +90,7 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-600">Under Maintenance</p>
+            <p className="text-xs font-medium text-gray-600">{t('yard.stats.maintenance')}</p>
             <p className="text-xl font-bold text-gray-900">{stats.maintenance}</p>
           </div>
           <div className="p-2 bg-orange-100 rounded-lg">
@@ -100,7 +103,7 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-600">Being Cleaned</p>
+            <p className="text-xs font-medium text-gray-600">{t('yard.stats.cleaning')}</p>
             <p className="text-xl font-bold text-gray-900">{stats.cleaning}</p>
           </div>
           <div className="p-2 bg-purple-100 rounded-lg">
@@ -113,7 +116,7 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-600">Damaged</p>
+            <p className="text-xs font-medium text-gray-600">{t('yard.stats.damaged')}</p>
             <p className="text-xl font-bold text-gray-900">{stats.damaged}</p>
           </div>
           <div className="p-2 bg-red-100 rounded-lg">
@@ -126,7 +129,7 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all duration-300">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-600">Total Stacks</p>
+            <p className="text-xs font-medium text-gray-600">{t('yard.stats.totalStacks')}</p>
             <p className="text-xl font-bold text-gray-900">{stats.totalStacks}</p>
           </div>
           <div className="p-2 bg-teal-100 rounded-lg">
@@ -139,22 +142,22 @@ export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
       {/* Yard Information */}
       {currentYard && (
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Yard Information</h4>
+          <h4 className="text-sm font-medium text-gray-900 mb-2">{t('yard.info.title')}</h4>
           <div className="space-y-2 text-xs text-gray-600">
             <div className="flex justify-between">
-              <span>Layout:</span>
+              <span>{t('yard.info.layout')}</span>
               <span className="font-medium capitalize">{currentYard.layout}</span>
             </div>
             <div className="flex justify-between">
-              <span>Sections:</span>
+              <span>{t('yard.info.sections')}</span>
               <span className="font-medium">{currentYard.sections.length}</span>
             </div>
             <div className="flex justify-between">
-              <span>Total Capacity:</span>
+              <span>{t('yard.info.totalCapacity')}</span>
               <span className="font-medium">{currentYard.totalCapacity.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span>Current Occupancy:</span>
+              <span>{t('yard.info.currentOccupancy')}</span>
               <span className="font-medium">{currentYard.currentOccupancy.toLocaleString()}</span>
             </div>
           </div>

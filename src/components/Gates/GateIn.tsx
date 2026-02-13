@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import { useYard } from '../../hooks/useYard';
-import { gateService, clientService, containerService, stackService, realtimeService, locationManagementService, yardsService } from '../../services/api';
+import { gateService, clientService, containerService, realtimeService, locationManagementService, yardsService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
 
-import { stackPairingService } from '../../services/api/stackPairingService';
 // import moment from 'moment'; // Commented out - not used in current code
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
@@ -33,6 +33,7 @@ const extractStackNumber = (location: string): string | null => {
 
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
+  const { t } = useLanguage();
   const { currentYard, validateYardOperation } = useYard();
   const toast = useToast();
 
@@ -45,8 +46,6 @@ export const GateIn: React.FC = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [gateInOperations, setGateInOperations] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
-  const [stacks, setStacks] = useState<any[]>([]);
-  const [pairingMap, setPairingMap] = useState<Map<number, number>>(new Map());
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
@@ -56,40 +55,34 @@ export const GateIn: React.FC = () => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
+      const [clientsData, operationsData, containersData] = await Promise.all([
         clientService.getAll().catch(err => { handleError(err, 'GateIn.loadClients'); return []; }),
         gateService.getGateInOperations({ yardId: currentYard?.id }).catch(err => {
           handleError(err, 'GateIn.loadOperations');
           return [];
         }),
-        containerService.getAll().catch(err => { handleError(err, 'GateIn.loadContainers'); return []; }),
-        stackService.getAll(currentYard?.id).catch(err => { handleError(err, 'GateIn.loadStacks'); return []; }),
-        stackPairingService.getPairingMap(currentYard?.id || '').catch(err => { handleError(err, 'GateIn.loadPairingMap'); return new Map(); })
+        containerService.getAll().catch(err => { handleError(err, 'GateIn.loadContainers'); return []; })
       ]);
 
       setClients(clientsData || []);
       setGateInOperations(operationsData || []);
       setContainers(containersData || []);
-      setStacks(stacksData || []);
-      setPairingMap(pairingMapData || new Map());
     } catch (error) {
       handleError(error, 'GateIn.loadData');
       setClients([]);
       setGateInOperations([]);
       setContainers([]);
-      setStacks([]);
-      setPairingMap(new Map());
     } finally {
       setLoading(false);
     }
   }, [currentYard?.id]);
 
-  // Load data when currentYard changes, not when loadData function changes
+  // Load data when currentYard changes
   useEffect(() => {
     if (currentYard?.id) {
       loadData();
     }
-  }, [currentYard?.id]); // Remove loadData from dependencies
+  }, [currentYard?.id, loadData]);
 
 
 useEffect(() => {
@@ -111,13 +104,11 @@ useEffect(() => {
   });
 
   return () => {
-    try { unsubscribeGateIn(); } catch (e) { /* ignore */ }
-    try { unsubscribeContainers(); } catch (e) { /* ignore */ }
+    try { unsubscribeGateIn(); } catch { /* ignore */ }
+    try { unsubscribeContainers(); } catch { /* ignore */ }
   };
-}, [currentYard?.id]);
+}, [currentYard?.id, loadData]);
 
-// Minimal mockLocations for pending operations view. Replace with full logic if needed.
-const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] }), [stacks, containers, pairingMap]);
 
   const pendingOperations = gateInOperations.filter(op =>
     op.status === 'pending' || !op.assignedLocation
@@ -185,23 +176,38 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
 
   const alimentaireContainersCount = allOperations.filter(op => op.classification === 'alimentaire').length;
 
-  const handleInputChange = (field: keyof GateInFormData, value: any) => {
-    // Container number fields are now handled by ContainerNumberInput component
-    // No special processing needed here since the component handles validation
+  const handleHighCubeChange = useCallback((isHighCube: boolean) => {
+    setFormData(prev => {
+      // If switching High Cube, validate if current container type is still valid
+      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, prev.containerSize, isHighCube);
+
+      return {
+        ...prev,
+        isHighCube,
+        // Reset to default 'dry' type if current type is not valid for new high cube setting
+        containerType: isCurrentTypeValid ? prev.containerType : 'dry'
+      };
+    });
+  }, []);
+
+  const handleStatusChange = useCallback((isFullStatus: boolean) => {
+    const newStatus = isFullStatus ? 'FULL' : 'EMPTY';
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      status: newStatus,
+      bookingReference: newStatus === 'EMPTY' ? '' : prev.bookingReference
     }));
+  }, []);
 
-    // Trigger auto-save with cleanup
-    setAutoSaving(true);
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-    autoSaveTimeoutRef.current = setTimeout(() => setAutoSaving(false), 1000);
-  };
+  const handleQuantityChange = useCallback((quantity: 1 | 2) => {
+    setFormData(prev => ({
+      ...prev,
+      containerQuantity: quantity,
+      secondContainerNumber: quantity === 1 ? '' : prev.secondContainerNumber
+    }));
+  }, []);
 
-  const handleContainerSizeChange = (size: '20ft' | '40ft') => {
+  const handleContainerSizeChange = useCallback((size: '20ft' | '40ft') => {
     setFormData(prev => {
       // Check if current container type is valid for the new size and high cube flag
       const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, size, prev.isHighCube);
@@ -219,42 +225,30 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         containerType: isCurrentTypeValid ? prev.containerType : 'dry'
       };
     });
-  };
+  }, []);
 
-  const handleQuantityChange = (quantity: 1 | 2) => {
+  const handleInputChange = useCallback((field: keyof GateInFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
-      containerQuantity: quantity,
-      secondContainerNumber: quantity === 1 ? '' : prev.secondContainerNumber
+      [field]: value
     }));
-  };
 
-  const handleStatusChange = (isFullStatus: boolean) => {
-    const newStatus = isFullStatus ? 'FULL' : 'EMPTY';
+    // Trigger auto-save with cleanup
+    setAutoSaving(true);
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    autoSaveTimeoutRef.current = setTimeout(() => setAutoSaving(false), 1000);
+  }, []);
+
+  const handleTransactionTypeChange = useCallback((transactionType: 'Retour Livraison' | 'Transfert (IN)') => {
     setFormData(prev => ({
       ...prev,
-      status: newStatus,
-      bookingReference: newStatus === 'EMPTY' ? '' : prev.bookingReference
+      transactionType
     }));
-  };
+  }, []);
 
-  const handleHighCubeChange = (isHighCube: boolean) => {
-    setFormData(prev => {
-      // If switching High Cube, validate if current container type is still valid
-      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, prev.containerSize, isHighCube);
-
-      return {
-        ...prev,
-        isHighCube,
-        // Reset to default 'dry' type if current type is not valid for new high cube setting
-        containerType: isCurrentTypeValid ? prev.containerType : 'dry'
-      };
-    });
-  };
-
-
-
-  const handleClientChange = (clientId: string) => {
+  const handleClientChange = useCallback((clientId: string) => {
     const selectedClient = clients.find(c => c.id === clientId);
     if (selectedClient) {
       setFormData(prev => ({
@@ -264,14 +258,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         clientName: selectedClient.name
       }));
     }
-  };
-
-  const handleTransactionTypeChange = (transactionType: 'Retour Livraison' | 'Transfert (IN)') => {
-    setFormData(prev => ({
-      ...prev,
-      transactionType
-    }));
-  };
+  }, [clients]);
 
   // Memoized validation check for current step (safe for render-time calls)
   const isCurrentStepValid = React.useMemo(() => {
@@ -286,7 +273,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     }
   }, [currentStep, formData, hasModuleAccess]);
 
-  const validateStep = (step: number): boolean => {
+  const validateStep = useCallback((step: number): boolean => {
     try {
       // Clear previous validation errors
       setValidationErrors([]);
@@ -318,19 +305,54 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       setValidationErrors(['Validation error occurred. Please try again.']);
       return false;
     }
-  };
+  }, [formData, hasModuleAccess]);
 
-  const handleNextStep = () => {
+  const handleNextStep = useCallback(() => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(3, prev + 1));
     }
-  };
+  }, [currentStep, validateStep]);
 
-  const handlePrevStep = () => {
+  const handlePrevStep = useCallback(() => {
     setCurrentStep(prev => Math.max(1, prev - 1));
-  };
+  }, []);
 
-  const handleSubmit = async () => {
+  const resetForm = useCallback(() => {
+    setFormData({
+      containerSize: '20ft',
+      containerType: 'dry',
+      isHighCube: false,
+      containerIsoCode: '',
+      containerQuantity: 1,
+      status: 'EMPTY', // Default to 'EMPTY'
+      clientId: '',
+      clientCode: '',
+      clientName: '',
+      bookingReference: '',
+      equipmentReference: '', // Equipment reference for EDI transmission
+      bookingType: 'EXPORT',
+      containerNumber: '',
+      containerNumberConfirmation: '',
+      secondContainerNumber: '',
+      secondContainerNumberConfirmation: '',
+      classification: 'divers', // Default to 'divers'
+      transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
+      driverName: '',
+      truckNumber: '',
+      transportCompany: '',
+      truckArrivalDate: new Date().toISOString().split('T')[0],
+      truckArrivalTime: new Date().toTimeString().slice(0, 5),
+      truckDepartureDate: '',
+      truckDepartureTime: '',
+      notes: '',
+      operationStatus: 'pending'
+    });
+    setSubmissionError(null);
+    setValidationErrors([]);
+    setValidationWarnings([]);
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
 
     // Clear previous errors
     setSubmissionError(null);
@@ -484,42 +506,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      containerSize: '20ft',
-      containerType: 'dry',
-      isHighCube: false,
-      containerIsoCode: '',
-      containerQuantity: 1,
-      status: 'EMPTY', // Default to 'EMPTY'
-      clientId: '',
-      clientCode: '',
-      clientName: '',
-      bookingReference: '',
-      equipmentReference: '', // Equipment reference for EDI transmission
-      bookingType: 'EXPORT',
-      containerNumber: '',
-      containerNumberConfirmation: '',
-      secondContainerNumber: '',
-      secondContainerNumberConfirmation: '',
-      classification: 'divers', // Default to 'divers'
-      transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
-      driverName: '',
-      truckNumber: '',
-      transportCompany: '',
-      truckArrivalDate: new Date().toISOString().split('T')[0],
-      truckArrivalTime: new Date().toTimeString().slice(0, 5),
-      truckDepartureDate: '',
-      truckDepartureTime: '',
-      notes: '',
-      operationStatus: 'pending'
-    });
-    setSubmissionError(null);
-    setValidationErrors([]);
-    setValidationWarnings([]);
-  };
+  }, [canPerformGateIn, validateYardOperation, containers, hasModuleAccess, formData, user, currentYard, resetForm, loadData, toast]);
 
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
@@ -701,11 +688,11 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
             if (!locationFindError1 && locationRecord1 && !locationRecord1.is_occupied) {
               console.log(`✅ Using first physical location ${physicalLocation1}`);
               // Use the first physical stack location
-              await locationManagementService.assignLocation({
+              await locationManagementService.assignContainer({
                 locationId: locationRecord1.id,
                 containerId: finalContainers[0].id,
                 containerSize: operation.containerSize as '20ft' | '40ft',
-                clientPoolId: null
+                clientPoolId: undefined
               });
               console.log(`✓ Virtual location ${locationData.assignedLocation} mapped to physical ${physicalLocation1} and marked as occupied`);
             } else {
@@ -725,12 +712,12 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               
               if (!locationFindError2 && locationRecord2 && !locationRecord2.is_occupied) {
                 console.log(`✅ Using second physical location ${physicalLocation2}`);
-                await locationManagementService.assignLocation({
-                  locationId: locationRecord2.id,
-                  containerId: finalContainers[0].id,
-                  containerSize: operation.containerSize as '20ft' | '40ft',
-                  clientPoolId: null
-                });
+              await locationManagementService.assignContainer({
+                locationId: locationRecord2.id,
+                containerId: finalContainers[0].id,
+                containerSize: operation.containerSize as '20ft' | '40ft',
+                clientPoolId: undefined
+              });
                 console.log(`✓ Virtual location ${locationData.assignedLocation} mapped to physical ${physicalLocation2} and marked as occupied`);
               } else {
                 console.warn(`❌ Both physical locations for virtual ${locationData.assignedLocation} are occupied or not found`);
@@ -751,11 +738,11 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
             if (locationFindError) {
               console.error('Error finding location:', locationFindError);
             } else if (locationRecord) {
-              await locationManagementService.assignLocation({
+              await locationManagementService.assignContainer({
                 locationId: locationRecord.id,
                 containerId: finalContainers[0].id,
                 containerSize: operation.containerSize as '20ft' | '40ft',
-                clientPoolId: null
+                clientPoolId: undefined
               });
               console.log(`✓ Physical location ${locationData.assignedLocation} marked as occupied`);
             } else {
@@ -1039,8 +1026,8 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     return (
       <div className="text-center py-12">
         <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-        <p className="text-gray-600">You don't have permission to perform gate in operations.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.restricted')}</h3>
+        <p className="text-gray-600">{t('common.unauthorized')}</p>
       </div>
     );
   }
@@ -1055,7 +1042,6 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         onBack={() => setActiveView('overview')}
         onComplete={handleLocationValidation}
         isProcessing={isProcessing}
-        mockLocations={mockLocations}
       />
     );
   }
@@ -1067,8 +1053,6 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate In</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">Container entry management</p>
             </div>
           </div>
         </div>
@@ -1098,8 +1082,6 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate In</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">Container entry management</p>
             </div>
           </div>
 
@@ -1110,7 +1092,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl lg:rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">New Gate In</span>
+              <span className="text-sm lg:text-base">Gate In</span>
             </button>
 
             <button
@@ -1118,7 +1100,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <Clock className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">Pending ({pendingOperations.length})</span>
+              <span className="text-sm lg:text-base">{t('gate.in.pending')} ({pendingOperations.length})</span>
             </button>
           </div>
         </div>
@@ -1136,7 +1118,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{todayGateIns.length}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Today's Gate Ins</p>
+                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.today')}</p>
               </div>
             </div>
           </div>
@@ -1149,7 +1131,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">Pending Operations</p>
+                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.pending')}</p>
               </div>
             </div>
           </div>
@@ -1162,7 +1144,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{completedOperations.length}</p>
-                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">Containers Processed</p>
+                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.processed')}</p>
               </div>
             </div>
           </div>

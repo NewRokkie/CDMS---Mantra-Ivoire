@@ -10,16 +10,6 @@ import { useYard } from '../../../hooks/useYard';
 import { DamageAssessment } from '../types';
 import { bufferZoneService } from '../../../services/bufferZoneService';
 
-interface LocationData {
-  id: string;
-  name: string;
-  capacity: number;
-  available: number;
-  section: string;
-  stackId?: string;
-  stackNumber?: number;
-}
-
 interface LocationValidationOperation {
   id: string;
   date: Date;
@@ -46,11 +36,6 @@ interface LocationValidationModalProps {
   operation: LocationValidationOperation | null;
   onComplete: (operation: LocationValidationOperation, locationData: any) => Promise<void>;
   isProcessing: boolean;
-  mockLocations: {
-    '20ft': LocationData[];
-    '40ft': LocationData[];
-    damage: LocationData[];
-  };
 }
 
 export const LocationValidationModal: React.FC<LocationValidationModalProps> = ({

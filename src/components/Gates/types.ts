@@ -200,6 +200,7 @@ export interface ContainerTypeSelectProps {
   selectedIso?: string;
   onChange: (value: string, iso?: string) => void;
   containerSize: '20ft' | '40ft';
+  isHighCube: boolean;
 }
 
 export interface SwitchProps {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useYard } from '../../hooks/useYard';
+import { useLanguage } from '../../hooks/useLanguage';
 import { containerService, stackService } from '../../services/api';
 import { realtimeService } from '../../services/api/realtimeService';
 import { yardsService } from '../../services/api/yardsService';
@@ -10,6 +11,7 @@ import { handleError } from '../../services/errorHandling';
 
 export const YardManagement: React.FC = () => {
   const { currentYard: contextYard } = useYard();
+  const { t } = useLanguage();
   const [allContainers, setAllContainers] = useState<Container[]>([]);
   const [currentYard, setCurrentYard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -110,14 +112,14 @@ export const YardManagement: React.FC = () => {
           <div className="flex items-center justify-center h-screen">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-600">Loading Yard Management...</p>
+              <p className="text-gray-600">{t('yard.loading')}</p>
             </div>
           </div>
         ) : !currentYard ? (
           <div className="flex items-center justify-center h-screen">
             <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-200">
-              <p className="text-yellow-800 font-medium">No yard selected</p>
-              <p className="text-yellow-600 text-sm mt-2">Please select a yard to continue</p>
+              <p className="text-yellow-800 font-medium">{t('yard.noYardSelected')}</p>
+              <p className="text-yellow-600 text-sm mt-2">{t('yard.selectYardMessage')}</p>
             </div>
           </div>
         ) : (
