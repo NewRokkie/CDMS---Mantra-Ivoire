@@ -88,9 +88,9 @@ class EDIDatabaseService {
       return null;
     }
 
-    const { data, error } = await query.single();
+    const { data, error } = await query.maybeSingle();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (error) {
       console.error('Error fetching client:', error);
       throw new Error(`Failed to fetch client: ${error.message}`);
     }
@@ -151,9 +151,9 @@ class EDIDatabaseService {
         clients!containers_client_id_fkey (*)
       `)
       .eq('number', containerNumber.toUpperCase())
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error fetching container:', error);
       throw new Error(`Failed to fetch container: ${error.message}`);
     }
@@ -448,9 +448,12 @@ class EDIDatabaseService {
       .select('auto_edi')
       .eq('code', clientCode.toUpperCase())
       .eq('active', true)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
+      if (error) {
+        console.error('Error checking if client EDI is enabled:', error);
+      }
       return false;
     }
 
