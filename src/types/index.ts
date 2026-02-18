@@ -234,7 +234,6 @@ export interface Container {
   auditLogs?: AuditLog[];
   // Enhanced yard management fields
   coordinates?: string; // Grid coordinates (e.g., "A-12-03")
-  weight?: number; // Container weight in kg
   contents?: string; // Description of container contents
   origin?: string; // Origin location
   destination?: string; // Destination location
@@ -245,8 +244,10 @@ export interface Container {
   hazardous?: boolean; // Hazardous materials flag
   customsStatus?: 'pending' | 'cleared' | 'hold';
   bookingReference?: string;
-  sealNumber?: string;
-  temperatureSetting?: number;
+  // EDI fields
+  ediTransmitted?: boolean; // Whether EDI was transmitted
+  ediTransmissionDate?: Date; // When EDI was transmitted
+  ediErrorMessage?: string; // Error message if EDI failed
   // Soft delete fields
   isDeleted?: boolean; // Soft delete flag
   deletedAt?: Date; // When container was deleted

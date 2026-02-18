@@ -26,11 +26,22 @@ export default {
         }
       },
       fontFamily: {
-        // Marianina Wide pour les titres (Tracking 0 pour Web UI)
-        heading: ['"Marianina Wide FY"', 'Arial', 'sans-serif'],
-        // Helvetica Neue pour les données denses et le corps de texte
-        body: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
-        system: ['Arial', 'sans-serif'],
+        // Gilroy comme police par défaut pour tout le texte général
+        sans: ['"Gilroy-Regular"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+        
+        // Variantes Gilroy pour titres, labels, navigation, boutons
+        'gilroy-light': ['"Gilroy-Light"', 'sans-serif'],
+        'gilroy': ['"Gilroy-Regular"', 'sans-serif'],
+        'gilroy-medium': ['"Gilroy-Medium"', 'sans-serif'],
+        'gilroy-bold': ['"Gilroy-Bold"', 'sans-serif'],
+        'gilroy-heavy': ['"Gilroy-Heavy"', 'sans-serif'],
+        
+        // Helvetica Neue pour chiffres, données numériques, tableaux
+        'numeric': ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+        'helvetica': ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+        
+        // Marianina Wide pour les grands titres (Tracking 0 pour Web UI)
+        'heading': ['"Marianina Wide FY"', 'Arial', 'sans-serif'],
       },
       letterSpacing: {
         // Marianina nécessite souvent un tracking serré (-20), sauf en Web UI

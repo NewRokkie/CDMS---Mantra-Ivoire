@@ -18,6 +18,7 @@ import { handleError } from '../../services/errorHandling';
 import { exportToExcel, formatDateForExport, formatDateShortForExport } from '../../utils/excelExport';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
+import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 
 // Helper function to format container number for display (adds hyphens)
 const formatContainerNumberForDisplay = (containerNumber?: string | null): string => {
@@ -62,6 +63,7 @@ const formatGateInTime = (date?: Date | null): string => {
 export const ContainerList: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ediStatuses, setEdiStatuses] = useState<Map<string, { hasFailed: boolean; transmitted: boolean }>>(new Map());
 
   useEffect(() => {
     async function loadContainers() {
@@ -72,6 +74,22 @@ export const ContainerList: React.FC = () => {
           return [];
         });
         setContainers(data || []);
+        
+        // Load EDI statuses for containers
+        if (data && data.length > 0) {
+          const statusMap = new Map<string, { hasFailed: boolean; transmitted: boolean }>();
+          
+          // Check each container for failed EDI transmissions
+          for (const container of data) {
+            const failedTransmissions = await ediTransmissionService.getFailedTransmissions(container.number);
+            statusMap.set(container.id, {
+              hasFailed: failedTransmissions.length > 0,
+              transmitted: container.ediTransmitted || false
+            });
+          }
+          
+          setEdiStatuses(statusMap);
+        }
       } catch (error) {
         handleError(error, 'ContainerList.loadContainers');
         setContainers([]);
@@ -537,10 +555,30 @@ function filterTable(){
     else exportHTML(rows);
   };
 
-  const regenerateEDI = (container: Container) => {
-    // Simulate EDI regeneration/update: add audit log and notify user
-    addAuditLog(container.id, 'edi_regenerated', `EDI regenerated for container ${container.number}`);
-    toast.info(`EDI regenerated for ${container.number} (will reuse existing EDI id where applicable).`);
+  const regenerateEDI = async (container: Container) => {
+    try {
+      toast.info(`Regenerating EDI for ${container.number}...`);
+      
+      const result = await ediTransmissionService.regenerateEDI(container.id);
+      
+      if (result.success) {
+        addAuditLog(container.id, 'edi_regenerated', `EDI successfully regenerated and transmitted for container ${container.number}`);
+        toast.success(`EDI regenerated and transmitted for ${container.number}`);
+        
+        // Update EDI status
+        setEdiStatuses(prev => {
+          const newMap = new Map(prev);
+          newMap.set(container.id, { hasFailed: false, transmitted: true });
+          return newMap;
+        });
+      } else {
+        addAuditLog(container.id, 'edi_regeneration_failed', `EDI regeneration failed for container ${container.number}: ${result.error}`);
+        toast.error(`EDI regeneration failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error regenerating EDI:', error);
+      toast.error(`Failed to regenerate EDI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   // Show client restriction notice
@@ -782,6 +820,18 @@ function filterTable(){
                           <div className="text-xs text-red-600 flex items-center mt-1">
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             {container.damage.length} damage(s) reported
+                          </div>
+                        )}
+                        {ediStatuses.get(container.id)?.hasFailed && (
+                          <div className="text-xs text-orange-600 flex items-center mt-1">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            EDI transmission failed
+                          </div>
+                        )}
+                        {ediStatuses.get(container.id)?.transmitted && !ediStatuses.get(container.id)?.hasFailed && (
+                          <div className="text-xs text-green-600 flex items-center mt-1">
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            EDI transmitted
                           </div>
                         )}
                       </div>

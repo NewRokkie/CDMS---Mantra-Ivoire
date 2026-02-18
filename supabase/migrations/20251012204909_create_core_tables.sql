@@ -3,7 +3,7 @@
 
   ## Overview
   This migration creates the foundational tables for a complete container depot management system.
-  
+
   ## New Tables
 
   ### 1. `clients`
@@ -36,11 +36,8 @@
   - `client_code` (text) - Denormalized for quick access
   - `gate_in_date` (timestamptz) - When container entered
   - `gate_out_date` (timestamptz) - When container left
-  - `weight` (decimal) - Container weight
   - `damage` (jsonb) - Array of damage descriptions
   - `booking_reference` (text) - Related booking/BL number
-  - `seal_number` (text) - Seal number if applicable
-  - `temperature_setting` (decimal) - For reefers
   - `created_by` (text) - User who created record
   - `updated_by` (text) - User who last updated
   - `created_at` (timestamptz)
@@ -79,7 +76,6 @@
   - `assigned_location` (text) - Where container was placed
   - `damage_reported` (boolean)
   - `damage_description` (text)
-  - `weight` (decimal)
   - `status` (text) - pending, completed, cancelled
   - `operator_id` (text) - User who performed operation
   - `operator_name` (text)
@@ -188,7 +184,6 @@ CREATE TABLE IF NOT EXISTS containers (
   client_code text,
   gate_in_date timestamptz,
   gate_out_date timestamptz,
-  weight decimal(10,2),
   damage jsonb DEFAULT '[]'::jsonb,
   booking_reference text,
   seal_number text,
@@ -233,7 +228,6 @@ CREATE TABLE IF NOT EXISTS gate_in_operations (
   assigned_location text,
   damage_reported boolean DEFAULT false,
   damage_description text,
-  weight decimal(10,2),
   status text DEFAULT 'completed',
   operator_id text,
   operator_name text,

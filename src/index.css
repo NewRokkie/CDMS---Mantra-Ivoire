@@ -1,19 +1,68 @@
+@import url('https://fonts.cdnfonts.com/css/gilroy-bold?styles=20876,20878,20880');
+@import url('https://fonts.cdnfonts.com/css/helvetica-neue-55');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.cdnfonts.com/css/gilroy-bold?styles=20876,20878,20880');
-@import url('https://fonts.cdnfonts.com/css/helvetica-neue-55');
-
 
 @layer components {
   body {
-    font-family: 'Gilroy-Bold', sans-serif;
-    font-family: 'Gilroy-Heavy', sans-serif;
+    font-family: 'Gilroy-Regular', 'Helvetica Neue', sans-serif;
+  }
+
+  /* Font family utilities */
+  .font-gilroy-light {
     font-family: 'Gilroy-Light', sans-serif;
-    font-family: 'Gilroy-Medium', sans-serif;
+  }
+
+  .font-gilroy-regular {
     font-family: 'Gilroy-Regular', sans-serif;
+  }
+
+  .font-gilroy-medium {
+    font-family: 'Gilroy-Medium', sans-serif;
+  }
+
+  .font-gilroy-bold {
+    font-family: 'Gilroy-Bold', sans-serif;
+  }
+
+  .font-gilroy-heavy {
+    font-family: 'Gilroy-Heavy', sans-serif;
+  }
+
+  .font-helvetica {
     font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  /* Numeric content - use Helvetica Neue */
+  .font-numeric {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Apply numeric font to common numeric elements */
+  input[type="number"],
+  .numeric-input,
+  .price,
+  .quantity,
+  .weight,
+  .measurement,
+  .stat-value,
+  .counter,
+  .timer,
+  .date-display,
+  .time-display {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Tables with numeric data */
+  table td.numeric,
+  table th.numeric {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-variant-numeric: tabular-nums;
   }
 
   .label {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useRef, useEffect } from 'react';
 import { CheckCircle, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 
 export interface Notification {
@@ -36,31 +36,74 @@ interface NotificationProviderProps {
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const timeoutRefs = useRef(new Map<string, NodeJS.Timeout>());
+  const idCounter = useRef(0);
+
+  const clearAll = useCallback(() => {
+    // Nettoyer tous les timers
+    timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+    timeoutRefs.current.clear();
+
+    // Réinitialiser les notifications
+    setNotifications([]);
+  }, []);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+
+    // Clear the timeout if it exists
+    if (timeoutRefs.current.has(id)) {
+      clearTimeout(timeoutRefs.current.get(id)!);
+      timeoutRefs.current.delete(id);
+    }
+  }, []);
 
   const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = Math.random().toString(36).substr(2, 9);
+    // Limiter le nombre de notifications affichées simultanément
+    const MAX_NOTIFICATIONS = 5;
+    if (notifications.length >= MAX_NOTIFICATIONS) {
+      // Supprimer la plus ancienne notification si la limite est atteinte
+      const oldestNotification = notifications[0];
+      if (oldestNotification) {
+        removeNotification(oldestNotification.id);
+      }
+    }
+
+    const id = `${Date.now()}-${idCounter.current++}-${Math.random().toString(36).substr(2, 9)}`;
     const newNotification: Notification = {
       ...notification,
       id,
-      duration: notification.duration ?? 5000
+      duration: notification.duration ?? (notification.type === 'error' ? 8000 : 5000)
     };
+
+    // Empêcher l'ajout de notifications avec le même titre et message que la dernière
+    const isDuplicate = notifications.some(
+      n => n.title === newNotification.title && n.message === newNotification.message
+    );
+
+    if (isDuplicate) {
+      return; // Ne pas ajouter de notification dupliquée
+    }
 
     setNotifications(prev => [...prev, newNotification]);
 
     // Auto-remove after duration
     if (newNotification.duration && newNotification.duration > 0) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         removeNotification(id);
       }, newNotification.duration);
+
+      // Store timeout reference
+      timeoutRefs.current.set(id, timeoutId);
     }
-  }, []);
+  }, [removeNotification, notifications.length]);
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
-
-  const clearAll = useCallback(() => {
-    setNotifications([]);
+  // Clean up timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current.clear();
+    };
   }, []);
 
   return (
@@ -140,14 +183,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
           {getIcon()}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium">{title}</h4>
+          <h4 className="text-sm font-gilroy-bold">{title}</h4>
           {message && (
-            <p className="text-sm opacity-90 mt-1">{message}</p>
+            <p className="text-sm font-gilroy opacity-90 mt-1">{message}</p>
           )}
           {action && (
             <button
               onClick={action.onClick}
-              className="text-sm font-medium underline hover:no-underline mt-2"
+              className="text-sm font-gilroy-medium underline hover:no-underline mt-2"
             >
               {action.label}
             </button>
@@ -167,7 +210,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
 // Utility hooks for common notification types
 export const useSuccessNotification = () => {
   const { addNotification } = useNotifications();
-  
+
   return useCallback((title: string, message?: string) => {
     addNotification({
       type: 'success',
@@ -179,7 +222,7 @@ export const useSuccessNotification = () => {
 
 export const useErrorNotification = () => {
   const { addNotification } = useNotifications();
-  
+
   return useCallback((title: string, message?: string) => {
     addNotification({
       type: 'error',
@@ -192,7 +235,7 @@ export const useErrorNotification = () => {
 
 export const useInfoNotification = () => {
   const { addNotification } = useNotifications();
-  
+
   return useCallback((title: string, message?: string) => {
     addNotification({
       type: 'info',
@@ -204,7 +247,7 @@ export const useInfoNotification = () => {
 
 export const useWarningNotification = () => {
   const { addNotification } = useNotifications();
-  
+
   return useCallback((title: string, message?: string) => {
     addNotification({
       type: 'warning',

@@ -145,7 +145,6 @@ export interface GateInOperation {
   operatorName?: string;
   damageReported?: boolean;
   damageDescription?: string;
-  weight?: number;
   ediTransmitted?: boolean;
   ediTransmissionDate?: Date;
   containerId?: string;

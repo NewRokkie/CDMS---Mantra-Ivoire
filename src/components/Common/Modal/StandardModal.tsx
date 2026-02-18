@@ -150,7 +150,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                 <div className="flex items-center gap-2 ml-auto">
                   <button
                     onClick={onClose}
-                    className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
+                    className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm font-gilroy-medium"
                   >
                     <span className="sm:hidden">✕</span>
                     <span className="hidden sm:inline">{cancelLabel}</span>
@@ -161,7 +161,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                       type="button"
                       onClick={handleSubmit}
                       disabled={isSubmitting || !isFormValid}
-                      className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
+                      className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm font-gilroy-medium"
                     >
                       {isSubmitting ? (
                         <>

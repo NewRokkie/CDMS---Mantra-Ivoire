@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { Container, Client, User, BookingReference } from '../types';
 import { GateInOperation, GateOutOperation, AuditLogEntry } from '../types/operations';
-import { MOCK_CONTAINERS, MOCK_CLIENTS, MOCK_USERS, MOCK_RELEASE_ORDERS } from '../data/mockData';
 
 interface GlobalStore {
   containers: Container[];
@@ -59,7 +58,6 @@ interface GlobalStore {
     driverName: string;
     vehicleNumber: string;
     location: string;
-    weight?: number;
     operatorId: string;
     operatorName: string;
     yardId: string;
@@ -388,7 +386,6 @@ export const useGlobalStore = create<GlobalStore>()(
             clientName: client.name,
             clientId: client.id,
             clientCode: client.code,
-            weight: data.weight,
             createdBy: data.operatorName,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -400,6 +397,7 @@ export const useGlobalStore = create<GlobalStore>()(
           const gateInOperation: GateInOperation = {
             id: operationId,
             containerNumber: data.containerNumber,
+            containerQuantity: 1 || 2,
             containerId,
             clientCode: data.clientCode,
             clientName: client.name,
@@ -412,7 +410,6 @@ export const useGlobalStore = create<GlobalStore>()(
             damageReported: data.damageAssessment?.hasDamage || data.damageReported || false,
             damageDescription: data.damageAssessment?.damageDescription || data.damageDescription,
             damageAssessment: data.damageAssessment,
-            weight: data.weight,
             status: 'completed',
             operatorId: data.operatorId,
             operatorName: data.operatorName,
@@ -491,10 +488,10 @@ export const useGlobalStore = create<GlobalStore>()(
           const state = get();
           if (state.containers.length === 0) {
             set({
-              containers: MOCK_CONTAINERS,
-              clients: MOCK_CLIENTS,
-              users: MOCK_USERS,
-              bookingReferences: MOCK_RELEASE_ORDERS,
+              containers: [],
+              clients: [],
+              users: [],
+              bookingReferences: [],
               gateInOperations: [],
               gateOutOperations: [],
               auditLogs: []
@@ -504,10 +501,10 @@ export const useGlobalStore = create<GlobalStore>()(
 
         resetStore: () => {
           set({
-            containers: MOCK_CONTAINERS,
-            clients: MOCK_CLIENTS,
-            users: MOCK_USERS,
-            bookingReferences: MOCK_RELEASE_ORDERS,
+            containers: [],
+            clients: [],
+            users: [],
+            bookingReferences: [],
             gateInOperations: [],
             gateOutOperations: [],
             auditLogs: []

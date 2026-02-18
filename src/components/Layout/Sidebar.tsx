@@ -204,8 +204,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Container className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="font-bold text-lg">MANTRA IVOIRE</h2>
-              <p className="text-xs text-slate-400">Depot Management System (DMS)</p>
+              <h2 className="font-gilroy-bold text-lg">MANTRA IVOIRE</h2>
+              <p className="text-xs font-gilroy text-slate-400">Depot Management System (DMS)</p>
             </div>
           </div>
 
@@ -239,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }`}
                   >
                     <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-gilroy-medium">{item.label}</span>
                   </button>
                 </li>
               );
@@ -260,7 +260,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="flex items-center space-x-3">
                     <Cog className={`h-5 w-5 flex-shrink-0 ${isConfigurationActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span className="font-medium">Configurations</span>
+                    <span className="font-gilroy-medium">Configurations</span>
                   </div>
                   <div className={`transition-transform duration-200 ${isConfigurationsOpen ? 'rotate-90' : ''}`}>
                     <ChevronRight className="h-4 w-4" />
@@ -286,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               }`}
                           >
                             <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                            <span className="font-medium">{item.label}</span>
+                            <span className="font-gilroy-medium">{item.label}</span>
                           </button>
                         </li>
                       );
@@ -300,9 +300,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer - Fixed */}
         <div className="p-4 border-t border-slate-800 flex-shrink-0">
-          <div className="text-xs text-slate-400">
-            <p>© 2025 DepotManager</p>
-            <p>Version 1.0.0</p>
+          <div className="text-xs font-gilroy text-slate-400">
+            <p>© <span className="font-numeric">2025</span> DepotManager</p>
+            <p>Version <span className="font-numeric">1.0.0</span></p>
             {user && (
               <p className="mt-2 text-slate-300">
                 Logged in as: {user.role}

@@ -54,10 +54,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               </svg>
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base lg:text-xl font-bold text-gray-900 truncate">
+              <h1 className="text-base lg:text-xl font-gilroy-bold text-gray-900 truncate">
                 Container Depot
               </h1>
-              <p className="hidden sm:block text-xs lg:text-sm text-gray-600 truncate">
+              <p className="hidden sm:block text-xs lg:text-sm font-gilroy text-gray-600 truncate">
                 {user?.role ? t(`users.role.${user.role}`) : ''}
               </p>
             </div>
@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md animate-bounce-subtle"
               >
                 <Download className="h-4 w-4" />
-                <span className="hidden md:inline font-medium text-sm">{t('common.install')} {getModuleInstallName()}</span>
+                <span className="hidden md:inline font-gilroy-medium text-sm">{t('common.install')} {getModuleInstallName()}</span>
               </button>
             )}
 
@@ -89,13 +89,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <Globe className="h-4 w-4" />
-                <span className="font-medium">{language.toUpperCase()}</span>
+                <span className="font-gilroy-medium">{language.toUpperCase()}</span>
               </button>
 
               {/* Notifications */}
               <button className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors">
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-numeric font-bold">
                   3
                 </span>
               </button>
@@ -114,8 +114,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                     })()}
                   </div>
                   <div className="text-sm">
-                    <p className="font-medium text-gray-900">{user?.name}</p>
-                    <p className="text-xs text-gray-600 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
+                    <p className="font-gilroy-medium text-gray-900">{user?.name}</p>
+                    <p className="text-xs font-gilroy text-gray-600 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
 
@@ -172,15 +172,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                     <User className="h-7 w-7 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-lg font-bold text-gray-900">{user?.name}</p>
-                    <p className="text-sm text-blue-800 capitalize font-medium">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
+                    <p className="text-lg font-gilroy-bold text-gray-900">{user?.name}</p>
+                    <p className="text-sm text-blue-800 capitalize font-gilroy-medium">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
               </div>
 
               {/* Quick Actions Grid */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide px-1">
+                <label className="text-xs font-gilroy-bold text-gray-500 uppercase tracking-wide px-1">
                   {t('common.quickActions')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       <Globe className="h-6 w-6 text-gray-700" />
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-600 font-medium">{language.toUpperCase()}</p>
+                      <p className="text-xs text-gray-600 font-gilroy-medium">{language.toUpperCase()}</p>
                     </div>
                   </button>
 
@@ -209,12 +209,12 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       <div className="p-3 bg-white rounded-xl shadow-md">
                         <Bell className="h-6 w-6 text-gray-700" />
                       </div>
-                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
+                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-numeric font-bold shadow-lg">
                         3
                       </span>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-600 font-medium">3 {t('common.newNotifications')}</p>
+                      <p className="text-xs text-gray-600 font-gilroy-medium"><span className="font-numeric">3</span> {t('common.newNotifications')}</p>
                     </div>
                   </button>
                 </div>
@@ -226,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                   handleLogout();
                   setIsMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95 font-bold"
+                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95 font-gilroy-bold"
               >
                 <LogOut className="h-5 w-5" />
                 <span>{t('nav.logout')}</span>
@@ -234,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
 
               {/* App Info */}
               <div className="pt-6 border-t border-gray-200">
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs font-gilroy text-gray-500 text-center">
                   {t('common.appFooter')}
                 </p>
               </div>

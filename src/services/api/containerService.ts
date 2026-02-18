@@ -10,7 +10,8 @@ export class ContainerService {
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name, code)
+        clients!containers_client_id_fkey(name, code),
+        gate_in_operations(edi_transmitted, edi_transmission_date, edi_error_message)
       `)
       .order('created_at', { ascending: false });
 
@@ -80,28 +81,55 @@ export class ContainerService {
           type: container.type,
           size: container.size,
           status: container.status,
-          full_empty: container.fullEmpty, // Add full/empty status
+          full_empty: container.fullEmpty,
           location: container.location,
           yard_id: container.yardId,
           client_id: container.clientId,
           client_code: container.clientCode,
           gate_in_date: container.gateInDate?.toISOString(),
           gate_out_date: container.gateOutDate?.toISOString(),
-          weight: container.weight,
-          classification: container.classification, // Add classification
-          transaction_type: container.transactionType, // Add transaction type
+          classification: container.classification,
+          transaction_type: container.transactionType,
           damage: container.damage || [],
           booking_reference: container.bookingReference,
-          seal_number: container.sealNumber,
-          temperature_setting: container.temperatureSetting,
           created_by: container.createdBy
         })
         .select()
         .single();
 
-      if (error) throw error;
+      // Diagnostic logging — helps identify RLS / schema issues
+      if (error) {
+        console.error('[containerService.create] ❌ Supabase INSERT error:', {
+          code: error.code,
+          message: error.message,
+          details: (error as any).details,
+          hint: (error as any).hint,
+          status: (error as any).status,
+        });
+        throw error;
+      }
+
+      // Guard: if data is null with no error, RLS SELECT policy blocked the row
+      if (!data) {
+        const rlsError = new Error(
+          'INSERT returned no data — the row may have been blocked by a Row-Level Security (RLS) SELECT policy. ' +
+          'Please run migration: 20260218000000_fix_container_rls_auth_uid.sql in the Supabase Dashboard.'
+        );
+        console.error('[containerService.create] ❌ NULL data after INSERT — likely RLS SELECT policy issue');
+        throw rlsError;
+      }
+
       return this.mapToContainer(data);
-    } catch (error) {
+    } catch (error: any) {
+      // Log raw error BEFORE wrapping — critical for diagnosing schema/RLS issues
+      console.error('[containerService.create] ❌ RAW CATCH error:', {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        status: error?.status,
+      });
       throw ErrorHandler.createGateInError(error);
     }
   }
@@ -135,13 +163,10 @@ export class ContainerService {
       if (updates.clientCode !== undefined) updateData.client_code = updates.clientCode;
       if (updates.gateInDate !== undefined) updateData.gate_in_date = updates.gateInDate?.toISOString();
       if (updates.gateOutDate !== undefined) updateData.gate_out_date = updates.gateOutDate?.toISOString();
-      if (updates.weight !== undefined) updateData.weight = updates.weight;
       if (updates.classification !== undefined) updateData.classification = updates.classification; // Add classification
       if (updates.transactionType !== undefined) updateData.transaction_type = updates.transactionType; // Add transaction type
       if (updates.damage !== undefined) updateData.damage = updates.damage;
       if (updates.bookingReference !== undefined) updateData.booking_reference = updates.bookingReference;
-      if (updates.sealNumber !== undefined) updateData.seal_number = updates.sealNumber;
-      if (updates.temperatureSetting !== undefined) updateData.temperature_setting = updates.temperatureSetting;
       if (updates.updatedBy) updateData.updated_by = updates.updatedBy;
 
       // Handle location changes - release old location if status changes to out_depot
@@ -183,7 +208,7 @@ export class ContainerService {
         .rpc('check_container_deletion_constraints', { container_uuid: id });
 
       if (error) throw error;
-      
+
       if (!data || data.length === 0) {
         throw new GateInError({
           code: 'CONTAINER_NOT_FOUND',
@@ -262,7 +287,7 @@ export class ContainerService {
       }
 
       const result = data[0];
-      
+
       if (!result.success) {
         throw new GateInError({
           code: 'DELETE_BLOCKED',
@@ -864,6 +889,9 @@ export class ContainerService {
   }
 
   private mapToContainer(data: any): Container {
+    // Get EDI info from gate_in_operations if available
+    const gateInOp = data.gate_in_operations?.[0];
+    
     return {
       id: data.id,
       number: data.number,
@@ -878,19 +906,20 @@ export class ContainerService {
       clientCode: data.client_code,
       gateInDate: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
       gateOutDate: data.gate_out_date ? new Date(data.gate_out_date) : undefined,
-      weight: data.weight,
       classification: data.classification, // Map classification
       transactionType: data.transaction_type, // Map transaction type
       damage: data.damage || [],
       auditLogs: data.audit_logs || [], // Map audit logs
       bookingReference: data.booking_reference,
-      sealNumber: data.seal_number,
-      temperatureSetting: data.temperature_setting,
       createdBy: data.created_by,
       updatedBy: data.updated_by,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
       placedAt: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
+      // EDI fields from gate_in_operations
+      ediTransmitted: gateInOp?.edi_transmitted || false,
+      ediTransmissionDate: gateInOp?.edi_transmission_date ? new Date(gateInOp.edi_transmission_date) : undefined,
+      ediErrorMessage: gateInOp?.edi_error_message,
       // Soft delete fields
       isDeleted: data.is_deleted || false,
       deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined,

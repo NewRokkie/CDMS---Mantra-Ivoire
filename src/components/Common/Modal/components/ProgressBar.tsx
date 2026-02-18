@@ -19,7 +19,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         ></div>
       </div>
       {showLabels && (
-        <div className="flex justify-between text-xs text-gray-500 mt-2 font-medium w-full">
+        <div className="flex justify-between text-xs text-gray-500 mt-2 font-gilroy-medium w-full">
           {stepLabels.map((label, index) => (
             <span 
               key={index}

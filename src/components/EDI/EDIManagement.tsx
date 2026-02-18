@@ -25,6 +25,7 @@ import { EDIFileProcessor } from './EDIFileProcessor';
 import { EDIClientModal } from './EDIClientModal';
 import { EDIValidator } from './EDIValidator';
 import { ediManagementService, type EDITransmissionLog } from '../../services/edi/ediManagement';
+import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 import { ediRealDataService } from '../../services/edi/ediRealDataService';
 import { ediConfigurationDatabaseService } from '../../services/edi/ediConfigurationDatabase';
 import { type EDIServerConfig } from '../../services/edi/ediConfiguration';
@@ -70,7 +71,7 @@ const EDIManagement: React.FC = () => {
         ediRealDataService.getRealEDIStatistics(),
         ediRealDataService.getClientServerMappings(),
         ediConfigurationDatabaseService.getConfigurations(),
-        ediManagementService.getTransmissionHistory(),
+        ediTransmissionService.getTransmissionHistory(), // Use database service
         ediRealDataService.getAvailableClients()
       ]);
 
@@ -97,9 +98,13 @@ const EDIManagement: React.FC = () => {
   const handleRetryTransmission = async (logId: string) => {
     setIsLoading(true);
     try {
-      await ediManagementService.retryTransmission(logId);
-      await loadRealData();
-      toast.success('Transmission retry initiated');
+      const result = await ediTransmissionService.retryTransmission(logId);
+      if (result.success) {
+        await loadRealData();
+        toast.success('EDI transmission successful');
+      } else {
+        toast.error(`Retry failed: ${result.error || 'Unknown error'}`);
+      }
     } catch (error) {
       toast.error('Retry failed');
     } finally {
@@ -560,7 +565,12 @@ const EDIManagement: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Transmission History</h3>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Transmission History</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Recent EDI transmissions. Click icons to retry failed transmissions, view errors, or copy details.
+                </p>
+              </div>
               <button
                 onClick={() => {
                   const csvData = ediManagementService.exportTransmissionLogs();
@@ -594,6 +604,9 @@ const EDIManagement: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Attempts
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Client
@@ -639,6 +652,14 @@ const EDIManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-1">
+                        <span className="text-sm text-gray-900">{log.attempts || 0}</span>
+                        {log.attempts > 1 && (
+                          <span className="text-xs text-gray-500">retries</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{log.partnerCode}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -650,15 +671,58 @@ const EDIManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {log.status === 'failed' && (
+                      <div className="flex items-center space-x-2">
+                        {log.status === 'failed' && (
+                          <button
+                            onClick={() => handleRetryTransmission(log.id)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="Retry transmission"
+                            disabled={isLoading}
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </button>
+                        )}
+                        {log.errorMessage && (
+                          <button
+                            onClick={() => {
+                              toast.error(log.errorMessage || 'Unknown error', { duration: 10000 });
+                            }}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="View error details"
+                          >
+                            <AlertCircle className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleRetryTransmission(log.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Retry transmission"
+                          onClick={() => {
+                            const details = `
+EDI Transmission Details
+========================
+Container: ${log.containerNumber}
+Operation: ${log.operation}
+Status: ${log.status}
+Partner: ${log.partnerCode}
+File: ${log.fileName}
+Size: ${log.fileSize} bytes
+Attempts: ${log.attempts}
+Last Attempt: ${log.lastAttempt.toLocaleString()}
+Created: ${log.createdAt.toLocaleString()}
+${log.errorMessage ? `\nError: ${log.errorMessage}` : ''}
+${log.acknowledgmentReceived ? `\nAcknowledged: ${log.acknowledgmentReceived.toLocaleString()}` : ''}
+                            `.trim();
+                            
+                            navigator.clipboard.writeText(details);
+                            toast.success('Details copied to clipboard');
+                          }}
+                          className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50 transition-colors"
+                          title="Copy details to clipboard"
                         >
-                          <RotateCcw className="h-4 w-4" />
+                          <FileText className="h-4 w-4" />
                         </button>
-                      )}
+                        {log.status === 'success' && !log.errorMessage && (
+                          <span className="text-xs text-gray-400 italic">No actions needed</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

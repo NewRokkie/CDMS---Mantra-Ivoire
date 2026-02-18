@@ -130,11 +130,25 @@ class SFTPTransmissionService {
         body: JSON.stringify(request),
       });
 
-      const data = await response.json();
+      // Try to parse as JSON, but handle non-JSON responses
+      let data: any;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Non-JSON response (likely an error page or text)
+        const text = await response.text();
+        data = {
+          status: 'error',
+          message: text.substring(0, 200), // Truncate long error messages
+          error: `Server returned non-JSON response: ${text.substring(0, 100)}...`
+        };
+      }
 
       // 207 Multi-Status means partial success (generated but not transmitted)
       if (!response.ok && response.status !== 207) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
       }
 
       return data;

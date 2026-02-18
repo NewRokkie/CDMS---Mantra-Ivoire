@@ -23,11 +23,11 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
               </div>
             )}
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-gray-900">
+              <h3 className="text-base sm:text-lg font-gilroy-bold text-gray-900">
                 {title}
               </h3>
               {subtitle && (
-                <p className="text-xs sm:text-sm text-gray-600">{subtitle}</p>
+                <p className="text-xs sm:text-sm font-gilroy text-gray-600">{subtitle}</p>
               )}
             </div>
           </div>

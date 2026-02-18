@@ -25,9 +25,6 @@ export interface GateInOperation {
     assessedBy: string;
     assessedAt: Date;
   };
-  sealNumbers?: string[];
-  weight?: number;
-  temperature?: number;
   assignedLocation?: string;
   assignedStack?: string; // Stack number extracted from assignedLocation (e.g., "S04")
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';

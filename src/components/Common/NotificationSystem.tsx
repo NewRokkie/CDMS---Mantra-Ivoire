@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useRef, useEffect } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -15,6 +15,7 @@ interface NotificationContextType {
   notifications: Notification[];
   addNotification: (notification: Omit<Notification, 'id'>) => void;
   removeNotification: (id: string) => void;
+  clearNotifications: () => void;
   showSuccess: (title: string, message?: string) => void;
   showError: (title: string, message?: string) => void;
   showWarning: (title: string, message?: string) => void;
@@ -37,26 +38,59 @@ interface NotificationProviderProps {
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const timeoutRefs = useRef(new Map<string, NodeJS.Timeout>());
+  const idCounter = useRef(0);
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = Date.now().toString();
-    const newNotification: Notification = {
-      ...notification,
-      id,
-      duration: notification.duration || 5000,
-    };
+  // Fonction pour nettoyer toutes les notifications
+  const clearNotifications = useCallback(() => {
+    // Nettoyer tous les timers
+    timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+    timeoutRefs.current.clear();
 
-    setNotifications(prev => [...prev, newNotification]);
-
-    // Auto-remove notification after duration
-    setTimeout(() => {
-      removeNotification(id);
-    }, newNotification.duration);
+    // Réinitialiser les notifications
+    setNotifications([]);
   }, []);
 
   const removeNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+
+    // Clear the timeout if it exists
+    if (timeoutRefs.current.has(id)) {
+      clearTimeout(timeoutRefs.current.get(id)!);
+      timeoutRefs.current.delete(id);
+    }
   }, []);
+
+  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
+    // Limiter le nombre de notifications affichées simultanément
+    const MAX_NOTIFICATIONS = 5;
+    if (notifications.length >= MAX_NOTIFICATIONS) {
+      // Supprimer la plus ancienne notification si la limite est atteinte
+      const oldestNotification = notifications[0];
+      if (oldestNotification) {
+        removeNotification(oldestNotification.id);
+      }
+    }
+
+    const id = `${Date.now()}-${idCounter.current++}-${Math.random().toString(36).substr(2, 9)}`;
+    const newNotification: Notification = {
+      ...notification,
+      id,
+      duration: notification.duration ?? (notification.type === 'error' ? 7000 : 5000),
+    };
+
+    setNotifications(prev => [...prev, newNotification]);
+
+    // Auto-remove notification after duration if duration is not 0
+    if (newNotification.duration && newNotification.duration > 0) {
+      const timeoutId = setTimeout(() => {
+        removeNotification(id);
+      }, newNotification.duration);
+
+      // Store timeout reference
+      timeoutRefs.current.set(id, timeoutId);
+    }
+  }, [removeNotification, notifications.length]);
 
   const showSuccess = useCallback((title: string, message?: string) => {
     addNotification({ type: 'success', title, message });
@@ -78,11 +112,20 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     notifications,
     addNotification,
     removeNotification,
+    clearNotifications,
     showSuccess,
     showError,
     showWarning,
     showInfo,
   };
+
+  // Clean up timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current.clear();
+    };
+  }, []);
 
   return (
     <NotificationContext.Provider value={value}>
@@ -98,7 +141,20 @@ const NotificationContainer: React.FC = () => {
   if (notifications.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div
+      style={{
+        position: 'fixed',
+        top: '1rem',
+        right: '1rem',
+        zIndex: 9999,
+        width: '360px',
+        maxWidth: 'calc(100vw - 2rem)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        pointerEvents: 'none',
+      }}
+    >
       {notifications.map((notification) => (
         <NotificationItem
           key={notification.id}
@@ -143,30 +199,31 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onRem
   };
 
   return (
-    <div className={`max-w-sm w-full ${getBackgroundColor()} border rounded-lg shadow-lg p-4 transition-all duration-300 ease-in-out`}>
-      <div className="flex items-start">
-        <div className="flex-shrink-0">
+    <div
+      className={`w-full ${getBackgroundColor()} border rounded-xl shadow-lg p-4`}
+      style={{ pointerEvents: 'auto', boxSizing: 'border-box' }}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-0.5">
           {getIcon()}
         </div>
-        <div className="ml-3 w-0 flex-1">
-          <p className="text-sm font-medium text-gray-900">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 leading-snug">
             {notification.title}
           </p>
           {notification.message && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600 leading-snug break-words">
               {notification.message}
             </p>
           )}
         </div>
-        <div className="ml-4 flex-shrink-0 flex">
-          <button
-            className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            onClick={() => onRemove(notification.id)}
-          >
-            <span className="sr-only">Close</span>
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        <button
+          className="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+          onClick={() => onRemove(notification.id)}
+          aria-label="Fermer"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

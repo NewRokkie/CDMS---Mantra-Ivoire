@@ -23,13 +23,14 @@ export interface GateInData {
   location: string;
   truckArrivalDate?: string;
   truckArrivalTime?: string;
-  weight?: number;
   operatorId: string;
   operatorName: string;
   yardId: string;
   classification?: 'divers' | 'alimentaire';
   transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // Transaction type for reports
   equipmentReference?: string; // Equipment reference for EDI transmission
+  bookingReference?: string;   // Booking reference number
+  notes?: string;              // Additional notes
   damageReported?: boolean; // Keep for backward compatibility during migration
   damageDescription?: string;
   // New damage assessment structure - now defaults to assignment stage
@@ -85,6 +86,15 @@ export class GateService {
 
     }, { maxAttempts: 3, baseDelay: 1000 })
     .catch((error: GateInError) => {
+      // Log the actual error details before converting to generic response
+      console.error('🔴 [gateService.processGateIn] Error caught:', {
+        code: error.code,
+        message: error.message,
+        userMessage: error.userMessage,
+        technicalDetails: error.technicalDetails,
+        stack: error.stack,
+      });
+
       // Emit failure event
       eventBus.emitSync('GATE_IN_FAILED', {
         containerNumber: data.containerNumber,
@@ -188,8 +198,8 @@ export class GateService {
     const result = await handleAsyncOperation(async () => {
       const existing = await containerService.getAll();
       // Only check active (non-deleted) containers
-      return existing.find(c => 
-        c.number === containerNumber.trim().toUpperCase() && 
+      return existing.find(c =>
+        c.number === containerNumber.trim().toUpperCase() &&
         !c.isDeleted
       );
     }, 'checkDuplicateContainer');
@@ -213,48 +223,116 @@ export class GateService {
    * Creates container with transaction safety
    */
   private async createContainerSafely(data: GateInData, client: any): Promise<any> {
-    const result = await handleAsyncOperation(async () => {
-      // Calculate actual gate in date/time from truck arrival
-      let gateInDateTime: Date;
+    // Calculate actual gate in date/time from truck arrival
+    let gateInDateTime: Date;
+    if (data.truckArrivalDate && data.truckArrivalTime) {
+      // Handle time format - if it already has seconds (HH:MM:SS), use as-is, otherwise add :00
+      const timeWithSeconds = data.truckArrivalTime.split(':').length === 3 
+        ? data.truckArrivalTime 
+        : `${data.truckArrivalTime}:00`;
       
-      if (data.truckArrivalDate && data.truckArrivalTime) {
-        // Use the truck arrival date/time from the form
-        const dateTimeString = `${data.truckArrivalDate}T${data.truckArrivalTime}:00`;
-        gateInDateTime = new Date(dateTimeString);
-      } else {
-        // Fallback to current system time
-        gateInDateTime = new Date();
+      const dateTimeString = `${data.truckArrivalDate}T${timeWithSeconds}`;
+      gateInDateTime = new Date(dateTimeString);
+      
+      // Validate the parsed date
+      if (isNaN(gateInDateTime.getTime())) {
+        console.error('🔴 [createContainerSafely] Invalid date/time:', dateTimeString);
+        throw new GateInError({
+          code: 'INVALID_DATE_TIME',
+          message: `Invalid date/time format: ${dateTimeString}`,
+          severity: 'error',
+          retryable: false,
+          userMessage: `Invalid truck arrival date/time. Please check the date (${data.truckArrivalDate}) and time (${data.truckArrivalTime}) format.`,
+        });
       }
-
-      const container = await containerService.create({
-        number: data.containerNumber.trim().toUpperCase(),
-        type: data.containerType as any,
-        size: data.containerSize as any,
-        status: 'gate_in', // Status 01: Gate In - pending location assignment
-        fullEmpty: data.fullEmpty || 'FULL', // Add full/empty status from form data, default to FULL
-        location: data.location,
-        yardId: data.yardId,
-        clientId: client.id,
-        client: client.name,
-        clientCode: client.code,
-        gateInDate: gateInDateTime, // Use actual truck arrival date/time
-        weight: data.weight,
-        classification: data.classification || 'divers',
-        transactionType: data.transactionType || 'Retour Livraison', // Transaction type
-        damage: data.damageAssessment?.hasDamage && data.damageAssessment.damageDescription
-          ? [data.damageAssessment.damageDescription]
-          : (data.damageReported && data.damageDescription ? [data.damageDescription] : []),
-        createdBy: data.operatorName
-      } as any);
-
-      return container;
-    }, 'createContainer');
-
-    if (!result.success) {
-      throw result.error;
+    } else {
+      gateInDateTime = new Date();
     }
 
-    return result.data;
+    // ── DIAGNOSTIC: direct Supabase INSERT to reveal raw error ──
+    const diagPayload = {
+      number: data.containerNumber.trim().toUpperCase(),
+      type: data.containerType,
+      size: data.containerSize,
+      status: 'gate_in',
+      full_empty: data.fullEmpty || 'FULL',
+      location: data.location,
+      yard_id: data.yardId,
+      client_id: client.id,
+      client_code: client.code,
+      gate_in_date: gateInDateTime.toISOString(),
+      gate_out_date: null,
+      classification: data.classification || 'divers',
+      transaction_type: data.transactionType || 'Retour Livraison',
+      damage: [],
+      booking_reference: data.bookingReference || null,
+      created_by: data.operatorName,
+    };
+    console.log('🔍 [createContainerSafely] Payload envoyé à Supabase:', JSON.stringify(diagPayload, null, 2));
+
+    const { data: diagData, error: diagError } = await supabase
+      .from('containers')
+      .insert(diagPayload)
+      .select()
+      .single();
+
+    if (diagError) {
+      console.error('🔴 [createContainerSafely] Erreur Supabase INSERT:', {
+        code: diagError.code,
+        message: diagError.message,
+        details: (diagError as any).details,
+        hint: (diagError as any).hint,
+        status: (diagError as any).status,
+      });
+      throw new GateInError({
+        code: diagError.code === '23505' ? 'DUPLICATE_CONTAINER' : 'DATABASE_ERROR',
+        message: diagError.message,
+        severity: 'error',
+        retryable: false,
+        userMessage: diagError.code === '23505'
+          ? `Le conteneur ${data.containerNumber} existe déjà dans le système`
+          : `Erreur DB (${diagError.code}): ${diagError.message}`,
+        technicalDetails: (diagError as any).hint || diagError.message,
+      });
+    }
+
+    if (!diagData) {
+      console.error('🔴 [createContainerSafely] INSERT OK mais data null — RLS SELECT bloqué');
+      throw new GateInError({
+        code: 'DATABASE_ERROR',
+        message: 'INSERT returned no data',
+        severity: 'error',
+        retryable: false,
+        userMessage: 'Insertion réussie mais lecture bloquée par RLS — appliquer la migration fix_all_rls_policies.sql',
+      });
+    }
+
+    console.log('🟢 [createContainerSafely] INSERT OK, container id:', diagData.id);
+    // ── FIN DIAGNOSTIC ──
+
+    // Map to Container format for downstream use
+    const damage: string[] = data.damageAssessment?.hasDamage && data.damageAssessment.damageDescription
+      ? [data.damageAssessment.damageDescription]
+      : (data.damageReported && data.damageDescription ? [data.damageDescription] : []);
+
+    return {
+      id: diagData.id,
+      number: diagData.number,
+      type: diagData.type,
+      size: diagData.size,
+      status: diagData.status,
+      fullEmpty: diagData.full_empty,
+      location: diagData.location,
+      yardId: diagData.yard_id,
+      clientId: diagData.client_id,
+      clientCode: diagData.client_code,
+      classification: diagData.classification,
+      transactionType: diagData.transaction_type,
+      damage,
+      createdBy: diagData.created_by,
+      createdAt: new Date(diagData.created_at),
+      updatedAt: new Date(diagData.updated_at),
+    };
   }
 
   /**
@@ -264,8 +342,8 @@ export class GateService {
     const result = await handleAsyncOperation(async () => {
       // Ensure second_container_number is NULL (not undefined or empty string) when container_quantity is 1
       const containerQuantity = data.containerQuantity || 1;
-      const secondContainerNumber = containerQuantity === 2 && data.secondContainerNumber 
-        ? data.secondContainerNumber.trim().toUpperCase() 
+      const secondContainerNumber = containerQuantity === 2 && data.secondContainerNumber
+        ? data.secondContainerNumber.trim().toUpperCase()
         : null;
 
       const { data: operation, error: opError } = await supabase
@@ -295,7 +373,9 @@ export class GateService {
           damage_assessed_by: data.damageAssessment?.assessedBy,
           damage_assessed_at: data.damageAssessment?.assessedAt?.toISOString(),
           damage_type: data.damageAssessment?.damageType,
-          weight: data.weight,
+          // NOTE: 'weight' column does NOT exist in gate_in_operations table → removed
+          booking_reference: data.bookingReference || null,
+          notes: data.notes || null,
           status: 'pending',
           operator_id: data.operatorId,
           operator_name: data.operatorName,
@@ -304,10 +384,22 @@ export class GateService {
           completed_at: null
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (opError) {
+        console.error('🔴 [createGateInOperation] Erreur Supabase INSERT:', {
+          code: opError.code,
+          message: opError.message,
+          details: (opError as any).details,
+          hint: (opError as any).hint,
+          status: (opError as any).status,
+        });
         throw opError;
+      }
+      if (!operation) {
+        console.error('🔴 [createGateInOperation] INSERT OK mais data null — RLS SELECT bloqué sur gate_in_operations');
+      } else {
+        console.log('🟢 [createGateInOperation] INSERT OK, operation id:', operation.id);
       }
 
       return operation;
@@ -603,7 +695,7 @@ export class GateService {
       // Process containers - update their status based on operation completion
       for (const containerId of data.containerIds) {
         const containerStatus = newStatus === 'completed' ? 'out_depot' : 'gate_out';
-        
+
         await containerService.update(containerId, {
           status: containerStatus, // Status 03: Gate Out (pending) or 04: Out Depot (completed)
           gateOutDate: newStatus === 'completed' ? new Date() : undefined,
@@ -719,7 +811,6 @@ export class GateService {
         assessedBy: data.damage_assessed_by || 'Unknown',
         assessedAt: data.damage_assessed_at ? new Date(data.damage_assessed_at) : new Date()
       } : undefined,
-      weight: data.weight,
       status: data.status,
       operationStatus: data.completed_at ? 'completed' : 'pending', // Map status based on completion
       operatorId: data.operator_id,

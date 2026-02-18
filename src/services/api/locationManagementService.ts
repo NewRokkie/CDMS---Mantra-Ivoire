@@ -761,7 +761,9 @@ export class LocationManagementService {
       }
 
       // Validate container size compatibility
-      if (location.containerSize && location.containerSize !== request.containerSize) {
+      // For 40ft containers, allow assignment to 20ft locations (they will occupy two adjacent locations)
+      // For 20ft containers, must match exactly
+      if (location.containerSize && request.containerSize === '20ft' && location.containerSize !== '20ft') {
         throw new GateInError({
           code: 'CONTAINER_SIZE_MISMATCH',
           message: `Container size ${request.containerSize} does not match location size ${location.containerSize}`,
@@ -770,6 +772,9 @@ export class LocationManagementService {
           userMessage: `This location is configured for ${location.containerSize} containers only`
         });
       }
+      
+      // For 40ft containers on 20ft locations, this is allowed (virtual stack logic)
+      // The calling code is responsible for ensuring both physical locations are assigned
 
       // Validate client pool access restrictions
       // Requirements: 6.3, 6.5 - Enforce location access restrictions during container placement

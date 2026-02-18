@@ -63,21 +63,25 @@ export type Database = {
           type: string;
           size: string;
           status: string;
+          full_empty: string | null;           // Added: 20251107120001
           location: string | null;
           yard_id: string | null;
           client_id: string | null;
           client_code: string | null;
           gate_in_date: string | null;
           gate_out_date: string | null;
-          weight: number | null;
+          classification: string | null;       // Added: 20251112000000
+          transaction_type: string | null;     // Added: 20250212000000
           damage: any;
           booking_reference: string | null;
-          seal_number: string | null;
-          temperature_setting: number | null;
           created_by: string | null;
           updated_by: string | null;
           created_at: string;
           updated_at: string;
+          // Soft delete fields - Added: 20251208100000
+          is_deleted: boolean;
+          deleted_at: string | null;
+          deleted_by: string | null;
         };
         Insert: {
           id?: string;
@@ -85,19 +89,22 @@ export type Database = {
           type: string;
           size: string;
           status?: string;
+          full_empty?: string | null;
           location?: string | null;
           yard_id?: string | null;
           client_id?: string | null;
           client_code?: string | null;
           gate_in_date?: string | null;
           gate_out_date?: string | null;
-          weight?: number | null;
+          classification?: string | null;
+          transaction_type?: string | null;
           damage?: any;
           booking_reference?: string | null;
-          seal_number?: string | null;
-          temperature_setting?: number | null;
           created_by?: string | null;
           updated_by?: string | null;
+          is_deleted?: boolean;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Update: Partial<Database['public']['Tables']['containers']['Insert']>;
       };
@@ -156,7 +163,6 @@ export type Database = {
           damage_assessed_by: string | null;
           damage_assessed_at: string | null;
           damage_type: string | null;
-          weight: number | null;
           status: string;
           operator_id: string | null;
           operator_name: string | null;
@@ -185,7 +191,6 @@ export type Database = {
           damage_assessed_by?: string | null;
           damage_assessed_at?: string | null;
           damage_type?: string | null;
-          weight?: number | null;
           status?: string;
           operator_id?: string | null;
           operator_name?: string | null;

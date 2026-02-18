@@ -26,8 +26,8 @@ export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stat
                 <List className="h-6 w-6 text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600 truncate">Total Bookings</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-sm font-gilroy-medium text-gray-600 truncate">Total Bookings</p>
+                <p className="text-2xl font-numeric font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
           </div>
@@ -43,8 +43,8 @@ export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stat
                 <AlertTriangle className="h-6 w-6 text-yellow-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600 truncate">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+                <p className="text-sm font-gilroy-medium text-gray-600 truncate">Pending</p>
+                <p className="text-2xl font-numeric font-bold text-gray-900">{stats.pending}</p>
               </div>
             </div>
           </div>
@@ -60,8 +60,8 @@ export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stat
                 <AlertTriangle className="h-6 w-6 text-yellow-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600 truncate">In Process</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.inProcess}</p>
+                <p className="text-sm font-gilroy-medium text-gray-600 truncate">In Process</p>
+                <p className="text-2xl font-numeric font-bold text-gray-900">{stats.inProcess}</p>
               </div>
             </div>
           </div>
@@ -77,8 +77,8 @@ export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stat
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600 truncate">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+                <p className="text-sm font-gilroy-medium text-gray-600 truncate">Completed</p>
+                <p className="text-2xl font-numeric font-bold text-gray-900">{stats.completed}</p>
               </div>
             </div>
           </div>

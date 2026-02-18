@@ -74,6 +74,9 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Set JSON content type for all responses
+  res.setHeader('Content-Type', 'application/json');
+  
   if (req.method !== 'POST') {
     return res.status(405).json({
       status: 'error',
@@ -151,7 +154,22 @@ export default async function handler(
     const ediFilename = `CODECO_${requestData.customer}_${timestamp}_${requestData.operatorName}.edi`;
 
     // STAGE 2: Transmit via SFTP
-    const SftpClient = (await import('ssh2-sftp-client')).default;
+    let SftpClient;
+    try {
+      SftpClient = (await import('ssh2-sftp-client')).default;
+    } catch (importError) {
+      console.error('Failed to import ssh2-sftp-client:', importError);
+      return res.status(500).json({
+        status: 'error',
+        stage: 'transmission',
+        message: 'SFTP client library not available in serverless environment',
+        edi_file: ediFilename,
+        edi_content: ediContent,
+        uploaded_to_sftp: false,
+        error: 'ssh2-sftp-client module not available'
+      });
+    }
+    
     const sftp = new SftpClient();
 
     try {
@@ -221,7 +239,8 @@ export default async function handler(
     return res.status(500).json({
       status: 'error',
       stage: 'generation',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.stack : String(error)
     });
   }
 }

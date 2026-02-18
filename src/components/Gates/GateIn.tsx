@@ -399,6 +399,20 @@ useEffect(() => {
     setIsProcessing(true);
 
     try {
+      // Validate critical IDs before proceeding
+      if (!user?.id) {
+        console.error('🔴 [GateIn] user.id is missing:', user);
+        setSubmissionError('User ID is missing. Please log out and log back in.');
+        setIsProcessing(false);
+        return;
+      }
+      if (!currentYard?.id) {
+        console.error('� [GateIn] currentYard.id is missing:', currentYard);
+        setSubmissionError('Current yard is not selected. Please select a yard.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Use client pool service to find optimal stack assignment
       const { clientPoolService } = await import('../../services/clientPoolService');
 
@@ -428,6 +442,20 @@ useEffect(() => {
       const truckArrivalDate = formData.truckArrivalDate || now.toISOString().split('T')[0];
       const truckArrivalTime = formData.truckArrivalTime || now.toTimeString().slice(0, 5);
 
+      // Validate critical IDs before proceeding
+      if (!user?.id) {
+        console.error('🔴 [GateIn] user.id is missing:', user);
+        setSubmissionError('User ID is missing. Please log out and log back in.');
+        setIsProcessing(false);
+        return;
+      }
+      if (!currentYard?.id) {
+        console.error('🔴 [GateIn] currentYard.id is missing:', currentYard);
+        setSubmissionError('Current yard is not selected. Please select a yard.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Process Gate In through enhanced API service
       const gateInData = {
         containerNumber: formData.containerNumber.trim().toUpperCase(),
@@ -445,15 +473,23 @@ useEffect(() => {
         truckArrivalDate: truckArrivalDate,
         truckArrivalTime: truckArrivalTime,
         equipmentReference: formData.equipmentReference, // Equipment reference for EDI transmission
-        weight: undefined,
-        operatorId: user?.id || 'unknown',
-        operatorName: user?.name || 'Unknown Operator',
-        yardId: currentYard?.id || 'unknown',
+        bookingReference: formData.bookingReference || undefined,
+        notes: formData.notes || undefined,
+        operatorId: user.id,
+        operatorName: user.name || 'Unknown Operator',
+        yardId: currentYard.id,
         classification: formData.classification,
         damageReported: false, // Keep for backward compatibility
         damageDescription: undefined // Keep for backward compatibility
         // damageAssessment: moved to pending operations phase
       };
+
+      console.log('🔍 [GateIn] Calling processGateIn with data:', {
+        containerNumber: gateInData.containerNumber,
+        clientCode: gateInData.clientCode,
+        operatorId: gateInData.operatorId,
+        yardId: gateInData.yardId,
+      });
 
       const result = await gateService.processGateIn(gateInData);
 
@@ -548,7 +584,7 @@ useEffect(() => {
 
       if (isPendingCompletion) {
         // This is completing a pending operation - UPDATE existing containers
-        
+
         for (const container of existingContainers) {
           const { error: updateError } = await supabase
             .from('containers')
@@ -568,7 +604,7 @@ useEffect(() => {
         // This is a new operation - CREATE containers
         // This is a new operation - CREATE containers
         console.log('Creating new containers:', containerNumbers);
-        
+
         // 3. Create container(s) in containers table
         const containersToCreate = [
           {
@@ -630,7 +666,7 @@ useEffect(() => {
         updateData.damage_reported = locationData.damageAssessment.hasDamage;
         updateData.damage_description = locationData.damageAssessment.damageDescription || null;
         updateData.damage_assessment = JSON.stringify(locationData.damageAssessment);
-        
+
         // Marquer si c'est une zone tampon
         if (locationData.isBufferZone) {
           updateData.notes = `ZONE TAMPON - ${locationData.damageAssessment.damageType || 'Dommage détecté'}`;
@@ -657,71 +693,85 @@ useEffect(() => {
           const stackNum = parseInt(locationMatch[1]);
           const row = locationMatch[2];
           const tier = locationMatch[3];
-          
+
           console.log(`📍 Parsed location: Stack=${stackNum}, Row=${row}, Tier=${tier}`);
-          
+
           // Check if this is a virtual stack (even numbers for 40ft)
           const isVirtualStack = stackNum % 2 === 0;
           console.log(`🔢 Is virtual stack: ${isVirtualStack}`);
-          
-          if (isVirtualStack) {
-            // For virtual stacks, we need to find the physical stacks
+
+          if (isVirtualStack && operation.containerSize === '40ft') {
+            // For 40ft containers on virtual stacks, we need to occupy BOTH physical locations
             // Virtual stack S04 is made from physical stacks S03 and S05
             const physicalStack1 = stackNum - 1; // S03
             const physicalStack2 = stackNum + 1; // S05
-            
+
             console.log(`🔄 Virtual stack ${stackNum} maps to physical stacks ${physicalStack1} and ${physicalStack2}`);
-            
-            // Try to find a location in the first physical stack
+
+            // Get both physical locations
             const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
-            console.log(`🔍 Checking first physical location: ${physicalLocation1}`);
+            const physicalLocation2 = `S${String(physicalStack2).padStart(2, '0')}R${row}H${tier}`;
             
-            const { data: locationRecord1, error: locationFindError1 } = await supabase
+            console.log(`🔍 Checking both physical locations: ${physicalLocation1} and ${physicalLocation2}`);
+
+            const { data: locationRecords, error: locationFindError } = await supabase
+              .from('locations')
+              .select('id, location_id, is_occupied, container_size')
+              .in('location_id', [physicalLocation1, physicalLocation2])
+              .eq('yard_id', currentYard?.id);
+
+            console.log(`📊 Physical locations query result:`, { locationRecords, error: locationFindError });
+
+            if (!locationFindError && locationRecords && locationRecords.length === 2) {
+              // Check if both locations are available
+              const allAvailable = locationRecords.every(loc => !loc.is_occupied);
+              
+              if (allAvailable) {
+                console.log(`✅ Both physical locations are available, assigning 40ft container`);
+                
+                // Assign container to both physical locations
+                for (const locationRecord of locationRecords) {
+                  await locationManagementService.assignContainer({
+                    locationId: locationRecord.id,
+                    containerId: finalContainers[0].id,
+                    containerSize: '40ft',
+                    clientPoolId: undefined
+                  });
+                  console.log(`✓ Assigned to physical location ${locationRecord.location_id}`);
+                }
+                
+                console.log(`✓ Virtual location ${locationData.assignedLocation} successfully mapped to both physical locations`);
+              } else {
+                const occupiedLocations = locationRecords.filter(loc => loc.is_occupied).map(loc => loc.location_id);
+                console.warn(`❌ Cannot assign 40ft container - some physical locations are occupied: ${occupiedLocations.join(', ')}`);
+              }
+            } else {
+              console.warn(`❌ Could not find both physical locations for virtual ${locationData.assignedLocation}`);
+            }
+          } else if (isVirtualStack && operation.containerSize === '20ft') {
+            // For 20ft containers on virtual stacks, use just one physical location
+            const physicalStack1 = stackNum - 1;
+            const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
+            
+            console.log(`🔍 Checking physical location for 20ft: ${physicalLocation1}`);
+
+            const { data: locationRecord, error: locationFindError } = await supabase
               .from('locations')
               .select('id, is_occupied')
               .eq('location_id', physicalLocation1)
               .eq('yard_id', currentYard?.id)
               .maybeSingle();
-            
-            console.log(`📊 First location query result:`, { locationRecord1, error: locationFindError1 });
-            
-            if (!locationFindError1 && locationRecord1 && !locationRecord1.is_occupied) {
-              console.log(`✅ Using first physical location ${physicalLocation1}`);
-              // Use the first physical stack location
+
+            if (!locationFindError && locationRecord && !locationRecord.is_occupied) {
               await locationManagementService.assignContainer({
-                locationId: locationRecord1.id,
+                locationId: locationRecord.id,
                 containerId: finalContainers[0].id,
-                containerSize: operation.containerSize as '20ft' | '40ft',
+                containerSize: '20ft',
                 clientPoolId: undefined
               });
-              console.log(`✓ Virtual location ${locationData.assignedLocation} mapped to physical ${physicalLocation1} and marked as occupied`);
+              console.log(`✓ 20ft container assigned to physical location ${physicalLocation1}`);
             } else {
-              console.log(`⚠️ First location not available, trying second...`);
-              // Try the second physical stack
-              const physicalLocation2 = `S${String(physicalStack2).padStart(2, '0')}R${row}H${tier}`;
-              console.log(`🔍 Checking second physical location: ${physicalLocation2}`);
-              
-              const { data: locationRecord2, error: locationFindError2 } = await supabase
-                .from('locations')
-                .select('id, is_occupied')
-                .eq('location_id', physicalLocation2)
-                .eq('yard_id', currentYard?.id)
-                .maybeSingle();
-              
-              console.log(`📊 Second location query result:`, { locationRecord2, error: locationFindError2 });
-              
-              if (!locationFindError2 && locationRecord2 && !locationRecord2.is_occupied) {
-                console.log(`✅ Using second physical location ${physicalLocation2}`);
-              await locationManagementService.assignContainer({
-                locationId: locationRecord2.id,
-                containerId: finalContainers[0].id,
-                containerSize: operation.containerSize as '20ft' | '40ft',
-                clientPoolId: undefined
-              });
-                console.log(`✓ Virtual location ${locationData.assignedLocation} mapped to physical ${physicalLocation2} and marked as occupied`);
-              } else {
-                console.warn(`❌ Both physical locations for virtual ${locationData.assignedLocation} are occupied or not found`);
-              }
+              console.warn(`❌ Physical location ${physicalLocation1} not available`);
             }
           } else {
             console.log(`📍 Physical stack detected, using direct mapping`);
@@ -757,13 +807,13 @@ useEffect(() => {
 
       // 5. Process EDI transmission conditionally using new SFTP integration
       let ediStatus = 'not_attempted';
-      
+
       // EDI seulement si pas de dommages (ediShouldTransmit = true)
       if (locationData.ediShouldTransmit !== false) {
         try {
           // Import SFTP integration service
           const { sftpIntegrationService } = await import('../../services/edi/sftpIntegrationService');
-          
+
           // Prepare Gate In data for SFTP transmission
           const gateInData = {
             containerNumber: operation.containerNumber,
@@ -789,7 +839,7 @@ useEffect(() => {
 
           // Process Gate In with automatic SFTP transmission
           const sftpResult = await sftpIntegrationService.processGateInWithSFTP(gateInData);
-          
+
           if (sftpResult.transmitted) {
             // Update gate_in_operation with EDI transmission info
             await supabase
@@ -810,7 +860,7 @@ useEffect(() => {
         } catch (ediError) {
           // EDI transmission failed, but don't fail the entire operation
           console.error('EDI SFTP transmission failed:', ediError);
-          
+
           // Update gate_in_operation to indicate EDI failure
           await supabase
             .from('gate_in_operations')
@@ -851,7 +901,7 @@ useEffect(() => {
       try {
         const updatedContainers = await containerService.getAll();
         setContainers(updatedContainers);
-        
+
         // Refresh yard data to update occupancy
         if (currentYard?.id) {
           await yardsService.refreshYardData(currentYard.id);
@@ -861,10 +911,10 @@ useEffect(() => {
       }
 
       // 8. Show success message with EDI status
-      const damageStatus = locationData.damageAssessment?.hasDamage 
-        ? 'assigné en zone tampon (endommagé)' 
+      const damageStatus = locationData.damageAssessment?.hasDamage
+        ? 'assigné en zone tampon (endommagé)'
         : 'en bon état';
-      
+
       let ediStatusMessage = '';
       switch (ediStatus) {
         case 'transmitted':
@@ -882,7 +932,7 @@ useEffect(() => {
         default:
           ediStatusMessage = '• EDI non tenté';
       }
-      
+
       toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné avec succès à ${locationData.assignedLocation} (${damageStatus}) - ${ediStatusMessage}`);
       setActiveView('overview');
     } catch (error) {
@@ -923,7 +973,7 @@ useEffect(() => {
             locationAssignmentDuration: null,
             ediProcessingDuration: null
           };
-          
+
           // Calculate time tracking durations if operation is completed
           if (op.status === 'completed' && op.id) {
             try {

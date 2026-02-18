@@ -15,12 +15,12 @@ interface ToastProps {
   onClose: (id: string) => void;
 }
 
-export const Toast: React.FC<ToastProps> = ({ 
-  id, 
-  type, 
-  message, 
-  duration = 400000, 
-  onClose 
+export const Toast: React.FC<ToastProps> = ({
+  id,
+  type,
+  message,
+  duration = 5000,
+  onClose
 }) => {
   useEffect(() => {
     if (duration > 0) {

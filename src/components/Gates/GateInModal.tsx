@@ -509,7 +509,9 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                           <span className="text-blue-600 ml-1">
                             ({formData.containerSize === '20ft'
                               ? currentContainerType.code20
-                              : currentContainerType.code40})
+                              : (formData.isHighCube && currentContainerType.code40HC
+                                ? currentContainerType.code40HC
+                                : currentContainerType.code40)})
                           </span>
                         )}
                       </div>
@@ -639,7 +641,9 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                             <span className="text-blue-600 ml-1">
                               ({formData.containerSize === '20ft'
                                 ? currentContainerType.code20
-                                : currentContainerType.code40})
+                                : (formData.isHighCube && currentContainerType.code40HC
+                                  ? currentContainerType.code40HC
+                                  : currentContainerType.code40)})
                             </span>
                           )}
                         </div>

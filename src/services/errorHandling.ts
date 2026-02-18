@@ -146,6 +146,19 @@ export class ErrorHandler {
       return this.ERROR_CODES.TIMEOUT_ERROR;
     }
 
+    // Handle RLS policy violations by message content (Supabase may not always return code '42501')
+    if (
+      error.message?.toLowerCase().includes('row-level security') ||
+      error.message?.toLowerCase().includes('violates row-level') ||
+      error.status === 403 ||
+      error.statusCode === 403
+    ) {
+      return {
+        ...this.ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+        technicalDetails: error.message
+      };
+    }
+
     // Handle Supabase/PostgreSQL errors
     if (error.code) {
       switch (error.code) {
@@ -169,6 +182,32 @@ export class ErrorHandler {
           return {
             ...this.ERROR_CODES.CLIENT_NOT_FOUND,
             technicalDetails: error.message
+          };
+        case '42501': // Insufficient privilege / RLS policy violation
+          return {
+            ...this.ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+            technicalDetails: error.message
+          };
+        case '42703': // Undefined column - missing DB column
+          return {
+            ...this.ERROR_CODES.DATABASE_ERROR,
+            technicalDetails: `Missing database column: ${error.message}`
+          };
+        case '23502': // Not-null constraint violation
+          return {
+            ...this.ERROR_CODES.DATABASE_ERROR,
+            technicalDetails: `Required field missing: ${error.message}`
+          };
+        case '23514': // Check constraint violation
+          return {
+            ...this.ERROR_CODES.DATABASE_ERROR,
+            technicalDetails: `Constraint violation: ${error.message}`
+          };
+        case 'PGRST301': // JWT expired
+        case 'PGRST302': // JWT invalid
+          return {
+            ...this.ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+            technicalDetails: 'Authentication token is invalid or expired. Please log in again.'
           };
       }
     }
@@ -254,7 +293,7 @@ export class RetryManager {
       } catch (error) {
         lastError = error;
         const errorDetails = ErrorHandler.classifyError(error);
-        
+
         ErrorHandler.logError(errorDetails, { attempt, maxAttempts: finalConfig.maxAttempts });
 
         // Don't retry if error is not retryable
@@ -312,7 +351,7 @@ export async function handleAsyncOperation<T>(
       userMessage: gateInError.userMessage,
       technicalDetails: gateInError.technicalDetails
     }, { context });
-    
+
     return { success: false, error: gateInError };
   }
 }
