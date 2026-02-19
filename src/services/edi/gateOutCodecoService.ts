@@ -91,9 +91,13 @@ class GateOutCodecoService {
         const generator = new CodecoGenerator();
         const ediMessage = generator.generateFromSAPData(codecoData);
 
-        // Generate filename
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, 15);
-        const fileName = `CODECO_GATE_OUT_${containerNumber}_${timestamp}.edi`;
+        // Generate filename: CODECO_{SenderCode}{GateInDate}{GateInTime}_{containerNumber}_{operation}.edi
+        const gateDateStr = gateOutData.gateOutDate?.replace(/-/g, '') ?? new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const gateDate = gateDateStr.length === 6 ? '20' + gateDateStr : gateDateStr.slice(0, 8);
+        const gateTime = (gateOutData.gateOutTime?.replace(/:/g, '') ?? '').padEnd(6, '0').slice(0, 6);
+        const senderCode = (yardInfo.companyCode || '').trim();
+        const senderDateTime = `${senderCode}${gateDate}${gateTime}`;
+        const fileName = `CODECO_${senderDateTime}_${containerNumber}_GATE_OUT.edi`;
 
         ediMessages.push(ediMessage);
         fileNames.push(fileName);
@@ -232,7 +236,6 @@ class GateOutCodecoService {
       sender: yardInfo.companyCode || 'MANTRA',         // Company name
       receiver: gateOutData.clientName,                 // Client Name
       companyCode: yardInfo.companyCode || 'MANTRA',    // Company Code
-      plant: yardInfo.plant || 'DEPOT-01',              // Yard/Depot Code
       customer: gateOutData.clientName,                 // Client Name
       
       // Container Information - REQUIRED
@@ -261,27 +264,9 @@ class GateOutCodecoService {
       operatorName: gateOutData.operatorName,
       operatorId: gateOutData.operatorId,
       yardId: gateOutData.yardId,
-      
-      // Backward compatibility fields
-      weighbridgeId: `${gateOutData.bookingNumber}_${Date.now().toString().slice(-4)}`,
-      weighbridgeIdSno: '00001',
-      transporter: gateOutData.transportCompany,
-      design: '001',
-      type: '02', // Gate Out type
-      color: '#000000',
-      cleanType: '001',
-      status: '06', // Gate Out status
-      deviceNumber: `DEV${Date.now().toString().slice(-8)}`,
-      createdDate: formatDate(gateOutData.createdAt),
-      createdTime: formatTime(gateOutData.createdAt) + '00',
-      createdBy: gateOutData.operatorName,
-      changedDate: gateOutData.completedAt ? formatDate(gateOutData.completedAt) : undefined,
-      changedTime: gateOutData.completedAt ? formatTime(gateOutData.completedAt) + '00' : undefined,
-      changedBy: gateOutData.completedAt ? gateOutData.operatorName : undefined,
-      numOfEntries: '1', // One container per message
-      gateInDate: formatDate(operationDate), // Use gate out date
-      gateInTime: formatTime(operationDate) + '00', // Use gate out time
-      damageReported: false, // No damage assessment for gate out
+
+      // Damage Information (optional)
+      damageReported: false,
       damageAssessedBy: gateOutData.operatorName,
       damageAssessedAt: formatDate(now) + formatTime(now) + '00'
     };

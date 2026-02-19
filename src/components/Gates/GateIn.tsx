@@ -465,6 +465,8 @@ useEffect(() => {
         clientCode: formData.clientCode,
         containerType: formData.containerType,
         containerSize: formData.containerSize,
+        containerIsoCode: formData.containerIsoCode || undefined,
+        isHighCube: formData.isHighCube === true,
         fullEmpty: formData.status, // Pass the FULL/EMPTY status from form
         transportCompany: formData.transportCompany,
         driverName: formData.driverName,
@@ -605,35 +607,30 @@ useEffect(() => {
         // This is a new operation - CREATE containers
         console.log('Creating new containers:', containerNumbers);
 
-        // 3. Create container(s) in containers table
-        const containersToCreate = [
-          {
-            number: operation.containerNumber,
-            type: operation.containerType || 'standard',
-            size: operation.containerSize,
-            status: 'in_depot',
-            location: locationData.assignedLocation,
-            yard_id: currentYard?.id,
-            client_id: client?.id,
-            client_code: operation.clientCode,
-            gate_in_date: new Date().toISOString(),
-            created_by: user?.id
-          }
-        ];
+        // 3. Create container(s) in containers table (include is_high_cube, full_empty, etc. from operation)
+        const baseContainerPayload = {
+          number: operation.containerNumber,
+          type: operation.containerType || 'dry',
+          size: operation.containerSize,
+          is_high_cube: operation.isHighCube === true,
+          status: 'in_depot',
+          full_empty: operation.fullEmpty || 'FULL',
+          location: locationData.assignedLocation,
+          yard_id: currentYard?.id,
+          client_id: client?.id,
+          client_code: operation.clientCode,
+          gate_in_date: new Date().toISOString(),
+          classification: operation.classification || 'divers',
+          transaction_type: operation.transactionType || 'Retour Livraison',
+          created_by: user?.id
+        };
+        const containersToCreate: typeof baseContainerPayload[] = [baseContainerPayload];
 
         // If second container exists
         if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
           containersToCreate.push({
-            number: operation.secondContainerNumber,
-            type: operation.containerType || 'standard',
-            size: operation.containerSize,
-            status: 'in_depot',
-            location: locationData.assignedLocation,
-            yard_id: currentYard?.id,
-            client_id: client?.id,
-            client_code: operation.clientCode,
-            gate_in_date: new Date().toISOString(),
-            created_by: user?.id
+            ...baseContainerPayload,
+            number: operation.secondContainerNumber
           });
         }
 

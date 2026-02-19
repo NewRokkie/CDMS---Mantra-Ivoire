@@ -258,12 +258,13 @@ class EDITransmissionServiceImpl {
    */
   async regenerateEDI(containerId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Get container with gate in operation
+      // Get container with gate in operation and client info
       const { data: container, error: containerError } = await supabase
         .from('containers')
         .select(`
           *,
-          gate_in_operations(*)
+          gate_in_operations(*),
+          client:clients(name, code)
         `)
         .eq('id', containerId)
         .single();
@@ -277,13 +278,25 @@ class EDITransmissionServiceImpl {
         throw new Error('No gate in operation found for this container');
       }
 
+      // Get client name from relationship or fallback to container fields
+      const clientInfo = container.client as unknown as { name: string; code: string } | null;
+      const clientName = clientInfo?.name || container.client_name || container.client_code || 'Unknown Client';
+      const clientCode = clientInfo?.code || container.client_code || 'UNKNOWN';
+
+      console.log('Regenerating EDI for container:', {
+        containerId,
+        containerNumber: container.number,
+        clientName,
+        clientCode
+      });
+
       // Prepare gate in data
       const gateInData = {
         containerNumber: container.number,
         containerSize: container.size,
         containerType: container.type || 'dry',
-        clientCode: container.client_code,
-        clientName: container.client_name,
+        clientCode: clientCode,
+        clientName: clientName,
         transportCompany: gateInOp.transport_company || 'Unknown',
         truckNumber: gateInOp.truck_number || 'Unknown',
         arrivalDate: gateInOp.truck_arrival_date || new Date().toISOString().split('T')[0],

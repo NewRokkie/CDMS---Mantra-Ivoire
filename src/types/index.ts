@@ -212,6 +212,7 @@ export interface Container {
   number: string;
   type: 'dry' | 'high_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   size: '20ft' | '40ft';
+  isHighCube?: boolean; // High cube variant (e.g. Dry 40ft HC = 45G1), from Gate In
   status: 'gate_in' | 'in_depot' | 'gate_out' | 'out_depot' | 'maintenance' | 'cleaning';
   fullEmpty?: 'FULL' | 'EMPTY'; // Full or Empty status
   location: string;
@@ -227,6 +228,7 @@ export interface Container {
   clientName: string;
   clientId?: string; // Add client ID for direct relations
   clientCode?: string; // Add client code for filtering
+  transporter?: string; // Transport company from gate-in (e.g. "PROPRE MOYEN")
   releaseOrderId?: string;
   classification?: 'divers' | 'alimentaire'; // Container classification
   transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // Transaction type for Gate In

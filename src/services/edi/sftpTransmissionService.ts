@@ -27,6 +27,33 @@ export interface TransmitEDIResponse {
   error?: string;
 }
 
+export interface SendEDIRequest {
+  fileName: string;
+  fileContent: string;
+  clientName: string;
+  clientCode?: string;
+  containerNumber: string;
+  operation: 'GATE_IN' | 'GATE_OUT';
+  transmissionLogId?: string;
+}
+
+export interface SendEDIResponse {
+  success: boolean;
+  message: string;
+  details?: {
+    fileName: string;
+    server: string;
+    host: string;
+    remotePath: string;
+    containerNumber: string;
+    operation: string;
+    attempt: number;
+    testMode: boolean;
+    configId: string;
+  };
+  error?: string;
+}
+
 export interface GenerateAndTransmitRequest {
   // Header Information
   sender: string;
@@ -92,7 +119,120 @@ class SFTPTransmissionService {
   }
 
   /**
+   * Generate EDI CODECO content only (without transmission)
+   * Uses the Python EDI API for generation
+   */
+  async generateCodeco(request: Omit<GenerateAndTransmitRequest, 'sftpConfig'>): Promise<{
+    success: boolean;
+    ediFile?: string;
+    ediContent?: string;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/generate-codeco-python`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: request.sender,
+          receiver: request.receiver,
+          company_code: request.companyCode,
+          customer: request.customer,
+          container_number: request.containerNumber,
+          container_size: request.containerSize,
+          container_type: request.containerType,
+          transport_company: request.transportCompany,
+          vehicle_number: request.vehicleNumber,
+          operation_type: request.operationType,
+          operation_date: request.operationDate,
+          operation_time: request.operationTime,
+          booking_reference: request.bookingReference,
+          equipment_reference: request.equipmentReference,
+          location_code: request.locationCode,
+          location_details: request.locationDetails,
+          operator_name: request.operatorName,
+          operator_id: request.operatorId,
+          yard_id: request.yardId,
+          damage_reported: request.damageReported,
+          damage_type: request.damageType,
+          damage_description: request.damageDescription,
+          damage_assessed_by: request.damageAssessedBy,
+          damage_assessed_at: request.damageAssessedAt
+        }),
+      });
+
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        // Non-JSON response (likely an error page)
+        const text = await response.text();
+        throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return {
+        success: data.success,
+        ediFile: data.edi_file,
+        ediContent: data.edi_content,
+        error: data.error
+      };
+    } catch (error) {
+      console.error('CODECO generation error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error during CODECO generation'
+      };
+    }
+  }
+
+  /**
+   * Send EDI file using the new unified API endpoint
+   * This method uses the database-backed configuration system
+   */
+  async sendEDI(request: SendEDIRequest): Promise<SendEDIResponse> {
+    try {
+      console.log('Sending EDI request:', {
+        fileName: request.fileName,
+        fileContentLength: request.fileContent?.length,
+        clientName: request.clientName,
+        clientCode: request.clientCode,
+        containerNumber: request.containerNumber,
+        operation: request.operation,
+        transmissionLogId: request.transmissionLogId
+      });
+
+      const response = await fetch(`${this.baseUrl}/send-edi`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Send EDI failed:', data);
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('EDI send error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Transmit an existing EDI file to SFTP server
+   * @deprecated Use sendEDI instead for database-backed configuration
    */
   async transmitEDI(request: TransmitEDIRequest): Promise<TransmitEDIResponse> {
     try {
@@ -131,7 +271,7 @@ class SFTPTransmissionService {
       });
 
       // Try to parse as JSON, but handle non-JSON responses
-      let data: any;
+      let data: GenerateAndTransmitResponse;
       const contentType = response.headers.get('content-type');
       
       if (contentType && contentType.includes('application/json')) {

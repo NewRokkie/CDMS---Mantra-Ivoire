@@ -1,15 +1,14 @@
 /**
- * Vercel Serverless Function: Generate CODECO files (XML → EDI)
- * Replaces Flask endpoint: POST /api/v1/codeco/generate
+ * Vercel Serverless Function: Generate CODECO files only
  * 
- * This endpoint uses the CodecoGenerator class to generate EDI CODECO messages
- * matching the ONE LINE client format requirements.
+ * This endpoint generates EDI CODECO messages without transmission.
+ * Used when transmission will be handled separately via send-edi endpoint.
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { CodecoGenerator, CodecoMessageData } from '../../src/services/edi/codecoGenerator';
 
-interface CodecoRequest {
+interface GenerateCodecoRequest {
   // Header Information
   sender: string;
   receiver: string;
@@ -51,16 +50,26 @@ interface CodecoRequest {
   damageAssessedAt?: string;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+): Promise<void> {
+  // Set JSON content type for all responses
+  res.setHeader('Content-Type', 'application/json');
+  
   if (req.method !== 'POST') {
-    return res.status(405).json({ status: 'error', message: 'Method not allowed' });
+    res.status(405).json({
+      success: false,
+      message: 'Method not allowed'
+    });
+    return;
   }
 
   try {
-    const payload = req.body as Partial<CodecoRequest>;
+    const payload = req.body as Partial<GenerateCodecoRequest>;
 
     // Validate required fields
-    const requiredFields: (keyof CodecoRequest)[] = [
+    const requiredFields: (keyof GenerateCodecoRequest)[] = [
       'sender', 'receiver', 'companyCode', 'customer',
       'containerNumber', 'containerSize', 'containerType',
       'transportCompany', 'vehicleNumber',
@@ -71,16 +80,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const missingFields = requiredFields.filter(field => !payload[field]);
     if (missingFields.length > 0) {
-      return res.status(400).json({
-        status: 'error',
-        stage: 'validation',
+      res.status(400).json({
+        success: false,
         message: `Missing required fields: ${missingFields.join(', ')}`
       });
+      return;
     }
 
-    const requestData = payload as CodecoRequest;
+    const requestData = payload as GenerateCodecoRequest;
 
-    // Create CodecoMessageData from request
+    // Generate EDI CODECO message
     const codecoData: CodecoMessageData = {
       sender: requestData.sender,
       receiver: requestData.receiver,
@@ -108,28 +117,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       damageAssessedAt: requestData.damageAssessedAt
     };
 
-    // Generate EDI CODECO message using CodecoGenerator
     const generator = new CodecoGenerator();
     const ediContent = generator.generateFromSAPData(codecoData);
 
-    // Generate filename
-    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
-    const ediFilename = `CODECO_${requestData.customer}_${timestamp}_${requestData.operatorName}.edi`;
+    // Generate filename: CODECO_{SenderCode}{GateInDate}{GateInTime}_{containerNumber}_{operation}.edi
+    // Example: CODECO_20260218234902_ONEU1388601_GATE_IN.edi
+    const gateDate = requestData.operationDate.replace(/-/g, '').length === 6
+      ? '20' + requestData.operationDate.replace(/-/g, '')
+      : requestData.operationDate.replace(/-/g, '').slice(0, 8);
+    const gateTime = (requestData.operationTime.replace(/:/g, '') + '00').slice(0, 6).padEnd(6, '0');
+    const senderCode = (requestData.sender || requestData.companyCode || '').trim();
+    const senderDateTime = `${senderCode}${gateDate}${gateTime}`;
+    const ediFilename = `CODECO_${senderDateTime}_${requestData.containerNumber}_${requestData.operationType}.edi`;
 
-    return res.status(200).json({
-      status: 'success',
+    res.status(200).json({
+      success: true,
       message: 'CODECO file generated successfully',
-      edi_file: ediFilename,
-      edi_content: ediContent,
-      uploaded_to_sftp: false // SFTP upload would require additional configuration
+      ediFile: ediFilename,
+      ediContent: ediContent
     });
 
   } catch (error) {
     console.error('CODECO generation error:', error);
-    return res.status(500).json({
-      status: 'error',
-      stage: 'generation',
-      message: error instanceof Error ? error.message : 'Unknown error'
+    
+    // Ensure we always return JSON
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     });
   }
 }

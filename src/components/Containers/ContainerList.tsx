@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Eye, Edit, CreditCard, AlertTriangle, FileText, Recycle } from 'lucide-react';
+import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,17 +19,37 @@ import { exportToExcel, formatDateForExport, formatDateShortForExport } from '..
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
+import { containerTypeOptions } from '../Gates/constants';
 
-// Helper function to format container number for display (adds hyphens)
-const formatContainerNumberForDisplay = (containerNumber?: string | null): string => {
-  const num = containerNumber ?? '';
-  if (num.length === 11) {
-    const letters = num.substring(0, 4);
-    const numbers1 = num.substring(4, 10);
-    const numbers2 = num.substring(10, 11);
-    return `${letters}-${numbers1}-${numbers2}`;
+// Get ISO code from type + size + isHighCube (matches Gate In / EDI codes)
+function getContainerIsoCode(type: string, size: string, isHighCube?: boolean): string {
+  const opt = containerTypeOptions.find(o => o.value === type);
+  if (!opt || !size) return '';
+  if (isHighCube && size === '40ft' && (opt as { code40HC?: string }).code40HC) {
+    const hc = (opt as { code40HC?: string | string[] }).code40HC;
+    return (Array.isArray(hc) ? hc[0] : hc) ?? '';
   }
-  return num;
+  if (size === '40ft') {
+    const c40 = (opt as { code40?: string | string[] }).code40;
+    return (Array.isArray(c40) ? c40[0] : c40) ?? '';
+  }
+  if (size === '20ft') {
+    const c20 = (opt as { code20?: string | string[] }).code20;
+    return (Array.isArray(c20) ? c20[0] : c20) ?? '';
+  }
+  return '';
+}
+
+// Display: "Type - Size - HC (code)" using real container data from DB
+const formatContainerTypeSize = (container: { type?: string; size?: string; isHighCube?: boolean }): string => {
+  const type = container.type ?? 'dry';
+  const size = container.size ?? '';
+  const isHC = container.isHighCube === true;
+  const typeLabel = type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+  if (!size) return typeLabel;
+  const code = getContainerIsoCode(type, size, isHC);
+  const hcPart = isHC ? '- HC' : '';
+  return code ? `${typeLabel} - ${size}${hcPart} (${code})` : `${typeLabel} - ${size}${hcPart}`;
 };
 
 // Helper function to format date as DD/MM/YY - HH:MM
@@ -63,7 +83,8 @@ const formatGateInTime = (date?: Date | null): string => {
 export const ContainerList: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ediStatuses, setEdiStatuses] = useState<Map<string, { hasFailed: boolean; transmitted: boolean }>>(new Map());
+  // EDI Status per container: 'success' | 'failed' | 'pending' | 'retrying' | null (no logs)
+  const [ediStatusByContainerId, setEdiStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
 
   useEffect(() => {
     async function loadContainers() {
@@ -75,20 +96,27 @@ export const ContainerList: React.FC = () => {
         });
         setContainers(data || []);
         
-        // Load EDI statuses for containers
+        // Load EDI status from transmission history (same logic as Recent EDI Operations: prefer success if any)
         if (data && data.length > 0) {
-          const statusMap = new Map<string, { hasFailed: boolean; transmitted: boolean }>();
-          
-          // Check each container for failed EDI transmissions
+          const logs = await ediTransmissionService.getTransmissionHistory();
+          const statusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>();
           for (const container of data) {
-            const failedTransmissions = await ediTransmissionService.getFailedTransmissions(container.number);
-            statusMap.set(container.id, {
-              hasFailed: failedTransmissions.length > 0,
-              transmitted: container.ediTransmitted || false
-            });
+            const containerLogs = logs.filter(l => l.containerNumber === container.number);
+            if (containerLogs.length === 0) {
+              statusMap.set(container.id, null);
+              continue;
+            }
+            const successLog = containerLogs.find(l => l.status === 'success');
+            if (successLog) {
+              statusMap.set(container.id, 'success');
+              continue;
+            }
+            const byLastAttempt = [...containerLogs].sort(
+              (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
+            );
+            statusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
           }
-          
-          setEdiStatuses(statusMap);
+          setEdiStatusByContainerId(statusMap);
         }
       } catch (error) {
         handleError(error, 'ContainerList.loadContainers');
@@ -565,10 +593,10 @@ function filterTable(){
         addAuditLog(container.id, 'edi_regenerated', `EDI successfully regenerated and transmitted for container ${container.number}`);
         toast.success(`EDI regenerated and transmitted for ${container.number}`);
         
-        // Update EDI status
-        setEdiStatuses(prev => {
+        // Update EDI status to success
+        setEdiStatusByContainerId(prev => {
           const newMap = new Map(prev);
-          newMap.set(container.id, { hasFailed: false, transmitted: true });
+          newMap.set(container.id, 'success');
           return newMap;
         });
       } else {
@@ -793,6 +821,7 @@ function filterTable(){
                 {canViewAllData() && (<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>)}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate In</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate Out</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full / Empty</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.actions')}
@@ -812,26 +841,14 @@ function filterTable(){
                         <span className="text-lg">📦</span>
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{formatContainerNumberForDisplay(container.number)}</div>
+                        <div className="text-sm font-medium text-gray-900">{container.number}</div>
                         <div className="text-xs text-gray-500">
-                          {container.type ? container.type.charAt(0).toUpperCase() + container.type.slice(1) : '-'} • {container.size}
+                          {formatContainerTypeSize(container)}
                         </div>
                         {container.damage && container.damage.length > 0 && (
                           <div className="text-xs text-red-600 flex items-center mt-1">
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             {container.damage.length} damage(s) reported
-                          </div>
-                        )}
-                        {ediStatuses.get(container.id)?.hasFailed && (
-                          <div className="text-xs text-orange-600 flex items-center mt-1">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            EDI transmission failed
-                          </div>
-                        )}
-                        {ediStatuses.get(container.id)?.transmitted && !ediStatuses.get(container.id)?.hasFailed && (
-                          <div className="text-xs text-green-600 flex items-center mt-1">
-                            <CreditCard className="h-3 w-3 mr-1" />
-                            EDI transmitted
                           </div>
                         )}
                       </div>
@@ -869,6 +886,33 @@ function filterTable(){
                         </>) : '-'}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(() => {
+                      const status = ediStatusByContainerId.get(container.id);
+                      if (status === 'success') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                            <Wifi className="h-3 w-3 mr-1" />
+                            EDI Sent
+                          </span>
+                        );
+                      }
+                      if (status === 'failed') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 border border-red-200">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            EDI Failed
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                          <WifiOff className="h-3 w-3 mr-1" />
+                          No EDI
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' :
@@ -880,13 +924,6 @@ function filterTable(){
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleViewContainer(container)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
                       {canEditContainers && (
                         <button
                           onClick={(e) => {
@@ -918,7 +955,7 @@ function filterTable(){
                           className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50 transition-colors"
                           title="Regenerate EDI for this container"
                         >
-                          <CreditCard className="h-4 w-4" />
+                          <RefreshCw className="h-4 w-4" />
                         </button>
                       )}
                       {canEditContainers && (

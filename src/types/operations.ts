@@ -6,6 +6,7 @@ export interface GateInOperation {
   clientName: string;
   containerType: string;
   containerSize: string;
+  isHighCube?: boolean; // From Gate In form (High Cube switch)
   containerQuantity: 1 | 2; // Number of containers in this operation (1 or 2 for 20ft)
   secondContainerNumber?: string; // Second container number when containerQuantity is 2
   transportCompany: string;
@@ -13,6 +14,9 @@ export interface GateInOperation {
   truckNumber?: string; // Changed from vehicleNumber to truckNumber
   bookingNumber?: string;
   equipmentReference?: string; // Equipment reference for EDI transmission
+  containerIsoCode?: string;   // ISO type from dropdown (e.g. 45G1)
+  fullEmpty?: 'FULL' | 'EMPTY';
+  transactionType?: 'Retour Livraison' | 'Transfert (IN)';
   classification?: 'divers' | 'alimentaire';
   damageReported: boolean;
   damageDescription?: string;

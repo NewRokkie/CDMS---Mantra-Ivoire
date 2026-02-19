@@ -1,0 +1,5 @@
+# Python dependencies for Vercel serverless functions
+# Minimal dependencies - using Python standard library for EDI generation
+
+# Date/time handling (optional, datetime from stdlib is sufficient)
+python-dateutil==2.8.2

@@ -84,9 +84,13 @@ class GateInCodecoService {
       const generator = new CodecoGenerator();
       const ediMessage = generator.generateFromSAPData(codecoData);
 
-      // Generate filename
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, 15);
-      const fileName = `CODECO_GATE_IN_${gateInData.containerNumber}_${timestamp}.edi`;
+      // Generate filename: CODECO_{SenderCode}{GateInDate}{GateInTime}_{containerNumber}_{operation}.edi
+      const gateDateStr = gateInData.truckArrivalDate?.replace(/-/g, '') ?? new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const gateDate = gateDateStr.length === 6 ? '20' + gateDateStr : gateDateStr.slice(0, 8);
+      const gateTime = (gateInData.truckArrivalTime?.replace(/:/g, '') ?? '').padEnd(6, '0').slice(0, 6);
+      const senderCode = (yardInfo.companyCode || '').trim();
+      const senderDateTime = `${senderCode}${gateDate}${gateTime}`;
+      const fileName = `CODECO_${senderDateTime}_${gateInData.containerNumber}_GATE_IN.edi`;
 
       logger.info('CODECO message generated successfully', 'GateInCodecoService', {
         containerNumber: gateInData.containerNumber,

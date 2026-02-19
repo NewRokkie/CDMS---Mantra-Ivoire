@@ -11,7 +11,7 @@ export class ContainerService {
       .select(`
         *,
         clients!containers_client_id_fkey(name, code),
-        gate_in_operations(edi_transmitted, edi_transmission_date, edi_error_message)
+        gate_in_operations(edi_transmitted, edi_transmission_date, edi_error_message, transport_company)
       `)
       .order('created_at', { ascending: false });
 
@@ -24,7 +24,8 @@ export class ContainerService {
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name, code)
+        clients!containers_client_id_fkey(name, code),
+        gate_in_operations(transport_company)
       `)
       .eq('id', id)
       .maybeSingle();
@@ -49,7 +50,8 @@ export class ContainerService {
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name, code)
+        clients!containers_client_id_fkey(name, code),
+        gate_in_operations(transport_company)
       `)
       .eq('yard_id', yardId)
       .order('created_at', { ascending: false });
@@ -80,6 +82,7 @@ export class ContainerService {
           number: container.number,
           type: container.type,
           size: container.size,
+          is_high_cube: container.isHighCube === true,
           status: container.status,
           full_empty: container.fullEmpty,
           location: container.location,
@@ -155,6 +158,7 @@ export class ContainerService {
       if (updates.number) updateData.number = updates.number;
       if (updates.type) updateData.type = updates.type;
       if (updates.size) updateData.size = updates.size;
+      if (updates.isHighCube !== undefined) updateData.is_high_cube = updates.isHighCube;
       if (updates.status) updateData.status = updates.status;
       if (updates.fullEmpty !== undefined) updateData.full_empty = updates.fullEmpty; // Add full/empty status
       if (updates.location !== undefined) updateData.location = updates.location;
@@ -897,6 +901,7 @@ export class ContainerService {
       number: data.number,
       type: data.type,
       size: data.size,
+      isHighCube: data.is_high_cube === true,
       status: data.status,
       fullEmpty: data.full_empty, // Map full/empty status
       location: data.location,
@@ -916,7 +921,8 @@ export class ContainerService {
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
       placedAt: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
-      // EDI fields from gate_in_operations
+      // EDI fields and transporter from gate_in_operations
+      transporter: gateInOp?.transport_company ?? undefined,
       ediTransmitted: gateInOp?.edi_transmitted || false,
       ediTransmissionDate: gateInOp?.edi_transmission_date ? new Date(gateInOp.edi_transmission_date) : undefined,
       ediErrorMessage: gateInOp?.edi_error_message,

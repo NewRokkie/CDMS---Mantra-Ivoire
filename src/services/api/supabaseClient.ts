@@ -63,6 +63,7 @@ export type Database = {
           type: string;
           size: string;
           status: string;
+          is_high_cube: boolean;               // Added: 20260219000000 - High Cube from Gate In
           full_empty: string | null;           // Added: 20251107120001
           location: string | null;
           yard_id: string | null;
@@ -89,6 +90,7 @@ export type Database = {
           type: string;
           size: string;
           status?: string;
+          is_high_cube?: boolean;
           full_empty?: string | null;
           location?: string | null;
           yard_id?: string | null;
@@ -152,6 +154,8 @@ export type Database = {
           client_name: string;
           container_type: string;
           container_size: string;
+          is_high_cube: boolean;
+          container_iso_code: string | null;
           transport_company: string | null;
           driver_name: string | null;
           vehicle_number: string | null;
@@ -180,6 +184,8 @@ export type Database = {
           client_name: string;
           container_type: string;
           container_size: string;
+          is_high_cube?: boolean;
+          container_iso_code?: string | null;
           transport_company?: string | null;
           driver_name?: string | null;
           vehicle_number?: string | null;

@@ -16,6 +16,7 @@ export interface GateInData {
   clientName?: string;
   containerType: string;
   containerSize: string;
+  isHighCube?: boolean; // High cube variant (e.g. Dry 40ft HC), from Gate In form
   fullEmpty?: 'FULL' | 'EMPTY'; // Full or Empty status
   transportCompany: string;
   driverName: string;
@@ -29,6 +30,7 @@ export interface GateInData {
   classification?: 'divers' | 'alimentaire';
   transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // Transaction type for reports
   equipmentReference?: string; // Equipment reference for EDI transmission
+  containerIsoCode?: string;   // ISO type code from dropdown (e.g. 45G1)
   bookingReference?: string;   // Booking reference number
   notes?: string;              // Additional notes
   damageReported?: boolean; // Keep for backward compatibility during migration
@@ -254,6 +256,7 @@ export class GateService {
       number: data.containerNumber.trim().toUpperCase(),
       type: data.containerType,
       size: data.containerSize,
+      is_high_cube: data.isHighCube === true,
       status: 'gate_in',
       full_empty: data.fullEmpty || 'FULL',
       location: data.location,
@@ -357,6 +360,7 @@ export class GateService {
           client_name: client.name,
           container_type: data.containerType,
           container_size: data.containerSize,
+          is_high_cube: data.isHighCube === true,
           full_empty: data.fullEmpty || 'FULL', // Add full/empty status from form data
           transport_company: data.transportCompany,
           driver_name: data.driverName,
@@ -367,6 +371,7 @@ export class GateService {
           classification: data.classification || 'divers',
           transaction_type: data.transactionType || 'Retour Livraison', // Transaction type for reports
           equipment_reference: data.equipmentReference, // Equipment reference for EDI transmission
+          container_iso_code: data.containerIsoCode || null, // ISO type from dropdown (e.g. 45G1)
           damage_reported: data.damageAssessment?.hasDamage || data.damageReported || false,
           damage_description: data.damageAssessment?.damageDescription || data.damageDescription,
           damage_assessment_stage: data.damageAssessment?.assessmentStage || 'assignment',
@@ -793,6 +798,7 @@ export class GateService {
       clientName: data.client_name,
       containerType: data.container_type,
       containerSize: data.container_size,
+      isHighCube: data.is_high_cube === true,
       containerQuantity: data.container_quantity || 1, // Default to 1 if not set
       secondContainerNumber: data.second_container_number,
       transportCompany: data.transport_company,
@@ -800,6 +806,9 @@ export class GateService {
       truckNumber: data.vehicle_number, // Fix: map vehicle_number to truckNumber
       assignedLocation: data.assigned_location,
       assignedStack: data.assigned_stack, // Map assigned_stack
+      fullEmpty: data.full_empty || 'FULL',
+      transactionType: data.transaction_type || 'Retour Livraison',
+      containerIsoCode: data.container_iso_code || undefined,
       classification: data.classification || 'divers', // Fix: default to 'divers' not 'autres'
       damageReported: data.damage_reported,
       damageDescription: data.damage_description,
