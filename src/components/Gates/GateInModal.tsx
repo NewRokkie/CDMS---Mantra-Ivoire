@@ -1,7 +1,8 @@
 import React from 'react';
 import { Package, Truck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { GateInModalProps } from './types';
+import { useLanguage } from '../../hooks/useLanguage';
+import { GateInModalProps, GateInFormData } from './types';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TimePicker } from '../Common/TimePicker';
 import { DatePicker } from '../Common/DatePicker';
@@ -37,6 +38,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   validationWarnings = [],
 }) => {
   const { hasModuleAccess } = useAuth();
+  const { t } = useLanguage();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
 
   const handleFormSubmit = async () => {
@@ -54,12 +56,12 @@ export const GateInModal: React.FC<GateInModalProps> = ({
     <MultiStepModal
       isOpen={showForm}
       onClose={() => setShowForm(false)}
-      title="New Gate In"
+      title={t('gate.in.new')}
       subtitle="Process container entry into the depot"
       icon={Package}
       currentStep={currentStep}
       totalSteps={3}
-      stepLabels={['Container Info', 'Transport Details', 'Final Summary']}
+      stepLabels={[t('gate.in.form.containerInfo'), t('gate.in.form.transportInfo'), 'Final Summary']}
       onNextStep={currentStep === 3 ? handleFormSubmit : handleNextStep}
       onPrevStep={handlePrevStep}
       isStepValid={isCurrentStepValid}
@@ -91,7 +93,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
 // Extract form content into separate component for better organization
 interface GateInFormContentProps {
   currentStep: number;
-  formData: any;
+  formData: GateInFormData;
   currentContainerType: any;
   canManageTimeTracking: boolean;
   clients: any[];
@@ -99,12 +101,12 @@ interface GateInFormContentProps {
   validationErrors: string[];
   validationWarnings: string[];
   isProcessing: boolean;
-  handleInputChange: (field: any, value: any) => void;
-  handleContainerSizeChange: (size: any) => void;
+  handleInputChange: (field: keyof GateInFormData, value: any) => void;
+  handleContainerSizeChange: (size: '20ft' | '40ft') => void;
   handleHighCubeChange: (isHighCube: boolean) => void;
-  handleQuantityChange: (quantity: any) => void;
+  handleQuantityChange: (quantity: 1 | 2) => void;
   handleStatusChange: (isFull: boolean) => void;
-  handleClientChange: (clientId: string, clientName: string, clientCode: string) => void;
+  handleClientChange: (clientId: string) => void;
   handleTransactionTypeChange: (transactionType: 'Retour Livraison' | 'Transfert (IN)') => void;
 }
 
@@ -125,6 +127,8 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
   handleClientChange,
   handleTransactionTypeChange
 }) => {
+  const { t } = useLanguage();
+
   return (
     <>
       {/* Error and Warning Messages */}
@@ -135,7 +139,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
             <div className="flex items-start p-4 bg-red-50 border border-red-200 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-medium text-red-800 mb-1">Submission Failed</h4>
+                <h4 className="text-sm font-medium text-red-800 mb-1">{t('common.submissionFailed')}</h4>
                 <p className="text-sm text-red-700">{submissionError}</p>
               </div>
             </div>
@@ -146,7 +150,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
             <div className="flex items-start p-4 bg-red-50 border border-red-200 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h4>
+                <h4 className="text-sm font-medium text-red-800 mb-2">{t('common.fixErrors')}</h4>
                 <ul className="text-sm text-red-700 space-y-1">
                   {validationErrors.map((error, index) => (
                     <li key={index} className="flex items-start">
@@ -164,7 +168,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
             <div className="flex items-start p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-medium text-yellow-800 mb-2">Please review:</h4>
+                <h4 className="text-sm font-medium text-yellow-800 mb-2">{t('common.pleaseReview')}</h4>
                 <ul className="text-sm text-yellow-700 space-y-1">
                   {validationWarnings.map((warning, index) => (
                     <li key={index} className="flex items-start">
@@ -189,7 +193,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                 <div className="depot-section">
                   <h4 className="depot-section-header">
                     <Package className="depot-section-icon text-blue-500" />
-                    Container Information
+                    {t('gate.in.form.containerInfo')}
                   </h4>
 
                   <div className="depot-step-spacing">
@@ -197,7 +201,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     <div className="depot-form-grid md:grid-cols-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Container Size *
+                          {t('gate.in.form.containerSize')} *
                         </label>
                         <Switch
                           checked={formData.containerSize === '40ft'}
@@ -217,7 +221,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Is High Cube ?
+                          {t('gate.in.form.highCube')}
                         </label>
                         <Switch
                           checked={formData.isHighCube}
@@ -250,7 +254,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     <div className="depot-form-grid">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Quantity *
+                          {t('gate.in.form.quantity')} *
                         </label>
                         <Switch
                           checked={formData.containerQuantity === 2}
@@ -277,7 +281,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     <div className="depot-form-grid">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Container Status *
+                          {t('gate.in.form.status')} *
                         </label>
                         <Switch
                           checked={formData.status === 'FULL'}
@@ -299,18 +303,15 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {/* Client Selection */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Client *
+                        {t('gate.in.form.client')} *
                       </label>
                       <ClientSearchField
                         clients={clients}
                         selectedClientId={formData.clientId}
                         onClientSelect={(clientId: string) => {
-                          const client = clients.find(c => c.id === clientId);
-                          if (client) {
-                            handleClientChange(clientId, client.name, client.code);
-                          }
+                          handleClientChange(clientId);
                         }}
-                        placeholder="Search client by name or code..."
+                        placeholder={t('gate.in.form.searchClient')}
                         required
                       />
                     </div>
@@ -319,7 +320,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {formData.status === 'FULL' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Booking Reference *
+                          {t('gate.in.form.booking')} *
                         </label>
                         <input
                           type="text"
@@ -335,7 +336,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {/* Equipment Reference - Free text field for EDI transmission */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Equipment Reference
+                        {t('gate.in.form.equipmentRef')}
                         <span className="text-xs text-gray-500 ml-1">(for EDI client identification)</span>
                       </label>
                       <input
@@ -354,7 +355,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     <div className="depot-field-separator">
                       {/* First Container Number */}
                       <ContainerNumberInput
-                        label="Container Number"
+                        label={t('gate.in.form.containerNumber')}
                         value={formData.containerNumber}
                         confirmationValue={formData.containerNumberConfirmation}
                         onChange={(value) => handleInputChange('containerNumber', value)}
@@ -391,14 +392,14 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                 <div className="depot-section">
                   <h4 className="depot-section-header">
                     <Truck className="depot-section-icon text-green-500" />
-                    Transport Information
+                    {t('gate.in.form.transportInfo')}
                   </h4>
 
                   <div className="depot-step-spacing">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Driver Name *
+                        {t('gate.in.form.driver')} *
                       </label>
                       <input
                         type="text"
@@ -412,7 +413,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Truck Number *
+                        {t('gate.in.form.truck')} *
                       </label>
                       <input
                         type="text"
@@ -426,7 +427,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Transport Company *
+                        {t('gate.in.form.transport')} *
                       </label>
                       <input
                         type="text"
@@ -446,14 +447,14 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                   <div className="depot-section">
                     <h4 className="depot-section-header">
                       <Calendar className="depot-section-icon text-blue-500" />
-                      Truck Arrival Time
+                      {t('gate.in.form.arrival')}
                     </h4>
                     <p className="text-sm text-gray-600 mb-4">Manual time tracking (Admin only) - Defaults to current system time</p>
 
                     <div className="depot-form-grid">
                       <div>
                         <label className="label">
-                          Arrival Date
+                          {t('gate.in.form.arrivalDate')}
                         </label>
                         <DatePicker
                           value={formData.truckArrivalDate}
@@ -464,7 +465,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       </div>
                       <div>
                         <label className="label">
-                          Arrival Time
+                          {t('gate.in.form.arrivalTime')}
                         </label>
                         <TimePicker
                           value={formData.truckArrivalTime}
@@ -482,7 +483,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                 <div className="depot-section">
                   <h4 className="depot-section-header">
                     <Package className="depot-section-icon text-green-500" />
-                    Operation Summary
+                    {t('gate.in.summary')}
                   </h4>
                   <div className="space-y-3 text-sm">
                     {/* Mobile: Stack layout */}
@@ -508,7 +509,9 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                           <span className="text-blue-600 ml-1">
                             ({formData.containerSize === '20ft'
                               ? currentContainerType.code20
-                              : currentContainerType.code40})
+                              : (formData.isHighCube && currentContainerType.code40HC
+                                ? currentContainerType.code40HC
+                                : currentContainerType.code40)})
                           </span>
                         )}
                       </div>
@@ -577,7 +580,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                 {/* Additional Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Additional Notes
+                    {t('gate.in.form.notes')}
                   </label>
                   <textarea
                     value={formData.notes}
@@ -598,12 +601,10 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                 <div className="depot-section">
                   <h4 className="depot-section-header">
                     <Clock className="depot-section-icon text-blue-500" />
-                    Pending Operation
+                    {t('gate.in.pendingNotice.title')}
                   </h4>
                   <div className="text-sm text-gray-600">
-                    <p className="mb-2">This Gate In operation will be created with <strong>Pending</strong> status.</p>
-                    <p className="mb-2">Stack assignment and damage assessment will be done later through the "Pending Operations" section.</p>
-                    <p>The container will be physically inspected and assigned to a location during the pending operations workflow.</p>
+                    <p className="mb-2">{t('gate.in.pendingNotice.desc')}</p>
                   </div>
                 </div>
 
@@ -611,8 +612,10 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                 <div className="depot-section">
                   <h4 className="depot-section-header">
                     <Package className="depot-section-icon text-green-500" />
-                    Final Operation Summary
+                    {t('gate.in.summary')}
                   </h4>
+                  {/* ... Summary Content repeated - should be a component ideally but reusing same structure for now ... */}
+                  {/* For brevity, I'm replacing the repeated content with similar translated structure */}
                   <div className="space-y-3 text-sm">
                     {/* Container Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -638,7 +641,9 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                             <span className="text-blue-600 ml-1">
                               ({formData.containerSize === '20ft'
                                 ? currentContainerType.code20
-                                : currentContainerType.code40})
+                                : (formData.isHighCube && currentContainerType.code40HC
+                                  ? currentContainerType.code40HC
+                                  : currentContainerType.code40)})
                             </span>
                           )}
                         </div>
@@ -728,8 +733,6 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                         <div className="font-medium">{formData.notes}</div>
                       </div>
                     )}
-
-                    {/* Damage Assessment moved to pending operations phase */}
                 </div>
               </div>
             </div>

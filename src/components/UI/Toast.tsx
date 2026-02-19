@@ -15,12 +15,12 @@ interface ToastProps {
   onClose: (id: string) => void;
 }
 
-export const Toast: React.FC<ToastProps> = ({ 
-  id, 
-  type, 
-  message, 
-  duration = 4000, 
-  onClose 
+export const Toast: React.FC<ToastProps> = ({
+  id,
+  type,
+  message,
+  duration = 5000,
+  onClose
 }) => {
   useEffect(() => {
     if (duration > 0) {
@@ -76,6 +76,7 @@ export const Toast: React.FC<ToastProps> = ({
       flex items-center p-4 mb-3 rounded-lg border shadow-sm
       ${getBackgroundColor()} ${getTextColor()}
       animate-in slide-in-from-right-full duration-300
+      mt-20
     `}>
       <div className="flex-shrink-0">
         {getIcon()}

@@ -61,7 +61,7 @@ export const NotificationArea: React.FC<NotificationProps> = ({
   return (
     <div className={`mt-4 p-3 rounded-lg flex items-center space-x-2 animate-slide-in-down ${styles.container}`}>
       <IconComponent className={`h-5 w-5 flex-shrink-0 ${styles.iconColor}`} />
-      <span className="text-sm font-medium flex-1">{message}</span>
+      <span className="text-sm font-gilroy-medium flex-1">{message}</span>
       {type === 'error' && (
         <button
           onClick={onDismiss}

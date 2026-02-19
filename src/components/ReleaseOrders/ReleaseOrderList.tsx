@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import { useYard } from '../../hooks/useYard';
 import { bookingReferenceService } from '../../services/api';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
@@ -16,6 +17,7 @@ import { userService } from '../../services/api';
 // REMOVED: Mock data now managed by global store
 
 export const ReleaseOrderList: React.FC = () => {
+  const { t } = useLanguage();
   const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -189,8 +191,8 @@ export const ReleaseOrderList: React.FC = () => {
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Booking Management</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">Release orders & container bookings</p>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('releases.booking.title')}</h1>
+              <p className="text-sm text-gray-600 hidden lg:block">{t('releases.subtitle')}</p>
             </div>
           </div>
 
@@ -201,7 +203,7 @@ export const ReleaseOrderList: React.FC = () => {
               className="w-full lg:w-auto flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl lg:rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <FileText className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">Create Booking</span>
+              <span className="text-sm lg:text-base">{t('releases.createBooking')}</span>
             </button>
           </div>
         </div>
@@ -225,7 +227,7 @@ export const ReleaseOrderList: React.FC = () => {
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
-                placeholder="Search bookings..."
+                placeholder={t('releases.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 lg:bg-white focus:bg-white transition-colors"
@@ -252,7 +254,7 @@ export const ReleaseOrderList: React.FC = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
                   }`}
                 >
-                  {filter === 'all' ? 'All' : filter === 'in_process' ? 'In Process' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('releases.inProcess') : t(`common.status.${filter}`)}
                 </button>
               ))}
             </div>
@@ -263,10 +265,10 @@ export const ReleaseOrderList: React.FC = () => {
                 onChange={(e) => setSelectedFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
               >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="in_process">In Process</option>
-                <option value="completed">Completed</option>
+                <option value="all">{t('common.all')}</option>
+                <option value="pending">{t('common.status.pending')}</option>
+                <option value="in_process">{t('releases.inProcess')}</option>
+                <option value="completed">{t('common.status.completed')}</option>
               </select>
               {searchTerm && (
                 <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg font-medium">
@@ -276,10 +278,10 @@ export const ReleaseOrderList: React.FC = () => {
               <button
                 onClick={handleExportBookings}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                title="Export to Excel"
+                title={t('common.export')}
               >
                 <Download className="h-4 w-4" />
-                <span>Export</span>
+                <span>{t('common.export')}</span>
               </button>
             </div>
           </div>
@@ -318,10 +320,30 @@ export const ReleaseOrderList: React.FC = () => {
             setSelectedOrder(null);
             setIsEditMode(false);
           }}
-          onSubmit={() => {
-            setShowForm(false);
-            setSelectedOrder(null);
-            setIsEditMode(false);
+          onSubmit={async (data) => {
+            try {
+              if (isEditMode && selectedOrder) {
+                // Update existing booking
+                const updated = await bookingReferenceService.update(selectedOrder.id, data);
+                setReleaseOrders(prev =>
+                  prev.map(order => order.id === updated.id ? updated : order)
+                );
+              } else {
+                // Create new booking
+                const newBooking = await bookingReferenceService.create({
+                  ...data,
+                  status: 'pending',
+                  remainingContainers: data.totalContainers,
+                  createdBy: user?.id || ''
+                });
+                setReleaseOrders(prev => [...prev, newBooking]);
+              }
+              setShowForm(false);
+              setSelectedOrder(null);
+              setIsEditMode(false);
+            } catch (error) {
+              handleError(error, 'ReleaseOrderList.onSubmit');
+            }
           }}
 
           isLoading={false}

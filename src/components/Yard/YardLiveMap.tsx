@@ -358,16 +358,19 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const stats = useMemo(() => {
     const total = allContainers.length;
     const inDepot = allContainers.filter(c => c.status === 'in_depot').length;
-    const maintenance = allContainers.filter(c => c.status === 'maintenance').length;
-    const damaged = allContainers.filter(c => c.damage && c.damage.length > 0).length;
+    const fullContainers = allContainers.filter(c => c.fullEmpty === 'FULL' && c.status === 'in_depot').length;
+    const emptyContainers = allContainers.filter(c => c.fullEmpty === 'EMPTY' && c.status === 'in_depot').length;
     
     // Calculate effective capacity using our new logic instead of relying on yard.totalCapacity
     const allStacks = yard ? yard.sections.flatMap(section => section.stacks) : [];
     const effectiveCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
     
+    // Free space is the number of available locations (capacity - current occupancy)
+    const freeSpace = effectiveCapacity - (yard?.currentOccupancy || 0);
+    
     const occupancyRate = effectiveCapacity > 0 ? ((yard?.currentOccupancy || 0) / effectiveCapacity * 100) : 0;
 
-    return { total, inDepot, maintenance, damaged, occupancyRate, effectiveCapacity };
+    return { total, inDepot, fullContainers, emptyContainers, freeSpace, occupancyRate, effectiveCapacity };
   }, [allContainers, yard]);
 
   const stacksData = useMemo(() => {
@@ -401,10 +404,11 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           const pairedStackNumbers = pairedPhysicalStacks.map(s => s.stackNumber);
           
           const virtualContainers = filteredContainers.filter(c => {
-            // Only include 40ft containers from the paired physical stacks
+            // Include 40ft containers from paired physical stacks (S03, S05) OR virtual location (S04)
             if (c.size !== '40ft') return false;
             const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
-            return match && pairedStackNumbers.includes(parseInt(match[1]));
+            const stackNum = match ? parseInt(match[1]) : null;
+            return stackNum !== null && (pairedStackNumbers.includes(stackNum) || stackNum === stack.stackNumber);
           });
 
           const containerSlots: ContainerSlot[] = virtualContainers.map(c => {
@@ -523,11 +527,30 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           const all40ftContainers = filteredContainers.filter(c => {
             if (c.size !== '40ft') return false;
             const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
-            return match && bothStackNumbers.includes(parseInt(match[1]));
+            const stackNum = match ? parseInt(match[1]) : null;
+            return stackNum !== null && (bothStackNumbers.includes(stackNum) || stackNum === pairedVirtualStackNumber);
           });
 
-          // Create container slots but don't show them in physical stacks (they'll be shown in virtual stack)
-          const containerSlots: ContainerSlot[] = []; // Empty for physical stacks
+          // Build container slots per row so R1, R2, etc. show correct count (e.g. 1) in cells
+          const containerSlots: ContainerSlot[] = all40ftContainers.map(c => {
+            const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+            const row = locMatch ? parseInt(locMatch[1]) : 1;
+            const tier = locMatch ? parseInt(locMatch[2]) : 1;
+            let status: ContainerSlot['status'] = 'occupied';
+            if (c.damage && c.damage.length > 0) status = 'damaged';
+            else if (c.status === 'maintenance') status = 'priority';
+            return {
+              containerId: c.id,
+              containerNumber: c.number,
+              containerSize: c.size,
+              row,
+              tier,
+              status,
+              client: c.clientName,
+              transporter: (c as any).transporter,
+              containerType: c.status === 'in_depot' ? 'FULL' : 'EMPTY'
+            };
+          });
 
           allStacks.push({
             stackNumber: stack.stackNumber,
@@ -539,8 +562,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             zoneName,
             containerSize: '40ft',
             isSpecialStack: config.isSpecialStack,
-            containerSlots, // Empty - containers shown in virtual stack
-            currentOccupancy: all40ftContainers.length, // Show same count as virtual stack
+            containerSlots,
+            currentOccupancy: all40ftContainers.length,
             capacity: physicalCapacity, // Use calculated capacity
             rows: stack.rows,
             maxTiers: stack.maxTiers
@@ -641,7 +664,8 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             const virtual40ftContainers = filteredContainers.filter(c => {
               if (c.size !== '40ft') return false;
               const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
-              return match && bothStackNumbers.includes(parseInt(match[1]));
+              const stackNum = match ? parseInt(match[1]) : null;
+              return stackNum !== null && (bothStackNumbers.includes(stackNum) || stackNum === virtualStackNumber);
             });
 
             const virtualContainerSlots: ContainerSlot[] = virtual40ftContainers.map(c => {
@@ -870,20 +894,20 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded px-2 py-1.5 border border-orange-200">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-orange-600 font-medium uppercase">Maintenance</div>
-                <div className="text-lg font-bold text-orange-900">{stats.maintenance}</div>
+                <div className="text-[10px] text-orange-600 font-medium uppercase">Free Space</div>
+                <div className="text-lg font-bold text-orange-900">{stats.freeSpace}</div>
               </div>
-              <AlertTriangle className="h-5 w-5 text-orange-600 opacity-50" />
+              <MapPin className="h-5 w-5 text-orange-600 opacity-50" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded px-2 py-1.5 border border-red-200">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded px-2 py-1.5 border border-purple-200">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-red-600 font-medium uppercase">Damaged</div>
-                <div className="text-lg font-bold text-red-900">{stats.damaged}</div>
+                <div className="text-[10px] text-purple-600 font-medium uppercase">FULL</div>
+                <div className="text-lg font-bold text-purple-900">{stats.fullContainers}</div>
               </div>
-              <AlertTriangle className="h-5 w-5 text-red-600 opacity-50" />
+              <Package className="h-5 w-5 text-purple-600 opacity-50" />
             </div>
           </div>
 
@@ -891,9 +915,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[10px] text-gray-600 font-medium uppercase">Empty</div>
-                <div className="text-lg font-bold text-gray-900">{stats.effectiveCapacity - yard.currentOccupancy}</div>
+                <div className="text-lg font-bold text-gray-900">{stats.emptyContainers}</div>
               </div>
-              <MapPin className="h-5 w-5 text-gray-600 opacity-50" />
+              <Package className="h-5 w-5 text-gray-600 opacity-50" />
             </div>
           </div>
         </div>
@@ -1185,13 +1209,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FileText className="h-4 w-4 text-blue-600" />
-                    <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Type</label>
+                    <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Type / Design</label>
                   </div>
-                  <p className="text-lg font-bold text-blue-900 capitalize">{selectedContainer.type.replace('_', ' ')}</p>
+                  <p className="text-lg font-bold text-blue-900 capitalize">{selectedContainer.type.replace(/_/g, ' ')}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
@@ -1199,7 +1223,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     <Package className="h-4 w-4 text-purple-600" />
                     <label className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Size</label>
                   </div>
-                  <p className="text-lg font-bold text-purple-900">{selectedContainer.size}</p>
+                  <p className="text-lg font-bold text-purple-900">{selectedContainer.size}{selectedContainer.isHighCube ? ' High Cube' : ''}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
@@ -1212,11 +1236,139 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
                   <div className="flex items-center space-x-2 mb-2">
-                    <MapPin className="h-4 w-4 text-orange-600" />
-                    <label className="text-xs font-semibold text-orange-900 uppercase tracking-wide">Location</label>
+                    <Truck className="h-4 w-4 text-orange-600" />
+                    <label className="text-xs font-semibold text-orange-900 uppercase tracking-wide">Transporteur</label>
                   </div>
-                  <p className="text-lg font-bold text-orange-900 font-mono">{getVirtualLocation(selectedContainer, getStackConfiguration)}</p>
+                  <p className="text-lg font-bold text-orange-900">{selectedContainer.transporter ?? '—'}</p>
                 </div>
+
+                <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-xl border border-cyan-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MapPin className="h-4 w-4 text-cyan-600" />
+                    <label className="text-xs font-semibold text-cyan-900 uppercase tracking-wide">Emplacement</label>
+                  </div>
+                  <p className="text-lg font-bold text-cyan-900 font-mono">{getVirtualLocation(selectedContainer, getStackConfiguration)}</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-xl border border-amber-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Package className="h-4 w-4 text-amber-600" />
+                    <label className="text-xs font-semibold text-amber-900 uppercase tracking-wide">High Cube</label>
+                  </div>
+                  <p className="text-lg font-bold text-amber-900">{selectedContainer.isHighCube ? 'Oui' : 'Non'}</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="h-4 w-4 text-slate-600" />
+                    <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Plein / Vide</label>
+                  </div>
+                  <p className="text-lg font-bold text-slate-900">{selectedContainer.fullEmpty ?? '—'}</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="h-4 w-4 text-slate-600" />
+                    <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Classification</label>
+                  </div>
+                  <p className="text-lg font-bold text-slate-900 capitalize">{selectedContainer.classification ?? '—'}</p>
+                </div>
+
+                {(selectedContainer.transactionType || selectedContainer.bookingReference) && (
+                  <>
+                    {selectedContainer.transactionType && (
+                      <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <FileText className="h-4 w-4 text-slate-600" />
+                          <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Type de transaction</label>
+                        </div>
+                        <p className="text-lg font-bold text-slate-900">{selectedContainer.transactionType}</p>
+                      </div>
+                    )}
+                    {selectedContainer.bookingReference && (
+                      <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <FileText className="h-4 w-4 text-slate-600" />
+                          <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Réf. réservation</label>
+                        </div>
+                        <p className="text-lg font-bold text-slate-900 font-mono">{selectedContainer.bookingReference}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {(selectedContainer.origin || selectedContainer.destination) && (
+                  <>
+                    {selectedContainer.origin && (
+                      <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 col-span-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <MapPin className="h-4 w-4 text-slate-600" />
+                          <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Origine</label>
+                        </div>
+                        <p className="text-base font-bold text-slate-900">{selectedContainer.origin}</p>
+                      </div>
+                    )}
+                    {selectedContainer.destination && (
+                      <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 col-span-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <MapPin className="h-4 w-4 text-slate-600" />
+                          <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Destination</label>
+                        </div>
+                        <p className="text-base font-bold text-slate-900">{selectedContainer.destination}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {selectedContainer.priority && (
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-slate-600" />
+                      <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Priorité</label>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900 capitalize">{selectedContainer.priority}</p>
+                  </div>
+                )}
+
+                {selectedContainer.temperature != null && (
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <FileText className="h-4 w-4 text-slate-600" />
+                      <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Température (°C)</label>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900">{selectedContainer.temperature}</p>
+                  </div>
+                )}
+
+                {selectedContainer.hazardous && (
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl border border-red-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <label className="text-xs font-semibold text-red-900 uppercase tracking-wide">Matières dangereuses</label>
+                    </div>
+                    <p className="text-lg font-bold text-red-900">Oui</p>
+                  </div>
+                )}
+
+                {selectedContainer.customsStatus && (
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <FileText className="h-4 w-4 text-slate-600" />
+                      <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Douane</label>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900 capitalize">{selectedContainer.customsStatus}</p>
+                  </div>
+                )}
+
+                {selectedContainer.contents && (
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 col-span-2">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <FileText className="h-4 w-4 text-slate-600" />
+                      <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Contenu</label>
+                    </div>
+                    <p className="text-base font-bold text-slate-900">{selectedContainer.contents}</p>
+                  </div>
+                )}
               </div>
 
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
@@ -1260,21 +1412,57 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 </div>
               )}
 
-              {selectedContainer.gateInDate && (
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Calendar className="h-4 w-4 text-blue-600" />
-                    <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Gate In Date</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {selectedContainer.gateInDate && (
+                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Entrée dépôt</label>
+                    </div>
+                    <p className="text-base font-bold text-blue-900">
+                      {new Date(selectedContainer.gateInDate).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
                   </div>
-                  <p className="text-base font-bold text-blue-900">
-                    {new Date(selectedContainer.gateInDate).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
+                )}
+                {selectedContainer.gateOutDate && (
+                  <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Calendar className="h-4 w-4 text-orange-600" />
+                      <label className="text-xs font-semibold text-orange-900 uppercase tracking-wide">Sortie dépôt</label>
+                    </div>
+                    <p className="text-base font-bold text-orange-900">
+                      {new Date(selectedContainer.gateOutDate).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {(selectedContainer.ediTransmitted != null || selectedContainer.releaseOrderId) && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
+                  {selectedContainer.ediTransmitted != null && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">EDI transmis</span>
+                      <span className="font-bold text-gray-900">{selectedContainer.ediTransmitted ? 'Oui' : 'Non'}</span>
+                    </div>
+                  )}
+                  {selectedContainer.releaseOrderId && (
+                    <div>
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Ordre de livraison</span>
+                      <p className="font-mono text-sm font-bold text-gray-900 mt-1">{selectedContainer.releaseOrderId}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

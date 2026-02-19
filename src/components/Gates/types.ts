@@ -133,6 +133,7 @@ export interface GateInOperation {
   transportCompany?: string;
   operationStatus?: 'pending' | 'completed';
   assignedLocation?: string;
+  assignedStack?: string; // Stack number extracted from assignedLocation (e.g., "S04")
   truckArrivalDate?: string;
   truckArrivalTime?: string;
   truckDepartureDate?: string;
@@ -144,7 +145,6 @@ export interface GateInOperation {
   operatorName?: string;
   damageReported?: boolean;
   damageDescription?: string;
-  weight?: number;
   ediTransmitted?: boolean;
   ediTransmissionDate?: Date;
   containerId?: string;
@@ -199,6 +199,7 @@ export interface ContainerTypeSelectProps {
   selectedIso?: string;
   onChange: (value: string, iso?: string) => void;
   containerSize: '20ft' | '40ft';
+  isHighCube: boolean;
 }
 
 export interface SwitchProps {

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useYardProvider, YardContext } from '../../hooks/useYard';
 import { useModuleAccessSync } from '../../hooks/useModuleAccessSync';
+import { useModuleRouting } from '../../hooks/useModuleRouting';
 import { useGlobalStore } from '../../store/useGlobalStore';
 import { FullScreenLoader } from '../Common/FullScreenLoader';
 import { logger } from '../../utils/logger';
@@ -10,44 +11,16 @@ import { diagnostics } from '../../utils/diagnostics';
 import { AlertCircle, Grid2x2, RefreshCw, Settings, Bug } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
-// Lazy load components for better performance
-const DashboardOverview = React.lazy(() => import('../Dashboard/DashboardOverview').then(module => ({ default: module.DashboardOverview })));
-const ContainerList = React.lazy(() => import('../Containers/ContainerList').then(module => ({ default: module.ContainerList })));
-const GateIn = React.lazy(() => import('../Gates/GateIn').then(module => ({ default: module.GateIn })));
-const GateOut = React.lazy(() => import('../Gates/GateOut').then(module => ({ default: module.GateOut })));
-const ReleaseOrderList = React.lazy(() => import('../ReleaseOrders/ReleaseOrderList').then(module => ({ default: module.ReleaseOrderList })));
-const EDIManagement = React.lazy(() => import('../EDI/EDIManagement').then(module => ({ default: module.default })));
-const YardManagement = React.lazy(() => import('../Yard/YardManagement').then(module => ({ default: module.YardManagement })));
-const ClientMasterData = React.lazy(() => import('../Clients/ClientMasterData').then(module => ({ default: module.ClientMasterData })));
-const UserManagement = React.lazy(() => import('../Users/UserManagement').then(module => ({ default: module.UserManagement })));
-const DepotManagement = React.lazy(() => import('../Yard/DepotManagement/DepotManagement').then(module => ({ default: module.DepotManagement })));
-const StackManagement = React.lazy(() => import('../Yard/StackManagement/StackManagement').then(module => ({ default: module.StackManagement })));
-const ClientPoolManagement = React.lazy(() => import('../ClientPools/ClientPoolManagement').then(module => ({ default: module.ClientPoolManagement })));
-const ModuleAccessManagement = React.lazy(() => import('../ModuleAccess/ModuleAccessManagement').then(module => ({ default: module.ModuleAccessManagement })));
-const ReportsModule = React.lazy(() => import('../Reports/ReportsModule').then(module => ({ default: module.ReportsModule })));
-const Header = React.lazy(() => import('./Header').then(module => ({ default: module.Header })));
-const Sidebar = React.lazy(() => import('./Sidebar').then(module => ({ default: module.Sidebar })));
-
-
-// Access Denied Component
-const AccessDenied: React.FC = () => (
-  <div className="text-center py-12">
-    <div className="h-12 w-12 text-red-400 mx-auto mb-4">🚫</div>
-    <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-    <p className="text-gray-600">
-      You don't have permission to access this module.
-    </p>
-    <p className="text-sm text-gray-500 mt-2">
-      Contact your administrator to request access.
-    </p>
-  </div>
-);
+// Lazy load layout components
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
+import { RouteController } from '../Routing/RouteController';
 
 const ProtectedApp: React.FC = () => {
   const { user, hasModuleAccess, isLoading: authLoading, isAuthenticated, authError, isDatabaseConnected, retryConnection } = useAuth();
   const yardProvider = useYardProvider();
   const { hasPermissionUpdate } = useModuleAccessSync();
-  const [activeModule, setActiveModule] = useState('dashboard');
+  const { activeModule, setActiveModule } = useModuleRouting(); // Use routing hook for URL sync
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const initializeStore = useGlobalStore(state => state.initializeStore);
@@ -108,8 +81,13 @@ const ProtectedApp: React.FC = () => {
   }
 
   // Show full screen loader while yard context is loading
+  // BUT still provide the YardContext so components don't crash
   if (yardProvider.isLoading) {
-    return <FullScreenLoader message="Loading Yard..." submessage="Initializing your workspace" />;
+    return (
+      <YardContext.Provider value={yardProvider}>
+        <FullScreenLoader message="Loading Yard..." submessage="Initializing your workspace" />
+      </YardContext.Provider>
+    );
   }
 
   // Show error if yard loading failed
@@ -122,9 +100,10 @@ const ProtectedApp: React.FC = () => {
   // Exception: Allow access to yard management even without a current yard
   if (!yardProvider.currentYard && activeModule !== 'yard-management' && activeModule !== 'depot-management') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-6">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
-          <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 mx-auto mb-4">
+      <YardContext.Provider value={yardProvider}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-6">
+          <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
+            <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 mx-auto mb-4">
             <Grid2x2 />
           </div>
 
@@ -158,7 +137,7 @@ const ProtectedApp: React.FC = () => {
                 </button>
               )}
             </div>
-            
+
             <button
               onClick={handleRunDiagnostics}
               className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all duration-200"
@@ -167,53 +146,18 @@ const ProtectedApp: React.FC = () => {
               Run Diagnostics
             </button>
           </div>
-          
+
           <p className="mt-6 text-xs text-gray-500">
             Need help? <a href="mailto:habib.sayegh@olamnet.com" className="text-blue-600 hover:underline">Contact support</a>
           </p>
         </div>
       </div>
+      </YardContext.Provider>
     );
   }
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const renderModule = () => {
-    // Check module access before rendering
-    switch (activeModule) {
-      case 'dashboard':
-        return hasModuleAccess('dashboard') ? <DashboardOverview /> : <AccessDenied />;
-      case 'containers':
-        return hasModuleAccess('containers') ? <ContainerList /> : <AccessDenied />;
-      case 'gate-in':
-        return hasModuleAccess('gateIn') ? <GateIn /> : <AccessDenied />;
-      case 'gate-out':
-        return hasModuleAccess('gateOut') ? <GateOut /> : <AccessDenied />;
-      case 'releases':
-        return hasModuleAccess('releases') ? <ReleaseOrderList /> : <AccessDenied />;
-      case 'edi':
-        return hasModuleAccess('edi') ? <EDIManagement /> : <AccessDenied />;
-      case 'yard-management':
-        return hasModuleAccess('yard') ? <YardManagement /> : <AccessDenied />;
-      case 'clients':
-        return hasModuleAccess('clients') ? <ClientMasterData /> : <AccessDenied />;
-      case 'users':
-        return hasModuleAccess('users') ? <UserManagement /> : <AccessDenied />;
-      case 'depot-management':
-        return hasModuleAccess('depotManagement') ? <DepotManagement /> : <AccessDenied />;
-      case 'stack-management':
-        return hasModuleAccess('stackManagement') ? <StackManagement /> : <AccessDenied />;
-      case 'client-pools':
-        return hasModuleAccess('clients') ? <ClientPoolManagement /> : <AccessDenied />;
-      case 'module-access':
-        return hasModuleAccess('moduleAccess') ? <ModuleAccessManagement /> : <AccessDenied />;
-      case 'reports':
-        return hasModuleAccess('reports') ? <ReportsModule /> : <AccessDenied />;
-      default:
-        return <DashboardOverview />;
-    }
   };
 
   return (
@@ -227,7 +171,9 @@ const ProtectedApp: React.FC = () => {
         />
         <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
           <Header onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{renderModule()}</main>
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <RouteController />
+          </main>
         </div>
 
         {hasPermissionUpdate && (

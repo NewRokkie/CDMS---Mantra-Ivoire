@@ -32,7 +32,6 @@ interface PendingOperationsViewProps {
   onBack: () => void;
   onComplete: (operation: PendingOperation, locationData: any) => void;
   isProcessing: boolean;
-  mockLocations: any;
 }
 
 export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
@@ -41,8 +40,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   onSearchChange,
   onBack,
   onComplete,
-  isProcessing,
-  mockLocations
+  isProcessing
 }) => {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
@@ -427,7 +425,6 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
         operation={selectedOperation}
         onComplete={handleLocationComplete}
         isProcessing={isProcessing}
-        mockLocations={mockLocations}
       />
     </>
   );

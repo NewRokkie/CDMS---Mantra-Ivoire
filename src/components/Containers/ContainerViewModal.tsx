@@ -83,7 +83,13 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
       currentLocation: container.location,
       gateInDate: container.gateInDate?.toLocaleString() || 'N/A',
       gateOutDate: container.gateOutDate?.toLocaleString() || 'N/A',
-      daysInDepot: container.gateInDate ? `${getDaysBetween(container.gateInDate)} days` : 'N/A'
+      daysInDepot: container.gateInDate 
+        ? `${getDaysBetween(container.gateInDate, container.gateOutDate || new Date())} days` 
+        : 'N/A',
+      classification: container.classification 
+        ? container.classification.charAt(0).toUpperCase() + container.classification.slice(1)
+        : '-',
+      transactionType: container.transactionType || '-'
     },
     layout: 'grid' as const
   };

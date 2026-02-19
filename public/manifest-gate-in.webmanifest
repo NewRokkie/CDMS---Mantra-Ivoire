@@ -1,0 +1,24 @@
+{
+    "name": "Gate In - CDMS",
+    "short_name": "Gate In",
+    "description": "Operator module for Container Gate In operations",
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "orientation": "portrait",
+    "id": "cdms-gate-in",
+    "scope": "/",
+    "start_url": "/gate-in",
+    "icons": [
+        {
+            "src": "/assets/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

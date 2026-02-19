@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import type { User as AppUser, ModuleAccess } from '../types';
 import { supabase } from '../services/api/supabaseClient';
 import { userService } from '../services/api';
@@ -7,40 +7,9 @@ import { syncManager } from '../services/sync/SyncManager';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { handleError } from '../services/errorHandling';
 import { logger } from '../utils/logger';
+import { AuthContext, AuthContextType, SyncStatus } from '../contexts/AuthContext';
 
-export interface SyncStatus {
-  isHealthy: boolean;
-  lastSyncAt?: Date;
-  inconsistencyCount: number;
-  failedSyncCount: number;
-  nextScheduledSync?: Date;
-}
 
-interface AuthContextType {
-  user: AppUser | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (newPassword: string) => Promise<void>;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  authError: string | null;
-  isDatabaseConnected: boolean;
-  retryConnection: () => void;
-  hasModuleAccess: (module: keyof ModuleAccess) => boolean;
-  canViewAllData: () => boolean;
-  getClientFilter: () => string | null;
-  refreshUser: () => Promise<void>;
-  refreshModuleAccess: () => Promise<void>;
-  getSyncStatus: () => SyncStatus;
-  onSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
-  offSyncStatusChange: (callback: (status: SyncStatus) => void) => void;
-  hasAdminUsers: () => Promise<boolean>;
-  needsInitialSetup: boolean;
-  checkInitialSetup: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ⭐ EXPORT CORRIGÉ : Garder la hook useAuth existante
 export const useAuth = () => {
@@ -75,8 +44,8 @@ export const useAuthProvider = () => {
   const setAuthState = useCallback((newUser: AppUser | null, loading: boolean, authenticated: boolean, error: string | null = null, dbConnected: boolean = true, initialSetup: boolean = false) => {
     // Éviter les mises à jour inutiles
     if (userRef.current?.id === newUser?.id &&
-        isLoadingRef.current === loading &&
-        isAuthenticatedRef.current === authenticated) {
+      isLoadingRef.current === loading &&
+      isAuthenticatedRef.current === authenticated) {
       return;
     }
 
@@ -152,7 +121,7 @@ export const useAuthProvider = () => {
       // Map database user to app user
       // Use the enhanced ModuleAccessService with fallback mechanism
       let modulePermissions: ModuleAccess | null = null;
-      
+
       try {
         modulePermissions = await moduleAccessService.getUserModuleAccessWithFallback(users.id);
       } catch (error) {
@@ -215,7 +184,7 @@ export const useAuthProvider = () => {
     try {
       // First test database connection
       const isDbConnected = await testDatabaseConnection(8000); // 8 second timeout
-      
+
       if (!isDbConnected) {
         setAuthState(null, false, false, 'Database connection failed. The database may be paused or unreachable.', false);
         return;
@@ -237,7 +206,7 @@ export const useAuthProvider = () => {
         if (profile) {
           // Comparaison intelligente pour éviter les re-renders inutiles
           if (userRef.current?.id !== profile.id ||
-              userRef.current?.email !== profile.email) {
+            userRef.current?.email !== profile.email) {
             setAuthState(profile, false, true);
 
             // Update last login (non-blocking)
@@ -294,12 +263,12 @@ export const useAuthProvider = () => {
               failedSyncCount: metrics.failedSyncs,
               nextScheduledSync: metrics.nextScheduledSync
             };
-            
+
             // Only update if status actually changed to prevent unnecessary re-renders
             const currentStatus = syncStatus;
             if (currentStatus.isHealthy !== newStatus.isHealthy ||
-                currentStatus.inconsistencyCount !== newStatus.inconsistencyCount ||
-                currentStatus.failedSyncCount !== newStatus.failedSyncCount) {
+              currentStatus.inconsistencyCount !== newStatus.inconsistencyCount ||
+              currentStatus.failedSyncCount !== newStatus.failedSyncCount) {
               updateSyncStatus(newStatus);
             }
           } catch (error) {
@@ -368,7 +337,7 @@ export const useAuthProvider = () => {
 
       // Test database connection first
       const isDbConnected = await testDatabaseConnection(8000);
-      
+
       if (!isDbConnected) {
         setAuthState(null, false, false, 'Database connection failed. The database may be paused or unreachable.', false);
         throw new Error('Database connection failed. Please try again later or contact support.');
@@ -517,13 +486,13 @@ export const useAuthProvider = () => {
 
     try {
       const updatedPermissions = await moduleAccessService.getUserModuleAccessWithFallback(userRef.current.id);
-      
+
       if (updatedPermissions && userRef.current) {
         const updatedUser = {
           ...userRef.current,
           moduleAccess: updatedPermissions
         };
-        
+
         setAuthState(updatedUser, false, true);
       }
     } catch (error) {
@@ -609,6 +578,12 @@ export const useAuthProvider = () => {
     needsInitialSetup,
     checkInitialSetup
   };
+};
+
+// ⭐ PROVIDER COMPONENT
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const auth = useAuthProvider();
+  return <AuthContext.Provider value={auth}> {children} </AuthContext.Provider>;
 };
 
 // ⭐ EXPORT CORRIGÉ : Garder l'export du contexte

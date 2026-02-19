@@ -23,7 +23,20 @@ const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 w-full max-w-sm space-y-2">
+    <div
+      style={{
+        position: 'fixed',
+        top: '1rem',
+        right: '1rem',
+        zIndex: 9999,
+        width: '360px',
+        maxWidth: 'calc(100vw - 2rem)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        pointerEvents: 'none',
+      }}
+    >
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

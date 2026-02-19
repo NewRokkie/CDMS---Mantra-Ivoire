@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Eye, Edit, CreditCard, AlertTriangle, FileText, Recycle } from 'lucide-react';
+import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -18,24 +18,73 @@ import { handleError } from '../../services/errorHandling';
 import { exportToExcel, formatDateForExport, formatDateShortForExport } from '../../utils/excelExport';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
+import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
+import { containerTypeOptions } from '../Gates/constants';
 
-// Helper function to format container number for display (adds hyphens)
-const formatContainerNumberForDisplay = (containerNumber?: string | null): string => {
-  const num = containerNumber ?? '';
-  if (num.length === 11) {
-    const letters = num.substring(0, 4);
-    const numbers1 = num.substring(4, 10);
-    const numbers2 = num.substring(10, 11);
-    return `${letters}-${numbers1}-${numbers2}`;
+// Get ISO code from type + size + isHighCube (matches Gate In / EDI codes)
+function getContainerIsoCode(type: string, size: string, isHighCube?: boolean): string {
+  const opt = containerTypeOptions.find(o => o.value === type);
+  if (!opt || !size) return '';
+  if (isHighCube && size === '40ft' && (opt as { code40HC?: string }).code40HC) {
+    const hc = (opt as { code40HC?: string | string[] }).code40HC;
+    return (Array.isArray(hc) ? hc[0] : hc) ?? '';
   }
-  return num;
+  if (size === '40ft') {
+    const c40 = (opt as { code40?: string | string[] }).code40;
+    return (Array.isArray(c40) ? c40[0] : c40) ?? '';
+  }
+  if (size === '20ft') {
+    const c20 = (opt as { code20?: string | string[] }).code20;
+    return (Array.isArray(c20) ? c20[0] : c20) ?? '';
+  }
+  return '';
+}
+
+// Display: "Type - Size - HC (code)" using real container data from DB
+const formatContainerTypeSize = (container: { type?: string; size?: string; isHighCube?: boolean }): string => {
+  const type = container.type ?? 'dry';
+  const size = container.size ?? '';
+  const isHC = container.isHighCube === true;
+  const typeLabel = type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+  if (!size) return typeLabel;
+  const code = getContainerIsoCode(type, size, isHC);
+  const hcPart = isHC ? '- HC' : '';
+  return code ? `${typeLabel} - ${size}${hcPart} (${code})` : `${typeLabel} - ${size}${hcPart}`;
 };
 
+// Helper function to format date as DD/MM/YY - HH:MM
+const formatGateInDate = (date?: Date | null): string => {
+  if (!date) return '-';
+  
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  
+  return `${day}/${month}/${year}`;
+};
+
+// Helper function to format date as DD/MM/YY - HH:MM
+const formatGateInTime = (date?: Date | null): string => {
+  if (!date) return '-';
+  
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${hours}:${minutes}`;
+};
 // REMOVED: Mock data now managed by global store
 
 export const ContainerList: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
+  // EDI Status per container: 'success' | 'failed' | 'pending' | 'retrying' | null (no logs)
+  const [ediStatusByContainerId, setEdiStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
 
   useEffect(() => {
     async function loadContainers() {
@@ -46,6 +95,29 @@ export const ContainerList: React.FC = () => {
           return [];
         });
         setContainers(data || []);
+        
+        // Load EDI status from transmission history (same logic as Recent EDI Operations: prefer success if any)
+        if (data && data.length > 0) {
+          const logs = await ediTransmissionService.getTransmissionHistory();
+          const statusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>();
+          for (const container of data) {
+            const containerLogs = logs.filter(l => l.containerNumber === container.number);
+            if (containerLogs.length === 0) {
+              statusMap.set(container.id, null);
+              continue;
+            }
+            const successLog = containerLogs.find(l => l.status === 'success');
+            if (successLog) {
+              statusMap.set(container.id, 'success');
+              continue;
+            }
+            const byLastAttempt = [...containerLogs].sort(
+              (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
+            );
+            statusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
+          }
+          setEdiStatusByContainerId(statusMap);
+        }
       } catch (error) {
         handleError(error, 'ContainerList.loadContainers');
         setContainers([]);
@@ -511,10 +583,30 @@ function filterTable(){
     else exportHTML(rows);
   };
 
-  const regenerateEDI = (container: Container) => {
-    // Simulate EDI regeneration/update: add audit log and notify user
-    addAuditLog(container.id, 'edi_regenerated', `EDI regenerated for container ${container.number}`);
-    toast.info(`EDI regenerated for ${container.number} (will reuse existing EDI id where applicable).`);
+  const regenerateEDI = async (container: Container) => {
+    try {
+      toast.info(`Regenerating EDI for ${container.number}...`);
+      
+      const result = await ediTransmissionService.regenerateEDI(container.id);
+      
+      if (result.success) {
+        addAuditLog(container.id, 'edi_regenerated', `EDI successfully regenerated and transmitted for container ${container.number}`);
+        toast.success(`EDI regenerated and transmitted for ${container.number}`);
+        
+        // Update EDI status to success
+        setEdiStatusByContainerId(prev => {
+          const newMap = new Map(prev);
+          newMap.set(container.id, 'success');
+          return newMap;
+        });
+      } else {
+        addAuditLog(container.id, 'edi_regeneration_failed', `EDI regeneration failed for container ${container.number}: ${result.error}`);
+        toast.error(`EDI regeneration failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error regenerating EDI:', error);
+      toast.error(`Failed to regenerate EDI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   // Show client restriction notice
@@ -729,6 +821,7 @@ function filterTable(){
                 {canViewAllData() && (<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>)}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate In</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate Out</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full / Empty</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.actions')}
@@ -748,9 +841,9 @@ function filterTable(){
                         <span className="text-lg">📦</span>
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{formatContainerNumberForDisplay(container.number)}</div>
+                        <div className="text-sm font-medium text-gray-900">{container.number}</div>
                         <div className="text-xs text-gray-500">
-                          {container.type ? container.type.charAt(0).toUpperCase() + container.type.slice(1) : '-'} • {container.size}
+                          {formatContainerTypeSize(container)}
                         </div>
                         {container.damage && container.damage.length > 0 && (
                           <div className="text-xs text-red-600 flex items-center mt-1">
@@ -778,12 +871,47 @@ function filterTable(){
                     </td>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {container.location && container.location.includes('Stack') ? (
-                      container.gateInDate ? new Date(container.gateInDate).toLocaleDateString() : '-'
-                    ) : '-'}
+                    <div>
+                        {container.gateInDate ? (<>
+                          <div className="font-medium">{formatGateInDate(container.gateInDate)}</div>
+                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateInDate)}</div>
+                        </>) : '-'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {container.gateOutDate ? new Date(container.gateOutDate).toLocaleDateString() : '-'}
+                    <div>
+                        {container.gateOutDate ? (<>
+                          <div className="font-medium">{formatGateInDate(container.gateOutDate)}</div>
+                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateOutDate)}</div>
+                        </>) : '-'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(() => {
+                      const status = ediStatusByContainerId.get(container.id);
+                      if (status === 'success') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                            <Wifi className="h-3 w-3 mr-1" />
+                            EDI Sent
+                          </span>
+                        );
+                      }
+                      if (status === 'failed') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 border border-red-200">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            EDI Failed
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                          <WifiOff className="h-3 w-3 mr-1" />
+                          No EDI
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -796,13 +924,6 @@ function filterTable(){
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleViewContainer(container)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
                       {canEditContainers && (
                         <button
                           onClick={(e) => {
@@ -834,7 +955,7 @@ function filterTable(){
                           className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50 transition-colors"
                           title="Regenerate EDI for this container"
                         >
-                          <CreditCard className="h-4 w-4" />
+                          <RefreshCw className="h-4 w-4" />
                         </button>
                       )}
                       {canEditContainers && (

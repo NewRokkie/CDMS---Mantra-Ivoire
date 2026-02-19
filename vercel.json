@@ -4,8 +4,8 @@
   "framework": "vite",
   "functions": {
     "api/**/*.ts": {
-      "memory": 1024,
-      "maxDuration": 10
+      "memory": 2048,
+      "maxDuration": 120
     }
   },
   "rewrites": [
@@ -14,7 +14,7 @@
       "destination": "/api/edi/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|favicon\\.svg|manifest.*\\.webmanifest).*)",
       "destination": "/index.html"
     }
   ],

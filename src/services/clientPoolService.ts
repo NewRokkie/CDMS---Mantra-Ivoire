@@ -899,21 +899,11 @@ export class ClientPoolService {
   /**
    * Update location access permissions for a stack when assigned to a client pool
    * Requirements: 6.2 - Ensure location access permissions are updated when client pool assignments change
+   * Optimized: single bulk DB update instead of N+1 queries
    */
   private async updateLocationAccessForStack(stackId: string, clientPoolId: string): Promise<void> {
     try {
-      // Get all locations for this stack
-      const locations = await locationManagementService.getByStackId(stackId);
-      
-      // Update each location to assign it to the client pool
-      for (const location of locations) {
-        // Only update if location is not currently occupied
-        if (!location.isOccupied) {
-          await locationManagementService.update(location.id, {
-            clientPoolId: clientPoolId
-          });
-        }
-      }
+      await locationManagementService.updateClientPoolForStack(stackId, clientPoolId);
     } catch (error) {
       throw error;
     }
@@ -922,21 +912,11 @@ export class ClientPoolService {
   /**
    * Clear location access permissions for a stack when removed from a client pool
    * Requirements: 6.2 - Ensure location access permissions are updated when client pool assignments change
+   * Optimized: single bulk DB update instead of N+1 queries
    */
   private async clearLocationAccessForStack(stackId: string): Promise<void> {
     try {
-      // Get all locations for this stack
-      const locations = await locationManagementService.getByStackId(stackId);
-      
-      // Update each location to remove client pool assignment
-      for (const location of locations) {
-        // Only update if location is not currently occupied
-        if (!location.isOccupied) {
-          await locationManagementService.update(location.id, {
-            clientPoolId: undefined
-          });
-        }
-      }
+      await locationManagementService.updateClientPoolForStack(stackId, null);
     } catch (error) {
       throw error;
     }

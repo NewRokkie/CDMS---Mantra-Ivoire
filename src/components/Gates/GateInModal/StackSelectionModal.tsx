@@ -101,7 +101,13 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       }
       
       // Get all stacks from the yard
-      const allStacks = yard.sections.flatMap(section => section.stacks);
+      let allStacks = yard.sections.flatMap(section => section.stacks);
+      
+      // For 40ft containers, filter to only show virtual stacks that actually exist in the database
+      if (containerSize === '40ft') {
+        // Only show stacks that are marked as virtual in the database
+        allStacks = allStacks.filter(stack => stack.isVirtual === true);
+      }
       
       // Filter stacks based on client pool assignments
       const filteredStacks = allStacks.filter(stack => {
@@ -127,7 +133,8 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       // Calculate availability for filtered stacks
       availableStackResults = filteredStacks.map(stack => {
         const stackContainers = yardContainers.filter((c: any) => {
-          const match = c.location.match(/S(\d+)-R\d+-H\d+/);
+          // Match both formats: S04R5H1 and S04-R5-H1
+          const match = c.location.match(/S0*(\d+)[-]?R\d+[-]?H\d+/);
           return match && parseInt(match[1]) === stack.stackNumber;
         });
         const currentOccupancy = stackContainers.length;
@@ -142,7 +149,8 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
           availableSlots,
           totalCapacity: stack.capacity,
           isRecommended: availableSlots > 0,
-          distance: 0
+          distance: 0,
+          occupiedPositions: stackContainers.map((c: any) => c.location) // Track occupied positions
         };
       }).filter(result => result.availableSlots > 0);
       
@@ -150,21 +158,21 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       setHasClientPool(hasClientPool);
       setClientPoolStackCount(clientPoolStacks.length);
 
-      // Convert to StackLocation format and handle virtual stacks for 40ft
+      // Convert to StackLocation format
       const stackLocations = await Promise.all(
         availableStackResults.map(async (result) => {
           const stack = yard.sections
             .flatMap(section => section.stacks)
             .find(s => s.id === result.stackId);
           
-          if (!stack) return [];
-          
-          // For 40ft containers, create virtual stack locations
-          if (containerSize === '40ft') {
-            return getVirtualStackPositions(stack, result);
-          } else {
-            return getAvailablePositions(stack, result);
+          if (!stack) {
+            return [];
           }
+          
+          // For 40ft containers, stacks are already filtered to virtual ones
+          // Just generate positions directly
+          const positions = await getAvailablePositions(stack, result);
+          return positions;
         })
       );
       
@@ -180,23 +188,6 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper function to check if stack is valid for 40ft containers
-  // 40ft containers can ONLY be placed on VIRTUAL (even-numbered) stacks
-  // that represent paired odd stacks (e.g., S04 = S03+S05, S24 = S23+S25)
-  const isValidFortyFootStack = (stackNumber: number): boolean => {
-    const specialStacks = [1, 31, 101, 103];
-    if (specialStacks.includes(stackNumber)) return false;
-
-    const validPairs = [
-      [3, 5], [7, 9], [11, 13], [15, 17], [19, 21], [23, 25], [27, 29],
-      [33, 35], [37, 39], [41, 43], [45, 47], [49, 51], [53, 55],
-      [61, 63], [65, 67], [69, 71], [73, 75], [77, 79], [81, 83],
-      [85, 87], [89, 91], [93, 95], [97, 99]
-    ];
-
-    return validPairs.some(pair => pair.includes(stackNumber));
   };
 
   // Helper function to check if a stack number is a valid VIRTUAL stack for 40ft
@@ -216,70 +207,35 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     return validVirtualStacks.includes(stackNumber);
   };
 
-  // Get virtual stack positions for 40ft containers
-  const getVirtualStackPositions = async (stack: YardStack, result: any): Promise<StackLocation[]> => {
-    const positions: StackLocation[] = [];
-    
-    if (!isValidFortyFootStack(stack.stackNumber)) {
-      return positions;
-    }
-
-    // Calculate virtual stack number (like in YardLiveMap)
-    const getAdjacentStackNumber = (stackNumber: number): number | null => {
-      const validPairs = [
-        [3, 5], [7, 9], [11, 13], [15, 17], [19, 21], [23, 25], [27, 29],
-        [33, 35], [37, 39], [41, 43], [45, 47], [49, 51], [53, 55],
-        [61, 63], [65, 67], [69, 71], [73, 75], [77, 79], [81, 83],
-        [85, 87], [89, 91], [93, 95], [97, 99]
-      ];
-
-      for (const pair of validPairs) {
-        if (pair.includes(stackNumber)) {
-          return pair.find(num => num !== stackNumber) || null;
-        }
-      }
-      return null;
-    };
-
-    const pairedStackNumber = getAdjacentStackNumber(stack.stackNumber);
-    if (!pairedStackNumber) return positions;
-
-    // Virtual stack number is the lower stack number + 1
-    const virtualStackNumber = Math.min(stack.stackNumber, pairedStackNumber) + 1;
-    
-    // For each row and height combination, create a virtual position
-    for (let row = 1; row <= stack.rows; row++) {
-      for (let height = 1; height <= stack.maxTiers; height++) {
-        const formattedId = formatStackLocation(virtualStackNumber, row, height);
-        const isAvailable = result.availableSlots > 0; // Use the availability from client pool service
-        
-        positions.push({
-          id: `${stack.id}-virtual-R${row}H${height}`,
-          formattedId,
-          stackNumber: virtualStackNumber,
-          row,
-          height,
-          isAvailable,
-          section: stack.sectionName || 'Main',
-          containerSize: '40ft',
-          currentOccupancy: result.totalCapacity - result.availableSlots,
-          capacity: result.totalCapacity
-        });
-      }
-    }
-    
-    return positions;
-  };
-
   // Generate available positions for a stack
   const getAvailablePositions = async (stack: YardStack, result: any): Promise<StackLocation[]> => {
     const positions: StackLocation[] = [];
     
+    // Check if stack has custom row-tier configuration
+    const hasCustomConfig = stack.rowTierConfig && stack.rowTierConfig.length > 0;
+    
+    // Get list of occupied positions for this stack
+    const occupiedPositions = new Set(result.occupiedPositions || []);
+    
     // For each row and height combination, create a position if available
     for (let row = 1; row <= stack.rows; row++) {
-      for (let height = 1; height <= stack.maxTiers; height++) {
+      // Get max tiers for this specific row
+      let maxTiersForRow = stack.maxTiers;
+      
+      if (hasCustomConfig) {
+        const rowConfig = stack.rowTierConfig!.find(config => config.row === row);
+        if (rowConfig) {
+          maxTiersForRow = rowConfig.maxTiers;
+        }
+      }
+      
+      // Generate positions up to the max tiers for this row
+      for (let height = 1; height <= maxTiersForRow; height++) {
         const formattedId = formatStackLocation(stack.stackNumber, row, height);
-        const isAvailable = result.availableSlots > 0; // Use the availability from client pool service
+        
+        // Check if this specific position is occupied
+        const isOccupied = occupiedPositions.has(formattedId);
+        const isAvailable = !isOccupied;
         
         positions.push({
           id: `${stack.id}-R${row}H${height}`,
@@ -308,13 +264,14 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
 
   // Check if stack is compatible with container requirements
   const isStackCompatible = (stack: YardStack, reqSize: '20ft' | '40ft'): boolean => {
-    // For 20ft containers, any stack can accommodate
-    if (reqSize === '20ft') return true;
+    // For 20ft containers, any non-virtual stack can accommodate
+    if (reqSize === '20ft') {
+      return !stack.isVirtual; // 20ft containers should not use virtual stacks
+    }
 
-    // For 40ft containers, ONLY physical odd stacks that are part of valid pairs
-    // These will be converted to virtual stacks in getVirtualStackPositions
+    // For 40ft containers, ONLY virtual stacks (already filtered above)
     if (reqSize === '40ft') {
-      return isValidFortyFootStack(stack.stackNumber);
+      return stack.isVirtual === true;
     }
     
     return true;

@@ -1,10 +1,71 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'assets/logo.png', 'assets/logo_white.png'],
+      manifest: {
+        name: 'Container Depot Management System',
+        short_name: 'CDMS',
+        description: 'Advanced Container Depot Management System',
+        theme_color: '#2563eb',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        icons: [
+          {
+            src: '/assets/logo.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: '/assets/logo.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: '/assets/logo.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          }
+        ],
+        shortcuts: [
+          {
+            name: 'Gate In',
+            short_name: 'Gate In',
+            description: 'Quick access to Gate In operations',
+            url: '/gate-in',
+            icons: [{ src: '/assets/logo.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Gate Out',
+            short_name: 'Gate Out',
+            description: 'Quick access to Gate Out operations',
+            url: '/gate-out',
+            icons: [{ src: '/assets/logo.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Booking',
+            short_name: 'Booking',
+            description: 'Quick access to Bookings',
+            url: '/booking',
+            icons: [{ src: '/assets/logo.png', sizes: '192x192' }]
+          }
+        ]
+      },
+      devOptions: {
+        enabled: false
+      }
+    })
+  ],
   optimizeDeps: {
     exclude: ['lucide-react'],
   },

@@ -74,12 +74,12 @@ export class StackService {
           } catch (locationError) {
             // Fallback to container-based counting with improved pattern matching
             try {
-              const stackPattern = `S${String(stack.stackNumber).padStart(2, '0')}-%`;
+              const stackPattern = `S${String(stack.stackNumber).padStart(2, '0')}%`;
               const { data: containers, error } = await supabase
                 .from('containers')
                 .select('id, location, yard_id, status, size')
                 .eq('yard_id', yardId)
-                .eq('status', 'in_depot')
+                .in('status', ['in_depot', 'gate_in'])
                 .ilike('location', stackPattern);
 
               if (error) {
@@ -564,8 +564,8 @@ export class StackService {
           .from('containers')
           .select('id, number')
           .eq('yard_id', stack.yardId)
-          .eq('status', 'in_depot')
-          .ilike('location', `S${String(stack.stackNumber).padStart(2, '0')}-%`);
+          .in('status', ['in_depot', 'gate_in'])
+          .ilike('location', `S${String(stack.stackNumber).padStart(2, '0')}%`);
 
         if (containerCheckError) {
           handleError(containerCheckError, 'StackService.delete.checkContainers');
@@ -729,8 +729,8 @@ export class StackService {
       .from('containers')
       .select('id, number, size, location')
       .eq('yard_id', yardId)
-      .eq('status', 'in_depot')
-      .ilike('location', `S${String(stackNumber).padStart(2, '0')}-%`);
+      .in('status', ['in_depot', 'gate_in'])
+      .ilike('location', `S${String(stackNumber).padStart(2, '0')}%`);
 
     if (containerCheckError) throw containerCheckError;
 
@@ -1112,12 +1112,12 @@ export class StackService {
     empty: number;
   }> {
     try {
-      const stackPattern = `S${String(stackNumber).padStart(2, '0')}-%`;
+      const stackPattern = `S${String(stackNumber).padStart(2, '0')}%`;
       const { data: containers, error } = await supabase
         .from('containers')
-        .select('id, size, status, damage')
+        .select('id, size, status, damage, full_empty')
         .eq('yard_id', yardId)
-        .eq('status', 'in_depot')
+        .in('status', ['in_depot', 'gate_in'])
         .ilike('location', stackPattern);
 
       if (error) {
@@ -1153,11 +1153,13 @@ export class StackService {
           stats.damaged++;
         }
         
-        // Count by status (assuming we have these statuses)
+        // Count by status
         if (container.status === 'maintenance') stats.maintenance++;
         else if (container.status === 'cleaning') stats.cleaning++;
-        else if (container.status === 'full') stats.full++;
-        else if (container.status === 'empty') stats.empty++;
+        
+        // Count by full_empty field (not status)
+        if ((container as any).full_empty === 'FULL') stats.full++;
+        else if ((container as any).full_empty === 'EMPTY') stats.empty++;
       });
 
       return stats;

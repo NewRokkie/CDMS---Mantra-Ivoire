@@ -50,7 +50,7 @@ export const YardSelector: React.FC = () => {
     return (
       <div className="flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg">
         <MapPin className="h-4 w-4 text-blue-600" />
-        <span className="text-sm font-medium text-blue-900">
+        <span className="text-sm font-gilroy-medium text-blue-900">
           {currentYard?.name || 'No Yard Selected'}
         </span>
       </div>
@@ -84,10 +84,10 @@ export const YardSelector: React.FC = () => {
           <div className="text-left min-w-0 flex-1">
             {currentYard ? (
               <>
-                <div className="font-semibold text-gray-900 text-xs lg:text-sm truncate">{currentYard.name}</div>
+                <div className="font-gilroy-bold text-gray-900 text-xs lg:text-sm truncate">{currentYard.name}</div>
               </>
             ) : (
-              <div className="text-gray-500 text-xs lg:text-sm truncate">Select...</div>
+              <div className="text-gray-500 font-gilroy text-xs lg:text-sm truncate">Select...</div>
             )}
           </div>
         </div>
@@ -111,10 +111,10 @@ export const YardSelector: React.FC = () => {
           {/* Header */}
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              <span className="text-xs font-gilroy-medium text-gray-500 uppercase tracking-wide">
                 Available Yards
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs font-numeric text-gray-500">
                 {availableYards.length} yard{availableYards.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -154,13 +154,13 @@ export const YardSelector: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
                           <span className={`
-                            font-medium text-sm truncate
+                            font-gilroy-medium text-sm truncate
                             ${isSelected ? 'text-green-900' : 'text-gray-900'}
                           `}>
                             {yard.name}
                           </span>
                         </div>
-                        <div className="text-xs text-gray-500 truncate lg:hidden">
+                        <div className="text-xs font-numeric text-gray-500 truncate lg:hidden">
                           {yard.code}
                         </div>
                       </div>

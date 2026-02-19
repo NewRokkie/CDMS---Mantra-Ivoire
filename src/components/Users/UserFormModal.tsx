@@ -4,7 +4,6 @@ import type { User } from '../../types';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { useUserManagementRetry } from '../../hooks/useRetry';
 import { FormModal } from '../Common/Modal/FormModal';
-import { logger } from '../../utils/logger';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -244,17 +243,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   };
 
   return (
-    <ErrorBoundary
-      context={`User Form Modal - ${selectedUser ? 'Edit' : 'Create'} User`}
-      onError={(error, errorInfo) => {
-        logger.error('User Form Modal component error', 'UserFormModal', {
-          error: error.message,
-          isEditing: !!selectedUser,
-          userId: selectedUser?.id,
-          componentStack: errorInfo.componentStack
-        });
-      }}
-    >
+    <ErrorBoundary>
       <FormModal
         isOpen={isOpen}
         onClose={onClose}
@@ -294,7 +283,6 @@ interface UserFormContentProps {
   onFieldBlur: (field: string) => void;
   getRoleDescription: (role: User['role']) => string;
   triggerAutoSave?: () => void;
-  showNotification?: (type: 'success' | 'error' | 'warning' | 'info', message: string) => void;
 }
 
 const UserFormContent: React.FC<UserFormContentProps> = ({

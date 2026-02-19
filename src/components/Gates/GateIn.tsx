@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import { useYard } from '../../hooks/useYard';
-import { gateService, clientService, containerService, stackService, realtimeService } from '../../services/api';
+import { gateService, clientService, containerService, realtimeService, locationManagementService, yardsService } from '../../services/api';
 import { supabase } from '../../services/api/supabaseClient';
 
-import { stackPairingService } from '../../services/api/stackPairingService';
 // import moment from 'moment'; // Commented out - not used in current code
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
@@ -24,8 +24,16 @@ import { useToast } from '../../hooks/useToast';
 import { BufferZoneStats } from './BufferZoneStats';
 import { BufferZoneManagement } from './BufferZoneManagement';
 
+// Helper function to extract stack number from location (e.g., "S04R1H1" -> "S04")
+const extractStackNumber = (location: string): string | null => {
+  if (!location) return null;
+  const match = location.match(/^(S[0-9]+)/);
+  return match ? match[1] : null;
+};
+
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
+  const { t } = useLanguage();
   const { currentYard, validateYardOperation } = useYard();
   const toast = useToast();
 
@@ -38,8 +46,6 @@ export const GateIn: React.FC = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [gateInOperations, setGateInOperations] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
-  const [stacks, setStacks] = useState<any[]>([]);
-  const [pairingMap, setPairingMap] = useState<Map<number, number>>(new Map());
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
@@ -49,40 +55,34 @@ export const GateIn: React.FC = () => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [clientsData, operationsData, containersData, stacksData, pairingMapData] = await Promise.all([
+      const [clientsData, operationsData, containersData] = await Promise.all([
         clientService.getAll().catch(err => { handleError(err, 'GateIn.loadClients'); return []; }),
         gateService.getGateInOperations({ yardId: currentYard?.id }).catch(err => {
           handleError(err, 'GateIn.loadOperations');
           return [];
         }),
-        containerService.getAll().catch(err => { handleError(err, 'GateIn.loadContainers'); return []; }),
-        stackService.getAll(currentYard?.id).catch(err => { handleError(err, 'GateIn.loadStacks'); return []; }),
-        stackPairingService.getPairingMap(currentYard?.id || '').catch(err => { handleError(err, 'GateIn.loadPairingMap'); return new Map(); })
+        containerService.getAll().catch(err => { handleError(err, 'GateIn.loadContainers'); return []; })
       ]);
 
       setClients(clientsData || []);
       setGateInOperations(operationsData || []);
       setContainers(containersData || []);
-      setStacks(stacksData || []);
-      setPairingMap(pairingMapData || new Map());
     } catch (error) {
       handleError(error, 'GateIn.loadData');
       setClients([]);
       setGateInOperations([]);
       setContainers([]);
-      setStacks([]);
-      setPairingMap(new Map());
     } finally {
       setLoading(false);
     }
   }, [currentYard?.id]);
 
-  // Load data when currentYard changes, not when loadData function changes
+  // Load data when currentYard changes
   useEffect(() => {
     if (currentYard?.id) {
       loadData();
     }
-  }, [currentYard?.id]); // Remove loadData from dependencies
+  }, [currentYard?.id, loadData]);
 
 
 useEffect(() => {
@@ -104,13 +104,11 @@ useEffect(() => {
   });
 
   return () => {
-    try { unsubscribeGateIn(); } catch (e) { /* ignore */ }
-    try { unsubscribeContainers(); } catch (e) { /* ignore */ }
+    try { unsubscribeGateIn(); } catch { /* ignore */ }
+    try { unsubscribeContainers(); } catch { /* ignore */ }
   };
-}, [currentYard?.id]);
+}, [currentYard?.id, loadData]);
 
-// Minimal mockLocations for pending operations view. Replace with full logic if needed.
-const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] }), [stacks, containers, pairingMap]);
 
   const pendingOperations = gateInOperations.filter(op =>
     op.status === 'pending' || !op.assignedLocation
@@ -178,23 +176,38 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
 
   const alimentaireContainersCount = allOperations.filter(op => op.classification === 'alimentaire').length;
 
-  const handleInputChange = (field: keyof GateInFormData, value: any) => {
-    // Container number fields are now handled by ContainerNumberInput component
-    // No special processing needed here since the component handles validation
+  const handleHighCubeChange = useCallback((isHighCube: boolean) => {
+    setFormData(prev => {
+      // If switching High Cube, validate if current container type is still valid
+      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, prev.containerSize, isHighCube);
+
+      return {
+        ...prev,
+        isHighCube,
+        // Reset to default 'dry' type if current type is not valid for new high cube setting
+        containerType: isCurrentTypeValid ? prev.containerType : 'dry'
+      };
+    });
+  }, []);
+
+  const handleStatusChange = useCallback((isFullStatus: boolean) => {
+    const newStatus = isFullStatus ? 'FULL' : 'EMPTY';
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      status: newStatus,
+      bookingReference: newStatus === 'EMPTY' ? '' : prev.bookingReference
     }));
+  }, []);
 
-    // Trigger auto-save with cleanup
-    setAutoSaving(true);
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-    autoSaveTimeoutRef.current = setTimeout(() => setAutoSaving(false), 1000);
-  };
+  const handleQuantityChange = useCallback((quantity: 1 | 2) => {
+    setFormData(prev => ({
+      ...prev,
+      containerQuantity: quantity,
+      secondContainerNumber: quantity === 1 ? '' : prev.secondContainerNumber
+    }));
+  }, []);
 
-  const handleContainerSizeChange = (size: '20ft' | '40ft') => {
+  const handleContainerSizeChange = useCallback((size: '20ft' | '40ft') => {
     setFormData(prev => {
       // Check if current container type is valid for the new size and high cube flag
       const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, size, prev.isHighCube);
@@ -212,42 +225,30 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         containerType: isCurrentTypeValid ? prev.containerType : 'dry'
       };
     });
-  };
+  }, []);
 
-  const handleQuantityChange = (quantity: 1 | 2) => {
+  const handleInputChange = useCallback((field: keyof GateInFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
-      containerQuantity: quantity,
-      secondContainerNumber: quantity === 1 ? '' : prev.secondContainerNumber
+      [field]: value
     }));
-  };
 
-  const handleStatusChange = (isFullStatus: boolean) => {
-    const newStatus = isFullStatus ? 'FULL' : 'EMPTY';
+    // Trigger auto-save with cleanup
+    setAutoSaving(true);
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    autoSaveTimeoutRef.current = setTimeout(() => setAutoSaving(false), 1000);
+  }, []);
+
+  const handleTransactionTypeChange = useCallback((transactionType: 'Retour Livraison' | 'Transfert (IN)') => {
     setFormData(prev => ({
       ...prev,
-      status: newStatus,
-      bookingReference: newStatus === 'EMPTY' ? '' : prev.bookingReference
+      transactionType
     }));
-  };
+  }, []);
 
-  const handleHighCubeChange = (isHighCube: boolean) => {
-    setFormData(prev => {
-      // If switching High Cube, validate if current container type is still valid
-      const isCurrentTypeValid = isValidContainerTypeAndSize(prev.containerType, prev.containerSize, isHighCube);
-
-      return {
-        ...prev,
-        isHighCube,
-        // Reset to default 'dry' type if current type is not valid for new high cube setting
-        containerType: isCurrentTypeValid ? prev.containerType : 'dry'
-      };
-    });
-  };
-
-
-
-  const handleClientChange = (clientId: string) => {
+  const handleClientChange = useCallback((clientId: string) => {
     const selectedClient = clients.find(c => c.id === clientId);
     if (selectedClient) {
       setFormData(prev => ({
@@ -257,14 +258,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         clientName: selectedClient.name
       }));
     }
-  };
-
-  const handleTransactionTypeChange = (transactionType: 'Retour Livraison' | 'Transfert (IN)') => {
-    setFormData(prev => ({
-      ...prev,
-      transactionType
-    }));
-  };
+  }, [clients]);
 
   // Memoized validation check for current step (safe for render-time calls)
   const isCurrentStepValid = React.useMemo(() => {
@@ -279,7 +273,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     }
   }, [currentStep, formData, hasModuleAccess]);
 
-  const validateStep = (step: number): boolean => {
+  const validateStep = useCallback((step: number): boolean => {
     try {
       // Clear previous validation errors
       setValidationErrors([]);
@@ -311,19 +305,54 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       setValidationErrors(['Validation error occurred. Please try again.']);
       return false;
     }
-  };
+  }, [formData, hasModuleAccess]);
 
-  const handleNextStep = () => {
+  const handleNextStep = useCallback(() => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(3, prev + 1));
     }
-  };
+  }, [currentStep, validateStep]);
 
-  const handlePrevStep = () => {
+  const handlePrevStep = useCallback(() => {
     setCurrentStep(prev => Math.max(1, prev - 1));
-  };
+  }, []);
 
-  const handleSubmit = async () => {
+  const resetForm = useCallback(() => {
+    setFormData({
+      containerSize: '20ft',
+      containerType: 'dry',
+      isHighCube: false,
+      containerIsoCode: '',
+      containerQuantity: 1,
+      status: 'EMPTY', // Default to 'EMPTY'
+      clientId: '',
+      clientCode: '',
+      clientName: '',
+      bookingReference: '',
+      equipmentReference: '', // Equipment reference for EDI transmission
+      bookingType: 'EXPORT',
+      containerNumber: '',
+      containerNumberConfirmation: '',
+      secondContainerNumber: '',
+      secondContainerNumberConfirmation: '',
+      classification: 'divers', // Default to 'divers'
+      transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
+      driverName: '',
+      truckNumber: '',
+      transportCompany: '',
+      truckArrivalDate: new Date().toISOString().split('T')[0],
+      truckArrivalTime: new Date().toTimeString().slice(0, 5),
+      truckDepartureDate: '',
+      truckDepartureTime: '',
+      notes: '',
+      operationStatus: 'pending'
+    });
+    setSubmissionError(null);
+    setValidationErrors([]);
+    setValidationWarnings([]);
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
 
     // Clear previous errors
     setSubmissionError(null);
@@ -345,7 +374,9 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     }
 
     // Comprehensive form validation
-    const existingContainerNumbers = containers.map(c => c.number.toUpperCase());
+    const existingContainerNumbers = containers
+      .filter(c => !c.isDeleted) // Only check active (non-deleted) containers
+      .map(c => c.number.toUpperCase());
     const hasTimeTrackingAccess = hasModuleAccess('timeTracking');
     const formValidation = ValidationService.validateGateInForm(formData, undefined, hasTimeTrackingAccess);
     const businessValidation = ValidationService.validateBusinessRules(formData, existingContainerNumbers);
@@ -368,6 +399,20 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     setIsProcessing(true);
 
     try {
+      // Validate critical IDs before proceeding
+      if (!user?.id) {
+        console.error('🔴 [GateIn] user.id is missing:', user);
+        setSubmissionError('User ID is missing. Please log out and log back in.');
+        setIsProcessing(false);
+        return;
+      }
+      if (!currentYard?.id) {
+        console.error('� [GateIn] currentYard.id is missing:', currentYard);
+        setSubmissionError('Current yard is not selected. Please select a yard.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Use client pool service to find optimal stack assignment
       const { clientPoolService } = await import('../../services/clientPoolService');
 
@@ -397,6 +442,20 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
       const truckArrivalDate = formData.truckArrivalDate || now.toISOString().split('T')[0];
       const truckArrivalTime = formData.truckArrivalTime || now.toTimeString().slice(0, 5);
 
+      // Validate critical IDs before proceeding
+      if (!user?.id) {
+        console.error('🔴 [GateIn] user.id is missing:', user);
+        setSubmissionError('User ID is missing. Please log out and log back in.');
+        setIsProcessing(false);
+        return;
+      }
+      if (!currentYard?.id) {
+        console.error('🔴 [GateIn] currentYard.id is missing:', currentYard);
+        setSubmissionError('Current yard is not selected. Please select a yard.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Process Gate In through enhanced API service
       const gateInData = {
         containerNumber: formData.containerNumber.trim().toUpperCase(),
@@ -406,6 +465,8 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         clientCode: formData.clientCode,
         containerType: formData.containerType,
         containerSize: formData.containerSize,
+        containerIsoCode: formData.containerIsoCode || undefined,
+        isHighCube: formData.isHighCube === true,
         fullEmpty: formData.status, // Pass the FULL/EMPTY status from form
         transportCompany: formData.transportCompany,
         driverName: formData.driverName,
@@ -414,15 +475,23 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         truckArrivalDate: truckArrivalDate,
         truckArrivalTime: truckArrivalTime,
         equipmentReference: formData.equipmentReference, // Equipment reference for EDI transmission
-        weight: undefined,
-        operatorId: user?.id || 'unknown',
-        operatorName: user?.name || 'Unknown Operator',
-        yardId: currentYard?.id || 'unknown',
+        bookingReference: formData.bookingReference || undefined,
+        notes: formData.notes || undefined,
+        operatorId: user.id,
+        operatorName: user.name || 'Unknown Operator',
+        yardId: currentYard.id,
         classification: formData.classification,
         damageReported: false, // Keep for backward compatibility
         damageDescription: undefined // Keep for backward compatibility
         // damageAssessment: moved to pending operations phase
       };
+
+      console.log('🔍 [GateIn] Calling processGateIn with data:', {
+        containerNumber: gateInData.containerNumber,
+        clientCode: gateInData.clientCode,
+        operatorId: gateInData.operatorId,
+        yardId: gateInData.yardId,
+      });
 
       const result = await gateService.processGateIn(gateInData);
 
@@ -475,42 +544,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      containerSize: '20ft',
-      containerType: 'dry',
-      isHighCube: false,
-      containerIsoCode: '',
-      containerQuantity: 1,
-      status: 'EMPTY', // Default to 'EMPTY'
-      clientId: '',
-      clientCode: '',
-      clientName: '',
-      bookingReference: '',
-      equipmentReference: '', // Equipment reference for EDI transmission
-      bookingType: 'EXPORT',
-      containerNumber: '',
-      containerNumberConfirmation: '',
-      secondContainerNumber: '',
-      secondContainerNumberConfirmation: '',
-      classification: 'divers', // Default to 'divers'
-      transactionType: 'Retour Livraison', // Default to 'Retour Livraison'
-      driverName: '',
-      truckNumber: '',
-      transportCompany: '',
-      truckArrivalDate: new Date().toISOString().split('T')[0],
-      truckArrivalTime: new Date().toTimeString().slice(0, 5),
-      truckDepartureDate: '',
-      truckDepartureTime: '',
-      notes: '',
-      operationStatus: 'pending'
-    });
-    setSubmissionError(null);
-    setValidationErrors([]);
-    setValidationWarnings([]);
-  };
+  }, [canPerformGateIn, validateYardOperation, containers, hasModuleAccess, formData, user, currentYard, resetForm, loadData, toast]);
 
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
@@ -533,7 +567,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         throw new Error(`Client not found: ${operation.clientCode}`);
       }
 
-      // 2. Check if containers already exist
+      // 2. Check if containers already exist (they should exist in pending state)
       const containerNumbers = [operation.containerNumber];
       if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
         containerNumbers.push(operation.secondContainerNumber);
@@ -541,62 +575,85 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
 
       const { data: existingContainers } = await supabase
         .from('containers')
-        .select('number')
+        .select('id, number, status')
+        .eq('is_deleted', false)
         .in('number', containerNumbers);
 
-      if (existingContainers && existingContainers.length > 0) {
-        const duplicateNumbers = existingContainers.map(c => c.number).join(', ');
-        throw new Error(`Container(s) already exist in the system: ${duplicateNumbers}`);
-      }
+      // For pending operations, containers should already exist with status 'gate_in'
+      // For new operations, containers should NOT exist
+      const isPendingCompletion = existingContainers && existingContainers.length > 0;
+      let finalContainers = existingContainers || [];
 
-      // 3. Create container(s) in containers table
-      const containersToCreate = [
-        {
+      if (isPendingCompletion) {
+        // This is completing a pending operation - UPDATE existing containers
+
+        for (const container of existingContainers) {
+          const { error: updateError } = await supabase
+            .from('containers')
+            .update({
+              status: 'in_depot',
+              location: locationData.assignedLocation,
+              updated_at: new Date().toISOString(),
+              updated_by: user?.id
+            })
+            .eq('id', container.id);
+
+          if (updateError) {
+            throw new Error(`Failed to update container ${container.number}: ${updateError.message}`);
+          }
+        }
+      } else {
+        // This is a new operation - CREATE containers
+        // This is a new operation - CREATE containers
+        console.log('Creating new containers:', containerNumbers);
+
+        // 3. Create container(s) in containers table (include is_high_cube, full_empty, etc. from operation)
+        const baseContainerPayload = {
           number: operation.containerNumber,
-          type: operation.containerType || 'standard',
+          type: operation.containerType || 'dry',
           size: operation.containerSize,
+          is_high_cube: operation.isHighCube === true,
           status: 'in_depot',
+          full_empty: operation.fullEmpty || 'FULL',
           location: locationData.assignedLocation,
           yard_id: currentYard?.id,
           client_id: client?.id,
           client_code: operation.clientCode,
           gate_in_date: new Date().toISOString(),
+          classification: operation.classification || 'divers',
+          transaction_type: operation.transactionType || 'Retour Livraison',
           created_by: user?.id
+        };
+        const containersToCreate: typeof baseContainerPayload[] = [baseContainerPayload];
+
+        // If second container exists
+        if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
+          containersToCreate.push({
+            ...baseContainerPayload,
+            number: operation.secondContainerNumber
+          });
         }
-      ];
 
-      // If second container exists
-      if (operation.containerQuantity === 2 && operation.secondContainerNumber) {
-        containersToCreate.push({
-          number: operation.secondContainerNumber,
-          type: operation.containerType || 'standard',
-          size: operation.containerSize,
-          status: 'in_depot',
-          location: locationData.assignedLocation,
-          yard_id: currentYard?.id,
-          client_id: client?.id,
-          client_code: operation.clientCode,
-          gate_in_date: new Date().toISOString(),
-          created_by: user?.id
-        });
-      }
+        const { data: createdContainers, error: containerError } = await supabase
+          .from('containers')
+          .insert(containersToCreate)
+          .select();
 
-      const { data: createdContainers, error: containerError } = await supabase
-        .from('containers')
-        .insert(containersToCreate)
-        .select();
-
-      if (containerError) {
-        if (containerError.code === '23505') {
-          throw new Error('Container number already exists in the system');
+        if (containerError) {
+          if (containerError.code === '23505') {
+            throw new Error('Container number already exists in the system');
+          }
+          throw new Error(`Failed to create container: ${containerError.message}`);
         }
-        throw new Error(`Failed to create container: ${containerError.message}`);
+
+        finalContainers = createdContainers || [];
       }
 
       // 4. Link container ID to gate_in_operation and include damage assessment
       const updateData: any = {
-        container_id: createdContainers?.[0]?.id,
+        container_id: finalContainers?.[0]?.id,
         assigned_location: locationData.assignedLocation,
+        assigned_stack: extractStackNumber(locationData.assignedLocation), // Extract stack number
         completed_at: new Date().toISOString(),
         status: 'completed'
       };
@@ -606,7 +663,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         updateData.damage_reported = locationData.damageAssessment.hasDamage;
         updateData.damage_description = locationData.damageAssessment.damageDescription || null;
         updateData.damage_assessment = JSON.stringify(locationData.damageAssessment);
-        
+
         // Marquer si c'est une zone tampon
         if (locationData.isBufferZone) {
           updateData.notes = `ZONE TAMPON - ${locationData.damageAssessment.damageType || 'Dommage détecté'}`;
@@ -622,15 +679,138 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
       }
 
+      // 4.5. Update location occupancy in locations table
+      console.log('🔍 Starting location occupancy update for:', locationData.assignedLocation);
+      try {
+        // Parse the location to check if it's a virtual stack
+        const locationMatch = locationData.assignedLocation.match(/S(\d+)R(\d+)H(\d+)/);
+        if (!locationMatch) {
+          console.warn(`Invalid location format: ${locationData.assignedLocation}`);
+        } else {
+          const stackNum = parseInt(locationMatch[1]);
+          const row = locationMatch[2];
+          const tier = locationMatch[3];
+
+          console.log(`📍 Parsed location: Stack=${stackNum}, Row=${row}, Tier=${tier}`);
+
+          // Check if this is a virtual stack (even numbers for 40ft)
+          const isVirtualStack = stackNum % 2 === 0;
+          console.log(`🔢 Is virtual stack: ${isVirtualStack}`);
+
+          if (isVirtualStack && operation.containerSize === '40ft') {
+            // For 40ft containers on virtual stacks, we need to occupy BOTH physical locations
+            // Virtual stack S04 is made from physical stacks S03 and S05
+            const physicalStack1 = stackNum - 1; // S03
+            const physicalStack2 = stackNum + 1; // S05
+
+            console.log(`🔄 Virtual stack ${stackNum} maps to physical stacks ${physicalStack1} and ${physicalStack2}`);
+
+            // Get both physical locations
+            const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
+            const physicalLocation2 = `S${String(physicalStack2).padStart(2, '0')}R${row}H${tier}`;
+            
+            console.log(`🔍 Checking both physical locations: ${physicalLocation1} and ${physicalLocation2}`);
+
+            const { data: locationRecords, error: locationFindError } = await supabase
+              .from('locations')
+              .select('id, location_id, is_occupied, container_size')
+              .in('location_id', [physicalLocation1, physicalLocation2])
+              .eq('yard_id', currentYard?.id);
+
+            console.log(`📊 Physical locations query result:`, { locationRecords, error: locationFindError });
+
+            if (!locationFindError && locationRecords && locationRecords.length === 2) {
+              // Check if both locations are available
+              const allAvailable = locationRecords.every(loc => !loc.is_occupied);
+              
+              if (allAvailable) {
+                console.log(`✅ Both physical locations are available, assigning 40ft container`);
+                
+                // Assign container to both physical locations
+                for (const locationRecord of locationRecords) {
+                  await locationManagementService.assignContainer({
+                    locationId: locationRecord.id,
+                    containerId: finalContainers[0].id,
+                    containerSize: '40ft',
+                    clientPoolId: undefined
+                  });
+                  console.log(`✓ Assigned to physical location ${locationRecord.location_id}`);
+                }
+                
+                console.log(`✓ Virtual location ${locationData.assignedLocation} successfully mapped to both physical locations`);
+              } else {
+                const occupiedLocations = locationRecords.filter(loc => loc.is_occupied).map(loc => loc.location_id);
+                console.warn(`❌ Cannot assign 40ft container - some physical locations are occupied: ${occupiedLocations.join(', ')}`);
+              }
+            } else {
+              console.warn(`❌ Could not find both physical locations for virtual ${locationData.assignedLocation}`);
+            }
+          } else if (isVirtualStack && operation.containerSize === '20ft') {
+            // For 20ft containers on virtual stacks, use just one physical location
+            const physicalStack1 = stackNum - 1;
+            const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
+            
+            console.log(`🔍 Checking physical location for 20ft: ${physicalLocation1}`);
+
+            const { data: locationRecord, error: locationFindError } = await supabase
+              .from('locations')
+              .select('id, is_occupied')
+              .eq('location_id', physicalLocation1)
+              .eq('yard_id', currentYard?.id)
+              .maybeSingle();
+
+            if (!locationFindError && locationRecord && !locationRecord.is_occupied) {
+              await locationManagementService.assignContainer({
+                locationId: locationRecord.id,
+                containerId: finalContainers[0].id,
+                containerSize: '20ft',
+                clientPoolId: undefined
+              });
+              console.log(`✓ 20ft container assigned to physical location ${physicalLocation1}`);
+            } else {
+              console.warn(`❌ Physical location ${physicalLocation1} not available`);
+            }
+          } else {
+            console.log(`📍 Physical stack detected, using direct mapping`);
+            // Physical stack - direct mapping
+            const { data: locationRecord, error: locationFindError } = await supabase
+              .from('locations')
+              .select('id')
+              .eq('location_id', locationData.assignedLocation)
+              .eq('yard_id', currentYard?.id)
+              .maybeSingle();
+
+            console.log(`📊 Physical location query result:`, { locationRecord, error: locationFindError });
+
+            if (locationFindError) {
+              console.error('Error finding location:', locationFindError);
+            } else if (locationRecord) {
+              await locationManagementService.assignContainer({
+                locationId: locationRecord.id,
+                containerId: finalContainers[0].id,
+                containerSize: operation.containerSize as '20ft' | '40ft',
+                clientPoolId: undefined
+              });
+              console.log(`✓ Physical location ${locationData.assignedLocation} marked as occupied`);
+            } else {
+              console.warn(`Physical location ${locationData.assignedLocation} not found in locations table`);
+            }
+          }
+        }
+      } catch (locationError) {
+        console.error('❌ Error updating location occupancy:', locationError);
+        // Don't fail the entire operation if location update fails
+      }
+
       // 5. Process EDI transmission conditionally using new SFTP integration
       let ediStatus = 'not_attempted';
-      
+
       // EDI seulement si pas de dommages (ediShouldTransmit = true)
       if (locationData.ediShouldTransmit !== false) {
         try {
           // Import SFTP integration service
           const { sftpIntegrationService } = await import('../../services/edi/sftpIntegrationService');
-          
+
           // Prepare Gate In data for SFTP transmission
           const gateInData = {
             containerNumber: operation.containerNumber,
@@ -656,7 +836,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
 
           // Process Gate In with automatic SFTP transmission
           const sftpResult = await sftpIntegrationService.processGateInWithSFTP(gateInData);
-          
+
           if (sftpResult.transmitted) {
             // Update gate_in_operation with EDI transmission info
             await supabase
@@ -677,7 +857,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         } catch (ediError) {
           // EDI transmission failed, but don't fail the entire operation
           console.error('EDI SFTP transmission failed:', ediError);
-          
+
           // Update gate_in_operation to indicate EDI failure
           await supabase
             .from('gate_in_operations')
@@ -705,7 +885,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         op.id === operation.id
           ? {
               ...op,
-              containerId: createdContainers?.[0]?.id,
+              containerId: finalContainers?.[0]?.id,
               assignedLocation: locationData.assignedLocation,
               completedAt: new Date(),
               status: 'completed',
@@ -714,19 +894,24 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           : op
       ));
 
-      // 7. Refresh containers list (non-blocking)
+      // 7. Refresh containers list and yard data (non-blocking)
       try {
         const updatedContainers = await containerService.getAll();
         setContainers(updatedContainers);
+
+        // Refresh yard data to update occupancy
+        if (currentYard?.id) {
+          await yardsService.refreshYardData(currentYard.id);
+        }
       } catch (refreshError) {
         logger.warn('Avertissement', 'GateIn.tsx', refreshError);
       }
 
       // 8. Show success message with EDI status
-      const damageStatus = locationData.damageAssessment?.hasDamage 
-        ? 'assigné en zone tampon (endommagé)' 
+      const damageStatus = locationData.damageAssessment?.hasDamage
+        ? 'assigné en zone tampon (endommagé)'
         : 'en bon état';
-      
+
       let ediStatusMessage = '';
       switch (ediStatus) {
         case 'transmitted':
@@ -744,7 +929,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         default:
           ediStatusMessage = '• EDI non tenté';
       }
-      
+
       toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné avec succès à ${locationData.assignedLocation} (${damageStatus}) - ${ediStatusMessage}`);
       setActiveView('overview');
     } catch (error) {
@@ -785,7 +970,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
             locationAssignmentDuration: null,
             ediProcessingDuration: null
           };
-          
+
           // Calculate time tracking durations if operation is completed
           if (op.status === 'completed' && op.id) {
             try {
@@ -888,8 +1073,8 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
     return (
       <div className="text-center py-12">
         <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-        <p className="text-gray-600">You don't have permission to perform gate in operations.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.restricted')}</h3>
+        <p className="text-gray-600">{t('common.unauthorized')}</p>
       </div>
     );
   }
@@ -904,7 +1089,6 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         onBack={() => setActiveView('overview')}
         onComplete={handleLocationValidation}
         isProcessing={isProcessing}
-        mockLocations={mockLocations}
       />
     );
   }
@@ -916,8 +1100,6 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate In</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">Container entry management</p>
             </div>
           </div>
         </div>
@@ -947,8 +1129,6 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Gate In</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">Container entry management</p>
             </div>
           </div>
 
@@ -959,7 +1139,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl lg:rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">New Gate In</span>
+              <span className="text-sm lg:text-base">Gate In</span>
             </button>
 
             <button
@@ -967,7 +1147,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <Clock className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">Pending ({pendingOperations.length})</span>
+              <span className="text-sm lg:text-base">{t('gate.in.pending')} ({pendingOperations.length})</span>
             </button>
           </div>
         </div>
@@ -985,7 +1165,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{todayGateIns.length}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Today's Gate Ins</p>
+                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.today')}</p>
               </div>
             </div>
           </div>
@@ -998,7 +1178,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">Pending Operations</p>
+                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.pending')}</p>
               </div>
             </div>
           </div>
@@ -1011,7 +1191,7 @@ const mockLocations = React.useMemo(() => ({ '20ft': [], '40ft': [], damage: [] 
               </div>
               <div className="lg:ml-3">
                 <p className="text-2xl lg:text-lg font-bold text-gray-900">{completedOperations.length}</p>
-                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">Containers Processed</p>
+                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.processed')}</p>
               </div>
             </div>
           </div>

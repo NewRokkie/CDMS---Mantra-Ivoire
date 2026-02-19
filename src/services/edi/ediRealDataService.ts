@@ -194,9 +194,9 @@ class EDIRealDataService {
         .from('edi_client_settings')
         .select('*')
         .eq('client_code', clientCode)
-        .single();
+        .maybeSingle();
 
-      if (settingError && settingError.code !== 'PGRST116') {
+      if (settingError) {
         console.error('Error checking EDI settings:', settingError);
       }
 
@@ -439,9 +439,9 @@ class EDIRealDataService {
         .from('edi_client_settings')
         .select('id')
         .eq('client_id', client.id)
-        .single();
+        .maybeSingle();
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         throw new Error(`Failed to check existing settings: ${checkError.message}`);
       }
 
@@ -508,10 +508,7 @@ class EDIRealDataService {
 
       if (deleteError) {
         console.error('Error deleting client EDI settings:', deleteError);
-        // Don't throw error if record doesn't exist
-        if (deleteError.code !== 'PGRST116') {
-          throw new Error(`Failed to delete client EDI settings: ${deleteError.message}`);
-        }
+        throw new Error(`Failed to delete client EDI settings: ${deleteError.message}`);
       }
 
       // Also disable auto_edi in clients table

@@ -6,7 +6,6 @@ import {
   Phone,
   Building,
   Shield,
-  MapPin,
   Clock,
   Activity,
   CheckCircle,
@@ -20,11 +19,11 @@ import {
 } from 'lucide-react';
 import type { UserDetails, User } from '../../types';
 import { userService } from '../../services/api';
+import { useLanguage } from '../../hooks/useLanguage';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useDatabaseRetry } from '../../hooks/useRetry';
 import { handleError } from '../../services/errorHandling';
-import { logger } from '../../utils/logger';
 
 interface UserDetailsModalProps {
   isOpen: boolean;
@@ -41,6 +40,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   onEdit,
   onDelete
 }) => {
+  const { t } = useLanguage();
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -54,9 +54,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   // Use retry mechanism for fetching user details
   const {
     execute: fetchUserDetailsWithRetry,
-    isRetrying,
-    retryCount,
-    lastError
+    retryCount
   } = useDatabaseRetry(async (userId: string) => {
     return await userService.getUserDetails(userId);
   });
@@ -197,16 +195,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   };
 
   return (
-    <ErrorBoundary
-      context={`User Details Modal - ${user?.name || 'Unknown User'}`}
-      onError={(error, errorInfo) => {
-        logger.error('User Details Modal component error', 'UserDetailsModal', {
-          error: error.message,
-          userId: user?.id,
-          componentStack: errorInfo.componentStack
-        });
-      }}
-    >
+    <ErrorBoundary>
       <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
 
@@ -231,12 +220,12 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                   {user.isActive ? (
                     <>
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      Active
+                      {t('common.status.active')}
                     </>
                   ) : (
                     <>
                       <XCircle className="h-3 w-3 mr-1" />
-                      Inactive
+                      {t('common.status.inactive')}
                     </>
                   )}
                 </span>
@@ -247,13 +236,13 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                 onClick={() => onEdit(user)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
-                Edit User
+                {t('common.edit')}
               </button>
               <button
                 onClick={() => onDelete(user.id)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
               >
-                Delete
+                {t('common.delete')}
               </button>
               <button
                 onClick={onClose}
@@ -271,7 +260,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-900">Loading user details...</p>
+                <p className="text-lg font-medium text-gray-900">{t('common.loading')}</p>
                 <p className="text-sm text-gray-600">Please wait while we fetch the information</p>
                 {retryCount > 0 && (
                   <p className="text-xs text-orange-600 mt-2">Retry attempt {retryCount}</p>
@@ -279,22 +268,12 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
               </div>
             </div>
           ) : error && !userDetails ? (
-            <div className="p-6">
+            <div className="py-12">
               <UserManagementErrorFallback
                 error={error}
                 onRetry={handleRetry}
                 operation="loading"
               />
-              {isRetrying && (
-                <div className="mt-4 text-center">
-                  <div className="flex items-center justify-center space-x-2 text-blue-600">
-                    <Loader className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">
-                      Retrying... ({retryCount}/3)
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -306,14 +285,14 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
               <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
                 <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
                   <UserIcon className="h-5 w-5 mr-2" />
-                  Profile Information
+                  {t('users.form.profileInfo')}
                 </h4>
 
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-blue-600" />
                     <div>
-                      <p className="text-sm font-medium text-blue-800">Email</p>
+                      <p className="text-sm font-medium text-blue-800">{t('users.form.email')}</p>
                       <p className="text-sm text-blue-700">{user.email}</p>
                     </div>
                   </div>
@@ -322,7 +301,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <Phone className="h-4 w-4 text-blue-600" />
                       <div>
-                        <p className="text-sm font-medium text-blue-800">Phone</p>
+                        <p className="text-sm font-medium text-blue-800">{t('users.form.phone')}</p>
                         <p className="text-sm text-blue-700">{user.phone}</p>
                       </div>
                     </div>
@@ -332,7 +311,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <Building className="h-4 w-4 text-blue-600" />
                       <div>
-                        <p className="text-sm font-medium text-blue-800">Department</p>
+                        <p className="text-sm font-medium text-blue-800">{t('users.form.department')}</p>
                         <p className="text-sm text-blue-700">{user.department}</p>
                       </div>
                     </div>
@@ -342,7 +321,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <Building className="h-4 w-4 text-blue-600" />
                       <div>
-                        <p className="text-sm font-medium text-blue-800">Company</p>
+                        <p className="text-sm font-medium text-blue-800">{t('users.form.company')}</p>
                         <p className="text-sm text-blue-700">{user.company}</p>
                       </div>
                     </div>
@@ -364,7 +343,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                   <div className="flex items-center space-x-3">
                     <Clock className="h-4 w-4 text-blue-600" />
                     <div>
-                      <p className="text-sm font-medium text-blue-800">Last Login</p>
+                      <p className="text-sm font-medium text-blue-800">{t('users.form.status')}</p>
                       <p className="text-sm text-blue-700">{formatLastLogin(user.lastLogin)}</p>
                     </div>
                   </div>

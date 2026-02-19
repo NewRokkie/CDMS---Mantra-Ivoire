@@ -2,12 +2,15 @@ import React from 'react';
 import { Package, Shield, Grid3x3, Users, TrendingUp } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
+import { useLanguage } from '../../../hooks/useLanguage';
 
 interface StackSummaryCardsProps {
   stacks: YardStack[];
 }
 
 export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) => {
+  const { t } = useLanguage();
+  
   // Filter out virtual stacks for calculations
   const physicalStacks = stacks.filter(s => !(s as any).isVirtual);
   
@@ -55,18 +58,11 @@ export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) 
     }
   });
 
-  console.log('🔍 40ft Stack Calculation:', {
-    physical40ftStacks: stacks40ftPhysical.length,
-    logical40ftStacks: logical40ftCount,
-    countedStacks: Array.from(counted40ftStacks),
-    stackNumbers: stacks40ftPhysical.map(s => s.stackNumber)
-  });
-
   const cards = [
     {
-      title: 'Total Stacks',
+      title: t('stack.stats.total'),
       value: totalStacks,
-      subtitle: 'All stacks',
+      subtitle: t('stack.stats.all'),
       icon: Package,
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
@@ -75,9 +71,9 @@ export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) 
       textColor: 'text-blue-900'
     },
     {
-      title: 'Total 40ft Stacks',
+      title: t('stack.stats.40ft'),
       value: logical40ftCount,
-      subtitle: 'Logical pairs',
+      subtitle: t('stack.stats.logicalPairs'),
       icon: Grid3x3,
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200',
@@ -86,9 +82,9 @@ export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) 
       textColor: 'text-orange-900'
     },
     {
-      title: 'Total 20ft Stacks',
+      title: t('stack.stats.20ft'),
       value: stacks20ft,
-      subtitle: 'Single stacks',
+      subtitle: t('stack.stats.single'),
       icon: Package,
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
@@ -97,9 +93,9 @@ export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) 
       textColor: 'text-green-900'
     },
     {
-      title: 'Special Stacks',
+      title: t('stack.stats.special'),
       value: specialStacks,
-      subtitle: 'Buffer zones',
+      subtitle: t('stack.stats.buffer'),
       icon: Shield,
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
@@ -108,9 +104,9 @@ export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) 
       textColor: 'text-purple-900'
     },
     {
-      title: 'Regular Stacks',
+      title: t('stack.stats.regular'),
       value: regularStacks,
-      subtitle: 'Standard ops',
+      subtitle: t('stack.stats.standardOps'),
       icon: TrendingUp,
       bgColor: 'bg-emerald-50',
       borderColor: 'border-emerald-200',
@@ -119,9 +115,9 @@ export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) 
       textColor: 'text-emerald-900'
     },
     {
-      title: 'Client Assigned',
+      title: t('stack.stats.clientAssigned'),
       value: assignedStacks,
-      subtitle: `${totalStacks - assignedStacks} unassigned`,
+      subtitle: t('stack.stats.unassignedCount').replace('{count}', (totalStacks - assignedStacks).toString()),
       icon: Users,
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',

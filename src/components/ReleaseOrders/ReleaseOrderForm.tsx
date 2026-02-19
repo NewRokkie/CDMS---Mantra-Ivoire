@@ -5,6 +5,7 @@ import { ContainerQuantityBySize, Client } from '../../types';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { clientService } from '../../services/api';
 import { TransactionOutSwitch } from './TransactionOutSwitch';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface BookingReferenceFormData {
   bookingNumber: string;
@@ -37,6 +38,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   initialData,
   isEditMode = false
 }) => {
+  const { t } = useLanguage();
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -225,12 +227,12 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     <MultiStepModal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? 'Edit Booking' : 'Create Booking'}
-      subtitle={isEditMode ? `Update booking reference` : `Generate new booking reference`}
+      title={isEditMode ? t('releases.edit') : t('releases.create')}
+      subtitle={isEditMode ? t('releases.subtitle.edit') : t('releases.subtitle.create')}
       icon={FileText}
       currentStep={currentStep}
       totalSteps={2}
-      stepLabels={['Booking & Client', 'Container Quantities']}
+      stepLabels={[t('releases.form.bookingInfo'), t('releases.form.quantities')]}
       onNextStep={currentStep === 2 ? handleSubmit : handleNextStep}
       onPrevStep={handlePrevStep}
       isStepValid={validateStep(currentStep)}
@@ -275,19 +277,21 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
   handleClientSelect,
   handleTransactionTypeChange
 }) => {
+  const { t } = useLanguage();
+
   const getContainerBreakdownText = (): string => {
     const parts = [];
     if (formData.containerQuantities.size20ft > 0) {
-      parts.push(`${formData.containerQuantities.size20ft} Container${formData.containerQuantities.size20ft !== 1 ? 's' : ''} of 20"`);
+      parts.push(`${formData.containerQuantities.size20ft} ${t('common.container')}${formData.containerQuantities.size20ft !== 1 ? 's' : ''} of 20"`);
     }
     if (formData.containerQuantities.size40ft > 0) {
-      parts.push(`${formData.containerQuantities.size40ft} Container${formData.containerQuantities.size40ft !== 1 ? 's' : ''} of 40"`);
+      parts.push(`${formData.containerQuantities.size40ft} ${t('common.container')}${formData.containerQuantities.size40ft !== 1 ? 's' : ''} of 40"`);
     }
 
     if (parts.length === 0) return 'No containers specified';
 
     const result = parts.join(' and ');
-    return `${result} for a total of ${formData.totalContainers} container${formData.totalContainers !== 1 ? 's' : ''}`;
+    return `${result} for a total of ${formData.totalContainers} ${t('common.container')}${formData.totalContainers !== 1 ? 's' : ''}`;
   };
 
   return (
@@ -302,8 +306,8 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-blue-900">Booking Information</h4>
-                <p className="text-xs text-blue-700">Define the booking type and reference number</p>
+                <h4 className="font-semibold text-blue-900">{t('releases.form.bookingInfo')}</h4>
+                <p className="text-xs text-blue-700">{t('releases.form.bookingDesc')}</p>
               </div>
             </div>
 
@@ -311,7 +315,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               {/* Booking Type */}
               <div>
                 <label className="block text-sm font-semibold text-blue-900 mb-3">
-                  Booking Type *
+                  {t('releases.form.bookingType')} *
                 </label>
                 <div className="flex items-center space-x-4">
                   <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 transition-colors flex-1">
@@ -352,7 +356,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               {/* Booking Reference Number */}
               <div>
                 <label className="block text-sm font-semibold text-blue-900 mb-2">
-                  Booking Reference Number *
+                  {t('releases.form.bookingNumber')} *
                 </label>
                 <input
                   type="text"
@@ -364,7 +368,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   placeholder="e.g., ABJEXXXXXXXX"
                 />
                 <p className="text-xs text-blue-700 mt-2">
-                  {isEditMode ? 'Reference number cannot be changed' : 'This will be used as the booking ID throughout the application'}
+                  {isEditMode ? t('releases.form.refImmutable') : t('releases.form.refHelp')}
                 </p>
               </div>
             </div>
@@ -377,20 +381,20 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <User className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-green-900">Client Information</h4>
-                <p className="text-xs text-green-700">Select the client for this booking</p>
+                <h4 className="font-semibold text-green-900">{t('releases.form.clientInfo')}</h4>
+                <p className="text-xs text-green-700">{t('releases.form.clientDesc')}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-green-900 mb-3">
-                Select Client *
+                {t('releases.form.client')} *
               </label>
               <ClientSearchField
                 clients={clients}
                 selectedClientId={formData.clientId}
                 onClientSelect={handleClientSelect}
-                placeholder="Search and select client..."
+                placeholder={t('gate.in.form.searchClient')}
                 required
               />
               {formData.clientName && (
@@ -417,14 +421,14 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <Calculator className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-purple-900">Quantity Control</h4>
-                <p className="text-xs text-purple-700">Set limits for container allocation</p>
+                <h4 className="font-semibold text-purple-900">{t('releases.form.qtyControl')}</h4>
+                <p className="text-xs text-purple-700">{t('releases.form.qtyControlDesc')}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-purple-900 mb-3">
-                Maximum Quantity Threshold *
+                {t('releases.form.threshold')} *
               </label>
               <div className="flex items-center space-x-3">
                 <input
@@ -437,10 +441,10 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   className="flex-1 px-4 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   placeholder="10"
                 />
-                <span className="text-sm font-medium text-purple-900">containers</span>
+                <span className="text-sm font-medium text-purple-900">{t('common.containers')}</span>
               </div>
               <p className="text-xs text-purple-700 mt-2">
-                Maximum containers allowed before requiring detailed breakdown per size
+                {t('releases.form.thresholdHelp')}
               </p>
             </div>
           </div>
@@ -452,9 +456,9 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-orange-900">Container Quantities by Size</h4>
+                <h4 className="font-semibold text-orange-900">{t('releases.form.quantitiesTitle')}</h4>
                 <p className="text-xs text-orange-700">
-                  Total: <span className="font-bold">{formData.totalContainers}</span> container{formData.totalContainers !== 1 ? 's' : ''}
+                  {t('common.total')}: <span className="font-bold">{formData.totalContainers}</span> {t('common.container')}{formData.totalContainers !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
@@ -465,9 +469,9 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-blue-600" />
-                    <span className="font-semibold text-gray-900">20" Containers</span>
+                    <span className="font-semibold text-gray-900">{t('releases.form.containers20')}</span>
                   </div>
-                  <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">Standard</span>
+                  <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">{t('common.standard')}</span>
                 </div>
 
                 <div className="flex items-center justify-between space-x-3">
@@ -507,9 +511,9 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-green-600" />
-                    <span className="font-semibold text-gray-900">40" Containers</span>
+                    <span className="font-semibold text-gray-900">{t('releases.form.containers40')}</span>
                   </div>
-                  <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">High Capacity</span>
+                  <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">{t('common.highCapacity')}</span>
                 </div>
 
                 <div className="flex items-center justify-between space-x-3">
@@ -549,7 +553,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
             {formData.totalContainers > 0 && (
               <div className="space-y-3">
                 <div className="p-4 bg-white rounded-lg border-2 border-orange-300">
-                  <h5 className="font-semibold text-orange-900 mb-2">Summary</h5>
+                  <h5 className="font-semibold text-orange-900 mb-2">{t('common.summary')}</h5>
                   <p className="text-sm text-gray-700 leading-relaxed">
                     {getContainerBreakdownText()}
                   </p>
@@ -559,9 +563,9 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   <div className="flex items-start p-4 bg-orange-50 border border-orange-300 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-orange-600 mr-3 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-orange-900">Detailed Breakdown Required</p>
+                      <p className="text-sm font-semibold text-orange-900">{t('releases.breakdown.required')}</p>
                       <p className="text-xs text-orange-700 mt-1">
-                        Total exceeds threshold ({formData.maxQuantityThreshold}). Detailed breakdown will be required for processing.
+                        {t('releases.breakdown.help')}
                       </p>
                     </div>
                   </div>
@@ -576,7 +580,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               <div className="p-2 bg-gray-600 text-white rounded-lg">
                 <FileText className="h-5 w-5" />
               </div>
-              <h4 className="font-semibold text-gray-900">Additional Notes (Optional)</h4>
+              <h4 className="font-semibold text-gray-900">{t('gate.in.form.notes')}</h4>
             </div>
             <textarea
               value={formData.notes || ''}
@@ -591,3 +595,4 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
     </div>
   );
 };
+

@@ -1,0 +1,16 @@
+Pour optimiser l'UX des formulaires multi-étapes de votre CDMS sans modifier la logique métier ou la structure des données, vous pouvez appliquer les principes du skill UI/UX Pro Max tout en respectant strictement la charte graphique d'Olam.
+Voici les leviers d'optimisation recommandés, basés sur les sources :
+1. Clarté Visuelle et Hiérarchie (Règle du 60/30/10)
+• Espace Blanc (60%) : Augmentez l'espace négatif autour des champs de saisie pour réduire la charge cognitive. Une interface aérée permet à l'utilisateur de se concentrer sur une étape à la fois sans reprogrammation de l'agence des pages.
+• Couleurs Primaires (30%) : Utilisez l'Olam Green (#A0C800) pour les éléments interactifs principaux comme le bouton "Suivant" ou l'indicateur de l'étape active.
+• Accents (10%) : Réservez les couleurs d'accent (comme l'Orange secondaire #FD4E00) uniquement pour les messages d'erreur ou les alertes critiques, afin de ne pas surcharger visuellement le formulaire.
+2. Typographie et Lisibilité
+• Titres d'étapes : Utilisez la police Marianina Wide FY pour les titres de sections afin de renforcer l'identité de marque. Appliquez un tracking de 0 pour les titres d'interface web.
+• Champs et Instructions : Pour les labels et le texte de corps de texte long, privilégiez Helvetica Neue (Roman ou Light), car elle offre une meilleure lisibilité pour les données denses.
+3. Composants UI Pro Max (Style "Soft UI Evolution")
+• Indicateurs de Progression (Steppers) : Remplacez les barres de progression classiques par un stepper au style Soft UI Evolution, utilisant des ombres douces et des transitions fluides (200-300ms) pour indiquer le passage d'une étape à l'autre.
+• États de survol et focus : Appliquez des états de hover et focus clairs sur tous les champs cliquables (cursor-pointer) pour améliorer l'accessibilité au clavier sans changer la logique de validation.
+• Iconographie : Utilisez exclusivement des icônes SVG (Lucide ou Heroicons) pour les indications visuelles. Le skill proscrit l'usage des emojis dans les interfaces professionnelles.
+4. Accessibilité et Validation
+• Contraste : Assurez-vous que toutes les combinaisons de texte (notamment le texte blanc sur fond Olam Green) respectent un ratio de contraste minimal de 4.5:1 (norme WCAG AA).
+• Retours d'information : Utilisez des micro-interactions pour confirmer la validité d'un champ en temps réel, ce qui améliore l'expérience sans nécessiter de nouveaux points de données.

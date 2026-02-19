@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Search, Check, ChevronDown, Loader, AlertTriangle } from 'lucide-react';
 import { ContainerFormData } from '../ContainerEditModal';
 import { useYard } from '../../../hooks/useYard';
-import { locationManagementService } from '../../../services/api';
+import { yardsService } from '../../../services/api';
 import { handleError } from '../../../services/errorHandling';
 
 interface LocationAssignmentStepProps {
@@ -87,80 +87,104 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
         setClientPoolStacks(poolStacks);
         setOtherClientsStacks(otherStacks);
         
-        // Fetch all individual locations for the current yard
-        const dbLocations = await locationManagementService.getAll({
-          yardId: currentYard.id,
-          isActive: true
-        });
+        // Get the yard configuration to access stack information
+        const yard = yardsService.getYardById(currentYard.id);
+        if (!yard) {
+          throw new Error('Yard not found');
+        }
 
-        // Transform locations to LocationOption format
-        // Each location represents a specific Row×Height position
-        // ONLY show available locations (not occupied)
-        // Filter by container size: 40ft -> virtual stacks (even numbers), 20ft -> physical stacks (odd numbers or special)
-        // Filter by client pool: if client has a pool, only show their assigned stacks
-        const locationOptions: LocationOption[] = dbLocations
-          .filter(loc => {
-            // Must be active
-            if (!loc.isActive) return false;
+        // Get all containers to check which locations are occupied
+        const { containerService } = await import('../../../services/api/containerService');
+        const allContainers = await containerService.getAll();
+        
+        // Filter containers for this yard directly
+        const yardContainers = allContainers.filter((c: any) => c.yardId === currentYard.id);
+        
+        // Get all stacks from the yard configuration
+        let allStacks = yard.sections.flatMap(section => section.stacks);
+        
+        // Filter stacks based on container size
+        if (formData.size === '40ft') {
+          // For 40ft containers, only show virtual stacks
+          allStacks = allStacks.filter(stack => stack.isVirtual === true);
+        } else if (formData.size === '20ft') {
+          // For 20ft containers, only show physical (non-virtual) stacks
+          allStacks = allStacks.filter(stack => !stack.isVirtual);
+        }
+
+        // Generate location options from stacks
+        const allLocationOptions: LocationOption[] = [];
+        
+        for (const stack of allStacks) {
+          // Check if this stack is in the client's pool (if applicable)
+          if (hasPool && poolStacks.length > 0) {
+            if (!poolStacks.includes(stack.id)) {
+              continue; // Skip stacks not in client's pool
+            }
+          }
+          // If client has no pool, skip stacks assigned to other clients
+          else if (formData.clientCode && otherStacks.has(stack.id)) {
+            continue;
+          }
+          
+          // Get containers in this stack to check occupancy
+          const stackContainers = yardContainers.filter((c: any) => {
+            const match = c.location.match(/S0*(\d+)[-]?R\d+[-]?H\d+/);
+            return match && parseInt(match[1]) === stack.stackNumber;
+          });
+          
+          // Create a set of occupied positions (normalize format to SXXRXHX)
+          const occupiedPositions = new Set(
+            stackContainers.map((c: any) => {
+              // Normalize location format: remove dashes and ensure S has 2 digits
+              const normalized = c.location.replace(/-/g, '').replace(/S(\d)R/, 'S0$1R');
+              return normalized;
+            })
+          );
+          
+          // Generate all possible positions for this stack
+          for (let row = 1; row <= stack.rows; row++) {
+            // Get max tiers for this specific row
+            let maxTiersForRow = stack.maxTiers;
             
-            // Must be available (not occupied)
-            // Check both the available flag and isOccupied flag for safety
-            if (loc.isOccupied) return false;
-            if (loc.available === false) return false;
-            
-            // If there's a container assigned, it's not available
-            if (loc.containerId) return false;
-            
-            // CLIENT POOL FILTERING
-            // If client has a pool with assigned stacks, only show locations from those stacks
-            if (hasPool && poolStacks.length > 0) {
-              if (!loc.stackId || !poolStacks.includes(loc.stackId)) {
-                return false; // Not in client's assigned stacks
+            // Check if stack has custom row-tier configuration
+            if (stack.rowTierConfig && stack.rowTierConfig.length > 0) {
+              const rowConfig = stack.rowTierConfig.find(config => config.row === row);
+              if (rowConfig) {
+                maxTiersForRow = rowConfig.maxTiers;
               }
             }
-            // If client has no pool, only show locations from unassigned stacks
-            // (This prevents showing locations from other clients' pools)
-            else if (formData.clientCode && loc.stackId) {
-              // Don't show locations from stacks assigned to other clients
-              if (otherStacks.has(loc.stackId)) {
-                return false;
+            
+            // Generate positions up to the max tiers for this row
+            for (let tier = 1; tier <= maxTiersForRow; tier++) {
+              const locationId = `S${String(stack.stackNumber).padStart(2, '0')}R${row}H${tier}`;
+              
+              // Check if this position is occupied
+              const isOccupied = occupiedPositions.has(locationId);
+              
+              // Include if: not occupied OR it's the current location
+              if (!isOccupied || locationId === formData.location) {
+                const section = yard.sections.find(s => s.id === stack.sectionId);
+                
+                allLocationOptions.push({
+                  id: `${stack.id}-R${row}H${tier}`, // Synthetic ID based on stack
+                  name: locationId,
+                  section: section?.name || `Stack S${String(stack.stackNumber).padStart(2, '0')}`,
+                  type: stack.isVirtual ? '40ft' : '20ft',
+                  capacity: 1,
+                  occupied: isOccupied ? 1 : 0,
+                  stackId: stack.id,
+                  yardId: currentYard.id
+                });
               }
             }
-            
-            // Filter by container size
-            const stackNumber = parseInt(loc.locationId.match(/S(\d+)/)?.[1] || '0');
-            const isVirtualStack = loc.isVirtual === true;
-            const isEvenStack = stackNumber % 2 === 0;
-            const isOddStack = stackNumber % 2 === 1;
-            
-            // For 40ft containers: only show virtual stacks (even numbered: S04, S08, S12, etc.)
-            if (formData.size === '40ft') {
-              return isVirtualStack && isEvenStack;
-            }
-            
-            // For 20ft containers: only show physical stacks (odd numbered: S01, S03, S05, etc.)
-            if (formData.size === '20ft') {
-              return !isVirtualStack && isOddStack;
-            }
-            
-            // If size is not set yet, show all available locations
-            return true;
-          })
-          .map(loc => ({
-            id: loc.id,
-            name: loc.locationId, // e.g., S01R1H1, S04R2H3
-            section: `Stack S${loc.locationId.match(/S(\d+)/)?.[1] || ''}`,
-            type: loc.isVirtual ? '40ft' : '20ft',
-            capacity: 1, // Each location holds exactly 1 container
-            occupied: 0, // All filtered locations are available (occupied = 0)
-            stackId: loc.stackId,
-            yardId: currentYard.id
-          }));
+          }
+        }
 
         // Sort by location ID
-        locationOptions.sort((a, b) => a.name.localeCompare(b.name));
+        allLocationOptions.sort((a, b) => a.name.localeCompare(b.name));
 
-        setLocations(locationOptions);
+        setLocations(allLocationOptions);
       } catch (error) {
         handleError(error, 'LocationAssignmentStep.loadLocations');
         setLocations([]);
@@ -170,7 +194,7 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
     }
 
     loadLocations();
-  }, [currentYard]);
+  }, [currentYard, formData.location, formData.locationId, formData.clientCode, formData.size]);
 
   const filteredLocations = locations.filter(location =>
     location.name.toLowerCase().includes(locationSearch.toLowerCase()) ||

@@ -4,6 +4,7 @@ import { stackService, yardsService } from '../../../services/api';
 import StackSoftDeleteService from '../../../services/api/stackSoftDeleteService';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
+import { useLanguage } from '../../../hooks/useLanguage';
 import { clientPoolService } from '../../../services/api';
 import { StackManagementHeader } from './StackManagementHeader';
 import { StackManagementFilters } from './StackManagementFilters';
@@ -21,6 +22,7 @@ import { useToast } from '../../../hooks/useToast';
 import { useConfirm } from '../../../hooks/useConfirm';
 
 export const StackManagement: React.FC = () => {
+  const { t } = useLanguage();
   const [stacks, setStacks] = useState<YardStack[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -65,13 +67,13 @@ export const StackManagement: React.FC = () => {
       
       // Show success message for manual refresh
       if (showRefreshIndicator) {
-        toast.success('Stack configuration refreshed successfully!');
+        toast.success(t('stack.refreshed'));
       }
     } catch (error) {
       handleError(error, 'StackManagement.loadStacks');
       // Set empty array to prevent infinite loading
       setStacks([]);
-      toast.error('Error loading stacks: ' + (error as Error).message);
+      toast.error(t('common.error') + ': ' + (error as Error).message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -120,10 +122,10 @@ export const StackManagement: React.FC = () => {
     const stackNumber = stack?.stackNumber || 'Unknown';
     
     confirm({
-      title: 'Soft Delete Stack',
-      message: `Are you sure you want to soft delete Stack S${String(stackNumber).padStart(2, '0')}? This will deactivate the stack and all its locations, but preserve all data for potential recovery. You can reactivate it later if needed.`,
-      confirmText: 'Soft Delete',
-      cancelText: 'Cancel',
+      title: t('stack.delete.title'),
+      message: t('stack.delete.confirm').replace('{number}', String(stackNumber).padStart(2, '0')),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       variant: 'danger',
       onConfirm: async () => {
         try {
@@ -132,13 +134,13 @@ export const StackManagement: React.FC = () => {
           if (result.success) {
             // Remove from local state to update UI immediately
             setStacks(prev => prev.filter(s => s.id !== stackId));
-            toast.success(`Stack S${String(stackNumber).padStart(2, '0')} soft deleted successfully! You can reactivate it later if needed.`);
+            toast.success(t('stack.delete.success').replace('{number}', String(stackNumber).padStart(2, '0')));
           } else {
-            toast.error(result.message || 'Failed to soft delete stack');
+            toast.error(result.message || t('stack.delete.error'));
           }
         } catch (error) {
           handleError(error, 'StackManagement.handleDeleteStack');
-          toast.error('Error deleting stack: ' + (error as Error).message);
+          toast.error(t('common.error') + ': ' + (error as Error).message);
         }
       }
     });
@@ -149,7 +151,7 @@ export const StackManagement: React.FC = () => {
       if (selectedStack) {
         const updated = await stackService.update(selectedStack.id, stackData, user?.id || '');
         setStacks(prev => prev.map(s => s.id === updated.id ? updated : s));
-        toast.success('Stack updated successfully!');
+        toast.success(t('stack.update.success'));
       } else {
         const newStack = await stackService.create({
           ...stackData,
@@ -163,7 +165,7 @@ export const StackManagement: React.FC = () => {
         setCreatedStackNumber(newStack.stackNumber);
         setShowSuccessNotification(true);
         
-        toast.success('Stack created successfully!');
+        toast.success(t('stack.create.success'));
         
         // Refresh the yardsService cache to update stack suggestions
         if (currentYard?.id) {
@@ -183,7 +185,7 @@ export const StackManagement: React.FC = () => {
       setSelectedStack(null);
     } catch (error) {
       handleError(error, 'StackManagement.handleSaveStack');
-      toast.error('Error saving stack: ' + (error as Error).message);
+      toast.error(t('common.error') + ': ' + (error as Error).message);
     }
   };
 
@@ -206,9 +208,9 @@ export const StackManagement: React.FC = () => {
       await loadStacks();
 
       if (updatedStacks.length > 1) {
-        toast.success(`Successfully updated ${updatedStacks.length} stacks to ${newSize}!`);
+        toast.success(t('stack.sizeUpdate.successMulti').replace('{count}', updatedStacks.length.toString()).replace('{size}', newSize));
       } else {
-        toast.success(`Stack updated to ${newSize} successfully!`);
+        toast.success(t('stack.sizeUpdate.success').replace('{size}', newSize));
       }
     } catch (error) {
       handleError(error, 'StackManagement.handleContainerSizeChange');
@@ -219,9 +221,9 @@ export const StackManagement: React.FC = () => {
       // Show user-friendly error message
       const errorMessage = (error as any)?.message || String(error);
       if (errorMessage.includes('OCCUPIED_VIRTUAL_LOCATIONS')) {
-        toast.error('Cannot change stack size: Virtual stack locations are occupied. Please relocate all containers from the paired stacks first.');
+        toast.error(t('stack.sizeUpdate.errorOccupied'));
       } else {
-        toast.error('Error updating container size: ' + errorMessage);
+        toast.error(t('common.error') + ': ' + errorMessage);
       }
     }
   };
@@ -271,10 +273,10 @@ export const StackManagement: React.FC = () => {
 
       setShowClientAssignment(false);
       setSelectedStack(null);
-      toast.success(clientCode ? `Stack assigned to client ${clientCode} successfully!` : 'Stack unassigned from client pool successfully!');
+      toast.success(clientCode ? t('stack.assign.success').replace('{client}', clientCode) : t('stack.unassigned.success'));
     } catch (error) {
       handleError(error, 'StackManagement.handleClientAssignment');
-      toast.error('Error assigning client to stack: ' + (error as Error).message);
+      toast.error(t('common.error') + ': ' + (error as Error).message);
     }
   };
 
@@ -407,14 +409,15 @@ export const StackManagement: React.FC = () => {
               <LoadingSpinner
                 fullScreen={false}
                 size='sm'
-                message="Please wait while we load the yard configuration."
+                message={t('stack.loadingConfig')}
               />
               <button
                 onClick={() => setShowStackForm(false)}
                 className="mt-4 btn-secondary"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
+
             </div>
           </div>
         </div>

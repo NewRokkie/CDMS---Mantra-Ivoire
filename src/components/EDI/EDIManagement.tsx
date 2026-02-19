@@ -25,6 +25,7 @@ import { EDIFileProcessor } from './EDIFileProcessor';
 import { EDIClientModal } from './EDIClientModal';
 import { EDIValidator } from './EDIValidator';
 import { ediManagementService, type EDITransmissionLog } from '../../services/edi/ediManagement';
+import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 import { ediRealDataService } from '../../services/edi/ediRealDataService';
 import { ediConfigurationDatabaseService } from '../../services/edi/ediConfigurationDatabase';
 import { type EDIServerConfig } from '../../services/edi/ediConfiguration';
@@ -70,7 +71,7 @@ const EDIManagement: React.FC = () => {
         ediRealDataService.getRealEDIStatistics(),
         ediRealDataService.getClientServerMappings(),
         ediConfigurationDatabaseService.getConfigurations(),
-        ediManagementService.getTransmissionHistory(),
+        ediTransmissionService.getTransmissionHistory(), // Use database service
         ediRealDataService.getAvailableClients()
       ]);
 
@@ -97,9 +98,13 @@ const EDIManagement: React.FC = () => {
   const handleRetryTransmission = async (logId: string) => {
     setIsLoading(true);
     try {
-      await ediManagementService.retryTransmission(logId);
-      await loadRealData();
-      toast.success('Transmission retry initiated');
+      const result = await ediTransmissionService.retryTransmission(logId);
+      if (result.success) {
+        await loadRealData();
+        toast.success('EDI transmission successful');
+      } else {
+        toast.error(`Retry failed: ${result.error || 'Unknown error'}`);
+      }
     } catch (error) {
       toast.error('Retry failed');
     } finally {
@@ -170,6 +175,30 @@ const EDIManagement: React.FC = () => {
   };
 
   const canManageEDI = user?.role === 'admin' || user?.role === 'supervisor';
+
+  // One row per (containerNumber, operation): prefer most recent SUCCESS if any, else most recent by lastAttempt
+  const recentOperationsDeduplicated = React.useMemo(() => {
+    const byKey = new Map<string, EDITransmissionLog>();
+    for (const log of transmissionLogs) {
+      const key = `${log.containerNumber}|${log.operation}`;
+      const existing = byKey.get(key);
+      const logTime = new Date(log.lastAttempt).getTime();
+      const existingTime = existing ? new Date(existing.lastAttempt).getTime() : 0;
+      if (!existing) {
+        byKey.set(key, log);
+        continue;
+      }
+      if (log.status === 'success') {
+        if (existing.status !== 'success') byKey.set(key, log);
+        else if (logTime > existingTime) byKey.set(key, log);
+      } else if (existing.status !== 'success' && logTime > existingTime) {
+        byKey.set(key, log);
+      }
+    }
+    return Array.from(byKey.values()).sort(
+      (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
+    );
+  }, [transmissionLogs]);
 
   // Memoize DesktopContent to prevent unnecessary re-renders and unmounting of child components
   const DesktopContent = React.useMemo(() => () => (
@@ -305,49 +334,108 @@ const EDIManagement: React.FC = () => {
             }} 
           />
 
-          {/* Recent Operations */}
+          {/* Recent EDI Operations: one row per container + operation with actions */}
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Recent EDI Operations</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                One row per container and operation. Retry, view errors, or copy details.
+              </p>
             </div>
-            <div className="p-6">
-              {realStats?.recentOperations?.length > 0 ? (
-                <div className="space-y-4">
-                  {realStats.recentOperations.slice(0, 5).map((operation: any) => (
-                    <div
-                      key={operation.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          {operation.ediTransmitted ? (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-gray-400" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{operation.containerNumber}</p>
-                          <p className="text-sm text-gray-600">
-                            {operation.type} • {operation.clientName}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-900">
-                          {operation.createdAt.toLocaleDateString()}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {operation.ediTransmitted ? 'EDI Sent' : 'No EDI'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="overflow-x-auto">
+              {recentOperationsDeduplicated.length > 0 ? (
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Container</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transmission Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {recentOperationsDeduplicated.map((log) => (
+                      <tr key={log.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">{log.containerNumber}</div>
+                          <div className="text-sm text-gray-500">{log.fileName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            log.operation === 'GATE_IN' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {log.operation.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            {log.status === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                            {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-500" />}
+                            {log.status === 'pending' && <Clock className="h-4 w-4 text-yellow-500" />}
+                            {log.status === 'retrying' && <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />}
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              log.status === 'success' ? 'bg-green-100 text-green-800' :
+                              log.status === 'failed' ? 'bg-red-100 text-red-800' :
+                              log.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {log.status.toUpperCase()}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900">{log.attempts || 0}</span>
+                          {log.attempts > 1 && <span className="text-xs text-gray-500 ml-1">retries</span>}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.partnerCode}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{log.lastAttempt.toLocaleDateString()}</div>
+                          <div className="text-xs text-gray-500">{log.lastAttempt.toLocaleTimeString()}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            {log.status === 'failed' && (
+                              <button
+                                onClick={() => handleRetryTransmission(log.id)}
+                                className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                                title="Retry transmission"
+                                disabled={isLoading}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </button>
+                            )}
+                            {log.errorMessage && (
+                              <button
+                                onClick={() => { toast.error(log.errorMessage || 'Unknown error', 10000); }}
+                                className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                                title="View error details"
+                              >
+                                <AlertCircle className="h-4 w-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                const details = `EDI Transmission Details\n========================\nContainer: ${log.containerNumber}\nOperation: ${log.operation}\nStatus: ${log.status}\nPartner: ${log.partnerCode}\nFile: ${log.fileName}\nSize: ${log.fileSize} bytes\nAttempts: ${log.attempts}\nLast Attempt: ${log.lastAttempt.toLocaleString()}\nCreated: ${log.createdAt.toLocaleString()}${log.errorMessage ? `\nError: ${log.errorMessage}` : ''}${log.acknowledgmentReceived ? `\nAcknowledged: ${log.acknowledgmentReceived.toLocaleString()}` : ''}`.trim();
+                                navigator.clipboard.writeText(details);
+                                toast.success('Details copied to clipboard');
+                              }}
+                              className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50 transition-colors"
+                              title="Copy details to clipboard"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <div className="text-center py-8">
                   <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No recent operations</p>
+                  <p className="text-gray-600">No recent EDI operations</p>
                 </div>
               )}
             </div>
@@ -560,7 +648,12 @@ const EDIManagement: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Transmission History</h3>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Transmission History</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  All EDI transmission attempts (including every retry). Display only — use Overview for actions.
+                </p>
+              </div>
               <button
                 onClick={() => {
                   const csvData = ediManagementService.exportTransmissionLogs();
@@ -583,88 +676,61 @@ const EDIManagement: React.FC = () => {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Container
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Operation
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Transmission Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {transmissionLogs.slice(0, 10).map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{log.containerNumber}</div>
-                      <div className="text-sm text-gray-500">{log.fileName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        log.operation === 'GATE_IN'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {log.operation.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        {log.status === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
-                        {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-500" />}
-                        {log.status === 'pending' && <Clock className="h-4 w-4 text-yellow-500" />}
-                        {log.status === 'retrying' && <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />}
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          log.status === 'success' ? 'bg-green-100 text-green-800' :
-                          log.status === 'failed' ? 'bg-red-100 text-red-800' :
-                          log.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {log.status.toUpperCase()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{log.partnerCode}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {log.lastAttempt.toLocaleDateString()}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {log.lastAttempt.toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {log.status === 'failed' && (
-                        <button
-                          onClick={() => handleRetryTransmission(log.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Retry transmission"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                        </button>
-                      )}
-                    </td>
+            {transmissionLogs.length > 0 ? (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Container</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transmission Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {transmissionLogs.length === 0 && (
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {transmissionLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">{log.containerNumber}</div>
+                        <div className="text-sm text-gray-500">{log.fileName}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          log.operation === 'GATE_IN' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {log.operation.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          {log.status === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                          {log.status === 'failed' && <XCircle className="h-4 w-4 text-red-500" />}
+                          {log.status === 'pending' && <Clock className="h-4 w-4 text-yellow-500" />}
+                          {log.status === 'retrying' && <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />}
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            log.status === 'success' ? 'bg-green-100 text-green-800' :
+                            log.status === 'failed' ? 'bg-red-100 text-red-800' :
+                            log.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {log.status.toUpperCase()}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900">{log.attempts || 0}</span>
+                        {log.attempts > 1 && <span className="text-xs text-gray-500 ml-1">retries</span>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.partnerCode}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{log.lastAttempt.toLocaleDateString()}</div>
+                        <div className="text-xs text-gray-500">{log.lastAttempt.toLocaleTimeString()}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600">No transmission logs found</p>
@@ -680,6 +746,7 @@ const EDIManagement: React.FC = () => {
     serverConfigs,
     clientMappings,
     transmissionLogs,
+    recentOperationsDeduplicated,
     isLoading,
     isLoadingServers,
     isLoadingClients,
@@ -687,7 +754,9 @@ const EDIManagement: React.FC = () => {
     clientSearchTerm,
     togglingClientCode,
     deletingClientCode,
-    handleValidationComplete
+    handleRetryTransmission,
+    handleValidationComplete,
+    toast
   ]);
 
   if (!canManageEDI) {

@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { Container } from '../../types';
 import { YardStack } from '../../types/yard';
-import { formatContainerNumberForDisplay } from '../Gates/utils';
 
 interface StackDetailsModalProps {
   stack: YardStack;
@@ -195,20 +194,8 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
                         ? `S${locationMatch[1].padStart(2, '0')}R${locationMatch[2]}H${locationMatch[3]}`
                         : container.location;
                       
-                      // Nom du transporteur (exemple générique)
-                      const transporterName = container.clientCode === 'MAERSK' 
-                        ? 'Maersk Logistics'
-                        : container.clientCode === 'PIL'
-                        ? 'PIL Transport'
-                        : container.clientCode === 'ONE'
-                        ? 'ONE Logistics'
-                        : container.clientCode === 'CMA'
-                        ? 'CMA CGM Logistics'
-                        : container.clientCode === 'MSC'
-                        ? 'MSC Transport'
-                        : container.clientCode === 'HAPAG'
-                        ? 'Hapag-Lloyd Logistics'
-                        : 'Swift Transport';
+                      // Transporteur : depuis gate_in_operations (saisi à l'entrée)
+                      const transporterName = container.transporter ?? '—';
 
                       // Formater le type de container pour affichage
                       const formatContainerType = (type: string) => {
@@ -234,7 +221,7 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="font-mono text-sm font-bold text-gray-900">
-                                {formatContainerNumberForDisplay(container.number)}
+                                {container.number}
                               </div>
                             </div>
                           </td>

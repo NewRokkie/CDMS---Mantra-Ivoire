@@ -14,7 +14,6 @@ import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useUserManagementRetry } from '../../hooks/useRetry';
 import { toDate } from '../../utils/dateHelpers';
 import { handleError } from '../../services/errorHandling';
-import { logger } from '../../utils/logger';
 
 // Helper function to get module access based on role
 const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
@@ -106,18 +105,29 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
 
 
 const UserManagementContent: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const { currentYard } = useYard();
+  const { showSuccess, showError } = useNotifications();
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [operationLoading, setOperationLoading] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<Error | null>(null);
-  const { showSuccess, showError } = useNotifications();
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showForm, setShowForm] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Use retry mechanism for loading users
   const {
     execute: loadUsersWithRetry,
     isRetrying: isRetryingLoad,
-    retryCount: loadRetryCount,
-    lastError: loadLastError
+    retryCount: loadRetryCount
   } = useUserManagementRetry(async () => {
     const data = await userService.getAll();
     return data || [];
@@ -186,16 +196,6 @@ const UserManagementContent: React.FC = () => {
       setOperationLoading(null);
     }
   };
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showForm, setShowForm] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const { user: currentUser } = useAuth();
-  const { currentYard } = useYard();
 
   const canManageUsers = currentUser?.role === 'admin';
 
@@ -723,15 +723,7 @@ const UserManagementContent: React.FC = () => {
 
 export const UserManagement: React.FC = () => {
   return (
-    <ErrorBoundary
-      context="User Management Module"
-      onError={(error, errorInfo) => {
-        logger.error('User Management component error', 'UserManagement', {
-          error: error.message,
-          componentStack: errorInfo.componentStack
-        });
-      }}
-    >
+    <ErrorBoundary>
       <NotificationProvider>
         <UserManagementContent />
       </NotificationProvider>

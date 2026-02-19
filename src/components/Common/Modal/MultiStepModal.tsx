@@ -142,7 +142,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
         {/* Modal Header with Integrated Progress Bar */}
         <ModalHeader
           title={title}
-          subtitle={`Étape ${currentStep} sur ${totalSteps}`}
+          subtitle={`Étape <span class="font-numeric">${currentStep}</span> sur <span class="font-numeric">${totalSteps}</span>`}
           icon={icon}
           onClose={showCloseButton ? onClose : undefined}
           showCloseButton={showCloseButton}
@@ -186,7 +186,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
             type="button"
             onClick={handlePrevStep}
             disabled={isFirstStep}
-            className="px-4 py-2 text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+            className="px-4 py-2 text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 transition disabled:opacity-50 font-gilroy-medium"
           >
             Précédent
           </button>
@@ -195,7 +195,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition font-gilroy-medium"
             >
               Annuler
             </button>
@@ -204,7 +204,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
               type="button"
               onClick={handleNextStep}
               disabled={!isStepValid}
-              className={`px-4 py-2 text-white rounded-lg transition flex items-center space-x-2 disabled:opacity-50 ${
+              className={`px-4 py-2 text-white rounded-lg transition flex items-center space-x-2 disabled:opacity-50 font-gilroy-medium ${
                 isLastStep
                   ? 'bg-green-600 hover:bg-green-700'
                   : 'bg-blue-600 hover:bg-blue-700'

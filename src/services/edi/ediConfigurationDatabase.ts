@@ -39,7 +39,7 @@ export class EDIConfigurationDatabaseService {
         .from('edi_server_configurations')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching EDI configuration:', error);
@@ -92,11 +92,15 @@ export class EDIConfigurationDatabaseService {
         .update(dbUpdates)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error updating EDI configuration:', error);
         throw new Error(`Failed to update configuration: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error(`Configuration with id ${id} not found`);
       }
 
       return this.mapDatabaseToConfig(data);
@@ -143,14 +147,19 @@ export class EDIConfigurationDatabaseService {
         .select('*')
         .eq('is_default', true)
         .eq('enabled', true)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching default EDI configuration:', error);
         return null;
       }
 
-      return data ? this.mapDatabaseToConfig(data) : null;
+      if (!data) {
+        // No default configuration found, but don't log as error
+        return null;
+      }
+
+      return this.mapDatabaseToConfig(data);
     } catch (error) {
       console.error('Error in getDefaultConfiguration:', error);
       return null;
