@@ -190,6 +190,27 @@ export class ContainerService {
         .single();
 
       if (error) throw error;
+
+      // Update gate_in_operations table if location has changed
+      if (updates.location !== undefined && updates.location !== currentContainer.location) {
+        try {
+          // Extract stack from location (e.g., "S04R1H3" → "S04")
+          const stackMatch = updates.location?.match(/^(S\d+)/);
+          const assignedStack = stackMatch ? stackMatch[1] : null;
+
+          await supabase
+            .from('gate_in_operations')
+            .update({ 
+              assigned_location: updates.location,
+              assigned_stack: assignedStack
+            })
+            .eq('container_id', id);
+        } catch (gateInError) {
+          // Log error but don't fail the entire update
+          console.error('Failed to update gate_in_operations location:', gateInError);
+        }
+      }
+
       return this.mapToContainer(data);
     } catch (error) {
       throw ErrorHandler.createGateInError(error);

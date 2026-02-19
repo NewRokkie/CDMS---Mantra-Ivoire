@@ -143,25 +143,91 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
       
       // Validate that the selected location is actually available (only if location changed)
       try {
-        const { locationManagementService } = await import('../../services/api');
+        const { locationManagementService, yardsService, containerService } = await import('../../services/api');
         
-        // Get the location by location ID
-        const location = await locationManagementService.getByLocationId(formData.location);
+        // Check if this is a virtual location (even stack number like S04, S08, S12, etc.)
+        const stackNumberMatch = formData.location.match(/S(\d+)/);
+        const stackNumber = stackNumberMatch ? parseInt(stackNumberMatch[1]) : 0;
+        const isVirtualLocation = stackNumber % 2 === 0;
         
-        if (!location) {
-          errors.push('Selected location does not exist');
-        } else {
-          // Check if location is occupied by a DIFFERENT container
-          const isOccupiedByOther = location.containerId && location.containerId !== container.id;
+        if (isVirtualLocation) {
+          // For virtual locations, validate against yard configuration and container occupancy
+          // instead of database records (since virtual locations may not be in DB yet)
           
-          if (isOccupiedByOther) {
-            errors.push(`Location ${formData.location} is already occupied by container ${location.containerNumber || 'another container'}`);
-          } else if (location.isOccupied && !location.containerId) {
-            // Location is marked as occupied but no container ID (data inconsistency)
-            errors.push(`Location ${formData.location} is marked as occupied`);
-          } else if (location.available === false && location.containerId !== container.id) {
-            // Location is explicitly marked as not available and not occupied by this container
-            errors.push(`Location ${formData.location} is not available`);
+          // Get yard configuration
+          const yard = yardsService.getYardById(formData.yardId || container.yardId);
+          if (!yard) {
+            errors.push('Yard not found');
+            return errors;
+          }
+          
+          // Find the virtual stack in yard configuration
+          const allStacks = yard.sections.flatMap(section => section.stacks);
+          const virtualStack = allStacks.find(s => s.stackNumber === stackNumber && s.isVirtual);
+          
+          if (!virtualStack) {
+            errors.push(`Virtual stack S${String(stackNumber).padStart(2, '0')} does not exist in yard configuration`);
+            return errors;
+          }
+          
+          // Validate the location format matches stack configuration
+          const locationMatch = formData.location.match(/S(\d+)R(\d+)H(\d+)/);
+          if (!locationMatch) {
+            errors.push('Invalid location format');
+            return errors;
+          }
+          
+          const row = parseInt(locationMatch[2]);
+          const tier = parseInt(locationMatch[3]);
+          
+          // Check if row is valid
+          if (row < 1 || row > virtualStack.rows) {
+            errors.push(`Invalid row number. Stack has ${virtualStack.rows} rows`);
+            return errors;
+          }
+          
+          // Check if tier is valid (considering custom tier config)
+          let maxTiersForRow = virtualStack.maxTiers;
+          if (virtualStack.rowTierConfig && virtualStack.rowTierConfig.length > 0) {
+            const rowConfig = virtualStack.rowTierConfig.find(config => config.row === row);
+            if (rowConfig) {
+              maxTiersForRow = rowConfig.maxTiers;
+            }
+          }
+          
+          if (tier < 1 || tier > maxTiersForRow) {
+            errors.push(`Invalid tier number. Row ${row} has maximum ${maxTiersForRow} tiers`);
+            return errors;
+          }
+          
+          // Check if location is already occupied by another container
+          const allContainers = await containerService.getAll();
+          const occupyingContainer = allContainers.find(c => 
+            c.location === formData.location && c.id !== container.id
+          );
+          
+          if (occupyingContainer) {
+            errors.push(`Location ${formData.location} is already occupied by container ${occupyingContainer.number}`);
+          }
+        } else {
+          // For physical locations, validate against database
+          const location = await locationManagementService.getByLocationId(formData.location);
+          
+          if (!location) {
+            errors.push('Selected location does not exist');
+          } else {
+            // Check if location is occupied by a DIFFERENT container
+            const isOccupiedByOther = location.containerId && location.containerId !== container.id;
+            
+            if (isOccupiedByOther) {
+              errors.push(`Location ${formData.location} is already occupied by container ${location.containerNumber || 'another container'}`);
+            } else if (location.isOccupied && !location.containerId) {
+              // Location is marked as occupied but no container ID (data inconsistency)
+              errors.push(`Location ${formData.location} is marked as occupied`);
+            } else if (location.available === false && location.containerId !== container.id) {
+              // Location is explicitly marked as not available and not occupied by this container
+              errors.push(`Location ${formData.location} is not available`);
+            }
           }
         }
       } catch (error) {

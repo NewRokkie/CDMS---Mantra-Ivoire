@@ -320,10 +320,30 @@ export const ReleaseOrderList: React.FC = () => {
             setSelectedOrder(null);
             setIsEditMode(false);
           }}
-          onSubmit={() => {
-            setShowForm(false);
-            setSelectedOrder(null);
-            setIsEditMode(false);
+          onSubmit={async (data) => {
+            try {
+              if (isEditMode && selectedOrder) {
+                // Update existing booking
+                const updated = await bookingReferenceService.update(selectedOrder.id, data);
+                setReleaseOrders(prev =>
+                  prev.map(order => order.id === updated.id ? updated : order)
+                );
+              } else {
+                // Create new booking
+                const newBooking = await bookingReferenceService.create({
+                  ...data,
+                  status: 'pending',
+                  remainingContainers: data.totalContainers,
+                  createdBy: user?.id || ''
+                });
+                setReleaseOrders(prev => [...prev, newBooking]);
+              }
+              setShowForm(false);
+              setSelectedOrder(null);
+              setIsEditMode(false);
+            } catch (error) {
+              handleError(error, 'ReleaseOrderList.onSubmit');
+            }
           }}
 
           isLoading={false}
