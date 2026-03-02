@@ -1,4 +1,5 @@
 import { ContainerValidation, GateInFormData } from './types';
+import { isValidContainer } from '@mykelcodes/container-number-validation';
 
 // ========== CONTAINER UTILITIES ==========
 
@@ -28,6 +29,13 @@ export const validateContainerNumber = (containerNumber: string): ContainerValid
     return { isValid: false, message: 'Last 7 must be numbers' };
   }
 
+  if (!isValidContainer(cleanNumber)) {
+    if (typeof window !== 'undefined') {
+      alert(`Le numéro de conteneur ${cleanNumber} est invalide selon la norme ISO 6346.`);
+    }
+    return { isValid: false, message: 'Invalid ISO 6346 container number' };
+  }
+
   return { isValid: true, message: 'Valid format' };
 };
 
@@ -49,10 +57,10 @@ export const formatContainerNumberForDisplay = (containerNumber: string): string
  */
 export const formatContainerNumberInput = (containerNumber: string): string => {
   if (!containerNumber) return '';
-  
+
   // Auto-capitalize and clean the input
   const cleaned = containerNumber.trim().toUpperCase();
-  
+
   // Ensure we don't exceed 11 characters
   return cleaned.substring(0, 11);
 };
@@ -84,6 +92,10 @@ export const getContainerValidationStatus = (containerNumber: string) => {
     return { isValid: false, message: 'Last 7 must be numbers' };
   }
 
+  if (!isValidContainer(cleanNumber)) {
+    return { isValid: false, message: 'Invalid ISO 6346' };
+  }
+
   return { isValid: true, message: 'Valid format' };
 };
 
@@ -100,20 +112,20 @@ export const validateGateInStep = (step: number, formData: GateInFormData): bool
       const hasContainerConfirmation = formData.containerNumberConfirmation.trim() !== '';
       const isValidFirstConfirmation = hasContainerConfirmation && validateContainerNumber(formData.containerNumberConfirmation).isValid;
       const isFirstContainerMatching = formData.containerNumber.trim().toUpperCase() === formData.containerNumberConfirmation.trim().toUpperCase();
-      
+
       const hasSecondContainer = formData.containerQuantity === 1 || formData.secondContainerNumber.trim() !== '';
       const isValidSecondContainer = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumber).isValid;
       const hasSecondContainerConfirmation = formData.containerQuantity === 1 || formData.secondContainerNumberConfirmation.trim() !== '';
       const isValidSecondConfirmation = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumberConfirmation).isValid;
-      const isSecondContainerMatching = formData.containerQuantity === 1 || 
+      const isSecondContainerMatching = formData.containerQuantity === 1 ||
         (formData.secondContainerNumber.trim().toUpperCase() === formData.secondContainerNumberConfirmation.trim().toUpperCase());
-      
+
       const hasClient = formData.clientId !== '';
       const hasBookingRef = formData.status === 'EMPTY' || formData.bookingReference.trim() !== '';
-      
+
       return isValidFirstContainer && hasContainerConfirmation && isValidFirstConfirmation && isFirstContainerMatching &&
-             hasSecondContainer && isValidSecondContainer && hasSecondContainerConfirmation && isValidSecondConfirmation && isSecondContainerMatching &&
-             hasClient && hasBookingRef;
+        hasSecondContainer && isValidSecondContainer && hasSecondContainerConfirmation && isValidSecondConfirmation && isSecondContainerMatching &&
+        hasClient && hasBookingRef;
     case 2:
       return formData.driverName !== '' && formData.truckNumber !== '' && formData.transportCompany !== '';
     default:

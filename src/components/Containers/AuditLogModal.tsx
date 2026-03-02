@@ -19,7 +19,7 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
 }) => {
   const { hasModuleAccess } = useAuth();
   const canViewAuditLogs = hasModuleAccess('auditLogs');
-  
+
   if (!canViewAuditLogs) {
     return (
       <DataDisplayModal
@@ -42,13 +42,13 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
       </DataDisplayModal>
     );
   }
-  
+
   const sortedLogs = auditLogs
     ? [...auditLogs].sort((a, b) => {
-        const timeA = new Date(a.timestamp).getTime();
-        const timeB = new Date(b.timestamp).getTime();
-        return timeB - timeA;
-      })
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA;
+    })
     : [];
 
   const getActionColor = (action: string) => {
@@ -68,12 +68,12 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
     data: {
       totalEntries: sortedLogs.length.toString(),
       containerNumber: containerNumber,
-      dateRange: sortedLogs.length > 0 
+      dateRange: sortedLogs.length > 0
         ? `${new Date(sortedLogs[sortedLogs.length - 1].timestamp).toLocaleDateString()} - ${new Date(sortedLogs[0].timestamp).toLocaleDateString()}`
-        : 'N/A',
-      lastActivity: sortedLogs.length > 0 
+        : '-',
+      lastActivity: sortedLogs.length > 0
         ? new Date(sortedLogs[0].timestamp).toLocaleString()
-        : 'N/A'
+        : '-'
     },
     layout: 'grid' as const
   };
@@ -96,7 +96,7 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
             <FileText className="h-5 w-5 mr-2 text-blue-600" />
             Activity Timeline
           </h4>
-          
+
           <div className="relative">
             <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
             <div className="space-y-4">
@@ -122,7 +122,7 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
-                        <span>{new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        <span>{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
                     {log.details && (

@@ -48,15 +48,15 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
 
   const filteredOperations = operations.filter(operation => {
     const matchesSearch = operation.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      operation.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      operation.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      operation.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesFilter = selectedFilter === 'all' ||
-                         operation.status === selectedFilter ||
-                         (selectedFilter === 'alimentaire' && operation.classification === 'alimentaire') ||
-                         (selectedFilter === 'divers' && operation.classification === 'divers');
-    
+      operation.status === selectedFilter ||
+      (selectedFilter === 'alimentaire' && operation.classification === 'alimentaire') ||
+      (selectedFilter === 'divers' && operation.classification === 'divers');
+
     return matchesSearch && matchesFilter;
   });
 
@@ -91,7 +91,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   };
 
   const formatDate = (date?: Date) => {
-    if (!date) return 'N/A';
+    if (!date) return '-';
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -161,11 +161,10 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               <button
                 key={filter}
                 onClick={() => setSelectedFilter(filter)}
-                className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
-                  selectedFilter === filter
+                className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${selectedFilter === filter
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                }`}
+                  }`}
               >
                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
               </button>

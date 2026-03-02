@@ -55,27 +55,27 @@ const formatContainerTypeSize = (container: { type?: string; size?: string; isHi
 // Helper function to format date as DD/MM/YY - HH:MM
 const formatGateInDate = (date?: Date | null): string => {
   if (!date) return '-';
-  
+
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
-  
+
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = String(d.getFullYear()).slice(-2);
-  
+
   return `${day}/${month}/${year}`;
 };
 
 // Helper function to format date as DD/MM/YY - HH:MM
 const formatGateInTime = (date?: Date | null): string => {
   if (!date) return '-';
-  
+
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
-  
+
   const hours = String(d.getHours()).padStart(2, '0');
   const minutes = String(d.getMinutes()).padStart(2, '0');
-  
+
   return `${hours}:${minutes}`;
 };
 // REMOVED: Mock data now managed by global store
@@ -95,7 +95,7 @@ export const ContainerList: React.FC = () => {
           return [];
         });
         setContainers(data || []);
-        
+
         // Load EDI status from transmission history (same logic as Recent EDI Operations: prefer success if any)
         if (data && data.length > 0) {
           const logs = await ediTransmissionService.getTransmissionHistory();
@@ -211,8 +211,8 @@ export const ContainerList: React.FC = () => {
         // Fallback to original filtering
         const clientName = container.clientName ?? '';
         return container.clientCode === clientFilter ||
-               clientName === user?.company ||
-               clientName.toLowerCase().includes(clientFilter.toLowerCase());
+          clientName === user?.company ||
+          clientName.toLowerCase().includes(clientFilter.toLowerCase());
       });
     }
 
@@ -222,7 +222,7 @@ export const ContainerList: React.FC = () => {
       const number = container.number ?? '';
       const clientName = container.clientName ?? '';
       const matchesSearch = number.toLowerCase().includes(searchLower) ||
-                            clientName.toLowerCase().includes(searchLower);
+        clientName.toLowerCase().includes(searchLower);
       const matchesStatus = statusFilter === 'all' || container.status === statusFilter;
 
       // Date range filter (based on gateInDate / gateOutDate)
@@ -260,17 +260,17 @@ export const ContainerList: React.FC = () => {
       prevContainers.map(container =>
         container.id === containerId
           ? {
-              ...container,
-              auditLogs: [
-                ...(container.auditLogs || []),
-                {
-                  timestamp: new Date(),
-                  user: user?.name || 'Unknown User',
-                  action,
-                  details
-                }
-              ]
-            }
+            ...container,
+            auditLogs: [
+              ...(container.auditLogs || []),
+              {
+                timestamp: new Date(),
+                user: user?.name || 'Unknown User',
+                action,
+                details
+              }
+            ]
+          }
           : container
       )
     );
@@ -321,83 +321,83 @@ export const ContainerList: React.FC = () => {
     toast.success('Container updated successfully!');
   };
 
-const handleDeleteContainer = async (containerId: string) => {
+  const handleDeleteContainer = async (containerId: string) => {
     try {
-        // First, check if container can be deleted
-        const constraints = await containerService.checkDeletionConstraints(containerId);
-        
-        if (!constraints.canDelete) {
-            // Show detailed blocking reason
-            let message = 'Cannot delete this container:\n\n';
-            message += constraints.blockingReason || 'Unknown reason';
-            message += '\n\nContainer Details:\n';
-            message += `• Status: ${constraints.currentStatus}\n`;
-            message += `• Gate-In Operations: ${constraints.gateInCount}\n`;
-            message += `• Gate-Out Operations: ${constraints.gateOutCount}\n`;
-            message += `• Location Assigned: ${constraints.locationAssigned ? 'Yes' : 'No'}\n`;
-            
-            if (constraints.currentStatus === 'in_depot' || constraints.currentStatus === 'gate_in') {
-                message += '\nAction Required:\n';
-                message += '1. Gate out the container first\n';
-                message += '2. Ensure status is "out_depot"\n';
-                message += '3. Then try deleting again';
-            } else if (constraints.locationAssigned) {
-                message += '\nAction Required:\n';
-                message += '1. Remove the location assignment\n';
-                message += '2. Then try deleting again';
-            }
-            
-            toast.error(message);
-            return;
+      // First, check if container can be deleted
+      const constraints = await containerService.checkDeletionConstraints(containerId);
+
+      if (!constraints.canDelete) {
+        // Show detailed blocking reason
+        let message = 'Cannot delete this container:\n\n';
+        message += constraints.blockingReason || 'Unknown reason';
+        message += '\n\nContainer Details:\n';
+        message += `• Status: ${constraints.currentStatus}\n`;
+        message += `• Gate-In Operations: ${constraints.gateInCount}\n`;
+        message += `• Gate-Out Operations: ${constraints.gateOutCount}\n`;
+        message += `• Location Assigned: ${constraints.locationAssigned ? 'Yes' : 'No'}\n`;
+
+        if (constraints.currentStatus === 'in_depot' || constraints.currentStatus === 'gate_in') {
+          message += '\nAction Required:\n';
+          message += '1. Gate out the container first\n';
+          message += '2. Ensure status is "out_depot"\n';
+          message += '3. Then try deleting again';
+        } else if (constraints.locationAssigned) {
+          message += '\nAction Required:\n';
+          message += '1. Remove the location assignment\n';
+          message += '2. Then try deleting again';
         }
 
-        // Show confirmation with details
-        const container = containers.find(c => c.id === containerId);
-        const containerNumber = container?.number || 'Unknown';
-        
-        let confirmMessage = `Delete Container: ${containerNumber}\n\n`;
-        confirmMessage += 'This will mark the container as deleted.\n';
-        if (constraints.gateInCount > 0 || constraints.gateOutCount > 0) {
-            confirmMessage += `\nNote: This container has ${constraints.gateInCount} gate-in and ${constraints.gateOutCount} gate-out operation(s) in history.\n`;
-            confirmMessage += 'These records will be preserved.\n';
+        toast.error(message);
+        return;
+      }
+
+      // Show confirmation with details
+      const container = containers.find(c => c.id === containerId);
+      const containerNumber = container?.number || 'Unknown';
+
+      let confirmMessage = `Delete Container: ${containerNumber}\n\n`;
+      confirmMessage += 'This will mark the container as deleted.\n';
+      if (constraints.gateInCount > 0 || constraints.gateOutCount > 0) {
+        confirmMessage += `\nNote: This container has ${constraints.gateInCount} gate-in and ${constraints.gateOutCount} gate-out operation(s) in history.\n`;
+        confirmMessage += 'These records will be preserved.\n';
+      }
+      confirmMessage += '\nAre you sure you want to continue?';
+
+      confirm({
+        title: 'Delete Container',
+        message: confirmMessage,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        variant: 'danger',
+        onConfirm: async () => {
+          try {
+            // Perform soft delete
+            await containerService.delete(containerId);
+
+            // Add audit log
+            addAuditLog(containerId, 'deleted', 'Container soft deleted from system');
+
+            // Refresh the container list from database
+            await refreshContainers();
+
+            toast.success('Container deleted successfully!');
+          } catch (error: any) {
+            handleError(error, 'ContainerList.handleDeleteContainer');
+
+            // Show user-friendly error message
+            const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
+            toast.error(`Delete Failed: ${errorMessage}`);
+          }
         }
-        confirmMessage += '\nAre you sure you want to continue?';
-        
-        confirm({
-            title: 'Delete Container',
-            message: confirmMessage,
-            confirmText: 'Delete',
-            cancelText: 'Cancel',
-            variant: 'danger',
-            onConfirm: async () => {
-                try {
-                    // Perform soft delete
-                    await containerService.delete(containerId);
-
-                    // Add audit log
-                    addAuditLog(containerId, 'deleted', 'Container soft deleted from system');
-
-                    // Refresh the container list from database
-                    await refreshContainers();
-
-                    toast.success('Container deleted successfully!');
-                } catch (error: any) {
-                    handleError(error, 'ContainerList.handleDeleteContainer');
-                    
-                    // Show user-friendly error message
-                    const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
-                    toast.error(`Delete Failed: ${errorMessage}`);
-                }
-            }
-        });
+      });
     } catch (error: any) {
-        handleError(error, 'ContainerList.handleDeleteContainer');
-        
-        // Show user-friendly error message
-        const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
-        toast.error(`Delete Failed: ${errorMessage}`);
+      handleError(error, 'ContainerList.handleDeleteContainer');
+
+      // Show user-friendly error message
+      const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
+      toast.error(`Delete Failed: ${errorMessage}`);
     }
-};
+  };
 
   // --------------------------
   // Export helpers
@@ -453,7 +453,7 @@ const handleDeleteContainer = async (containerId: string) => {
         }).join(',');
       }).join('\n')
     ].join('\n');
-    downloadFile(csv, `containers_export_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8');
+    downloadFile(csv, `containers_export_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8');
   };
 
   const exportExcel = (rows: Container[]) => {
@@ -548,7 +548,7 @@ const handleDeleteContainer = async (containerId: string) => {
         <td>${r.inOut}</td>
         <td>${r.gateIn ? new Date(r.gateIn).toLocaleString() : ''}</td>
         <td>${r.gateOut ? new Date(r.gateOut).toLocaleString() : ''}</td>
-        <td>${r.client} ${r.clientCode ? '('+r.clientCode+')' : ''}</td>
+        <td>${r.client} ${r.clientCode ? '(' + r.clientCode + ')' : ''}</td>
       </tr>`).join('')}
     </tbody>
   </table>
@@ -573,7 +573,7 @@ function filterTable(){
 </script>
 </body>
 </html>`;
-    downloadFile(html, `containers_export_${new Date().toISOString().slice(0,10)}.html`, 'text/html;charset=utf-8');
+    downloadFile(html, `containers_export_${new Date().toISOString().slice(0, 10)}.html`, 'text/html;charset=utf-8');
   };
 
   const handleExport = (type: 'csv' | 'excel' | 'html') => {
@@ -586,13 +586,13 @@ function filterTable(){
   const regenerateEDI = async (container: Container) => {
     try {
       toast.info(`Regenerating EDI for ${container.number}...`);
-      
+
       const result = await ediTransmissionService.regenerateEDI(container.id);
-      
+
       if (result.success) {
         addAuditLog(container.id, 'edi_regenerated', `EDI successfully regenerated and transmitted for container ${container.number}`);
         toast.success(`EDI regenerated and transmitted for ${container.number}`);
-        
+
         // Update EDI status to success
         setEdiStatusByContainerId(prev => {
           const newMap = new Map(prev);
@@ -858,7 +858,11 @@ function filterTable(){
                     {getStatusBadge(container.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <strong>{container.location || '-'}</strong>
+                    {container.location && container.location !== 'Pending Assignment' ? (
+                      <strong>{container.location}</strong>
+                    ) : (
+                      <span className="text-gray-400 italic">Pending</span>
+                    )}
                   </td>
                   {canViewAllData() && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -872,18 +876,18 @@ function filterTable(){
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div>
-                        {container.gateInDate ? (<>
-                          <div className="font-medium">{formatGateInDate(container.gateInDate)}</div>
-                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateInDate)}</div>
-                        </>) : '-'}
+                      {container.gateInDate ? (<>
+                        <div className="font-medium">{formatGateInDate(container.gateInDate)}</div>
+                        <div className="text-xs text-gray-500">{formatGateInTime(container.gateInDate)}</div>
+                      </>) : '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div>
-                        {container.gateOutDate ? (<>
-                          <div className="font-medium">{formatGateInDate(container.gateOutDate)}</div>
-                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateOutDate)}</div>
-                        </>) : '-'}
+                      {container.gateOutDate ? (<>
+                        <div className="font-medium">{formatGateInDate(container.gateOutDate)}</div>
+                        <div className="text-xs text-gray-500">{formatGateInTime(container.gateOutDate)}</div>
+                      </>) : '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -914,11 +918,10 @@ function filterTable(){
                     })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' :
-                      container.fullEmpty === 'EMPTY' ? 'bg-gray-100 text-gray-800' :
-                      'bg-gray-50 text-gray-500'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' :
+                        container.fullEmpty === 'EMPTY' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-50 text-gray-500'
+                      }`}>
                       {container.fullEmpty || '-'}
                     </span>
                   </td>

@@ -3,155 +3,59 @@ import { YardStack } from '../types/yard';
 import { handleError } from './errorHandling';
 import { logger } from '../utils/logger';
 
+export interface BufferZoneEntry {
+  id: string;
+  containerId: string;
+  containerNumber?: string;
+  containerSize?: string;
+  containerType?: string;
+  gateInOperationId: string | null;
+  bufferStackId: string | null;
+  bufferStackNumber?: number;
+  bufferStackName?: string;
+  yardId: string;
+  damageType: string | null;
+  damageDescription: string | null;
+  damageAssessment: any | null;
+  status: 'in_buffer' | 'released';
+  releasedAt: Date | null;
+  releasedBy: string | null;
+  releaseNotes: string | null;
+  createdAt: Date;
+  createdBy: string | null;
+}
+
+export interface AssignToBufferZoneParams {
+  containerId: string;
+  gateInOperationId: string;
+  bufferStackId: string;
+  yardId: string;
+  damageType: string;
+  damageDescription?: string;
+  damageAssessment?: any;
+  createdBy: string;
+}
+
+export interface ReleaseFromBufferZoneParams {
+  containerId: string;
+  newLocation: string;
+  newStackId: string;
+  releaseNotes: string;
+  releasedBy: string;
+}
+
 /**
- * Service de gestion des zones tampons pour conteneurs endommagés
+ * Service de gestion des zones tampons.
  * 
- * Les zones tampons sont des stacks virtuels qui n'existent pas physiquement
- * mais permettent de stocker temporairement les conteneurs endommagés
- * en attendant leur traitement ou réparation.
+ * Les zones tampons sont maintenant gérées dans la table container_buffer_zones.
+ * Les stacks tampons (is_buffer_zone = true) sont créés MANUELLEMENT dans Stack Management.
+ * Ce service ne crée PLUS de stacks automatiquement.
  */
 export class BufferZoneService {
-  private readonly BUFFER_ZONE_PREFIX = 'BUFFER';
 
   /**
-   * Obtient ou crée un stack tampon pour un conteneur endommagé
-   * @param yardId - ID du dépôt
-   * @param containerSize - Taille du conteneur (20ft ou 40ft)
-   * @param damageType - Type de dommage
-   * @returns Stack tampon assigné
-   */
-  async getOrCreateBufferStack(
-    yardId: string, 
-    containerSize: '20ft' | '40ft',
-    damageType: string
-  ): Promise<YardStack> {
-    try {
-      // Chercher un stack tampon existant avec de la capacité
-      const existingBuffer = await this.findAvailableBufferStack(yardId, containerSize, damageType);
-      
-      if (existingBuffer) {
-        logger.info('Information', 'BufferZoneService', `Stack tampon existant trouvé: ${existingBuffer.stackNumber}`);
-        return existingBuffer;
-      }
-
-      // Créer un nouveau stack tampon
-      const newBuffer = await this.createBufferStack(yardId, containerSize, damageType);
-      logger.info('Information', 'BufferZoneService', `Nouveau stack tampon créé: ${newBuffer.stackNumber}`);
-      return newBuffer;
-    } catch (error) {
-      handleError(error, 'BufferZoneService.getOrCreateBufferStack');
-      throw error;
-    }
-  }
-
-  /**
-   * Cherche un stack tampon disponible
-   */
-  private async findAvailableBufferStack(
-    yardId: string, 
-    containerSize: '20ft' | '40ft',
-    _damageType: string
-  ): Promise<YardStack | null> {
-    const { data, error } = await supabase
-      .from('stacks')
-      .select('*')
-      .eq('yard_id', yardId)
-      .eq('container_size', containerSize)
-      .eq('is_active', true)
-      .eq('is_buffer_zone', true)
-      .lt('current_occupancy', 'capacity')
-      .order('current_occupancy', { ascending: true })
-      .limit(1);
-
-    if (error) {
-      handleError(error, 'BufferZoneService.findAvailableBufferStack');
-      return null;
-    }
-
-    return data && data.length > 0 ? this.mapToStack(data[0]) : null;
-  }
-
-  /**
-   * Crée un nouveau stack tampon
-   */
-  private async createBufferStack(
-    yardId: string, 
-    containerSize: '20ft' | '40ft',
-    damageType: string
-  ): Promise<YardStack> {
-    // Générer un numéro de stack unique pour la zone tampon
-    const stackNumber = await this.generateBufferStackNumber(yardId);
-    
-    // Nom de section descriptif
-    const sectionName = `${this.BUFFER_ZONE_PREFIX} - ${damageType.toUpperCase()} - ${containerSize}`;
-    
-    // Capacité par défaut pour les zones tampons
-    const capacity = containerSize === '40ft' ? 20 : 40; // Moins de capacité pour les zones tampons
-    
-    const { data, error } = await supabase
-      .from('stacks')
-      .insert({
-        yard_id: yardId,
-        stack_number: stackNumber,
-        section_id: `buffer-${damageType}`,
-        section_name: sectionName,
-        rows: containerSize === '40ft' ? 4 : 6, // Moins de rangées pour les zones tampons
-        max_tiers: containerSize === '40ft' ? 5 : 7, // Hauteur adaptée
-        capacity: capacity,
-        current_occupancy: 0,
-        position_x: -1000, // Position virtuelle (hors plan physique)
-        position_y: -1000,
-        position_z: 0,
-        width: containerSize === '40ft' ? 2.5 : 2.5,
-        length: containerSize === '40ft' ? 12 : 6,
-        is_active: true,
-        is_odd_stack: false,
-        is_special_stack: true, // Marquer comme stack spécial
-        is_buffer_zone: true, // Nouveau champ pour identifier les zones tampons
-        buffer_zone_type: 'damage',
-        damage_types_supported: JSON.stringify([damageType]),
-        container_size: containerSize,
-        assigned_client_code: null, // Pas de client assigné pour les zones tampons
-        notes: `Zone tampon automatique pour conteneurs endommagés - Type: ${damageType}`,
-        created_by: 'system-buffer-zone'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      handleError(error, 'BufferZoneService.createBufferStack');
-      throw new Error(`Impossible de créer le stack tampon: ${error.message}`);
-    }
-
-    return this.mapToStack(data);
-  }
-
-  /**
-   * Génère un numéro de stack unique pour les zones tampons
-   */
-  private async generateBufferStackNumber(yardId: string): Promise<number> {
-    // Les stacks tampons utilisent des numéros à partir de 9000
-    const BUFFER_START = 9000;
-    
-    const { data, error } = await supabase
-      .from('stacks')
-      .select('stack_number')
-      .eq('yard_id', yardId)
-      .gte('stack_number', BUFFER_START)
-      .order('stack_number', { ascending: false })
-      .limit(1);
-
-    if (error) {
-      handleError(error, 'BufferZoneService.generateBufferStackNumber');
-      return BUFFER_START; // Commencer au début si erreur
-    }
-
-    const lastNumber = data && data.length > 0 ? data[0].stack_number : BUFFER_START - 1;
-    return lastNumber + 1;
-  }
-
-  /**
-   * Obtient tous les stacks tampons d'un dépôt
+   * Récupère les stacks configurés comme zones tampons dans Stack Management.
+   * Ces stacks ont is_buffer_zone = true et ont été créés manuellement par un admin.
    */
   async getBufferStacks(yardId: string): Promise<YardStack[]> {
     const { data, error } = await supabase
@@ -171,22 +75,190 @@ export class BufferZoneService {
   }
 
   /**
-   * Vérifie si un stack est une zone tampon
+   * Assigne un conteneur à une zone tampon.
+   * Crée une entrée dans container_buffer_zones et met à jour le statut du conteneur.
+   * NE CRÉE PAS de stacks automatiquement.
    */
-  isBufferStack(stack: YardStack): boolean {
-    // Vérifier d'abord le champ is_buffer_zone s'il existe
-    if ('isBufferZone' in stack && typeof stack.isBufferZone === 'boolean') {
-      return stack.isBufferZone;
+  async assignContainerToBufferZone(params: AssignToBufferZoneParams): Promise<BufferZoneEntry> {
+    try {
+      // Vérifier que le stack tampon existe et est valide
+      const { data: bufferStack, error: stackError } = await supabase
+        .from('stacks')
+        .select('id, stack_number, section_name, is_buffer_zone, current_occupancy, capacity')
+        .eq('id', params.bufferStackId)
+        .eq('is_buffer_zone', true)
+        .single();
+
+      if (stackError || !bufferStack) {
+        throw new Error('Stack tampon introuvable ou non valide. Veuillez configurer un stack tampon dans Stack Management.');
+      }
+
+      // Vérifier la capacité
+      if (bufferStack.current_occupancy >= bufferStack.capacity) {
+        throw new Error(`Le stack tampon "${bufferStack.section_name}" est plein (${bufferStack.current_occupancy}/${bufferStack.capacity}).`);
+      }
+
+      // Créer l'entrée dans container_buffer_zones
+      const { data: entry, error: insertError } = await supabase
+        .from('container_buffer_zones')
+        .insert({
+          container_id: params.containerId,
+          gate_in_operation_id: params.gateInOperationId,
+          buffer_stack_id: params.bufferStackId,
+          yard_id: params.yardId,
+          damage_type: params.damageType,
+          damage_description: params.damageDescription || null,
+          damage_assessment: params.damageAssessment || null,
+          status: 'in_buffer',
+          created_by: params.createdBy,
+        })
+        .select()
+        .single();
+
+      if (insertError || !entry) {
+        throw new Error(`Impossible de créer l'entrée zone tampon: ${insertError?.message}`);
+      }
+
+      // Mettre à jour le conteneur
+      const { error: containerError } = await supabase
+        .from('containers')
+        .update({
+          status: 'in_buffer',
+          location: `BUF-S${String(bufferStack.stack_number).padStart(4, '0')}`,
+          buffer_zone_id: entry.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.containerId);
+
+      if (containerError) {
+        logger.error('BufferZone: Impossible de mettre à jour le conteneur', 'BufferZoneService', containerError);
+      }
+
+      // Incrémenter l'occupancy du stack tampon
+      await supabase
+        .from('stacks')
+        .update({ current_occupancy: bufferStack.current_occupancy + 1 })
+        .eq('id', params.bufferStackId);
+
+      logger.info(
+        `Conteneur ${params.containerId} assigné au stack tampon ${bufferStack.stack_number}`,
+        'BufferZoneService'
+      );
+
+      return this.mapToBufferZoneEntry(entry);
+    } catch (error) {
+      handleError(error, 'BufferZoneService.assignContainerToBufferZone');
+      throw error;
     }
-    
-    // Fallback vers la vérification du nom de section
-    return stack.sectionName?.startsWith(this.BUFFER_ZONE_PREFIX) || 
-           stack.stackNumber >= 9000 || 
-           false;
   }
 
   /**
-   * Obtient les statistiques des zones tampons
+   * Libère un conteneur de la zone tampon et le réassigne à un emplacement physique.
+   * Met à jour le statut del'entrée buffer, du conteneur, et NE transmet PAS l'EDI.
+   */
+  async releaseContainerFromBufferZone(params: ReleaseFromBufferZoneParams): Promise<void> {
+    try {
+      // 1. Trouver l'entrée active dans container_buffer_zones
+      const { data: entry, error: findError } = await supabase
+        .from('container_buffer_zones')
+        .select('id, buffer_stack_id')
+        .eq('container_id', params.containerId)
+        .eq('status', 'in_buffer')
+        .single();
+
+      if (findError || !entry) {
+        throw new Error('Entrée de zone tampon active introuvable pour ce conteneur.');
+      }
+
+      // 2. Marquer l'entrée buffer comme libérée
+      const { error: updateEntryError } = await supabase
+        .from('container_buffer_zones')
+        .update({
+          status: 'released',
+          released_at: new Date().toISOString(),
+          released_by: params.releasedBy,
+          release_notes: params.releaseNotes,
+        })
+        .eq('id', entry.id);
+
+      if (updateEntryError) {
+        throw new Error(`Impossible de libérer la zone tampon: ${updateEntryError.message}`);
+      }
+
+      // 3. Mettre à jour le conteneur vers son nouvel emplacement
+      const { error: containerError } = await supabase
+        .from('containers')
+        .update({
+          status: 'in_depot',
+          location: params.newLocation,
+          buffer_zone_id: null,
+          damage_reported: false,  // Marquer le dommage comme résolu
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.containerId);
+
+      if (containerError) {
+        throw new Error(`Impossible de mettre à jour le conteneur: ${containerError.message}`);
+      }
+
+      // 4. Décrémenter l'occupancy du stack tampon
+      if (entry.buffer_stack_id) {
+        const { data: bufferStack } = await supabase
+          .from('stacks')
+          .select('current_occupancy')
+          .eq('id', entry.buffer_stack_id)
+          .single();
+
+        if (bufferStack && bufferStack.current_occupancy > 0) {
+          await supabase
+            .from('stacks')
+            .update({ current_occupancy: bufferStack.current_occupancy - 1 })
+            .eq('id', entry.buffer_stack_id);
+        }
+      }
+
+      logger.info(
+        `Conteneur ${params.containerId} libéré de la zone tampon → ${params.newLocation}`,
+        'BufferZoneService'
+      );
+    } catch (error) {
+      handleError(error, 'BufferZoneService.releaseContainerFromBufferZone');
+      throw error;
+    }
+  }
+
+  /**
+   * Récupère tous les conteneurs actifs en zone tampon pour un yard.
+   */
+  async getActiveBufferZoneEntries(yardId: string): Promise<BufferZoneEntry[]> {
+    const { data, error } = await supabase
+      .from('container_buffer_zones')
+      .select(`
+        *,
+        containers!container_id (number, type, size, full_empty, client_code),
+        stacks (stack_number, section_name)
+      `)
+      .eq('yard_id', yardId)
+      .eq('status', 'in_buffer')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      handleError(error, 'BufferZoneService.getActiveBufferZoneEntries');
+      return [];
+    }
+
+    return (data || []).map(item => ({
+      ...this.mapToBufferZoneEntry(item),
+      containerNumber: item.containers?.number,
+      containerSize: item.containers?.size,
+      containerType: item.containers?.type,
+      bufferStackNumber: item.stacks?.stack_number,
+      bufferStackName: item.stacks?.section_name,
+    }));
+  }
+
+  /**
+   * Récupère les statistiques des zones tampons (basées sur container_buffer_zones).
    */
   async getBufferZoneStats(yardId: string): Promise<{
     totalBufferStacks: number;
@@ -195,108 +267,65 @@ export class BufferZoneService {
     availableSpaces: number;
     utilizationRate: number;
   }> {
-    try {
-      // Utiliser la fonction SQL optimisée
-      const { data, error } = await supabase
-        .rpc('get_buffer_zone_stats', { p_yard_id: yardId });
-
-      if (error) {
-        handleError(error, 'BufferZoneService.getBufferZoneStats.rpc');
-        // Fallback vers la méthode manuelle
-        return this.getBufferZoneStatsManual(yardId);
-      }
-
-      if (data && data.length > 0) {
-        const stats = data[0];
-        return {
-          totalBufferStacks: stats.total_buffer_stacks || 0,
-          totalCapacity: stats.total_capacity || 0,
-          currentOccupancy: stats.current_occupancy || 0,
-          availableSpaces: stats.available_spaces || 0,
-          utilizationRate: parseFloat(stats.utilization_rate) || 0
-        };
-      }
-
-      return {
-        totalBufferStacks: 0,
-        totalCapacity: 0,
-        currentOccupancy: 0,
-        availableSpaces: 0,
-        utilizationRate: 0
-      };
-    } catch (error) {
-      handleError(error, 'BufferZoneService.getBufferZoneStats');
-      return this.getBufferZoneStatsManual(yardId);
-    }
-  }
-
-  /**
-   * Méthode de fallback pour calculer les statistiques manuellement
-   */
-  private async getBufferZoneStatsManual(yardId: string): Promise<{
-    totalBufferStacks: number;
-    totalCapacity: number;
-    currentOccupancy: number;
-    availableSpaces: number;
-    utilizationRate: number;
-  }> {
+    // Stats des stacks tampon configurés
     const bufferStacks = await this.getBufferStacks(yardId);
-    
-    const totalCapacity = bufferStacks.reduce((sum, stack) => sum + stack.capacity, 0);
-    const currentOccupancy = bufferStacks.reduce((sum, stack) => sum + stack.currentOccupancy, 0);
+    const totalCapacity = bufferStacks.reduce((s, st) => s + st.capacity, 0);
+    const currentOccupancy = bufferStacks.reduce((s, st) => s + st.currentOccupancy, 0);
     const availableSpaces = totalCapacity - currentOccupancy;
-    const utilizationRate = totalCapacity > 0 ? (currentOccupancy / totalCapacity) * 100 : 0;
+    const utilizationRate = totalCapacity > 0 ? Math.round((currentOccupancy / totalCapacity) * 10000) / 100 : 0;
 
     return {
       totalBufferStacks: bufferStacks.length,
       totalCapacity,
       currentOccupancy,
       availableSpaces,
-      utilizationRate: Math.round(utilizationRate * 100) / 100
+      utilizationRate,
     };
   }
 
   /**
-   * Nettoie les stacks tampons vides (optionnel)
+   * Vérifie si un stack est une zone tampon.
    */
-  async cleanupEmptyBufferStacks(yardId: string): Promise<number> {
-    const { data, error } = await supabase
-      .from('stacks')
-      .delete()
-      .eq('yard_id', yardId)
-      .eq('current_occupancy', 0)
-      .eq('is_active', true)
-      .eq('is_buffer_zone', true)
-      .select();
-
-    if (error) {
-      handleError(error, 'BufferZoneService.cleanupEmptyBufferStacks');
-      return 0;
+  isBufferStack(stack: YardStack): boolean {
+    if ('isBufferZone' in stack && typeof stack.isBufferZone === 'boolean') {
+      return stack.isBufferZone;
     }
-
-    const deletedCount = data?.length || 0;
-    if (deletedCount > 0) {
-      logger.info('Information', 'BufferZoneService', `${deletedCount} stacks tampons vides supprimés`);
-    }
-
-    return deletedCount;
+    return stack.stackNumber >= 9000 || stack.sectionName?.toUpperCase().includes('BUFFER') || false;
   }
 
   /**
-   * Mappe les données de la base vers l'objet YardStack
+   * Mappe les données Supabase vers l'objet BufferZoneEntry.
+   */
+  private mapToBufferZoneEntry(data: any): BufferZoneEntry {
+    return {
+      id: data.id,
+      containerId: data.container_id,
+      gateInOperationId: data.gate_in_operation_id,
+      bufferStackId: data.buffer_stack_id,
+      yardId: data.yard_id,
+      damageType: data.damage_type,
+      damageDescription: data.damage_description,
+      damageAssessment: data.damage_assessment,
+      status: data.status,
+      releasedAt: data.released_at ? new Date(data.released_at) : null,
+      releasedBy: data.released_by,
+      releaseNotes: data.release_notes,
+      createdAt: new Date(data.created_at),
+      createdBy: data.created_by,
+    };
+  }
+
+  /**
+   * Mappe les données de la base vers l'objet YardStack.
    */
   private mapToStack(data: any): YardStack {
-    // Parse damage_types_supported if it exists
     let damageTypesSupported: string[] | undefined;
     if (data.damage_types_supported) {
       try {
-        damageTypesSupported = typeof data.damage_types_supported === 'string' 
+        damageTypesSupported = typeof data.damage_types_supported === 'string'
           ? JSON.parse(data.damage_types_supported)
           : data.damage_types_supported;
-      } catch (error) {
-        handleError(error, 'BufferZoneService.mapToStack.parseDamageTypes');
-        damageTypesSupported = undefined;
-      }
+      } catch { /* ignore */ }
     }
 
     return {
@@ -312,11 +341,11 @@ export class BufferZoneService {
       position: {
         x: parseFloat(data.position_x) || 0,
         y: parseFloat(data.position_y) || 0,
-        z: parseFloat(data.position_z) || 0
+        z: parseFloat(data.position_z) || 0,
       },
       dimensions: {
         width: parseFloat(data.width) || 2.5,
-        length: parseFloat(data.length) || 12
+        length: parseFloat(data.length) || 12,
       },
       containerPositions: [],
       isOddStack: data.is_odd_stack,
@@ -330,10 +359,9 @@ export class BufferZoneService {
       updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
       createdBy: data.created_by,
       updatedBy: data.updated_by,
-      // Buffer Zone fields
       isBufferZone: data.is_buffer_zone || false,
       bufferZoneType: data.buffer_zone_type as 'damage' | 'maintenance' | 'quarantine' | 'inspection' | undefined,
-      damageTypesSupported: damageTypesSupported
+      damageTypesSupported,
     };
   }
 }

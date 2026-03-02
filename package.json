@@ -12,6 +12,7 @@
     "deploy-migrations": "tsx scripts/deploy-migrations.ts"
   },
   "dependencies": {
+    "@mykelcodes/container-number-validation": "^1.0.2",
     "@react-three/drei": "^9.92.0",
     "@react-three/fiber": "^8.15.0",
     "@supabase/supabase-js": "^2.94.0",

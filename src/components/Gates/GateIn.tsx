@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, realtimeService, locationManagementService, yardsService } from '../../services/api';
+import { bufferZoneService } from '../../services/bufferZoneService';
+import { ediTransmissionService } from '../../services/ediTransmissionService';
 import { supabase } from '../../services/api/supabaseClient';
 
 // import moment from 'moment'; // Commented out - not used in current code
@@ -85,29 +87,29 @@ export const GateIn: React.FC = () => {
   }, [currentYard?.id, loadData]);
 
 
-useEffect(() => {
-  if (!currentYard?.id) return;
+  useEffect(() => {
+    if (!currentYard?.id) return;
 
-  const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
-    currentYard.id,
-    () => {
+    const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
+      currentYard.id,
+      () => {
+        if (document.visibilityState === 'visible') {
+          loadData();
+        }
+      }
+    );
+
+    const unsubscribeContainers = realtimeService.subscribeToContainers(() => {
       if (document.visibilityState === 'visible') {
         loadData();
       }
-    }
-  );
+    });
 
-  const unsubscribeContainers = realtimeService.subscribeToContainers(() => {
-    if (document.visibilityState === 'visible') {
-      loadData();
-    }
-  });
-
-  return () => {
-    try { unsubscribeGateIn(); } catch { /* ignore */ }
-    try { unsubscribeContainers(); } catch { /* ignore */ }
-  };
-}, [currentYard?.id, loadData]);
+    return () => {
+      try { unsubscribeGateIn(); } catch { /* ignore */ }
+      try { unsubscribeContainers(); } catch { /* ignore */ }
+    };
+  }, [currentYard?.id, loadData]);
 
 
   const pendingOperations = gateInOperations.filter(op =>
@@ -471,7 +473,7 @@ useEffect(() => {
         transportCompany: formData.transportCompany,
         driverName: formData.driverName,
         truckNumber: formData.truckNumber,
-        location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
+        location: formData.assignedLocation || optimalStack?.stackId || null,
         truckArrivalDate: truckArrivalDate,
         truckArrivalTime: truckArrivalTime,
         equipmentReference: formData.equipmentReference, // Equipment reference for EDI transmission
@@ -515,9 +517,8 @@ useEffect(() => {
       }
 
       // Show success message
-      const successMessage = `Gate In operation completed successfully for container ${formData.containerNumber}${
-        formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''
-      }`;
+      const successMessage = `Gate In operation completed successfully for container ${formData.containerNumber}${formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''
+        }`;
 
       toast.success(successMessage);
 
@@ -586,12 +587,13 @@ useEffect(() => {
 
       if (isPendingCompletion) {
         // This is completing a pending operation - UPDATE existing containers
+        const newStatus = locationData.isBufferZone ? 'in_buffer' : 'in_depot';
 
         for (const container of existingContainers) {
           const { error: updateError } = await supabase
             .from('containers')
             .update({
-              status: 'in_depot',
+              status: newStatus,
               location: locationData.assignedLocation,
               updated_at: new Date().toISOString(),
               updated_by: user?.id
@@ -613,7 +615,7 @@ useEffect(() => {
           type: operation.containerType || 'dry',
           size: operation.containerSize,
           is_high_cube: operation.isHighCube === true,
-          status: 'in_depot',
+          status: locationData.isBufferZone ? 'in_buffer' : 'in_depot',
           full_empty: operation.fullEmpty || 'FULL',
           location: locationData.assignedLocation,
           yard_id: currentYard?.id,
@@ -653,9 +655,10 @@ useEffect(() => {
       const updateData: any = {
         container_id: finalContainers?.[0]?.id,
         assigned_location: locationData.assignedLocation,
-        assigned_stack: extractStackNumber(locationData.assignedLocation), // Extract stack number
+        assigned_stack: locationData.isBufferZone ? null : extractStackNumber(locationData.assignedLocation),
         completed_at: new Date().toISOString(),
-        status: 'completed'
+        status: 'completed',
+        is_buffer_assignment: locationData.isBufferZone || false,
       };
 
       // Add damage assessment data if provided
@@ -663,10 +666,8 @@ useEffect(() => {
         updateData.damage_reported = locationData.damageAssessment.hasDamage;
         updateData.damage_description = locationData.damageAssessment.damageDescription || null;
         updateData.damage_assessment = JSON.stringify(locationData.damageAssessment);
-
-        // Marquer si c'est une zone tampon
         if (locationData.isBufferZone) {
-          updateData.notes = `ZONE TAMPON - ${locationData.damageAssessment.damageType || 'Dommage détecté'}`;
+          updateData.buffer_zone_reason = locationData.damageAssessment.damageType || 'Dommage détecté';
         }
       }
 
@@ -677,6 +678,26 @@ useEffect(() => {
 
       if (updateError) {
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
+      }
+
+      // 4.5. Si zone tampon: créer l'entrée dans container_buffer_zones
+      if (locationData.isBufferZone && locationData.bufferStackId && finalContainers?.[0]?.id) {
+        try {
+          await bufferZoneService.assignContainerToBufferZone({
+            containerId: finalContainers[0].id,
+            gateInOperationId: operation.id,
+            bufferStackId: locationData.bufferStackId,
+            yardId: currentYard?.id || '',
+            damageType: locationData.damageAssessment?.damageType || 'general',
+            damageDescription: locationData.damageAssessment?.damageDescription,
+            damageAssessment: locationData.damageAssessment,
+            createdBy: user?.id || 'system',
+          });
+          logger.info(`Conteneur ${operation.containerNumber} assigné à la zone tampon`, 'GateIn');
+        } catch (bufferError) {
+          // Ne pas bloquer l'opération si l'entrée buffer échoue
+          logger.error('Impossible de créer l\'entrée zone tampon', 'GateIn', bufferError);
+        }
       }
 
       // 4.5. Update location occupancy in locations table
@@ -708,7 +729,7 @@ useEffect(() => {
             // Get both physical locations
             const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
             const physicalLocation2 = `S${String(physicalStack2).padStart(2, '0')}R${row}H${tier}`;
-            
+
             console.log(`🔍 Checking both physical locations: ${physicalLocation1} and ${physicalLocation2}`);
 
             const { data: locationRecords, error: locationFindError } = await supabase
@@ -722,10 +743,10 @@ useEffect(() => {
             if (!locationFindError && locationRecords && locationRecords.length === 2) {
               // Check if both locations are available
               const allAvailable = locationRecords.every(loc => !loc.is_occupied);
-              
+
               if (allAvailable) {
                 console.log(`✅ Both physical locations are available, assigning 40ft container`);
-                
+
                 // Assign container to both physical locations
                 for (const locationRecord of locationRecords) {
                   await locationManagementService.assignContainer({
@@ -736,7 +757,7 @@ useEffect(() => {
                   });
                   console.log(`✓ Assigned to physical location ${locationRecord.location_id}`);
                 }
-                
+
                 console.log(`✓ Virtual location ${locationData.assignedLocation} successfully mapped to both physical locations`);
               } else {
                 const occupiedLocations = locationRecords.filter(loc => loc.is_occupied).map(loc => loc.location_id);
@@ -749,7 +770,7 @@ useEffect(() => {
             // For 20ft containers on virtual stacks, use just one physical location
             const physicalStack1 = stackNum - 1;
             const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
-            
+
             console.log(`🔍 Checking physical location for 20ft: ${physicalLocation1}`);
 
             const { data: locationRecord, error: locationFindError } = await supabase
@@ -802,95 +823,34 @@ useEffect(() => {
         // Don't fail the entire operation if location update fails
       }
 
-      // 5. Process EDI transmission conditionally using new SFTP integration
+      // 5. Transmission EDI GATE IN (toujours transmis, zone tampon ou non)
+      //    ediTransmissionService est idempotent : si déjà transmis, il ne renvoie pas.
       let ediStatus = 'not_attempted';
-
-      // EDI seulement si pas de dommages (ediShouldTransmit = true)
-      if (locationData.ediShouldTransmit !== false) {
-        try {
-          // Import SFTP integration service
-          const { sftpIntegrationService } = await import('../../services/edi/sftpIntegrationService');
-
-          // Prepare Gate In data for SFTP transmission
-          const gateInData = {
-            containerNumber: operation.containerNumber,
-            containerSize: operation.containerSize,
-            containerType: operation.containerType || 'dry',
-            clientCode: operation.clientCode,
-            clientName: operation.clientName,
-            transportCompany: operation.transportCompany || 'Unknown',
-            truckNumber: operation.truckNumber || 'Unknown',
-            arrivalDate: operation.truckArrivalDate || new Date().toISOString().split('T')[0],
-            arrivalTime: operation.truckArrivalTime || new Date().toTimeString().slice(0, 5),
-            assignedLocation: locationData.assignedLocation,
-            yardId: currentYard?.id || 'unknown',
-            operatorName: user?.name || 'System',
-            operatorId: user?.id || 'system',
-            damageReported: locationData.damageAssessment?.hasDamage || false,
-            damageType: locationData.damageAssessment?.damageType,
-            damageDescription: locationData.damageAssessment?.damageDescription,
-            damageAssessedBy: user?.name || 'System',
-            damageAssessedAt: new Date().toISOString(),
-            equipmentReference: operation.equipmentReference
-          };
-
-          // Process Gate In with automatic SFTP transmission
-          const sftpResult = await sftpIntegrationService.processGateInWithSFTP(gateInData);
-
-          if (sftpResult.transmitted) {
-            // Update gate_in_operation with EDI transmission info
-            await supabase
-              .from('gate_in_operations')
-              .update({
-                edi_transmitted: true,
-                edi_transmission_date: new Date().toISOString(),
-                edi_error_message: null
-              })
-              .eq('id', operation.id);
-            ediStatus = 'transmitted';
-          } else if (sftpResult.error) {
-            throw new Error(sftpResult.error);
-          } else {
-            // EDI not enabled for this client
-            ediStatus = 'not_enabled';
-          }
-        } catch (ediError) {
-          // EDI transmission failed, but don't fail the entire operation
-          console.error('EDI SFTP transmission failed:', ediError);
-
-          // Update gate_in_operation to indicate EDI failure
-          await supabase
-            .from('gate_in_operations')
-            .update({
-              edi_transmitted: false,
-              edi_error_message: ediError instanceof Error ? ediError.message : 'EDI SFTP transmission failed'
-            })
-            .eq('id', operation.id);
+      try {
+        const ediResult = await ediTransmissionService.transmitGateInEDI(operation.id);
+        if (ediResult.success) {
+          ediStatus = ediResult.error?.includes('déjà transmis') ? 'already_sent' : 'transmitted';
+        } else {
           ediStatus = 'failed';
+          logger.error(`EDI non transmis: ${ediResult.error}`, 'GateIn');
         }
-      } else {
-        // Conteneur endommagé - EDI en PENDING
-        await supabase
-          .from('gate_in_operations')
-          .update({
-            edi_transmitted: false,
-            edi_error_message: 'EDI en attente - Conteneur endommagé nécessite traitement manuel'
-          })
-          .eq('id', operation.id);
-        ediStatus = 'pending_manual';
+      } catch (ediError) {
+        // EDI transmission failed, but don't fail the entire operation
+        logger.error('EDI: Erreur inattendue', 'GateIn', ediError);
+        ediStatus = 'failed';
       }
 
       // 6. Update local state
       setGateInOperations(prev => prev.map(op =>
         op.id === operation.id
           ? {
-              ...op,
-              containerId: finalContainers?.[0]?.id,
-              assignedLocation: locationData.assignedLocation,
-              completedAt: new Date(),
-              status: 'completed',
-              ediTransmitted: ediStatus === 'transmitted',
-            }
+            ...op,
+            containerId: finalContainers?.[0]?.id,
+            assignedLocation: locationData.assignedLocation,
+            completedAt: new Date(),
+            status: 'completed',
+            ediTransmitted: ediStatus === 'transmitted',
+          }
           : op
       ));
 
@@ -908,29 +868,26 @@ useEffect(() => {
       }
 
       // 8. Show success message with EDI status
-      const damageStatus = locationData.damageAssessment?.hasDamage
-        ? 'assigné en zone tampon (endommagé)'
-        : 'en bon état';
+      const damageStatus = locationData.isBufferZone
+        ? 'Zone Tampon'
+        : 'Emplacement physique';
 
       let ediStatusMessage = '';
       switch (ediStatus) {
         case 'transmitted':
-          ediStatusMessage = '✓ EDI transmis automatiquement via SFTP';
+          ediStatusMessage = '✓ EDI GATE IN transmis';
+          break;
+        case 'already_sent':
+          ediStatusMessage = '• EDI déjà transmis (ignoré)';
           break;
         case 'failed':
-          ediStatusMessage = '⚠ Transmission EDI échouée';
-          break;
-        case 'pending_manual':
-          ediStatusMessage = '⏳ EDI en attente (traitement manuel requis)';
-          break;
-        case 'not_enabled':
-          ediStatusMessage = '• EDI non activé pour ce client';
+          ediStatusMessage = '⚠ Transmission EDI échouée (vérifier logs)';
           break;
         default:
           ediStatusMessage = '• EDI non tenté';
       }
 
-      toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné avec succès à ${locationData.assignedLocation} (${damageStatus}) - ${ediStatusMessage}`);
+      toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné → ${damageStatus}: ${locationData.assignedLocation} — ${ediStatusMessage}`);
       setActiveView('overview');
     } catch (error) {
       handleError(error, 'GateIn.handleLocationValidation');
@@ -952,9 +909,9 @@ useEffect(() => {
       (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesFilter = selectedFilter === 'all' ||
-                         op.status === selectedFilter ||
-                         (selectedFilter === 'alimentaire' && op.classification === 'alimentaire') ||
-                         (selectedFilter === 'divers' && op.classification === 'divers');
+      op.status === selectedFilter ||
+      (selectedFilter === 'alimentaire' && op.classification === 'alimentaire') ||
+      (selectedFilter === 'divers' && op.classification === 'divers');
 
     return matchesSearch && matchesFilter;
   });
@@ -1244,11 +1201,10 @@ useEffect(() => {
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
-                    selectedFilter === filter
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                  }`}
+                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${selectedFilter === filter
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                    }`}
                 >
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}
                 </button>

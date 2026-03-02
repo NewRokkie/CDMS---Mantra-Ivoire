@@ -16,12 +16,12 @@ interface Props {
   onDelete?: (depot: Yard) => void;
 }
 
-export const DepotDetailModal: React.FC<Props> = ({ 
-  isOpen, 
-  onClose, 
+export const DepotDetailModal: React.FC<Props> = ({
+  isOpen,
+  onClose,
   depot,
   onEdit,
-  onDelete 
+  onDelete
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'structure' | 'metadata'>('overview');
 
@@ -154,11 +154,10 @@ export const DepotDetailModal: React.FC<Props> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab.id
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 <IconComponent className="h-4 w-4" />
                 <span>{tab.label}</span>
@@ -207,7 +206,7 @@ export const DepotDetailModal: React.FC<Props> = ({
             </h3>
             <div className="relative h-40 rounded-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
               <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg text-xs shadow-sm">
-                📍 {depot.address.city || 'Unknown'}, {depot.address.country || 'N/A'}
+                📍 {depot.address.city || 'Unknown'}, {depot.address.country || '-'}
               </div>
               <div className="absolute bottom-4 right-4 h-12 w-12 rounded-full bg-blue-500/20 blur-xl" />
               <div className="absolute bottom-4 right-4 h-3 w-3 rounded-full bg-blue-500 animate-pulse" />

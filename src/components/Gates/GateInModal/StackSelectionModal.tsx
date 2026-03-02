@@ -70,7 +70,12 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
 
       // Get all containers to check occupancy
       const allContainers = await containerService.getAll();
-      const yardContainers = yardsService.getYardContainers(yardId, allContainers);
+      
+      // Only consider containers that are actually in the depot
+      const activeContainers = allContainers.filter(c => 
+        c.status === 'in_depot' || c.status === 'gate_in'
+      );
+      const yardContainers = yardsService.getYardContainers(yardId, activeContainers);
       
       // Get available stacks based on client pool assignments
       let availableStackResults = [];
@@ -142,6 +147,19 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
         
         const section = yard.sections.find(s => s.id === stack.sectionId);
         
+        // Normalize occupied positions to standard format (S##R#H#)
+        const occupiedPositions = stackContainers.map((c: any) => {
+          // Normalize location format: remove dashes and ensure 2-digit stack number
+          const match = c.location.match(/S0*(\d+)[-]?R(\d+)[-]?H(\d+)/);
+          if (match) {
+            const stackNum = parseInt(match[1]);
+            const row = parseInt(match[2]);
+            const height = parseInt(match[3]);
+            return `S${String(stackNum).padStart(2, '0')}R${row}H${height}`;
+          }
+          return c.location;
+        });
+        
         return {
           stackId: stack.id,
           stackNumber: stack.stackNumber,
@@ -150,7 +168,7 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
           totalCapacity: stack.capacity,
           isRecommended: availableSlots > 0,
           distance: 0,
-          occupiedPositions: stackContainers.map((c: any) => c.location) // Track occupied positions
+          occupiedPositions // Track normalized occupied positions
         };
       }).filter(result => result.availableSlots > 0);
       
@@ -172,6 +190,7 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
           // For 40ft containers, stacks are already filtered to virtual ones
           // Just generate positions directly
           const positions = await getAvailablePositions(stack, result);
+          
           return positions;
         })
       );

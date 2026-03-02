@@ -418,6 +418,7 @@ const translations = {
     'stack.validation.rowsRange': 'Rows must be between 1 and 10',
     'stack.validation.tiersRange': 'Max tiers must be between 1 and 8',
     'stack.validation.specialNo40': 'Special stacks can only accommodate 20ft containers',
+    'stack.validation.duplicateNumber': 'Stack number already exists in this yard',
     'stack.validation.rowChangeError': 'Unable to validate row change. Please try again.',
 
 
@@ -1246,6 +1247,7 @@ const translations = {
     'stack.validation.rowsRange': 'Les rangées doivent être comprises entre 1 et 10',
     'stack.validation.tiersRange': 'Les paliers max doivent être compris entre 1 et 8',
     'stack.validation.specialNo40': 'Les piles spéciales ne peuvent accueillir que des conteneurs de 20 pieds',
+    'stack.validation.duplicateNumber': 'Ce numéro de stack existe déjà dans ce dépôt',
     'stack.validation.rowChangeError': 'Impossible de valider le changement de rangée. Veuillez réessayer.',
 
 

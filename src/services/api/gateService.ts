@@ -21,7 +21,7 @@ export interface GateInData {
   transportCompany: string;
   driverName: string;
   truckNumber: string;
-  location: string;
+  location: string | null;
   truckArrivalDate?: string;
   truckArrivalTime?: string;
   operatorId: string;
@@ -87,28 +87,28 @@ export class GateService {
       return { success: true, containerId: newContainer.id };
 
     }, { maxAttempts: 3, baseDelay: 1000 })
-    .catch((error: GateInError) => {
-      // Log the actual error details before converting to generic response
-      console.error('🔴 [gateService.processGateIn] Error caught:', {
-        code: error.code,
-        message: error.message,
-        userMessage: error.userMessage,
-        technicalDetails: error.technicalDetails,
-        stack: error.stack,
-      });
+      .catch((error: GateInError) => {
+        // Log the actual error details before converting to generic response
+        console.error('🔴 [gateService.processGateIn] Error caught:', {
+          code: error.code,
+          message: error.message,
+          userMessage: error.userMessage,
+          technicalDetails: error.technicalDetails,
+          stack: error.stack,
+        });
 
-      // Emit failure event
-      eventBus.emitSync('GATE_IN_FAILED', {
-        containerNumber: data.containerNumber,
-        error: error.userMessage || error.message
-      });
+        // Emit failure event
+        eventBus.emitSync('GATE_IN_FAILED', {
+          containerNumber: data.containerNumber,
+          error: error.userMessage || error.message
+        });
 
-      return {
-        success: false,
-        error: error.message,
-        userMessage: error.userMessage
-      };
-    });
+        return {
+          success: false,
+          error: error.message,
+          userMessage: error.userMessage
+        };
+      });
   }
 
   /**
@@ -229,13 +229,13 @@ export class GateService {
     let gateInDateTime: Date;
     if (data.truckArrivalDate && data.truckArrivalTime) {
       // Handle time format - if it already has seconds (HH:MM:SS), use as-is, otherwise add :00
-      const timeWithSeconds = data.truckArrivalTime.split(':').length === 3 
-        ? data.truckArrivalTime 
+      const timeWithSeconds = data.truckArrivalTime.split(':').length === 3
+        ? data.truckArrivalTime
         : `${data.truckArrivalTime}:00`;
-      
+
       const dateTimeString = `${data.truckArrivalDate}T${timeWithSeconds}`;
       gateInDateTime = new Date(dateTimeString);
-      
+
       // Validate the parsed date
       if (isNaN(gateInDateTime.getTime())) {
         console.error('🔴 [createContainerSafely] Invalid date/time:', dateTimeString);
@@ -733,14 +733,25 @@ export class GateService {
 
       if (updateError) throw updateError;
 
-      // Update booking reference and all containers if completed
-      if (newStatus === 'completed') {
-        await bookingReferenceService.update(currentOp.release_order_id, {
-          remainingContainers: 0,
-          status: 'completed'
-        });
+      // Get current booking to calculate new remaining containers
+      const currentBooking = await bookingReferenceService.getById(currentOp.release_order_id);
+      if (!currentBooking) {
+        return { success: false, error: 'Booking reference not found' };
+      }
 
-        // Update ALL containers in the operation to 'out_depot' status
+      // Calculate new booking remaining containers
+      const newBookingRemaining = currentBooking.remainingContainers - data.containerIds.length;
+      const bookingStatus = newBookingRemaining === 0 ? 'completed' : 'in_process';
+
+      // Update booking reference with new remaining count
+      await bookingReferenceService.update(currentOp.release_order_id, {
+        remainingContainers: Math.max(0, newBookingRemaining),
+        status: bookingStatus,
+        completedAt: bookingStatus === 'completed' ? new Date() : undefined
+      });
+
+      // Update ALL containers in the operation to 'out_depot' status if operation is completed
+      if (newStatus === 'completed') {
         for (const containerId of newContainerIds) {
           const container = await containerService.getById(containerId);
           if (container && container.status === 'gate_out') {

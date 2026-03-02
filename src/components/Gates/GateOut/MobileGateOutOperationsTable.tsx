@@ -59,7 +59,7 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
   };
 
   const formatDate = (date?: Date | string) => {
-    if (!date) return 'N/A';
+    if (!date) return '-';
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateObj.toLocaleDateString('en-US', {
       month: 'short',
@@ -88,9 +88,8 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                     {operation.bookingNumber || 'No Booking'}
                   </span>
                   {operation.bookingType && (
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      }`}>
                       {operation.bookingType}
                     </span>
                   )}
@@ -117,13 +116,12 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
-                  className={`h-3 rounded-full transition-all duration-300 ${
-                    operation.processedContainers === operation.totalContainers
+                  className={`h-3 rounded-full transition-all duration-300 ${operation.processedContainers === operation.totalContainers
                       ? 'bg-green-500'
                       : operation.processedContainers > 0
-                      ? 'bg-blue-500'
-                      : 'bg-gray-300'
-                  }`}
+                        ? 'bg-blue-500'
+                        : 'bg-gray-300'
+                    }`}
                   style={{ width: `${operation.totalContainers > 0 ? (operation.processedContainers / operation.totalContainers) * 100 : 0}%` }}
                 ></div>
               </div>
@@ -239,9 +237,8 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {operation.bookingType && (
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${operation.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                        }`}>
                         {operation.bookingType}
                       </span>
                     )}
@@ -266,13 +263,12 @@ export const MobileGateOutOperationsTable: React.FC<MobileGateOutOperationsTable
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            operation.processedContainers === operation.totalContainers
+                          className={`h-2 rounded-full transition-all duration-300 ${operation.processedContainers === operation.totalContainers
                               ? 'bg-green-500'
                               : operation.processedContainers > 0
-                              ? 'bg-blue-500'
-                              : 'bg-gray-300'
-                          }`}
+                                ? 'bg-blue-500'
+                                : 'bg-gray-300'
+                            }`}
                           style={{ width: `${operation.totalContainers > 0 ? (operation.processedContainers / operation.totalContainers) * 100 : 0}%` }}
                         ></div>
                       </div>

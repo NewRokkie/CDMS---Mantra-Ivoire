@@ -365,12 +365,11 @@ export const GateOut: React.FC = () => {
         // Import Gate Out CODECO service
         const { gateOutCodecoService } = await import('../../services/edi/gateOutCodecoService');
 
-        // Find the booking reference using bookingReferenceId if available, otherwise fall back to bookingNumber
-        const booking = operation.bookingNumber
-          ? releaseOrders.find(order => order.id === operation.bookingNumber)
-          : operation.bookingNumber
-            ? releaseOrders.find(order => order.bookingNumber === operation.bookingNumber)
-            : null;
+        // Find the booking reference using bookingReferenceId
+        const booking = releaseOrders.find(order => 
+          order.id === (operation as any).bookingReferenceId || 
+          order.bookingNumber === operation.bookingNumber
+        );
 
         if (booking && selectedContainers.length > 0) {
           // Create Gate Out CODECO data with all required fields
@@ -408,6 +407,12 @@ export const GateOut: React.FC = () => {
               bookingNumber: booking.bookingNumber
             });
           }
+        } else {
+          logger.warn('Booking not found for EDI transmission', 'GateOut', {
+            bookingReferenceId: (operation as any).bookingReferenceId,
+            bookingNumber: operation.bookingNumber,
+            availableBookings: releaseOrders.length
+          });
         }
       } catch (ediError) {
         // EDI transmission failed, but don't fail the entire Gate Out operation

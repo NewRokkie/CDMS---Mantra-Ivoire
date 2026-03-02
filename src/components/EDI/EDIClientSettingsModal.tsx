@@ -166,7 +166,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
       try {
         const jsonData = e.target?.result as string;
         const result = ediClientSettingsService.importClientSettings(jsonData);
-        
+
         if (result.success) {
           toast.success(`Successfully imported ${result.imported} client settings`);
           loadClientSettings();
@@ -178,7 +178,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
       }
     };
     reader.readAsText(file);
-    
+
     // Reset input
     event.target.value = '';
   };
@@ -197,11 +197,11 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
 
   // Filtrage des clients
   const filteredClients = clientSettings.filter(client => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       client.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (client.clientCode && client.clientCode.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesFilter = filterStatus === 'all' || 
+
+    const matchesFilter = filterStatus === 'all' ||
       (filterStatus === 'enabled' && client.ediEnabled) ||
       (filterStatus === 'disabled' && !client.ediEnabled);
 
@@ -243,7 +243,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                   </button>
                 </div>
               </div>
-              
+
               {/* Contrôles de recherche et filtrage */}
               <div className="space-y-3 mb-4">
                 <div className="relative">
@@ -256,7 +256,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                   />
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 </div>
-                
+
                 <div className="flex space-x-2">
                   <select
                     value={filterStatus}
@@ -267,7 +267,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                     <option value="enabled">EDI activé</option>
                     <option value="disabled">EDI désactivé</option>
                   </select>
-                  
+
                   <button
                     onClick={handleExport}
                     className="flex items-center space-x-1 px-3 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
@@ -275,7 +275,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                     <Download className="h-4 w-4" />
                     <span>Export</span>
                   </button>
-                  
+
                   <label className="flex items-center space-x-1 px-3 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors cursor-pointer">
                     <Upload className="h-4 w-4" />
                     <span>Import</span>
@@ -294,11 +294,10 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
               {filteredClients.map((client) => (
                 <div
                   key={client.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedClient?.id === client.id
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedClient?.id === client.id
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                    }`}
                   onClick={() => setSelectedClient(client)}
                 >
                   <div className="flex items-center justify-between">
@@ -308,11 +307,10 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                         <p className="text-sm text-gray-600">Code: {client.clientCode}</p>
                       )}
                       <div className="flex items-center space-x-2 mt-2">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          client.ediEnabled
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${client.ediEnabled
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
-                        }`}>
+                          }`}>
                           EDI {client.ediEnabled ? 'Activé' : 'Désactivé'}
                         </span>
                         {client.ediEnabled && (
@@ -368,7 +366,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                   </div>
                 </div>
               ))}
-              
+
               {filteredClients.length === 0 && (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -430,8 +428,8 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                           value={formData.clientName || ''}
                           onChange={(e) => {
                             const selectedRealClient = realClients.find(c => c.name === e.target.value);
-                            setFormData({ 
-                              ...formData, 
+                            setFormData({
+                              ...formData,
                               clientName: e.target.value,
                               clientCode: selectedRealClient?.code || ''
                             });
@@ -500,7 +498,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                         />
                         <span className="ml-2 text-sm text-gray-700">EDI activé pour ce client</span>
                       </label>
-                      
+
                       {formData.ediEnabled && (
                         <div className="ml-6 space-y-2">
                           <label className="flex items-center">
@@ -512,7 +510,7 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                             />
                             <span className="ml-2 text-sm text-gray-700">EDI pour Gate In</span>
                           </label>
-                          
+
                           <label className="flex items-center">
                             <input
                               type="checkbox"
@@ -562,26 +560,24 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
-                      <p className="text-gray-900">{selectedClient.clientCode || 'N/A'}</p>
+                      <p className="text-gray-900">{selectedClient.clientCode || '-'}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        selectedClient.priority === 'high' ? 'bg-red-100 text-red-800' :
-                        selectedClient.priority === 'low' ? 'bg-gray-100 text-gray-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {selectedClient.priority === 'high' ? 'Haute' : 
-                         selectedClient.priority === 'low' ? 'Basse' : 'Normale'}
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${selectedClient.priority === 'high' ? 'bg-red-100 text-red-800' :
+                          selectedClient.priority === 'low' ? 'bg-gray-100 text-gray-800' :
+                            'bg-blue-100 text-blue-800'
+                        }`}>
+                        {selectedClient.priority === 'high' ? 'Haute' :
+                          selectedClient.priority === 'low' ? 'Basse' : 'Normale'}
                       </span>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Statut EDI</label>
-                      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                        selectedClient.ediEnabled
+                      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${selectedClient.ediEnabled
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
+                        }`}>
                         {selectedClient.ediEnabled ? (
                           <CheckCircle className="h-3 w-3 mr-1" />
                         ) : (
@@ -596,18 +592,16 @@ export const EDIClientSettingsModal: React.FC<EDIClientSettingsModalProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Opérations EDI</label>
                       <div className="flex space-x-4">
-                        <span className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${
-                          selectedClient.gateInEdi
+                        <span className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${selectedClient.gateInEdi
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-600'
-                        }`}>
+                          }`}>
                           Gate In {selectedClient.gateInEdi ? '✓' : '✗'}
                         </span>
-                        <span className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${
-                          selectedClient.gateOutEdi
+                        <span className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${selectedClient.gateOutEdi
                             ? 'bg-purple-100 text-purple-800'
                             : 'bg-gray-100 text-gray-600'
-                        }`}>
+                          }`}>
                           Gate Out {selectedClient.gateOutEdi ? '✓' : '✗'}
                         </span>
                       </div>

@@ -1,7 +1,5 @@
 import React from 'react';
 import { Calendar, Package, User, Truck, MapPin, AlertTriangle, CheckCircle, Clock, ChevronRight, Wifi, WifiOff, XCircle } from 'lucide-react';
-import { LoadingSpinner } from '../../Common/LoadingSpinner';
-import { TableSkeleton } from '../../Common/TableSkeleton';
 
 interface Operation {
   id: string;
@@ -131,7 +129,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
   };
 
   const formatDate = (date?: Date) => {
-    if (!date) return 'N/A';
+    if (!date) return '-';
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -380,7 +378,7 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold text-gray-900">No Operations Available</h3>
                 <p className="text-gray-500 max-w-md">
-                  {searchTerm || selectedFilter !== 'all' 
+                  {searchTerm || selectedFilter !== 'all'
                     ? 'No operations match your current search or filter criteria.'
                     : 'No gate in operations have been recorded yet. Create your first operation to get started.'
                   }

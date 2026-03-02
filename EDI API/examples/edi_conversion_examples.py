@@ -92,9 +92,9 @@ UNZ+1+20240101120000'"""
             # Show parsed EDI data if available
             if 'parsed_edi_data' in result:
                 container_info = result['parsed_edi_data'].get('container_details', {})
-                print(f"📦 Container: {container_info.get('container_number', 'N/A')}")
-                print(f"📏 Size: {container_info.get('container_size', 'N/A')}")
-                print(f"📊 Status: {container_info.get('container_status', 'N/A')}")
+                print(f"📦 Container: {container_info.get('container_number', '-')}")
+                print(f"📏 Size: {container_info.get('container_size', '-')}")
+                print(f"📊 Status: {container_info.get('container_status', '-')}")
         else:
             error = response.json()
             print(f"❌ Error: {error['message']}")
@@ -149,7 +149,7 @@ UNZ+1+20240101120000'"""
                 print("✅ Successfully parsed EDI structure")
                 container_info = result['parsed_data'].get('container_details', {})
                 if container_info:
-                    print(f"📦 Container: {container_info.get('container_number', 'N/A')}")
+                    print(f"📦 Container: {container_info.get('container_number', '-')}")
         else:
             error = response.json()
             print(f"❌ Error: {error['message']}")

@@ -80,13 +80,13 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     data: {
       containerNumber: formatContainerNumberForDisplay(container.number),
       type: `${container.type.charAt(0).toUpperCase() + container.type.slice(1)} • ${container.size}`,
-      currentLocation: container.location,
-      gateInDate: container.gateInDate?.toLocaleString() || 'N/A',
-      gateOutDate: container.gateOutDate?.toLocaleString() || 'N/A',
-      daysInDepot: container.gateInDate 
-        ? `${getDaysBetween(container.gateInDate, container.gateOutDate || new Date())} days` 
-        : 'N/A',
-      classification: container.classification 
+      currentLocation: container.location || '-',
+      gateInDate: container.gateInDate?.toLocaleString() || '-',
+      gateOutDate: container.gateOutDate?.toLocaleString() || '-',
+      daysInDepot: container.gateInDate
+        ? `${getDaysBetween(container.gateInDate, container.gateOutDate || new Date())} days`
+        : '-',
+      classification: container.classification
         ? container.classification.charAt(0).toUpperCase() + container.classification.slice(1)
         : '-',
       transactionType: container.transactionType || '-'

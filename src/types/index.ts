@@ -119,13 +119,6 @@ export interface YardSection {
   name: string;
   yardId: string;
   stacks: YardStack[];
-  position: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  dimensions: { width: number; length: number };
-  color?: string; // For visual distinction
 }
 
 export interface RowTierConfig {
@@ -164,6 +157,7 @@ export interface YardStack {
   updatedAt?: Date;
   createdBy?: string;
   updatedBy?: string;
+  isBufferZone?: boolean;
 }
 
 export interface YardBlock {

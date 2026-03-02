@@ -83,7 +83,7 @@ export class UserService {
   private handleSupabaseError(error: any, operation: string): ServiceError {
     const timestamp = new Date();
     const errorId = `${operation}-${timestamp.getTime()}`;
-    
+
     logger.error(`Supabase error in ${operation}`, 'UserService', { errorId, error });
 
     // Comprehensive Supabase error code mappings
@@ -93,36 +93,36 @@ export class UserService {
       '23503': { message: 'Referenced data not found or constraint violation', retryable: false, category: 'constraint' },
       '23514': { message: 'Data validation failed - check constraint violation', retryable: false, category: 'validation' },
       '23502': { message: 'Required field is missing', retryable: false, category: 'validation' },
-      
+
       // Schema/structure errors
       '42P01': { message: 'Database table not found - schema may need migration', retryable: false, category: 'schema' },
       '42703': { message: 'Database column not found - schema may need migration', retryable: false, category: 'schema' },
       '42804': { message: 'Data type mismatch', retryable: false, category: 'schema' },
       '42883': { message: 'Database function not found', retryable: false, category: 'schema' },
-      
+
       // PostgREST specific errors
       'PGRST116': { message: 'No data found', retryable: false, category: 'data' },
       'PGRST301': { message: 'Database connection failed', retryable: true, category: 'connection' },
       'PGRST302': { message: 'Database query timeout', retryable: true, category: 'timeout' },
       'PGRST204': { message: 'Schema cache loading failed', retryable: true, category: 'cache' },
-      
+
       // Connection and network errors
       '08006': { message: 'Database connection failed', retryable: true, category: 'connection' },
       '08001': { message: 'Unable to connect to database', retryable: true, category: 'connection' },
       '08003': { message: 'Connection does not exist', retryable: true, category: 'connection' },
       '08007': { message: 'Transaction resolution unknown', retryable: true, category: 'transaction' },
-      
+
       // Resource/capacity errors
       '53300': { message: 'Database temporarily unavailable - too many connections', retryable: true, category: 'capacity' },
       '53400': { message: 'Database configuration limit exceeded', retryable: true, category: 'capacity' },
       '57P01': { message: 'Database connection terminated unexpectedly', retryable: true, category: 'connection' },
       '57P02': { message: 'Database connection failure during transaction', retryable: true, category: 'transaction' },
-      
+
       // Authentication/authorization errors
       '28000': { message: 'Invalid authorization specification', retryable: false, category: 'auth' },
       '28P01': { message: 'Invalid password', retryable: false, category: 'auth' },
       '42501': { message: 'Insufficient privileges', retryable: false, category: 'auth' },
-      
+
       // Transaction errors
       '25001': { message: 'Transaction is active', retryable: true, category: 'transaction' },
       '25P02': { message: 'Transaction is in failed state', retryable: true, category: 'transaction' },
@@ -183,22 +183,22 @@ export class UserService {
     let lastError: any;
     let lastServiceError: ServiceError | null = null;
     const startTime = Date.now();
-    
+
     for (let attempt = 1; attempt <= retryConfig.maxRetries; attempt++) {
       try {
         const result = await operation();
-        
+
         // Log successful retry if this wasn't the first attempt
         if (attempt > 1) {
           const totalTime = Date.now() - startTime;
           logger.info(`${operationName} succeeded on retry`, 'UserService', { attempt, totalTimeMs: totalTime });
         }
-        
+
         return result;
       } catch (error) {
         lastError = error;
         lastServiceError = this.handleSupabaseError(error, operationName);
-        
+
         // Don't retry if error is not retryable or we've reached max attempts
         if (!lastServiceError.retryable || attempt === retryConfig.maxRetries) {
           const totalTime = Date.now() - startTime;
@@ -210,18 +210,18 @@ export class UserService {
         const baseDelay = retryConfig.baseDelay * Math.pow(retryConfig.backoffMultiplier, attempt - 1);
         const jitter = Math.random() * 0.1 * baseDelay; // Add up to 10% jitter
         const delay = Math.min(baseDelay + jitter, retryConfig.maxDelay);
-        
+
         logger.warn(`Retrying ${operationName}`, 'UserService', {
           attempt,
           maxRetries: retryConfig.maxRetries,
           delayMs: Math.round(delay),
           errorCode: lastServiceError.code
         });
-        
+
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
+
     // This should never be reached, but included for completeness
     throw lastError;
   }
@@ -298,7 +298,7 @@ export class UserService {
             errors.push(`Yard ID at index ${index} must be a non-empty string`);
           }
         });
-        
+
         // Check for duplicates
         const uniqueYardIds = new Set(user.yardIds);
         if (uniqueYardIds.size !== user.yardIds.length) {
@@ -379,7 +379,7 @@ export class UserService {
    */
   private async logAuditEntry(entry: AuditLogEntry): Promise<void> {
     const auditId = `${entry.action}-${entry.entityId}-${entry.timestamp.getTime()}`;
-    
+
     try {
       // Validate audit entry before logging
       if (!entry.entityId || !entry.action || !entry.timestamp) {
@@ -412,11 +412,11 @@ export class UserService {
         if (error) {
           throw error;
         }
-      }, `audit-log-${entry.action}`, { 
-        maxRetries: 2, 
-        baseDelay: 500, 
-        maxDelay: 2000, 
-        backoffMultiplier: 2 
+      }, `audit-log-${entry.action}`, {
+        maxRetries: 2,
+        baseDelay: 500,
+        maxDelay: 2000,
+        backoffMultiplier: 2
       });
 
       logger.debug(`Audit entry logged`, 'UserService', {
@@ -471,12 +471,12 @@ export class UserService {
   async runMigrations(auditContext?: { userId?: string; userName?: string }): Promise<MigrationResult> {
     const migrationId = `migration-${Date.now()}`;
     logger.info(`Starting database migrations`, 'UserService', { migrationId });
-    
+
     return this.withRetry(async () => {
       try {
         // Enhanced migration status check by attempting to query the columns
         logger.debug(`Checking migration status for soft delete fields`, 'UserService');
-        
+
         // Try to query users table with soft delete columns to check if they exist
         const { error: testError } = await supabase
           .from('users')
@@ -494,9 +494,9 @@ export class UserService {
         }
 
         // Check if error is due to missing columns
-        const isMissingColumn = testError.code === '42703' || 
-                               testError.message?.includes('column') ||
-                               testError.message?.includes('does not exist');
+        const isMissingColumn = testError.code === '42703' ||
+          testError.message?.includes('column') ||
+          testError.message?.includes('does not exist');
 
         if (!isMissingColumn) {
           // Some other error occurred
@@ -514,7 +514,7 @@ export class UserService {
             entityType: 'user',
             entityId: 'system',
             action: 'migration',
-            changes: { 
+            changes: {
               migration: 'soft_delete_fields',
               migrationId,
               status: 'columns_missing'
@@ -528,7 +528,7 @@ export class UserService {
         // In production, migrations should be run through Supabase CLI
         logger.warn(`Migration should be run through Supabase CLI in production`, 'UserService', { migrationId });
         logger.info(`Migration file path: supabase/migrations/20251103000000_add_soft_delete_to_users.sql`, 'UserService');
-        
+
         const migrationResult: MigrationResult = {
           success: true,
           message: 'Migration needed. Please run: supabase db reset or supabase migration up'
@@ -539,7 +539,7 @@ export class UserService {
 
       } catch (error) {
         logger.error(`Error executing migrations`, 'UserService', { migrationId, error });
-        
+
         // Enhanced error reporting for migrations
         const migrationError: MigrationResult = {
           success: false,
@@ -558,11 +558,11 @@ export class UserService {
 
         return migrationError;
       }
-    }, 'run migrations', { 
-      maxRetries: 2, 
-      baseDelay: 2000, 
-      maxDelay: 8000, 
-      backoffMultiplier: 2 
+    }, 'run migrations', {
+      maxRetries: 2,
+      baseDelay: 2000,
+      maxDelay: 8000,
+      backoffMultiplier: 2
     });
   }
 
@@ -573,7 +573,7 @@ export class UserService {
   async getAll(): Promise<User[]> {
     const operationId = `get-all-users-${Date.now()}`;
     logger.info(`Fetching all active users`, 'UserService', { operationId });
-    
+
     return this.withRetry(async () => {
       try {
         const { data, error } = await supabase
@@ -674,7 +674,7 @@ export class UserService {
           logger.error(`Error fetching user by ID`, 'UserService', { operationId, serviceError });
           throw new Error(serviceError.message);
         }
-        
+
         if (!data) {
           logger.debug(`User not found or inactive`, 'UserService', { operationId, userId: id });
           return null;
@@ -731,7 +731,7 @@ export class UserService {
           const serviceError = this.handleSupabaseError(error, 'fetch user by email');
           throw new Error(serviceError.message);
         }
-        
+
         return data ? this.mapToUser(data) : null;
       } catch (error) {
         logger.error(`Error fetching user by email`, 'UserService', { email, error });
@@ -813,9 +813,9 @@ export class UserService {
         }
 
         authUserId = authData.user.id;
-        logger.info(`Auth user created successfully`, 'UserService', { 
+        logger.info(`Auth user created successfully`, 'UserService', {
           authUserId,
-          email: user.email 
+          email: user.email
         });
       }
 
@@ -840,7 +840,7 @@ export class UserService {
       if (error) {
         // If user creation fails and we created an auth user, log for manual cleanup
         if (authUserId) {
-          logger.error(`Failed to create user record after auth user creation`, 'UserService', { 
+          logger.error(`Failed to create user record after auth user creation`, 'UserService', {
             error,
             authUserId,
             email: user.email,
@@ -860,7 +860,7 @@ export class UserService {
         entityType: 'user',
         entityId: data.id,
         action: 'create',
-        changes: { 
+        changes: {
           created: userData,
           operationId,
           validationWarnings: validationResult.warnings.length > 0 ? validationResult.warnings : undefined
@@ -871,14 +871,14 @@ export class UserService {
         ipAddress: auditContext?.ipAddress,
         userAgent: auditContext?.userAgent
       });
-      
+
       logger.info(`User created successfully`, 'UserService', {
         operationId,
         userId: data.id,
         email: data.email,
         name: data.name
       });
-      
+
       return this.mapToUser(data);
     }, 'create user');
   }
@@ -887,7 +887,7 @@ export class UserService {
    * Update user with enhanced validation, error handling, and audit logging
    */
   async update(
-    id: string, 
+    id: string,
     updates: Partial<User> & { last_login?: string },
     auditContext?: { ipAddress?: string; userAgent?: string; updatedBy?: string }
   ): Promise<User> {
@@ -990,14 +990,14 @@ export class UserService {
         ipAddress: auditContext?.ipAddress,
         userAgent: auditContext?.userAgent
       });
-      
+
       logger.info(`User updated successfully`, 'UserService', {
         operationId,
         userId: id,
         fieldsChanged: Object.keys(updateData).filter(key => key !== 'updated_at'),
         updatedBy: auditContext?.updatedBy || updates.updatedBy
       });
-      
+
       return this.mapToUser(data);
     }, 'update user');
   }
@@ -1011,7 +1011,7 @@ export class UserService {
    * Soft delete user with enhanced error handling, validation, and audit logging
    */
   async softDelete(
-    id: string, 
+    id: string,
     deletedBy: string,
     auditContext?: { ipAddress?: string; userAgent?: string }
   ): Promise<void> {
@@ -1098,7 +1098,7 @@ export class UserService {
    * Restore soft-deleted user with enhanced error handling and audit logging
    */
   async restore(
-    id: string, 
+    id: string,
     restoredBy: string,
     auditContext?: { ipAddress?: string; userAgent?: string }
   ): Promise<User> {
@@ -1207,7 +1207,7 @@ export class UserService {
         restoredBy,
         previouslyDeletedBy: existingData.deleted_by
       });
-      
+
       return this.mapToUser(data);
     }, 'restore user');
   }
@@ -1252,8 +1252,8 @@ export class UserService {
    * Uses limit/offset with proper indexing for performance
    */
   async getPaginatedUsers(
-    page: number = 1, 
-    limit: number = 50, 
+    page: number = 1,
+    limit: number = 50,
     includeDeleted: boolean = false
   ): Promise<{ users: User[]; total: number; hasMore: boolean }> {
     if (page < 1) page = 1;
@@ -1318,7 +1318,7 @@ export class UserService {
 
         // Parallel execution of detail fetching for better performance
         logger.debug(`Fetching user details in parallel`, 'UserService', { userId: id });
-        
+
         const [yardDetails, activityHistory, loginHistory, createdByName] = await Promise.all([
           this.getUserYardDetails(user.yardIds || []).catch(error => {
             logger.warn(`Failed to fetch yard details for user`, 'UserService', { userId: id, error });
@@ -1407,7 +1407,7 @@ export class UserService {
 
       // Get unique user IDs who created these yards
       const creatorIds = [...new Set(data.map(yard => yard.created_by).filter(Boolean))];
-      
+
       // Fetch user names for these IDs
       const userNamesMap = new Map<string, string>();
       if (creatorIds.length > 0) {
@@ -1415,7 +1415,7 @@ export class UserService {
           .from('users')
           .select('id, name')
           .in('id', creatorIds);
-        
+
         if (users) {
           users.forEach(user => {
             userNamesMap.set(user.id, user.name);
@@ -1426,7 +1426,7 @@ export class UserService {
       return data.map(yard => ({
         yardId: yard.id,
         yardName: yard.name || 'Unknown Yard',
-        yardCode: yard.code || 'N/A',
+        yardCode: yard.code || '-',
         assignedAt: yard.created_at ? new Date(yard.created_at) : new Date(),
         assignedBy: yard.created_by ? (userNamesMap.get(yard.created_by) || 'Unknown User') : 'System'
       }));
@@ -1517,9 +1517,9 @@ export class UserService {
         };
       });
 
-      logger.debug(`Retrieved user activity history`, 'UserService', { 
-        userId, 
-        activityCount: activities.length 
+      logger.debug(`Retrieved user activity history`, 'UserService', {
+        userId,
+        activityCount: activities.length
       });
 
       return activities;
@@ -1638,9 +1638,9 @@ export class UserService {
         sessionDuration: session.session_duration_minutes || undefined
       }));
 
-      logger.debug(`Retrieved user login history`, 'UserService', { 
-        userId, 
-        loginCount: loginRecords.length 
+      logger.debug(`Retrieved user login history`, 'UserService', {
+        userId,
+        loginCount: loginRecords.length
       });
 
       return loginRecords;
@@ -1696,7 +1696,7 @@ export class UserService {
 
         if (error) {
           logger.warn(`Database function failed, falling back to direct query`, 'UserService', { error });
-          
+
           // Fallback to direct count query
           const fallbackResult = await supabase
             .from('users')
@@ -1707,16 +1707,16 @@ export class UserService {
 
           if (fallbackResult.error) {
             // If both methods fail, assume no admins exist to allow initial setup
-            logger.warn(`Both admin check methods failed, assuming no admins exist`, 'UserService', { 
+            logger.warn(`Both admin check methods failed, assuming no admins exist`, 'UserService', {
               functionError: error,
-              fallbackError: fallbackResult.error 
+              fallbackError: fallbackResult.error
             });
-            
+
             return false;
           }
 
           const hasAdmins = (fallbackResult.count || 0) > 0;
-          
+
           logger.info(`Admin users check completed (fallback)`, 'UserService', {
             operationId,
             hasAdmins,
@@ -1727,7 +1727,7 @@ export class UserService {
         }
 
         const hasAdmins = data === true;
-        
+
         logger.info(`Admin users check completed (function)`, 'UserService', {
           operationId,
           hasAdmins,
@@ -1737,7 +1737,7 @@ export class UserService {
         return hasAdmins;
       } catch (error) {
         logger.error(`Error checking for admin users`, 'UserService', { operationId, error });
-        
+
         // On any error, return false to allow initial setup
         // This is safer than blocking the application
         logger.warn(`Returning false due to error - allowing initial setup`, 'UserService', { operationId });
@@ -1848,13 +1848,13 @@ export class UserService {
       if (userError) {
         // If user creation fails, we can't easily clean up the auth user without admin API
         // Log the issue for manual cleanup if needed
-        logger.error(`Failed to create user record after auth user creation`, 'UserService', { 
+        logger.error(`Failed to create user record after auth user creation`, 'UserService', {
           userError,
           authUserId: authData.user.id,
           email: authData.user.email,
           message: 'Manual cleanup may be required in Supabase Auth dashboard'
         });
-        
+
         const serviceError = this.handleSupabaseError(userError, 'create initial admin user record');
         throw new Error(serviceError.message);
       }
@@ -1875,21 +1875,21 @@ export class UserService {
           });
 
         if (moduleAccessError) {
-          logger.error(`Failed to create module access record for initial admin`, 'UserService', { 
+          logger.error(`Failed to create module access record for initial admin`, 'UserService', {
             moduleAccessError,
             userId: userRecord.id,
             authUserId: authData.user.id,
             email: authData.user.email,
             message: 'Manual cleanup may be required in Supabase Auth dashboard'
           });
-          
+
           // Clean up the user record, but we can't clean up auth user without admin API
           try {
             await supabase.from('users').delete().eq('id', userRecord.id);
           } catch (cleanupError) {
             logger.error(`Failed to cleanup user record after module access creation failure`, 'UserService', { cleanupError });
           }
-          
+
           throw new Error(`Failed to set module permissions: ${moduleAccessError.message}`);
         }
 
@@ -1908,7 +1908,7 @@ export class UserService {
         entityType: 'user',
         entityId: userRecord.id,
         action: 'create',
-        changes: { 
+        changes: {
           created: userData,
           operationId,
           isInitialAdmin: true,
@@ -1949,9 +1949,9 @@ export class UserService {
           .single();
 
         if (yardError) {
-          logger.warn(`Failed to create initial yard for admin`, 'UserService', { 
+          logger.warn(`Failed to create initial yard for admin`, 'UserService', {
             yardError,
-            userId: userRecord.id 
+            userId: userRecord.id
           });
           // Don't fail the entire process if yard creation fails
         } else if (yardData) {
@@ -1966,7 +1966,7 @@ export class UserService {
             .eq('id', userRecord.id);
 
           if (updateError) {
-            logger.warn(`Failed to assign initial yard to admin`, 'UserService', { 
+            logger.warn(`Failed to assign initial yard to admin`, 'UserService', {
               updateError,
               userId: userRecord.id,
               yardId: yardData.id
@@ -1981,7 +1981,7 @@ export class UserService {
           }
         }
       } catch (yardCreationError) {
-        logger.warn(`Error during initial yard creation`, 'UserService', { 
+        logger.warn(`Error during initial yard creation`, 'UserService', {
           yardCreationError,
           userId: userRecord.id
         });

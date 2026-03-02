@@ -16,7 +16,7 @@ SELECT
     END as address_structure,
     -- Check if billing address has proper structure (if exists)
     CASE 
-        WHEN billing_address IS NULL THEN 'N/A'
+        WHEN billing_address IS NULL THEN '-'
         WHEN billing_address ? 'street' AND billing_address ? 'city' AND billing_address ? 'state' AND billing_address ? 'zipCode' AND billing_address ? 'country' 
         THEN 'VALID'
         ELSE 'INVALID'

@@ -5,6 +5,7 @@
 
 import { GateInFormData } from '../components/Gates/types';
 import { GateInError } from './errorHandling';
+import { isValidContainer } from '@mykelcodes/container-number-validation';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -84,6 +85,23 @@ export class ValidationService {
       });
     }
 
+    // New check: ISO 6346
+    if (cleanNumber.length === 11 && /^[A-Z]{4}$/.test(letterPart) && /^[0-9]{7}$/.test(numberPart)) {
+      if (!isValidContainer(cleanNumber)) {
+        errors.push({
+          field: fieldName,
+          code: 'INVALID_CONTAINER_CHECKSUM',
+          message: 'Container number failed ISO 6346 check digit validation',
+          userMessage: 'Numéro de conteneur invalide (ISO 6346)'
+        });
+
+        // As a fallback directly alert the user as requested, if window is available
+        if (typeof window !== 'undefined') {
+          alert(`Le numéro de conteneur ${cleanNumber} est invalide selon la norme ISO 6346.`);
+        }
+      }
+    }
+
     // Check for common patterns that might indicate errors
     if (cleanNumber === cleanNumber.charAt(0).repeat(11)) {
       warnings.push({
@@ -111,10 +129,10 @@ export class ValidationService {
 
     // Check length - must be exactly 11 characters
     if (formattedNumber.length !== 11) {
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: `Must be exactly 11 characters (currently ${formattedNumber.length})`,
-        formattedNumber 
+        formattedNumber
       };
     }
 
@@ -123,25 +141,37 @@ export class ValidationService {
     const numberPart = formattedNumber.substring(4, 11);
 
     if (!/^[A-Z]{4}$/.test(letterPart)) {
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: 'First 4 characters must be letters (A-Z)',
-        formattedNumber 
+        formattedNumber
       };
     }
 
     if (!/^[0-9]{7}$/.test(numberPart)) {
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: 'Last 7 characters must be numbers (0-9)',
-        formattedNumber 
+        formattedNumber
       };
     }
 
-    return { 
-      isValid: true, 
+    // New check: ISO 6346
+    if (!isValidContainer(formattedNumber)) {
+      if (typeof window !== 'undefined') {
+        alert(`Le numéro de conteneur ${formattedNumber} est invalide selon la norme ISO 6346.`);
+      }
+      return {
+        isValid: false,
+        message: 'Numéro de conteneur invalide (ISO 6346)',
+        formattedNumber
+      };
+    }
+
+    return {
+      isValid: true,
       message: 'Valid format',
-      formattedNumber 
+      formattedNumber
     };
   }
 
@@ -169,7 +199,7 @@ export class ValidationService {
         });
       } else {
         const confirmationValidation = this.validateContainerNumber(
-          formData.containerNumberConfirmation, 
+          formData.containerNumberConfirmation,
           'containerNumberConfirmation'
         );
         errors.push(...confirmationValidation.errors);
@@ -197,7 +227,7 @@ export class ValidationService {
           });
         } else {
           const secondContainerValidation = this.validateContainerNumber(
-            formData.secondContainerNumber, 
+            formData.secondContainerNumber,
             'secondContainerNumber'
           );
           errors.push(...secondContainerValidation.errors);
@@ -224,7 +254,7 @@ export class ValidationService {
           });
         } else {
           const secondConfirmationValidation = this.validateContainerNumber(
-            formData.secondContainerNumberConfirmation, 
+            formData.secondContainerNumberConfirmation,
             'secondContainerNumberConfirmation'
           );
           errors.push(...secondConfirmationValidation.errors);
@@ -281,9 +311,9 @@ export class ValidationService {
         });
       } else {
         // Validate container type and size combinations
-        if (formData.containerType === 'high_cube' && formData.containerSize === '20ft') {
+        if (formData.isHighCube && formData.containerSize === '20ft') {
           errors.push({
-            field: 'containerType',
+            field: 'isHighCube',
             code: 'INVALID_COMBINATION',
             message: 'High-Cube containers are only available in 40ft size',
             userMessage: 'High-Cube containers are only available in 40ft size. Please select 40ft container size or choose a different container type.'
@@ -385,11 +415,11 @@ export class ValidationService {
     if (!step || step === 3) {
       // Stack assignment is now handled in pending operations, not during initial Gate In
       // No stack validation required for Step 3
-      
+
       // Final validation - ensure all previous steps are still valid
       const step1Validation = this.validateGateInForm(formData, 1, hasTimeTrackingAccess);
       const step2Validation = this.validateGateInForm(formData, 2, hasTimeTrackingAccess);
-      
+
       errors.push(...step1Validation.errors);
       errors.push(...step2Validation.errors);
       warnings.push(...step1Validation.warnings);

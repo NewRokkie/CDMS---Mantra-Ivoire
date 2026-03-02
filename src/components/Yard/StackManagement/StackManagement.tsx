@@ -385,7 +385,7 @@ export const StackManagement: React.FC = () => {
           }}
           selectedStack={selectedStack}
           onSubmit={handleSaveStack}
-          yard={currentYard}
+          yard={currentYard} existingStacks={stacks}
         />
       )}
 

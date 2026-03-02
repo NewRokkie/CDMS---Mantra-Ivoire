@@ -9,15 +9,15 @@ UPDATE yards
 SET
   timezone = 'Africa/Abidjan',
   contact_info = '{
-    "manager": "Unknown",
-    "phone": "N/A",
-    "email": "N/A"
+    "manager": "-",
+    "phone": "-",
+    "email": "-"
   }'::jsonb,
   address = '{
-    "street": "Unknown",
-    "city": "Unknown",
-    "state": "Unknown",
-    "zipCode": "Unknown",
-    "country": "Unknown"
+    "street": "-",
+    "city": "-",
+    "state": "-",
+    "zipCode": "-",
+    "country": "-"
   }'::jsonb
 WHERE timezone IS NULL OR contact_info IS NULL OR address IS NULL;

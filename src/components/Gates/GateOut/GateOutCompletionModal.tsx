@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Loader, Package, CheckCircle, AlertTriangle, Plus, Trash2, Calendar } from 'lucide-react';
 import { PendingGateOut } from '../types';
 import { validateContainerNumber, formatContainerNumberForDisplay } from '../utils';
-import { useGlobalStore } from '../../../store/useGlobalStore';
 import { Container } from '../../../types';
 import { useLanguage } from '../../../hooks/useLanguage';
+import { containerService } from '../../../services/api';
 
 // Local interface for ContainerInput since it's GateOut-specific
 interface ContainerInput {
@@ -42,7 +42,10 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   const { hasModuleAccess } = useAuth();
   const { t } = useLanguage();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
-  const { containers } = useGlobalStore();
+  
+  // Load containers directly from database instead of relying on global store
+  const [containers, setContainers] = useState<Container[]>([]);
+  const [loadingContainers, setLoadingContainers] = useState(false);
 
   const [containerInputs, setContainerInputs] = useState<ContainerInput[]>([
     { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '', containerData: null, isValidating: false }
@@ -52,6 +55,26 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   const [inConfirmation, setInConfirmation] = useState(false);
   const [error, setError] = useState<string>('');
   const [truckCapacityError, setTruckCapacityError] = useState<string>('');
+
+  // Load containers when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadContainers();
+    }
+  }, [isOpen]);
+
+  const loadContainers = async () => {
+    try {
+      setLoadingContainers(true);
+      const data = await containerService.getAll();
+      setContainers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to load containers:', error);
+      setContainers([]);
+    } finally {
+      setLoadingContainers(false);
+    }
+  };
 
   // Validate container against yard inventory
   const validateContainerInYard = (containerNumber: string): { isValid: boolean; message: string; container: Container | null } => {
@@ -63,26 +86,35 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
     const container = containers.find(c => c.number === containerNumber);
 
     if (!container) {
-      return { 
-        isValid: false, 
-        message: t('gate.out.error.containerNotFound'), 
-        container: null 
+      return {
+        isValid: false,
+        message: t('gate.out.error.containerNotFound'),
+        container: null
       };
     }
 
     // Check if container has 'in_depot' status
     if (container.status !== 'in_depot') {
-      return { 
-        isValid: false, 
-        message: t('gate.out.error.invalidStatus').replace('{status}', container.status), 
-        container 
+      return {
+        isValid: false,
+        message: t('gate.out.error.invalidStatus').replace('{status}', container.status),
+        container
       };
     }
 
-    return { 
-      isValid: true, 
-      message: 'Valid', 
-      container 
+    // Check if container belongs to the same client as the booking
+    if (operation && container.clientCode !== operation.clientCode) {
+      return {
+        isValid: false,
+        message: `Container belongs to client ${container.clientCode}, but booking is for ${operation.clientCode}`,
+        container
+      };
+    }
+
+    return {
+      isValid: true,
+      message: 'Valid',
+      container
     };
   };
 
@@ -119,60 +151,60 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
     }
   }, [operation?.id]);
 
- // Check truck capacity constraints
- const checkTruckCapacity = (inputs: ContainerInput[]): { isValid: boolean; error?: string } => {
-   const validInputs = inputs.filter(input => input.isValid);
+  // Check truck capacity constraints
+  const checkTruckCapacity = (inputs: ContainerInput[]): { isValid: boolean; error?: string } => {
+    const validInputs = inputs.filter(input => input.isValid);
 
-   if (validInputs.length === 0) return { isValid: true };
-   if (validInputs.length === 1) return { isValid: true };
+    if (validInputs.length === 0) return { isValid: true };
+    if (validInputs.length === 1) return { isValid: true };
 
-   // Check first container size
-   const firstContainerSize = getContainerSize(validInputs[0].containerData);
-   if (!firstContainerSize) return { isValid: true }; // Skip validation if size unknown
+    // Check first container size
+    const firstContainerSize = getContainerSize(validInputs[0].containerData);
+    if (!firstContainerSize) return { isValid: true }; // Skip validation if size unknown
 
-   // If first container is 40ft, no second container allowed
-   if (firstContainerSize === '40ft' && validInputs.length > 1) {
-     return {
-       isValid: false,
-       error: t('gate.out.truckRules.40ft')
-     };
-   }
+    // If first container is 40ft, no second container allowed
+    if (firstContainerSize === '40ft' && validInputs.length > 1) {
+      return {
+        isValid: false,
+        error: t('gate.out.truckRules.40ft')
+      };
+    }
 
-   // If first container is 20ft, check second container
-   if (firstContainerSize === '20ft' && validInputs.length === 2) {
-     const secondContainerSize = getContainerSize(validInputs[1].containerData);
-     if (!secondContainerSize) return { isValid: true }; // Skip validation if size unknown
+    // If first container is 20ft, check second container
+    if (firstContainerSize === '20ft' && validInputs.length === 2) {
+      const secondContainerSize = getContainerSize(validInputs[1].containerData);
+      if (!secondContainerSize) return { isValid: true }; // Skip validation if size unknown
 
-     if (secondContainerSize === '40ft') {
-       return {
-         isValid: false,
-         error: t('gate.out.truckRules.mix')
-       };
-     }
-   }
+      if (secondContainerSize === '40ft') {
+        return {
+          isValid: false,
+          error: t('gate.out.truckRules.mix')
+        };
+      }
+    }
 
-   return { isValid: true };
- };
+    return { isValid: true };
+  };
 
- // Check if second field should be enabled
- const shouldEnableSecondField = (): boolean => {
-   if (containerInputs.length < 1) return false;
+  // Check if second field should be enabled
+  const shouldEnableSecondField = (): boolean => {
+    if (containerInputs.length < 1) return false;
 
-   const firstInput = containerInputs[0];
-   if (!firstInput.isValid) return false;
+    const firstInput = containerInputs[0];
+    if (!firstInput.isValid) return false;
 
-   const firstContainerSize = getContainerSize(firstInput.containerData);
-   // Only enable second field if first container is 20ft
-   return firstContainerSize === '20ft';
- };
+    const firstContainerSize = getContainerSize(firstInput.containerData);
+    // Only enable second field if first container is 20ft
+    return firstContainerSize === '20ft';
+  };
 
- // Get maximum allowed containers based on first container
- const getMaxContainers = (): number => {
-   if (containerInputs.length === 0 || !containerInputs[0].isValid) return 2;
+  // Get maximum allowed containers based on first container
+  const getMaxContainers = (): number => {
+    if (containerInputs.length === 0 || !containerInputs[0].isValid) return 2;
 
-   const firstContainerSize = getContainerSize(containerInputs[0].containerData);
-   return firstContainerSize === '40ft' ? 1 : 2;
- };
+    const firstContainerSize = getContainerSize(containerInputs[0].containerData);
+    return firstContainerSize === '40ft' ? 1 : 2;
+  };
   if (!isOpen || !operation) return null;
 
   const handleContainerNumberChange = (index: number, value: string) => {
@@ -199,13 +231,13 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
 
         // First validate format
         const formatValidation = validateContainerNumber(validValue);
-        
+
         if (validValue.length === 11 && formatValidation.isValid) {
           // Then validate against yard inventory
           const yardValidation = validateContainerInYard(validValue);
           newInputs[index].validationMessage = yardValidation.message;
           newInputs[index].containerData = yardValidation.container;
-          
+
           // Don't mark as valid yet - need confirmation
           if (!yardValidation.isValid) {
             newInputs[index].isValid = false;
@@ -243,7 +275,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
         const formatValidation = validateContainerNumber(newInputs[index].containerNumber);
         const yardValidation = validateContainerInYard(newInputs[index].containerNumber);
         const matches = newInputs[index].containerNumber === validValue;
-        
+
         // Container is valid only if: format is valid, exists in yard with 'in_depot' status, and confirmation matches
         newInputs[index].isValid = formatValidation.isValid && yardValidation.isValid && matches;
 
@@ -259,34 +291,34 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   const addContainerField = () => {
     const maxContainers = getMaxContainers();
     if (containerInputs.length < maxContainers) {
-       setContainerInputs(prev => [
-         ...prev,
-         { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '', containerData: null, isValidating: false }
-       ]);
-     }
-   };
+      setContainerInputs(prev => [
+        ...prev,
+        { containerNumber: '', confirmContainerNumber: '', isValid: false, validationMessage: '', containerData: null, isValidating: false }
+      ]);
+    }
+  };
 
   const removeContainerField = (index: number) => {
     if (containerInputs.length > 1) {
-     setContainerInputs(prev => {
-       const newInputs = prev.filter((_, i) => i !== index);
-       // Check truck capacity after removal
-       const capacityCheck = checkTruckCapacity(newInputs);
-       setTruckCapacityError(capacityCheck.error || '');
-       return newInputs;
-     });
+      setContainerInputs(prev => {
+        const newInputs = prev.filter((_, i) => i !== index);
+        // Check truck capacity after removal
+        const capacityCheck = checkTruckCapacity(newInputs);
+        setTruckCapacityError(capacityCheck.error || '');
+        return newInputs;
+      });
     }
   };
 
   const handleSubmit = () => {
     setError('');
 
-   // Check truck capacity constraints
-   const capacityCheck = checkTruckCapacity(containerInputs);
-   if (!capacityCheck.isValid) {
-     setError(capacityCheck.error || 'Truck capacity exceeded');
-     return;
-   }
+    // Check truck capacity constraints
+    const capacityCheck = checkTruckCapacity(containerInputs);
+    if (!capacityCheck.isValid) {
+      setError(capacityCheck.error || 'Truck capacity exceeded');
+      return;
+    }
 
     const validContainers = containerInputs.filter(input => input.isValid);
 
@@ -295,10 +327,10 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
       return;
     }
 
-   if (validContainers.length > 2) {
-     setError('Truck capacity exceeded: Maximum 2 containers per truck.');
-     return;
-   }
+    if (validContainers.length > 2) {
+      setError('Truck capacity exceeded: Maximum 2 containers per truck.');
+      return;
+    }
 
     const containerNumbers = validContainers.map(input => input.containerNumber);
     onComplete(operation, containerNumbers);
@@ -309,8 +341,8 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
     // Only check that valid containers are properly validated, allow empty optional fields
     const validInputs = containerInputs.filter(input => input.containerNumber.trim() !== '');
     return validInputs.length > 0 &&
-           validInputs.every(input => input.isValid) &&
-           capacityCheck.isValid;
+      validInputs.every(input => input.isValid) &&
+      capacityCheck.isValid;
   };
 
   return (
@@ -350,19 +382,19 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div>
                   <span className="text-blue-700">{t('nav.bookingReference')}:</span>
-                  <div className="font-medium break-all">{operation.bookingNumber || 'N/A'}</div>
+                  <div className="font-medium break-all">{operation.bookingNumber || '-'}</div>
                 </div>
                 <div>
                   <span className="text-blue-700">{t('common.client')}:</span>
-                  <div className="font-medium break-words">{operation.clientName || 'Unknown Client'}</div>
+                  <div className="font-medium break-words">{operation.clientName || '-'}</div>
                 </div>
                 <div>
                   <span className="text-blue-700">{t('gate.out.form.driver')}:</span>
-                  <div className="font-medium break-words">{operation.driverName || 'N/A'}</div>
+                  <div className="font-medium break-words">{operation.driverName || '-'}</div>
                 </div>
                 <div>
                   <span className="text-blue-700">{t('gate.out.form.vehicle')}:</span>
-                  <div className="font-medium break-all">{operation.truckNumber || 'N/A'}</div>
+                  <div className="font-medium break-all">{operation.truckNumber || '-'}</div>
                 </div>
               </div>
             </div>
@@ -373,14 +405,14 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                 <h4 className="font-semibold text-gray-900 text-sm sm:text-base">{t('gate.out.completion.containers')}</h4>
                 <div className="flex items-center space-x-2">
                   <span className="text-xs sm:text-sm text-gray-600">
-                   {containerInputs.filter(input => input.isValid).length}/{Math.min(getMaxContainers(), 2)} {t('common.containers')}
+                    {containerInputs.filter(input => input.isValid).length}/{Math.min(getMaxContainers(), 2)} {t('common.containers')}
                   </span>
-                 {containerInputs.length < getMaxContainers() && shouldEnableSecondField() && (
+                  {containerInputs.length < getMaxContainers() && shouldEnableSecondField() && (
                     <button
                       type="button"
                       onClick={addContainerField}
                       className="p-2 sm:p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors touch-target"
-                     title="Add second 20ft container"
+                      title="Add second 20ft container"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -388,50 +420,48 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                 </div>
               </div>
 
-             {/* Truck Capacity Info */}
-             <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-               <div className="flex items-center space-x-2 mb-2">
-                 <Package className="h-4 w-4 text-blue-600" />
-                 <span className="text-sm font-medium text-blue-900">{t('gate.out.truckRules.title')}</span>
-               </div>
-               <div className="text-xs text-blue-800 space-y-1">
-                 <div>• {t('gate.out.truckRules.40ft')}</div>
-                 <div>• {t('gate.out.truckRules.20ft')}</div>
-                 <div>• {t('gate.out.truckRules.mix')}</div>
-               </div>
-             </div>
+              {/* Truck Capacity Info */}
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Package className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">{t('gate.out.truckRules.title')}</span>
+                </div>
+                <div className="text-xs text-blue-800 space-y-1">
+                  <div>• {t('gate.out.truckRules.40ft')}</div>
+                  <div>• {t('gate.out.truckRules.20ft')}</div>
+                  <div>• {t('gate.out.truckRules.mix')}</div>
+                </div>
+              </div>
 
-             {/* Truck Capacity Error */}
-             {truckCapacityError && (
-               <div className="flex items-start p-3 bg-red-50 border border-red-200 rounded-lg">
-                 <AlertTriangle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
-                 <p className="text-xs sm:text-sm text-red-800 leading-relaxed">{truckCapacityError}</p>
-               </div>
-             )}
+              {/* Truck Capacity Error */}
+              {truckCapacityError && (
+                <div className="flex items-start p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs sm:text-sm text-red-800 leading-relaxed">{truckCapacityError}</p>
+                </div>
+              )}
               {containerInputs.map((input, index) => (
-               <div key={index} className={`space-y-3 p-3 sm:p-4 border rounded-lg transition-all duration-200 ${
-                 index === 1 && !shouldEnableSecondField()
-                   ? 'border-gray-200 bg-gray-50 opacity-50'
-                   : 'border-gray-200'
-               }`}>
+                <div key={index} className={`space-y-3 p-3 sm:p-4 border rounded-lg transition-all duration-200 ${index === 1 && !shouldEnableSecondField()
+                    ? 'border-gray-200 bg-gray-50 opacity-50'
+                    : 'border-gray-200'
+                  }`}>
                   <div className="flex items-center justify-between">
-                   <div className="flex items-center space-x-2">
-                     <h5 className="font-medium text-gray-900 text-sm sm:text-base">{t('common.container')} {index + 1}</h5>
-                     {index === 0 && containerInputs[0].isValid && containerInputs[0].containerData && (
-                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                         getContainerSize(containerInputs[0].containerData) === '40ft'
-                           ? 'bg-orange-100 text-orange-800'
-                           : 'bg-blue-100 text-blue-800'
-                       }`}>
-                         {getContainerSize(containerInputs[0].containerData)}
-                       </span>
-                     )}
-                     {index === 1 && !shouldEnableSecondField() && (
-                       <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                         {t('gate.out.truckRules.disabled40ft')}
-                       </span>
-                     )}
-                   </div>
+                    <div className="flex items-center space-x-2">
+                      <h5 className="font-medium text-gray-900 text-sm sm:text-base">{t('common.container')} {index + 1}</h5>
+                      {index === 0 && containerInputs[0].isValid && containerInputs[0].containerData && (
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getContainerSize(containerInputs[0].containerData) === '40ft'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-blue-100 text-blue-800'
+                          }`}>
+                          {getContainerSize(containerInputs[0].containerData)}
+                        </span>
+                      )}
+                      {index === 1 && !shouldEnableSecondField() && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                          {t('gate.out.truckRules.disabled40ft')}
+                        </span>
+                      )}
+                    </div>
                     {containerInputs.length > 1 && (
                       <button
                         type="button"
@@ -451,27 +481,26 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                       <div className="relative">
                         <input
                           type={inConfirmation ? 'password' : 'text'}
-                          onFocus={()=> setInConfirmation(false)}
-                          onBlur={()=> setInConfirmation(true)}
+                          onFocus={() => setInConfirmation(false)}
+                          onBlur={() => setInConfirmation(true)}
                           required
                           value={input.containerNumber}
                           onChange={(e) => handleContainerNumberChange(index, e.target.value)}
-                         disabled={index === 1 && !shouldEnableSecondField()}
-                          className={`form-input w-full pr-20 ${
-                           index === 1 && !shouldEnableSecondField()
-                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed py-4 sm:py-3'
-                             :
-                            input.containerNumber && !validateContainerNumber(input.containerNumber).isValid
-                              ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500 py-4 sm:py-3'
-                              : input.containerNumber && validateContainerNumber(input.containerNumber).isValid
-                              ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500 py-4 sm:py-3'
-                              : 'py-4 sm:py-3'
-                          }`}
-                         placeholder={index === 0 ? "e.g., MSKU1234567" : "Second container (20ft only)"}
+                          disabled={index === 1 && !shouldEnableSecondField()}
+                          className={`form-input w-full pr-20 ${index === 1 && !shouldEnableSecondField()
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed py-4 sm:py-3'
+                              :
+                              input.containerNumber && !validateContainerNumber(input.containerNumber).isValid
+                                ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500 py-4 sm:py-3'
+                                : input.containerNumber && validateContainerNumber(input.containerNumber).isValid
+                                  ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500 py-4 sm:py-3'
+                                  : 'py-4 sm:py-3'
+                            }`}
+                          placeholder={index === 0 ? "e.g., MSKU1234567" : "Second container (20ft only)"}
                           maxLength={11}
                         />
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                         {input.containerNumber && !(index === 1 && !shouldEnableSecondField()) && (
+                          {input.containerNumber && !(index === 1 && !shouldEnableSecondField()) && (
                             validateContainerNumber(input.containerNumber).isValid ? (
                               <CheckCircle className="h-5 w-5 sm:h-4 sm:w-4 text-green-500" />
                             ) : (
@@ -480,11 +509,11 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                           )}
                         </div>
                       </div>
-                     {index === 1 && !shouldEnableSecondField() && (
-                       <p className="text-xs text-gray-500 mt-1">
-                         Second field disabled: First container is 40ft (truck at full capacity)
-                       </p>
-                     )}
+                      {index === 1 && !shouldEnableSecondField() && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Second field disabled: First container is 40ft (truck at full capacity)
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -494,26 +523,25 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
                       <div className="relative">
                         <input
                           type="text"
-                          onFocus={()=> setInConfirmation(true)}
+                          onFocus={() => setInConfirmation(true)}
                           required
                           value={input.confirmContainerNumber}
                           onChange={(e) => handleConfirmContainerNumberChange(index, e.target.value)}
-                         disabled={index === 1 && !shouldEnableSecondField()}
-                          className={`form-input w-full pr-10 ${
-                           index === 1 && !shouldEnableSecondField()
-                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed py-4 sm:py-3'
-                             :
-                            input.confirmContainerNumber && input.containerNumber !== input.confirmContainerNumber
-                              ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500 py-4 sm:py-3'
-                              : input.confirmContainerNumber && input.containerNumber === input.confirmContainerNumber && validateContainerNumber(input.containerNumber).isValid
-                              ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500 py-4 sm:py-3'
-                              : 'py-4 sm:py-3'
-                          }`}
+                          disabled={index === 1 && !shouldEnableSecondField()}
+                          className={`form-input w-full pr-10 ${index === 1 && !shouldEnableSecondField()
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed py-4 sm:py-3'
+                              :
+                              input.confirmContainerNumber && input.containerNumber !== input.confirmContainerNumber
+                                ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500 py-4 sm:py-3'
+                                : input.confirmContainerNumber && input.containerNumber === input.confirmContainerNumber && validateContainerNumber(input.containerNumber).isValid
+                                  ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500 py-4 sm:py-3'
+                                  : 'py-4 sm:py-3'
+                            }`}
                           placeholder={t('gate.out.completion.confirm')}
                           maxLength={11}
                         />
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                         {input.confirmContainerNumber && !(index === 1 && !shouldEnableSecondField()) && (
+                          {input.confirmContainerNumber && !(index === 1 && !shouldEnableSecondField()) && (
                             input.containerNumber === input.confirmContainerNumber && validateContainerNumber(input.containerNumber).isValid ? (
                               <CheckCircle className="h-5 w-5 sm:h-4 sm:w-4 text-green-500" />
                             ) : (
@@ -647,7 +675,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="text-xs sm:text-sm text-gray-600 hidden sm:block">
-             {containerInputs.filter(input => input.isValid).length} of {Math.min(getMaxContainers(), 2)} containers ready
+              {containerInputs.filter(input => input.isValid).length} of {Math.min(getMaxContainers(), 2)} containers ready
             </div>
             <div className="flex items-center gap-2 ml-auto">
               <button

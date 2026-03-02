@@ -724,25 +724,7 @@ export class StackService {
     // Store the original container size before update
     const originalContainerSize = currentStack.containerSize;
 
-    // Check for existing 40ft containers on this stack
-    const { data: containersOnStack, error: containerCheckError } = await supabase
-      .from('containers')
-      .select('id, number, size, location')
-      .eq('yard_id', yardId)
-      .in('status', ['in_depot', 'gate_in'])
-      .ilike('location', `S${String(stackNumber).padStart(2, '0')}%`);
-
-    if (containerCheckError) throw containerCheckError;
-
-    // Check if trying to change FROM 40ft to 20ft while containers exist
-    if (originalContainerSize === '40ft' && newSize === '20ft' && containersOnStack && containersOnStack.length > 0) {
-      const has40ftContainers = containersOnStack.some(c => c.size === '40ft' || c.size === '40FT');
-      if (has40ftContainers) {
-        throw new Error(`Cannot change stack S${String(stackNumber).padStart(2, '0')} from 40ft to 20ft. There are ${containersOnStack.filter(c => c.size === '40ft' || c.size === '40FT').length} 40ft container(s) currently stored on this stack. Please relocate them first.`);
-      }
-    }
-
-    // Get pairing information from stack_pairings table
+    // Get pairing information from stack_pairings table FIRST
     const { data: pairingData } = await supabase
       .from('stack_pairings')
       .select('*')
@@ -750,6 +732,49 @@ export class StackService {
       .or(`first_stack_number.eq.${stackNumber},second_stack_number.eq.${stackNumber}`)
       .eq('is_active', true)
       .maybeSingle();
+
+    // When changing FROM 40ft to 20ft, check ALL related locations for containers
+    if (originalContainerSize === '40ft' && newSize === '20ft') {
+      const stacksToCheck: number[] = [stackNumber];
+      
+      // If this stack is part of a pairing, we need to check:
+      // 1. The current stack (e.g., S03)
+      // 2. The paired stack (e.g., S05)
+      // 3. The virtual stack (e.g., S04)
+      if (pairingData) {
+        const pairedStackNumber = pairingData.first_stack_number === stackNumber
+          ? pairingData.second_stack_number
+          : pairingData.first_stack_number;
+        const virtualStackNumber = pairingData.virtual_stack_number;
+        
+        stacksToCheck.push(pairedStackNumber);
+        if (virtualStackNumber) {
+          stacksToCheck.push(virtualStackNumber);
+        }
+      }
+
+      // Check for containers on ALL related stacks
+      let containersOnStacks: any[] = [];
+      for (const stackNum of stacksToCheck) {
+        const { data, error } = await supabase
+          .from('containers')
+          .select('id, number, size, location')
+          .eq('yard_id', yardId)
+          .in('status', ['in_depot', 'gate_in'])
+          .ilike('location', `S${String(stackNum).padStart(2, '0')}%`);
+
+        if (error) throw error;
+        if (data) {
+          containersOnStacks.push(...data);
+        }
+      }
+
+      if (containersOnStacks && containersOnStacks.length > 0) {
+        const containerCount = containersOnStacks.length;
+        const stackList = stacksToCheck.map(num => `S${String(num).padStart(2, '0')}`).join(', ');
+        throw new Error(`Cannot change stack configuration from 40ft to 20ft. There are ${containerCount} container(s) currently stored on related stacks (${stackList}). Please relocate all containers first.`);
+      }
+    }
 
     // Update the current stack
     const { data, error } = await supabase

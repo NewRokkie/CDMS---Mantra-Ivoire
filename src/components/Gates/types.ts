@@ -155,6 +155,7 @@ export interface PendingGateOut {
   id: string;
   date: Date;
   bookingNumber: string;
+  bookingReferenceId?: string; // ID of the booking reference
   clientCode: string;
   clientName: string;
   bookingType: 'IMPORT' | 'EXPORT';

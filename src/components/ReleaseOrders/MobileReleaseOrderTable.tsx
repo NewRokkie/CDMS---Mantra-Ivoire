@@ -4,7 +4,6 @@ import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { safeToLocaleDateString } from '../../utils/dateHelpers';
 import { TableSkeleton } from '../Common/TableSkeleton';
-import { LoadingSpinner } from '../Common/LoadingSpinner';
 
 interface MobileReleaseOrderTableProps {
   orders: BookingReference[];
@@ -92,7 +91,7 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
 
   const formatDate = (date: Date | string) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    if (!dateObj || isNaN(dateObj.getTime())) return 'N/A';
+    if (!dateObj || isNaN(dateObj.getTime())) return '-';
     return dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -294,9 +293,8 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                         {order.bookingNumber || order.id}
                       </span>
                       {order.bookingType && (
-                        <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
-                          order.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                        }`}>
+                        <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${order.bookingType === 'IMPORT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                          }`}>
                           {order.bookingType}
                         </span>
                       )}

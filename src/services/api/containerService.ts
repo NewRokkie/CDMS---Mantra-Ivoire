@@ -13,6 +13,7 @@ export class ContainerService {
         clients!containers_client_id_fkey(name, code),
         gate_in_operations(edi_transmitted, edi_transmission_date, edi_error_message, transport_company)
       `)
+      .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 
     if (error) throw error;

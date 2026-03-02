@@ -125,7 +125,7 @@ export const ReleaseOrderList: React.FC = () => {
   const handleExportBookings = async () => {
     // Get user names for createdBy UUIDs
     const userNamesMap = new Map<string, string>();
-    
+
     for (const order of filteredOrders) {
       if (order.createdBy && !userNamesMap.has(order.createdBy)) {
         try {
@@ -248,11 +248,10 @@ export const ReleaseOrderList: React.FC = () => {
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
-                    selectedFilter === filter
+                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${selectedFilter === filter
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                  }`}
+                    }`}
                 >
                   {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('releases.inProcess') : t(`common.status.${filter}`)}
                 </button>
@@ -324,7 +323,16 @@ export const ReleaseOrderList: React.FC = () => {
             try {
               if (isEditMode && selectedOrder) {
                 // Update existing booking
-                const updated = await bookingReferenceService.update(selectedOrder.id, data);
+                const currentRemaining = selectedOrder.remainingContainers ?? selectedOrder.totalContainers;
+                const processedContainers = selectedOrder.totalContainers - currentRemaining;
+                const newRemainingContainers = Math.max(0, data.totalContainers - processedContainers);
+
+                const updateData = {
+                  ...data,
+                  remainingContainers: newRemainingContainers
+                };
+
+                const updated = await bookingReferenceService.update(selectedOrder.id, updateData);
                 setReleaseOrders(prev =>
                   prev.map(order => order.id === updated.id ? updated : order)
                 );
