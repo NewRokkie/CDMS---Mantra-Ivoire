@@ -560,6 +560,7 @@ export class GateService {
       for (const container of validContainers) {
         await containerService.update(container.id, {
           status: 'out_depot',
+          location: null, // Clear location when container leaves depot
           gateOutDate: new Date(),
           updatedBy: data.operatorName
         });
@@ -703,6 +704,7 @@ export class GateService {
 
         await containerService.update(containerId, {
           status: containerStatus, // Status 03: Gate Out (pending) or 04: Out Depot (completed)
+          location: containerStatus === 'out_depot' ? null : undefined, // Clear location only when fully out of depot (confirmed)
           gateOutDate: newStatus === 'completed' ? new Date() : undefined,
           updatedBy: data.operatorName
         });
@@ -757,6 +759,7 @@ export class GateService {
           if (container && container.status === 'gate_out') {
             await containerService.update(containerId, {
               status: 'out_depot',
+              location: null, // Clear location when container leaves depot
               gateOutDate: new Date(),
               updatedBy: data.operatorName
             });

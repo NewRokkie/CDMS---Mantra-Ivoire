@@ -209,7 +209,7 @@ export interface Container {
   isHighCube?: boolean; // High cube variant (e.g. Dry 40ft HC = 45G1), from Gate In
   status: 'gate_in' | 'in_depot' | 'gate_out' | 'out_depot' | 'maintenance' | 'cleaning';
   fullEmpty?: 'FULL' | 'EMPTY'; // Full or Empty status
-  location: string;
+  location: string | null; // Location can be null when container is out of depot
   yardId?: string; // Add yard ID for direct relations
   yardPosition?: YardPosition;
   gateInDate?: Date;

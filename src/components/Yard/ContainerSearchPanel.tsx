@@ -39,7 +39,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
       .filter(container =>
         container.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         container.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        container.location.toLowerCase().includes(searchTerm.toLowerCase())
+        (container.location && container.location.toLowerCase().includes(searchTerm.toLowerCase()))
       )
       .slice(0, 10);
   }, [containers, searchTerm]);
@@ -110,7 +110,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
                   <div>
                     <div className="font-medium text-gray-900">{container.number}</div>
                     <div className="text-sm text-gray-600">
-                      {canViewAllData ? container.clientName : 'Your Company'} • {container.location}
+                      {canViewAllData ? container.clientName : 'Your Company'} • {container.location || '-'}
                     </div>
                   </div>
                   {getStatusBadge(container.status)}

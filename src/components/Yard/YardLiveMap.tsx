@@ -8,6 +8,9 @@ import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
 
 // Helper function to calculate virtual location for 40ft containers
 const getVirtualLocation = (container: Container, getStackConfiguration: (stackNum: number) => any): string => {
+  // If container has no location (e.g., out_depot), return a placeholder
+  if (!container.location) return 'N/A';
+  
   // Handle both formats: "S01-R3-H3" and "S01R3H3"
   const match = container.location.match(/S(\d+)[-]?R(\d+)[-]?H(\d+)/);
   if (!match) return container.location;
@@ -208,17 +211,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const handleSearchChange = (value: string) => {
     const validated = validateContainerInput(value);
     setSearchTerm(validated);
-
-    if (validated.length >= 2) {
-      const suggestions = allContainers.filter(c =>
-        c.number.toUpperCase().startsWith(validated)
-      ).slice(0, 5);
-      setSearchSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
-    } else {
-      setSearchSuggestions([]);
-      setShowSuggestions(false);
-    }
   };
 
   const filteredContainers = useMemo(() => {
@@ -240,10 +232,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       }
     } else {
       // For 'all' status, include containers that are physically in the yard
-      // This includes: gate_in, in_depot, maintenance, cleaning
+      // This includes: gate_in, in_depot, gate_out (still has location), maintenance, cleaning
+      // Excludes: out_depot (confirmed exit, no location)
       filtered = filtered.filter(c =>
         c.status === 'gate_in' ||
         c.status === 'in_depot' ||
+        c.status === 'gate_out' ||
         c.status === 'maintenance' ||
         c.status === 'cleaning'
       );
@@ -255,6 +249,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         const stackNumbers = section.stacks.map(s => s.stackNumber);
         filtered = filtered.filter(c => {
           // Handle both formats: "S01-R3-H3" and "S01R3H3"
+          if (!c.location) return false;
           const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
           return match && stackNumbers.includes(parseInt(match[1]));
         });
@@ -266,11 +261,26 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   const searchedContainer = useMemo(() => {
     if (!searchTerm.trim()) return null;
-    const found = allContainers.find(c =>
+    // Only search in containers that are physically in the yard (filteredContainers)
+    const found = filteredContainers.find(c =>
       c.number.toUpperCase() === searchTerm.toUpperCase()
     );
     return found || null;
-  }, [allContainers, searchTerm]);
+  }, [filteredContainers, searchTerm]);
+
+  // Update search suggestions based on filteredContainers (only containers in yard)
+  useEffect(() => {
+    if (searchTerm.length >= 2) {
+      const suggestions = filteredContainers.filter(c =>
+        c.number.toUpperCase().startsWith(searchTerm.toUpperCase())
+      ).slice(0, 5);
+      setSearchSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchTerm, filteredContainers]);
 
   useEffect(() => {
     if (highlightedStacks.length > 0) {
@@ -283,6 +293,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   const scrollToContainer = () => {
     if (!searchedContainer) return;
+
+    // If container has no location (e.g., out_depot), don't try to scroll
+    if (!searchedContainer.location) return;
 
     const match = searchedContainer.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
     if (!match) return;
@@ -411,6 +424,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           const virtualContainers = filteredContainers.filter(c => {
             // Include 40ft containers from paired physical stacks (S03, S05) OR virtual location (S04)
             if (c.size !== '40ft') return false;
+            if (!c.location) return false;
             const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
             const stackNum = match ? parseInt(match[1]) : null;
             return stackNum !== null && (pairedStackNumbers.includes(stackNum) || stackNum === stack.stackNumber);
@@ -531,6 +545,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
           const all40ftContainers = filteredContainers.filter(c => {
             if (c.size !== '40ft') return false;
+            if (!c.location) return false;
             const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
             const stackNum = match ? parseInt(match[1]) : null;
             return stackNum !== null && (bothStackNumbers.includes(stackNum) || stackNum === pairedVirtualStackNumber);
@@ -581,6 +596,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         // Regular stack processing (for 20ft stacks or unpaired stacks)
         const stackContainers = filteredContainers.filter(c => {
           // Handle both formats: "S01-R3-H3" and "S01R3H3"
+          if (!c.location) return false;
           const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
           return match && parseInt(match[1]) === stack.stackNumber;
         });
@@ -668,6 +684,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             const bothStackNumbers = [stackViz.stackNumber, pairedPhysicalStack.stackNumber];
             const virtual40ftContainers = filteredContainers.filter(c => {
               if (c.size !== '40ft') return false;
+              if (!c.location) return false;
               const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
               const stackNum = match ? parseInt(match[1]) : null;
               return stackNum !== null && (bothStackNumbers.includes(stackNum) || stackNum === virtualStackNumber);

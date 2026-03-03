@@ -2,9 +2,10 @@ import React from 'react';
 import { Package, Truck, FileText, AlertTriangle, CheckCircle, Clock, Building } from 'lucide-react';
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../hooks/useLanguage';
 import { getDaysBetween } from '../../utils/dateHelpers';
-import { formatContainerNumberForDisplay } from '../Gates/utils';
 import { DataDisplayModal } from '../Common/Modal/DataDisplayModal';
+import { getContainerLocationDisplay } from '../../utils/containerLocationDisplay';
 
 interface ContainerViewModalProps {
   container: Container;
@@ -18,6 +19,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
   isOpen
 }) => {
   const { canViewAllData } = useAuth();
+  const { language } = useLanguage();
 
   const getStatusIcon = (status: Container['status']) => {
     switch (status) {
@@ -78,9 +80,9 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     title: 'Container Information',
     icon: Package,
     data: {
-      containerNumber: formatContainerNumberForDisplay(container.number),
+      containerNumber: container.number,
       type: `${container.type.charAt(0).toUpperCase() + container.type.slice(1)} • ${container.size}`,
-      currentLocation: container.location || '-',
+      currentLocation: getContainerLocationDisplay(container, language),
       gateInDate: container.gateInDate?.toLocaleString() || '-',
       gateOutDate: container.gateOutDate?.toLocaleString() || '-',
       daysInDepot: container.gateInDate
@@ -166,7 +168,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Container Details"
-      subtitle={formatContainerNumberForDisplay(container.number)}
+      subtitle={container.number}
       icon={Package}
       size="lg"
       sections={sections}

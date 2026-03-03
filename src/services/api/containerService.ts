@@ -174,10 +174,12 @@ export class ContainerService {
       if (updates.bookingReference !== undefined) updateData.booking_reference = updates.bookingReference;
       if (updates.updatedBy) updateData.updated_by = updates.updatedBy;
 
-      // Handle location changes - release old location if status changes to out_depot
+      // Handle location changes - release old location ONLY when status changes to out_depot (confirmed exit)
       // Requirements: 4.3 - Ensure container status changes properly update location availability
-      if (updates.status === 'out_depot' && currentContainer.status === 'in_depot') {
-        // Container is leaving depot - release location if it has one
+      // Note: We don't release location for gate_out status to allow rollback if there's an error
+      if (updates.status === 'out_depot' && 
+          (currentContainer.status === 'in_depot' || currentContainer.status === 'gate_out')) {
+        // Container has left depot - release location if it has one
         if (currentContainer.location) {
           await this.releaseContainerLocation(id, currentContainer.location);
         }

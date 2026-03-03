@@ -20,6 +20,7 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 import { containerTypeOptions } from '../Gates/constants';
+import { getContainerLocationDisplay, getContainerLocationClass } from '../../utils/containerLocationDisplay';
 
 // Get ISO code from type + size + isHighCube (matches Gate In / EDI codes)
 function getContainerIsoCode(type: string, size: string, isHighCube?: boolean): string {
@@ -138,7 +139,7 @@ export const ContainerList: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
   const toast = useToast();
@@ -857,12 +858,10 @@ function filterTable(){
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(container.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {container.location && container.location !== 'Pending Assignment' ? (
-                      <strong>{container.location}</strong>
-                    ) : (
-                      <span className="text-gray-400 italic">Pending</span>
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={getContainerLocationClass(container)}>
+                      {getContainerLocationDisplay(container, language)}
+                    </span>
                   </td>
                   {canViewAllData() && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
