@@ -143,13 +143,13 @@ class EDIManagementServiceImpl {
     return this.processEDITransmissionAsync(data);
   }
 
-  async processGateOut(containerData: Omit<EDIContainerData, 'status'>): Promise<EDITransmissionLog | null> {
+  async processGateOut(containerData: Omit<EDIContainerData, 'status'> & { operationId?: string }): Promise<EDITransmissionLog | null> {
     const data: EDIContainerData = { ...containerData, status: 'GATE_OUT' };
     
     // Utiliser le service de données réelles pour traiter l'EDI
     try {
       const result = await ediRealDataService.processRealGateOutEDI(
-        `gate_out_${Date.now()}`, // operationId simulé
+        containerData.operationId || `gate_out_${Date.now()}`, // Use real operationId if provided, fallback to generated ID
         containerData.containerNumber, // bookingNumber
         containerData.clientCode || containerData.clientName
       );

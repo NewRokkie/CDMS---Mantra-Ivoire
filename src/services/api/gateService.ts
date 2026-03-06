@@ -888,7 +888,7 @@ export class GateService {
 
       // Calculate new booking remaining containers
       const newBookingRemaining = currentBooking.remainingContainers - data.containerIds.length;
-      const bookingStatus = newBookingRemaining === 0 ? 'completed' : 'in_process';
+      const bookingStatus = newBookingRemaining === 0 ? 'completed' : 'active';
 
       // Update booking reference with new remaining count
       await bookingReferenceService.update(currentOp.release_order_id, {
