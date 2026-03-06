@@ -101,11 +101,22 @@ export const ContainerTypeSelect: React.FC<ContainerTypeSelectProps> = ({ value,
   const selectedOption = dropdownOptions.find(opt => opt.value === value && (opt as any).iso === selectedIso) || dropdownOptions.find(opt => opt.value === value);
 
   // If current selection is not available for the new size/high cube combo, reset to default
+  // OR if the ISO code doesn't match the current size/HC combo, update it
   React.useEffect(() => {
-    if (value && !dropdownOptions.find(opt => opt.value === value)) {
-      onChange(dropdownOptions[0]?.value || ''); // Default to first available
+    const currentOption = dropdownOptions.find(opt => opt.value === value);
+    
+    if (value && !currentOption) {
+      // Type not available for this size/HC combo - reset to first available
+      const firstOption = dropdownOptions[0];
+      if (firstOption && (firstOption as any).iso) {
+        onChange(firstOption.value, (firstOption as any).iso);
+      }
+    } else if (currentOption && (currentOption as any).iso && (currentOption as any).iso !== selectedIso) {
+      // Type is available but ISO code doesn't match - update ISO code
+      // Only update if the new ISO code is different to avoid infinite loops
+      onChange(value, (currentOption as any).iso);
     }
-  }, [containerSize, isHighCube, value, onChange, dropdownOptions]);
+  }, [containerSize, isHighCube, value]);
 
   return (
     <div className="relative">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Package, AlertTriangle, Truck, Calendar, User } from 'lucide-react';
+import { Package, AlertTriangle, Truck, Calendar } from 'lucide-react';
 import { handleError } from '../../services/errorHandling';
 import { containerService } from '../../services/api';
 import { bufferZoneService } from '../../services/api';
@@ -17,7 +17,7 @@ interface BufferZoneContainer {
   assignedLocation: string;
   assignedStack: string;
   bufferStackName: string;
-  createdAt: Date;
+  createdAt: Date | string;
   daysInBuffer: number;
 }
 
@@ -58,22 +58,24 @@ export const BufferZoneManagement: React.FC = () => {
       
       for (const entry of bufferEntries) {
         const container = containerMap.get(entry.containerId);
+        const createdAtDate = new Date(entry.createdAt);
         if (container) {
           bufferContainers.push({
             id: container.id,
             containerNumber: container.number,
             containerSize: container.size,
             containerType: container.type,
-            clientName: container.clientName,
-            clientCode: container.clientCode,
+            clientName: container.clientName || '—',
+            clientCode: container.clientCode || '—',
             transporter: container.transporter || '—',
             damageType: entry.damageType || 'General',
             damageDescription: entry.damageDescription || '—',
             assignedLocation: container.location || '—',  // Use container.location instead of entry.assignedLocation
-            assignedStack: entry.assignedStack || '—',
+            // BufferZoneEntry does not expose an assignedStack field, so use buffer stack info instead
+            assignedStack: entry.bufferStackName || (entry.bufferStackNumber ? `S${entry.bufferStackNumber}` : '—'),
             bufferStackName: entry.bufferStackName || '—',
             createdAt: entry.createdAt,
-            daysInBuffer: Math.floor((new Date().getTime() - entry.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+            daysInBuffer: Math.floor((Date.now() - createdAtDate.getTime()) / (1000 * 60 * 60 * 24))
           });
         }
       }

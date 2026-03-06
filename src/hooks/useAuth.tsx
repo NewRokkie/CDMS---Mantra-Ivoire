@@ -7,7 +7,7 @@ import { syncManager } from '../services/sync/SyncManager';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { handleError } from '../services/errorHandling';
 import { logger } from '../utils/logger';
-import { AuthContext, AuthContextType, SyncStatus } from '../contexts/AuthContext';
+import { AuthContext, SyncStatus } from '../contexts/AuthContext';
 export type { SyncStatus };
 
 
@@ -285,7 +285,7 @@ export const useAuthProvider = () => {
       }, 30000); // 30 seconds
 
       // Set up sync error callback
-      const handleSyncError = (error: any) => {
+      const handleSyncError = () => {
         if (mounted) {
           const metrics = syncManager.getSyncMetrics();
           const newStatus: SyncStatus = {

@@ -96,14 +96,14 @@ export class LocationManagementService {
           .maybeSingle();
 
         if (error) throw error;
-        
+
         const location = data ? this.mapToLocation(data) : null;
-        
+
         // Cache the result
         if (location) {
           await locationCacheService.cacheLocationById(location);
         }
-        
+
         return location;
       } catch (error) {
         logger.error('LocationManagementService.getById error:', 'locationManagementService.ts', error);
@@ -143,14 +143,14 @@ export class LocationManagementService {
           .maybeSingle();
 
         if (error) throw error;
-        
+
         const location = data ? this.mapToLocation(data) : null;
-        
+
         // Cache the result
         if (location) {
           await locationCacheService.cacheLocationByLocationId(location);
         }
-        
+
         return location;
       } catch (error) {
         logger.error('LocationManagementService.getByLocationId error:', 'locationManagementService.ts', error);
@@ -254,7 +254,7 @@ export class LocationManagementService {
 
         if (error) throw error;
         const locations = (data || []).map(this.mapToLocation);
-        
+
         // Cache the result (only for queries without stack filter and limit)
         if (!query.stackId && !query.limit) {
           await locationCacheService.cacheAvailableLocations(
@@ -264,7 +264,7 @@ export class LocationManagementService {
             query.clientPoolId
           );
         }
-        
+
         return locations;
       } catch (error) {
         logger.error('LocationManagementService.getAvailableLocations error:', 'locationManagementService.ts', error);
@@ -308,7 +308,7 @@ export class LocationManagementService {
       const { data, error } = await dbQuery;
 
       if (error) throw error;
-      
+
       return (data || []).map(this.mapToLocation);
     } catch (error) {
       throw ErrorHandler.createGateInError(error);
@@ -349,7 +349,7 @@ export class LocationManagementService {
       const { data, error } = await dbQuery;
 
       if (error) throw error;
-      
+
       return (data || []).map(this.mapToLocation);
     } catch (error) {
       throw ErrorHandler.createGateInError(error);
@@ -630,7 +630,7 @@ export class LocationManagementService {
           .maybeSingle();
 
         if (error) throw error;
-        
+
         if (!data) return null;
 
         const statistics: LocationStatistics = {
@@ -645,10 +645,10 @@ export class LocationManagementService {
           occupancyPercentage: parseFloat(data.occupancy_percentage),
           lastUpdated: new Date(data.last_updated)
         };
-        
+
         // Cache the result
         await locationCacheService.cacheYardStatistics(statistics);
-        
+
         return statistics;
       } catch (error) {
         logger.error('LocationManagementService.getYardStatistics error:', 'locationManagementService.ts', error);
@@ -677,7 +677,7 @@ export class LocationManagementService {
           .maybeSingle();
 
         if (error) throw error;
-        
+
         if (!data) return null;
 
         const statistics: StackOccupancyStatistics = {
@@ -692,10 +692,10 @@ export class LocationManagementService {
           clientPoolId: data.client_pool_id,
           lastUpdated: new Date(data.last_updated)
         };
-        
+
         // Cache the result
         await locationCacheService.cacheStackStatistics(statistics);
-        
+
         return statistics;
       } catch (error) {
         logger.error('LocationManagementService.getStackStatistics error:', 'locationManagementService.ts', error);
@@ -729,7 +729,7 @@ export class LocationManagementService {
     try {
       // Validate location exists and is available
       const location = await this.getById(request.locationId);
-      
+
       if (!location) {
         throw new GateInError({
           code: 'LOCATION_NOT_FOUND',
@@ -772,12 +772,13 @@ export class LocationManagementService {
           userMessage: `This location is configured for ${location.containerSize} containers only`
         });
       }
-      
+
       // For 40ft containers on 20ft locations, this is allowed (virtual stack logic)
       // The calling code is responsible for ensuring both physical locations are assigned
 
       // Validate client pool access restrictions
       // Requirements: 6.3, 6.5 - Enforce location access restrictions during container placement
+      // Note: Allow assignment without clientPoolId if location is not strictly pooled
       if (location.clientPoolId && request.clientPoolId) {
         if (location.clientPoolId !== request.clientPoolId) {
           throw new GateInError({
@@ -788,22 +789,21 @@ export class LocationManagementService {
             userMessage: `This location is reserved for another client pool`
           });
         }
-      } else if (location.clientPoolId && !request.clientPoolId) {
-        throw new GateInError({
-          code: 'CLIENT_POOL_REQUIRED',
-          message: `Location ${location.locationId} requires a client pool assignment`,
-          severity: 'error',
-          retryable: false,
-          userMessage: `This location is reserved for pooled clients only`
-        });
-      } else if (!location.clientPoolId && request.clientPoolId) {
-        throw new GateInError({
-          code: 'LOCATION_NOT_POOLED',
-          message: `Location ${location.locationId} is not assigned to any client pool`,
-          severity: 'error',
-          retryable: false,
-          userMessage: `This location is not available for pooled clients`
-        });
+      }
+      // Allow assignment to pooled locations without explicit clientPoolId
+      // The location will inherit its existing pool assignment
+
+      // Fetch container number for the container being assigned
+      let containerNumber: string | null = null;
+      try {
+        const { data: containerData } = await supabase
+          .from('containers')
+          .select('number')
+          .eq('id', request.containerId)
+          .maybeSingle();
+        containerNumber = containerData?.number || null;
+      } catch {
+        // Non-critical: container_number is for quick reference only
       }
 
       // Update location with container assignment
@@ -811,7 +811,9 @@ export class LocationManagementService {
         .from('locations')
         .update({
           is_occupied: true,
+          available: false,
           container_id: request.containerId,
+          container_number: containerNumber,
           container_size: request.containerSize,
           client_pool_id: request.clientPoolId || location.clientPoolId,
           updated_at: new Date().toISOString()
@@ -823,7 +825,7 @@ export class LocationManagementService {
       if (error) throw error;
 
       const updatedLocation = this.mapToLocation(data);
-      
+
       // Invalidate cache on occupancy change
       // Requirements: 9.2 - Cache invalidation on location occupancy changes
       await locationCacheService.invalidateLocationCache(updatedLocation);
@@ -842,7 +844,7 @@ export class LocationManagementService {
     try {
       // Validate location exists and is occupied
       const location = await this.getById(request.locationId);
-      
+
       if (!location) {
         throw new GateInError({
           code: 'LOCATION_NOT_FOUND',
@@ -879,7 +881,9 @@ export class LocationManagementService {
         .from('locations')
         .update({
           is_occupied: false,
+          available: true,
           container_id: null,
+          container_number: null,
           container_size: null,
           updated_at: new Date().toISOString()
         })
@@ -890,7 +894,7 @@ export class LocationManagementService {
       if (error) throw error;
 
       const updatedLocation = this.mapToLocation(data);
-      
+
       // Invalidate cache on occupancy change
       // Requirements: 9.2 - Cache invalidation on location occupancy changes
       await locationCacheService.invalidateLocationCache(updatedLocation);
@@ -913,7 +917,7 @@ export class LocationManagementService {
   }> {
     try {
       const location = await this.getById(locationId);
-      
+
       if (!location) {
         throw new GateInError({
           code: 'LOCATION_NOT_FOUND',
@@ -946,7 +950,7 @@ export class LocationManagementService {
   ): Promise<boolean> {
     try {
       const location = await this.getById(locationId);
-      
+
       if (!location) return false;
       if (!location.isActive) return false;
       if (location.isOccupied) return false;
@@ -999,7 +1003,7 @@ export class LocationManagementService {
   ): Promise<boolean> {
     try {
       const location = await this.getById(locationId);
-      
+
       if (!location) return false;
       if (!location.isActive) return false;
 
@@ -1204,8 +1208,8 @@ export class LocationManagementService {
           l => l.is_occupied && l.container_size === '40ft'
         ).length;
 
-        const occupancyRate = totalLocations > 0 
-          ? (occupiedLocations / totalLocations) * 100 
+        const occupancyRate = totalLocations > 0
+          ? (occupiedLocations / totalLocations) * 100
           : 0;
 
         // Client pool statistics
@@ -1233,10 +1237,10 @@ export class LocationManagementService {
           availablePooledLocations,
           availableUnpooledLocations
         };
-        
+
         // Cache the result
         await locationCacheService.cacheAvailabilitySummary(yardId, summary);
-        
+
         return summary;
       } catch (error) {
         throw ErrorHandler.createGateInError(error);

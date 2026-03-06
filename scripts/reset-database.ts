@@ -65,14 +65,7 @@ const TABLES_TO_TRUNCATE = [
   'location_audit_log',
   'user_activities',
   'user_login_history',
-  'module_access_sync_log',
-  
-  // Backups (Phase 3)
-  'gate_in_operations_backup_pre_phase3',
-  'gate_out_operations_backup_pre_phase3',
-  'containers_backup_pre_phase3',
-  'booking_references_backup_pre_phase3',
-  'clients_backup_pre_phase3',
+  'module_access_sync_log'
 ];
 
 async function resetDatabase() {
@@ -141,33 +134,29 @@ async function resetDatabase() {
       }
     }
     
-    // Enfin, supprimer les tables de backup
-    const backupTables = [
-      'gate_in_operations_backup_pre_phase3',
-      'gate_out_operations_backup_pre_phase3',
-      'containers_backup_pre_phase3',
-      'booking_references_backup_pre_phase3',
-      'clients_backup_pre_phase3',
-    ];
+
+
+
+    // Réinitialiser les locations (marquer comme non occupées)
+    console.log('\n3️⃣ Réinitialisation des locations...\n');
     
-    console.log('\n2️⃣ Suppression des tables de backup...\n');
-    
-    for (const table of backupTables) {
-      try {
-        const existsQuery = `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1);`;
-        const exists = await client.query(existsQuery, [table]);
-        
-        if (exists.rows[0].exists) {
-          await client.query(`DROP TABLE IF EXISTS public.${table} CASCADE;`);
-          console.log(`   ✅ ${table} supprimée`);
-        }
-      } catch (error: any) {
-        console.log(`   ⚠️  ${table}: ${error.message}`);
-      }
+    try {
+      const updateResult = await client.query(`
+        UPDATE public.locations 
+        SET 
+          is_occupied = false,
+          container_id = NULL,
+          container_size = NULL,
+          updated_at = NOW()
+        WHERE is_occupied = true;
+      `);
+      console.log(`   ✅ ${updateResult.rowCount} locations réinitialisées (marquées comme non occupées)`);
+    } catch (error: any) {
+      console.log(`   ⚠️  Erreur lors de la réinitialisation des locations: ${error.message}`);
     }
 
     // Réinitialiser les séquences
-    console.log('\n3️⃣ Réinitialisation des séquences...\n');
+    console.log('\n4️⃣ Réinitialisation des séquences...\n');
     
     // Reset manual pour les séquences connues
     const sequencesToReset = [
@@ -189,7 +178,7 @@ async function resetDatabase() {
     }
 
     // VÉRIFICATIONS
-    console.log('\n4️⃣ Vérifications post-reset...\n');
+    console.log('\n5️⃣ Vérifications post-reset...\n');
     
     // Compter les lignes restantes dans les tables transactionnelles
     console.log('   📊 Tables transactionnelles (devraient être vides):\n');
@@ -229,6 +218,7 @@ async function resetDatabase() {
       'clients',
       'yards',
       'stacks',
+      'locations',
       'users',
       'user_module_access',
     ];
@@ -241,7 +231,15 @@ async function resetDatabase() {
         if (exists.rows[0].exists) {
           const countQuery = `SELECT COUNT(*) as count FROM public.${table}`;
           const count = await client.query(countQuery);
-          console.log(`      ${table}: ${count.rows[0].count} lignes`);
+          
+          // Pour locations, afficher aussi le nombre de locations occupées
+          if (table === 'locations') {
+            const occupiedQuery = `SELECT COUNT(*) as count FROM public.locations WHERE is_occupied = true`;
+            const occupiedCount = await client.query(occupiedQuery);
+            console.log(`      ${table}: ${count.rows[0].count} lignes (${occupiedCount.rows[0].count} occupées)`);
+          } else {
+            console.log(`      ${table}: ${count.rows[0].count} lignes`);
+          }
         }
       } catch (error: any) {
         console.log(`      ${table}: erreur - ${error.message}`);
@@ -254,12 +252,13 @@ async function resetDatabase() {
     console.log('\n📋 Résumé:');
     console.log(`   • ${TABLES_TO_TRUNCATE.length} tables transactionnelles vidées`);
     console.log(`   • ${TABLES_TO_KEEP.length} tables de référence conservées`);
+    console.log(`   • Locations réinitialisées (marquées comme non occupées)`);
     console.log(`   • Séquences réinitialisées`);
-    console.log(`   • Triggers réactivés`);
     console.log('\n📝 Prochaines étapes:');
     console.log('   1. Vérifier que les données de référence sont intactes');
-    console.log('   2. Tester la création de Gate In / Gate Out / Containers / Bookings');
-    console.log('   3. Vérifier que les triggers fonctionnent correctement');
+    console.log('   2. Vérifier que toutes les locations sont disponibles (is_occupied = false)');
+    console.log('   3. Tester la création de Gate In / Gate Out / Containers / Bookings');
+    console.log('   4. Vérifier que les triggers fonctionnent correctement');
     console.log('\n');
 
   } catch (error: any) {

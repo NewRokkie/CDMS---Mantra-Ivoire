@@ -143,8 +143,8 @@ export const GateIn: React.FC = () => {
     driverName: '',
     truckNumber: '',
     transportCompany: '',
-    truckArrivalDate: new Date().toISOString().split('T')[0], // Default to today
-    truckArrivalTime: new Date().toTimeString().slice(0, 5), // Default to current time
+    truckArrivalDate: '', // Empty by default - will use system time if not manually set
+    truckArrivalTime: '', // Empty by default - will use system time if not manually set
     truckDepartureDate: '',
     truckDepartureTime: '',
     notes: '',
@@ -342,8 +342,8 @@ export const GateIn: React.FC = () => {
       driverName: '',
       truckNumber: '',
       transportCompany: '',
-      truckArrivalDate: new Date().toISOString().split('T')[0],
-      truckArrivalTime: new Date().toTimeString().slice(0, 5),
+      truckArrivalDate: '', // Empty by default
+      truckArrivalTime: '', // Empty by default
       truckDepartureDate: '',
       truckDepartureTime: '',
       notes: '',
@@ -550,6 +550,12 @@ export const GateIn: React.FC = () => {
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
     setIsProcessing(true);
+
+    // Variables pour le rollback en cas d'erreur
+    let createdContainerIds: string[] = [];
+    let updatedContainerIds: string[] = [];
+    let originalContainerStates: Map<string, any> = new Map();
+
     try {
       // Validate required data
       if (!operation?.containerNumber) {
@@ -576,7 +582,7 @@ export const GateIn: React.FC = () => {
 
       const { data: existingContainers } = await supabase
         .from('containers')
-        .select('id, number, status')
+        .select('id, number, status, location, updated_at')
         .eq('is_deleted', false)
         .in('number', containerNumbers);
 
@@ -587,6 +593,16 @@ export const GateIn: React.FC = () => {
 
       if (isPendingCompletion) {
         // This is completing a pending operation - UPDATE existing containers
+        // Save original states for rollback
+        for (const container of existingContainers) {
+          originalContainerStates.set(container.id, {
+            status: container.status,
+            location: container.location,
+            updated_at: container.updated_at
+          });
+          updatedContainerIds.push(container.id);
+        }
+
         const newStatus = locationData.isBufferZone ? 'in_buffer' : 'in_depot';
 
         for (const container of existingContainers) {
@@ -605,7 +621,6 @@ export const GateIn: React.FC = () => {
           }
         }
       } else {
-        // This is a new operation - CREATE containers
         // This is a new operation - CREATE containers
         console.log('Creating new containers:', containerNumbers);
 
@@ -649,16 +664,19 @@ export const GateIn: React.FC = () => {
         }
 
         finalContainers = createdContainers || [];
+        createdContainerIds = finalContainers.map(c => c.id);
       }
 
-      // 4. Link container ID to gate_in_operation
+      // 4. Link container ID to gate_in_operation and update assigned_location
       const updateOperationData: any = {
         container_id: finalContainers?.[0]?.id,
+        assigned_location: locationData.assignedLocation,
         completed_at: new Date().toISOString(),
         status: 'completed',
       };
 
-      // Update gate_in_operations (basic fields only)
+      // Update gate_in_operations (basic fields + location)
+      // Note: assigned_stack is stored in gate_in_damage_assessments, not here
       const { error: updateError } = await supabase
         .from('gate_in_operations')
         .update(updateOperationData)
@@ -785,9 +803,14 @@ export const GateIn: React.FC = () => {
               } else {
                 const occupiedLocations = locationRecords.filter(loc => loc.is_occupied).map(loc => loc.location_id);
                 console.warn(`❌ Cannot assign 40ft container - some physical locations are occupied: ${occupiedLocations.join(', ')}`);
+                throw new Error(`Les emplacements physiques ${occupiedLocations.join(', ')} sont déjà occupés. Impossible d'assigner un conteneur 40ft à ${locationData.assignedLocation}.`);
               }
             } else {
+              const errorMsg = `Les emplacements physiques ${physicalLocation1} et ${physicalLocation2} n'existent pas dans la base de données. Veuillez vérifier que les stacks S${String(physicalStack1).padStart(2, '0')} et S${String(physicalStack2).padStart(2, '0')} sont correctement configurés avec des locations générées.`;
               console.warn(`❌ Could not find both physical locations for virtual ${locationData.assignedLocation}`);
+              console.warn(`   Expected: ${physicalLocation1} and ${physicalLocation2}`);
+              console.warn(`   Found: ${locationRecords?.length || 0} location(s)`);
+              throw new Error(errorMsg);
             }
           } else if (isVirtualStack && operation.containerSize === '20ft') {
             // For 20ft containers on virtual stacks, use just one physical location
@@ -811,8 +834,12 @@ export const GateIn: React.FC = () => {
                 clientPoolId: undefined
               });
               console.log(`✓ 20ft container assigned to physical location ${physicalLocation1}`);
+            } else if (locationRecord?.is_occupied) {
+              console.warn(`❌ Physical location ${physicalLocation1} is already occupied`);
+              throw new Error(`L'emplacement physique ${physicalLocation1} est déjà occupé. Impossible d'assigner le conteneur 20ft.`);
             } else {
-              console.warn(`❌ Physical location ${physicalLocation1} not available`);
+              console.warn(`❌ Physical location ${physicalLocation1} not found in locations table`);
+              throw new Error(`L'emplacement physique ${physicalLocation1} n'existe pas dans la base de données. Veuillez vérifier que le stack S${String(physicalStack1).padStart(2, '0')} est correctement configuré.`);
             }
           } else {
             console.log(`📍 Physical stack detected, using direct mapping`);
@@ -828,6 +855,7 @@ export const GateIn: React.FC = () => {
 
             if (locationFindError) {
               console.error('Error finding location:', locationFindError);
+              throw new Error(`Erreur lors de la recherche de l'emplacement ${locationData.assignedLocation}: ${locationFindError.message}`);
             } else if (locationRecord) {
               await locationManagementService.assignContainer({
                 locationId: locationRecord.id,
@@ -838,6 +866,7 @@ export const GateIn: React.FC = () => {
               console.log(`✓ Physical location ${locationData.assignedLocation} marked as occupied`);
             } else {
               console.warn(`Physical location ${locationData.assignedLocation} not found in locations table`);
+              throw new Error(`L'emplacement ${locationData.assignedLocation} n'existe pas dans la base de données. Veuillez vérifier que le stack est correctement configuré avec des locations générées.`);
             }
           }
         }
@@ -846,21 +875,65 @@ export const GateIn: React.FC = () => {
         // Don't fail the entire operation if location update fails
       }
 
-      // 5. Transmission EDI GATE IN (toujours transmis, zone tampon ou non)
-      //    ediTransmissionService est idempotent : si déjà transmis, il ne renvoie pas.
+      // 5. Transmission EDI GATE IN (seulement si le client a l'EDI activé)
       let ediStatus = 'not_attempted';
+      // edi_transmitted DB value: null = not attempted/not configured, false = failed, true = sent
+      let ediTransmittedDbValue: boolean | null = null;
       try {
-        const ediResult = await ediTransmissionService.transmitGateInEDI(operation.id);
-        if (ediResult.success) {
-          ediStatus = ediResult.error?.includes('déjà transmis') ? 'already_sent' : 'transmitted';
-        } else {
-          ediStatus = 'failed';
-          logger.error(`EDI non transmis: ${ediResult.error}`, 'GateIn');
+        // Vérifier si le client a l'EDI activé
+        const { data: ediStatusData, error: ediStatusError } = await supabase
+          .rpc('get_client_edi_status', {
+            p_client_code: operation.clientCode,
+            p_client_name: operation.clientName,
+            p_operation: 'gate_in'
+          })
+          .single();
+
+        if (ediStatusError) {
+          logger.warn(`Impossible de vérifier le statut EDI du client ${operation.clientCode}`, 'GateIn', ediStatusError);
         }
+
+        const typedEdiStatusData = ediStatusData as { edi_enabled?: boolean; gate_in_enabled?: boolean } | null;
+        const hasEdiEnabled = typedEdiStatusData?.edi_enabled && typedEdiStatusData?.gate_in_enabled;
+
+        if (hasEdiEnabled) {
+          // Le client a l'EDI activé, procéder à la transmission
+          logger.info(`EDI activé pour le client ${operation.clientCode}, transmission en cours...`, 'GateIn');
+          const ediResult = await ediTransmissionService.transmitGateInEDI(operation.id);
+          if (ediResult.success) {
+            ediStatus = ediResult.error?.includes('déjà transmis') ? 'already_sent' : 'transmitted';
+            ediTransmittedDbValue = true;
+          } else {
+            ediStatus = 'failed';
+            ediTransmittedDbValue = false;
+            logger.error(`EDI non transmis: ${ediResult.error}`, 'GateIn');
+          }
+        } else {
+          // Le client n'a pas l'EDI activé, ignorer la transmission
+          logger.info(`EDI non activé pour le client ${operation.clientCode}, transmission ignorée`, 'GateIn');
+          ediStatus = 'not_configured';
+          ediTransmittedDbValue = null; // Explicit: not configured = null (shows "No EDI")
+        }
+
+        // Persist EDI transmission result to gate_in_operations table
+        // This ensures the status survives page refreshes
+        await supabase
+          .from('gate_in_operations')
+          .update({ edi_transmitted: ediTransmittedDbValue })
+          .eq('id', operation.id);
+
       } catch (ediError) {
         // EDI transmission failed, but don't fail the entire operation
         logger.error('EDI: Erreur inattendue', 'GateIn', ediError);
         ediStatus = 'failed';
+        ediTransmittedDbValue = false;
+        // Still persist the failure status in DB
+        try {
+          await supabase
+            .from('gate_in_operations')
+            .update({ edi_transmitted: false })
+            .eq('id', operation.id);
+        } catch { /* ignore secondary failure */ }
       }
 
       // 6. Update local state
@@ -872,7 +945,8 @@ export const GateIn: React.FC = () => {
             assignedLocation: locationData.assignedLocation,
             completedAt: new Date(),
             status: 'completed',
-            ediTransmitted: ediStatus === 'transmitted',
+            // null = no EDI configured, false = failed, true = sent
+            ediTransmitted: ediTransmittedDbValue,
           }
           : op
       ));
@@ -913,9 +987,48 @@ export const GateIn: React.FC = () => {
       toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné → ${damageStatus}: ${locationData.assignedLocation} — ${ediStatusMessage}`);
       setActiveView('overview');
     } catch (error) {
+      // ROLLBACK: Annuler toutes les modifications en cas d'erreur
+      console.error('❌ Erreur détectée, rollback en cours...', error);
+
+      try {
+        // Rollback 1: Supprimer les conteneurs créés
+        if (createdContainerIds.length > 0) {
+          console.log(`🔄 Rollback: Suppression de ${createdContainerIds.length} conteneur(s) créé(s)...`);
+          await supabase
+            .from('containers')
+            .delete()
+            .in('id', createdContainerIds);
+          console.log('✓ Conteneurs créés supprimés');
+        }
+
+        // Rollback 2: Restaurer l'état original des conteneurs mis à jour
+        if (updatedContainerIds.length > 0) {
+          console.log(`🔄 Rollback: Restauration de ${updatedContainerIds.length} conteneur(s) mis à jour...`);
+          for (const containerId of updatedContainerIds) {
+            const originalState = originalContainerStates.get(containerId);
+            if (originalState) {
+              await supabase
+                .from('containers')
+                .update({
+                  status: originalState.status,
+                  location: originalState.location,
+                  updated_at: originalState.updated_at
+                })
+                .eq('id', containerId);
+            }
+          }
+          console.log('✓ Conteneurs mis à jour restaurés');
+        }
+
+        console.log('✅ Rollback terminé avec succès');
+      } catch (rollbackError) {
+        console.error('❌ Erreur lors du rollback:', rollbackError);
+        logger.error('Erreur critique: rollback échoué', 'GateIn.handleLocationValidation', rollbackError);
+      }
+
       handleError(error, 'GateIn.handleLocationValidation');
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(`Error completing operation: ${errorMessage}`);
+      toast.error(`Erreur lors de l'opération: ${errorMessage}. Les modifications ont été annulées.`);
     } finally {
       setIsProcessing(false);
     }

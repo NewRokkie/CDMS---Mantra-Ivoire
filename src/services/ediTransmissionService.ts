@@ -16,7 +16,7 @@ export interface EdiTransmissionResult {
  * Service de transmission EDI CODECO.
  * 
  * Garantit qu'une seule transmission EDI GATE IN est effectuée par opération.
- * Le flag edi_gate_in_transmitted sur gate_in_operations est la source de vérité.
+ * Le flag edi_gate_in_transmitted sur gate_in_edi_details est la source de vérité.
  */
 export class EdiTransmissionService {
 
@@ -27,7 +27,7 @@ export class EdiTransmissionService {
     async transmitGateInEDI(gateInOperationId: string): Promise<EdiTransmissionResult> {
         try {
             // 1. Vérifier si l'EDI a déjà été transmis (guard clause)
-            // Include gate_in_transport_info for equipment_reference
+            // Include gate_in_transport_info for equipment_reference and transport details
             const { data: operation, error: fetchError } = await supabase
                 .from('gate_in_operations')
                 .select(`
@@ -44,15 +44,17 @@ export class EdiTransmissionService {
           assigned_location,
           classification,
           transaction_type,
-          truck_arrival_date,
-          truck_arrival_time,
           operator_name,
           yard_id,
-          edi_gate_in_transmitted,
           gate_in_transport_info (
             equipment_reference,
             transport_company,
-            vehicle_number
+            vehicle_number,
+            truck_arrival_date,
+            truck_arrival_time
+          ),
+          gate_in_edi_details (
+            edi_gate_in_transmitted
           )
         `)
                 .eq('id', gateInOperationId)
@@ -64,7 +66,8 @@ export class EdiTransmissionService {
             }
 
             // Guard : EDI déjà transmis → on ne renvoie pas
-            if (operation.edi_gate_in_transmitted === true) {
+            const ediDetails = operation.gate_in_edi_details?.[0];
+            if (ediDetails?.edi_gate_in_transmitted === true) {
                 logger.info(`EDI: Déjà transmis pour l'opération ${gateInOperationId}, ignoré.`, 'EdiTransmissionService');
                 return { success: true, error: 'EDI déjà transmis (ignoré)' };
             }
@@ -98,18 +101,19 @@ export class EdiTransmissionService {
 
             const apiResult = await apiResponse.json();
 
-            // 4. Marquer comme transmis en DB
-            const { error: updateError } = await supabase
-                .from('gate_in_operations')
-                .update({
+            // 4. Marquer comme transmis en DB (dans la table normalisée gate_in_edi_details)
+            const { error: upsertError } = await supabase
+                .from('gate_in_edi_details')
+                .upsert({
+                    gate_in_operation_id: gateInOperationId,
                     edi_gate_in_transmitted: true,
-                    edi_transmitted: true,
                     edi_transmission_date: new Date().toISOString(),
-                })
-                .eq('id', gateInOperationId);
+                }, {
+                    onConflict: 'gate_in_operation_id'
+                });
 
-            if (updateError) {
-                logger.error('EDI: Impossible de marquer comme transmis', 'EdiTransmissionService', updateError);
+            if (upsertError) {
+                logger.error('EDI: Impossible de marquer comme transmis', 'EdiTransmissionService', upsertError);
                 // Ne pas échouer l'opération globale pour ça
             }
 
@@ -143,11 +147,11 @@ export class EdiTransmissionService {
      * Construit le payload JSON pour l'API EDI CODECO.
      */
     private buildCodecoPayload(operation: any): Record<string, any> {
-        const arrivalDate = operation.truck_arrival_date || new Date().toISOString().split('T')[0];
-        const arrivalTime = operation.truck_arrival_time || new Date().toTimeString().slice(0, 5);
-        
         // Get transport info from normalized table (first item in array)
         const transportInfo = operation.gate_in_transport_info?.[0] || {};
+        
+        const arrivalDate = transportInfo.truck_arrival_date || new Date().toISOString().split('T')[0];
+        const arrivalTime = transportInfo.truck_arrival_time || new Date().toTimeString().slice(0, 5);
 
         return {
             // Identifiants clés

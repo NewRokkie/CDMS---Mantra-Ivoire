@@ -210,8 +210,8 @@ export class ContainerService {
       if (updates.yardId !== undefined) updateData.yard_id = updates.yardId;
       if (updates.clientId !== undefined) updateData.client_id = updates.clientId;
       if (updates.clientCode !== undefined) updateData.client_code = updates.clientCode;
-      if (updates.gateInDate !== undefined) updateData.gate_in_date = updates.gateInDate?.toISOString();
-      if (updates.gateOutDate !== undefined) updateData.gate_out_date = updates.gateOutDate?.toISOString();
+      if (updates.gateInDate !== undefined) updateData.gate_in_date = updates.gateInDate ? updates.gateInDate.toISOString() : null;
+      if (updates.gateOutDate !== undefined) updateData.gate_out_date = updates.gateOutDate ? updates.gateOutDate.toISOString() : null;
       if (updates.classification !== undefined) updateData.classification = updates.classification; // Add classification
       if (updates.transactionType !== undefined) updateData.transaction_type = updates.transactionType; // Add transaction type
       if (updates.damage !== undefined) updateData.damage = updates.damage;
@@ -219,16 +219,18 @@ export class ContainerService {
       if (updates.gateOutOperationId !== undefined) updateData.gate_out_operation_id = updates.gateOutOperationId;
       if (updates.updatedBy) updateData.updated_by = updates.updatedBy;
 
-      // Handle location changes - release old location ONLY when status changes to out_depot (confirmed exit)
+      // Handle location changes - release old location when container leaves depot
       // Requirements: 4.3 - Ensure container status changes properly update location availability
-      // Note: We don't release location for gate_out status to allow rollback if there's an error
+      // Release location when status changes to 'out_depot' (container has left depot)
       if (updates.status === 'out_depot' && 
+          currentContainer.location &&
           (currentContainer.status === 'in_depot' || currentContainer.status === 'gate_out')) {
-        // Container has left depot - release location if it has one
-        if (currentContainer.location) {
-          await this.releaseContainerLocation(id, currentContainer.location);
-        }
+        // Container has left depot - release its location
+        await this.releaseContainerLocation(id, currentContainer.location);
       }
+
+      // Log the update data for debugging
+      console.log('🔍 [ContainerService.update] Update data:', JSON.stringify(updateData, null, 2));
 
       const { data, error } = await supabase
         .from('containers')
@@ -237,25 +239,41 @@ export class ContainerService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [ContainerService.update] Supabase error:', error);
+        throw error;
+      }
 
       // Update gate_in_damage_assessments table if location has changed
       // NOTE: assigned_location and assigned_stack are now in gate_in_damage_assessments
-      if (updates.location !== undefined && updates.location !== currentContainer.location) {
+      // Only do this for gate_in operations, not gate_out
+      if (updates.location !== undefined && 
+          updates.location !== currentContainer.location &&
+          updates.status !== 'out_depot' && 
+          updates.status !== 'gate_out') {
         try {
-          // Extract stack from location (e.g., "S04R1H3" → "S04")
-          const stackMatch = updates.location?.match(/^(S\d+)/);
-          const assignedStack = stackMatch ? stackMatch[1] : null;
+          // First, get the gate_in_operation_id for this container
+          const { data: gateInOp } = await supabase
+            .from('gate_in_operations')
+            .select('id')
+            .eq('container_id', currentContainer.id)
+            .single();
+          
+          if (gateInOp?.id) {
+            // Extract stack from location (e.g., "S04R1H3" → "S04")
+            const stackMatch = updates.location?.match(/^(S\d+)/);
+            const assignedStack = stackMatch ? stackMatch[1] : null;
 
-          // Update gate_in_damage_assessments instead of gate_in_operations
-          await supabase
-            .from('gate_in_damage_assessments')
-            .update({
-              assigned_location: updates.location,
-              assigned_stack: assignedStack
-            })
-            .eq('gate_in_operation_id', currentContainer.id)
-            .or(`gate_in_operation_id.is.null,assigned_location.is.null`);
+            // Update gate_in_damage_assessments instead of gate_in_operations
+            await supabase
+              .from('gate_in_damage_assessments')
+              .update({
+                assigned_location: updates.location,
+                assigned_stack: assignedStack
+              })
+              .eq('gate_in_operation_id', gateInOp.id)
+              .or('gate_in_operation_id.is.null,assigned_location.is.null');
+          }
         } catch (gateInError) {
           // Log error but don't fail the entire update
           console.error('Failed to update gate_in_damage_assessments location:', gateInError);

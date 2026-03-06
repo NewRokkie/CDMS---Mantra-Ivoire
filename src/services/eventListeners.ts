@@ -1,5 +1,6 @@
 import { eventBus } from './eventBus';
 import { logger } from '../utils/logger';
+import { ediDatabaseService } from './edi/ediDatabaseService';
 
 /**
  * Initialize all event listeners for automatic inter-module linking
@@ -29,11 +30,17 @@ export function initializeEventListeners() {
       }
 
       // 3. Request EDI transmission if client has auto_edi enabled
-      await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
-        entityId: operation.id,
-        entityType: 'gate_in',
-        messageType: 'CODECO'
-      });
+      const ediEnabled = await ediDatabaseService.isClientEdiEnabled(operation.clientCode);
+      if (ediEnabled) {
+        logger.debug(`Client ${operation.clientCode} has EDI enabled, requesting transmission`, 'EventListeners');
+        await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
+          entityId: operation.id,
+          entityType: 'gate_in',
+          messageType: 'CODECO'
+        });
+      } else {
+        logger.debug(`Client ${operation.clientCode} has EDI disabled, skipping transmission`, 'EventListeners');
+      }
 
       // 4. Dashboard stats auto-update (via DB queries)
       logger.debug('Dashboard will reflect new container on next refresh', 'EventListeners');
@@ -101,12 +108,18 @@ export function initializeEventListeners() {
       // 2. Release order already decremented
       logger.debug(`Booking reference updated: ${bookingReference.remainingContainers} remaining`, 'EventListeners');
 
-      // 3. Request EDI transmission
-      await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
-        entityId: operation.id,
-        entityType: 'gate_out',
-        messageType: 'CODECO'
-      });
+      // 3. Request EDI transmission if client has auto_edi enabled
+      const ediEnabled = await ediDatabaseService.isClientEdiEnabled(operation.clientCode);
+      if (ediEnabled) {
+        logger.debug(`Client ${operation.clientCode} has EDI enabled, requesting transmission`, 'EventListeners');
+        await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
+          entityId: operation.id,
+          entityType: 'gate_out',
+          messageType: 'CODECO'
+        });
+      } else {
+        logger.debug(`Client ${operation.clientCode} has EDI disabled, skipping transmission`, 'EventListeners');
+      }
 
     } catch (error) {
       logger.error('Error handling GATE_OUT_COMPLETED', 'EventListeners', error);
