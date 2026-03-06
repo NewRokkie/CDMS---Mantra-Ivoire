@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Menu, X, Clock, Plus, Truck, Package, Search, Filter, CheckCircle, Download } from 'lucide-react';
+import { AlertTriangle, X, Clock, Plus, Truck, Package, Search, CheckCircle, Download } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -93,7 +93,7 @@ export const GateOut: React.FC = () => {
 
     const unsubscribeGateOut = realtimeService.subscribeToGateOutOperations(
       currentYard.id,
-      async (payload) => {
+      async () => {
         try {
           const operations = await gateService.getGateOutOperations();
           setGateOutOperations(Array.isArray(operations) ? operations : []);
@@ -105,7 +105,7 @@ export const GateOut: React.FC = () => {
     );
 
     const unsubscribeBookingReferences = realtimeService.subscribeToBookingReferences(
-      async (payload) => {
+      async () => {
         try {
           const orders = await bookingReferenceService.getAll();
           setReleaseOrders(Array.isArray(orders) ? orders : []);
@@ -117,7 +117,7 @@ export const GateOut: React.FC = () => {
     );
 
     const unsubscribeContainers = realtimeService.subscribeToContainers(
-      async (payload) => {
+      async () => {
         try {
           const containers = await containerService.getAll();
           setContainers(Array.isArray(containers) ? containers : []);
@@ -657,10 +657,7 @@ export const GateOut: React.FC = () => {
 
         {/* Unified Operations List - Mobile First */}
         <MobileGateOutOperationsTable
-          operations={filteredOperations}
           searchTerm={searchTerm}
-          selectedFilter={selectedFilter}
-          onOperationClick={handlePendingOperationClick}
         />
       </div>
 

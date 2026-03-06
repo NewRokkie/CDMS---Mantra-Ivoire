@@ -250,10 +250,13 @@ export class StackService {
 
       if (!checkError) {
         // Columns exist, add buffer zone fields
-        insertData.is_buffer_zone = false;
-        insertData.buffer_zone_type = null;
+        insertData.is_buffer_zone = stack.isBufferZone === true;  // ✅ Use actual value from stack
+        insertData.buffer_zone_type = stack.isBufferZone === true ? 'damaged' : null;
         insertData.damage_types_supported = JSON.stringify([]);
-        console.log('🔍 Buffer zone columns detected, including in insert');
+        console.log('🔍 Buffer zone columns detected, including in insert:', {
+          isBufferZone: stack.isBufferZone,
+          is_buffer_zone: insertData.is_buffer_zone
+        });
       } else {
         console.log('🔍 Buffer zone columns not found, using base insert data');
       }

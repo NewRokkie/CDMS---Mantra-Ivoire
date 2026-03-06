@@ -644,11 +644,13 @@ export const SimpleAnalyticsTab: React.FC<SimpleAnalyticsTabProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <InteractiveLineChart
-              data={revenueReport.byMonth.map((month: any) => ({
-                label: new Date(month.month + '-01').toLocaleDateString('en', { month: 'short' }),
-                value: month.revenue,
-                date: new Date(month.month + '-01')
-              }))}
+              data={revenueReport.byMonth
+                .filter((month: any) => month.revenue !== null && month.revenue !== undefined && !isNaN(month.revenue))
+                .map((month: any) => ({
+                  label: new Date(month.month + '-01').toLocaleDateString('en', { month: 'short' }),
+                  value: Number(month.revenue) || 0,
+                  date: new Date(month.month + '-01')
+                }))}
               title="Revenue Trends Analysis"
               subtitle="Interactive monthly revenue with zoom and hover details"
               showPoints={true}

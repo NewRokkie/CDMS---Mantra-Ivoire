@@ -26,3 +26,4 @@ export * from './performanceBenchmark';
 export * from '../sync';
 export * from './realtimeService';
 export * from './yardsService';
+export * from '../bufferZoneService';

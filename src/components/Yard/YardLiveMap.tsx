@@ -408,6 +408,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       sortedStacks.forEach(stack => {
         if (processedStacks.has(stack.stackNumber)) return;
 
+        // Skip buffer zone stacks - they are shown in BufferZoneManagement
+        const isBufferZone = (stack as any).isBufferZone === true;
+        if (isBufferZone) {
+          processedStacks.add(stack.stackNumber);
+          return;
+        }
+
         // Check if this stack is virtual (from database)
         const isVirtualStack = (stack as any).isVirtual === true;
 

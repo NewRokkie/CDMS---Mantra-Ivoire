@@ -56,15 +56,22 @@ export class BufferZoneService {
   /**
    * Récupère les stacks configurés comme zones tampons dans Stack Management.
    * Ces stacks ont is_buffer_zone = true et ont été créés manuellement par un admin.
+   * Si yardId est vide, retourne tous les stacks tampon.
    */
   async getBufferStacks(yardId: string): Promise<YardStack[]> {
-    const { data, error } = await supabase
+    let query = supabase
       .from('stacks')
       .select('*')
-      .eq('yard_id', yardId)
       .eq('is_active', true)
       .eq('is_buffer_zone', true)
       .order('stack_number', { ascending: true });
+
+    // Only filter by yard if yardId is provided
+    if (yardId) {
+      query = query.eq('yard_id', yardId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       handleError(error, 'BufferZoneService.getBufferStacks');
@@ -228,19 +235,26 @@ export class BufferZoneService {
   }
 
   /**
-   * Récupère tous les conteneurs actifs en zone tampon pour un yard.
+   * Récupère tous les conteneurs actifs en zone tampon.
+   * Si yardId est vide, retourne tous les conteneurs en zone tampon.
    */
   async getActiveBufferZoneEntries(yardId: string): Promise<BufferZoneEntry[]> {
-    const { data, error } = await supabase
+    let query = supabase
       .from('container_buffer_zones')
       .select(`
         *,
         containers!container_id (number, type, size, full_empty, client_code),
         stacks (stack_number, section_name)
       `)
-      .eq('yard_id', yardId)
       .eq('status', 'in_buffer')
       .order('created_at', { ascending: false });
+
+    // Only filter by yard if yardId is provided
+    if (yardId) {
+      query = query.eq('yard_id', yardId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       handleError(error, 'BufferZoneService.getActiveBufferZoneEntries');
@@ -258,7 +272,9 @@ export class BufferZoneService {
   }
 
   /**
-   * Récupère les statistiques des zones tampons (basées sur container_buffer_zones).
+   * Récupère les statistiques des zones tampons.
+   * Compte les conteneurs réellement dans container_buffer_zones (status = 'in_buffer').
+   * Si yardId est vide, retourne les stats pour tous les yards.
    */
   async getBufferZoneStats(yardId: string): Promise<{
     totalBufferStacks: number;
@@ -270,7 +286,21 @@ export class BufferZoneService {
     // Stats des stacks tampon configurés
     const bufferStacks = await this.getBufferStacks(yardId);
     const totalCapacity = bufferStacks.reduce((s, st) => s + st.capacity, 0);
-    const currentOccupancy = bufferStacks.reduce((s, st) => s + st.currentOccupancy, 0);
+    
+    // Compter les conteneurs réellement en zone tampon depuis container_buffer_zones
+    let query = supabase
+      .from('container_buffer_zones')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'in_buffer');
+    
+    // Only filter by yard if yardId is provided
+    if (yardId) {
+      query = query.eq('yard_id', yardId);
+    }
+    
+    const { count } = await query;
+    
+    const currentOccupancy = count || 0;
     const availableSpaces = totalCapacity - currentOccupancy;
     const utilizationRate = totalCapacity > 0 ? Math.round((currentOccupancy / totalCapacity) * 10000) / 100 : 0;
 

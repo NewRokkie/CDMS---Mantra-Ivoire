@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle } from 'lucide-react';
+import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle, Clock } from 'lucide-react';
 import { Container } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
@@ -84,8 +84,9 @@ const formatGateInTime = (date?: Date | null): string => {
 export const ContainerList: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
-  // EDI Status per container: 'success' | 'failed' | 'pending' | 'retrying' | null (no logs)
-  const [ediStatusByContainerId, setEdiStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
+  // EDI Status per container - separate tracking for Gate In and Gate Out
+  const [ediGateInStatusByContainerId, setEdiGateInStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
+  const [ediGateOutStatusByContainerId, setEdiGateOutStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
 
   useEffect(() => {
     async function loadContainers() {
@@ -97,27 +98,52 @@ export const ContainerList: React.FC = () => {
         });
         setContainers(data || []);
 
-        // Load EDI status from transmission history (same logic as Recent EDI Operations: prefer success if any)
+        // Load EDI status from transmission history - separate for Gate In and Gate Out
         if (data && data.length > 0) {
           const logs = await ediTransmissionService.getTransmissionHistory();
-          const statusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>();
+          const gateInStatusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>();
+          const gateOutStatusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>();
+
           for (const container of data) {
             const containerLogs = logs.filter(l => l.containerNumber === container.number);
-            if (containerLogs.length === 0) {
-              statusMap.set(container.id, null);
-              continue;
+
+            // Process Gate In logs
+            const gateInLogs = containerLogs.filter(l => l.operation === 'GATE_IN');
+            if (gateInLogs.length === 0) {
+              // No EDI logs - check if client has EDI enabled
+              gateInStatusMap.set(container.id, 'no_edi');
+            } else {
+              const successLog = gateInLogs.find(l => l.status === 'success');
+              if (successLog) {
+                gateInStatusMap.set(container.id, 'success');
+              } else {
+                const byLastAttempt = [...gateInLogs].sort(
+                  (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
+                );
+                gateInStatusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
+              }
             }
-            const successLog = containerLogs.find(l => l.status === 'success');
-            if (successLog) {
-              statusMap.set(container.id, 'success');
-              continue;
+
+            // Process Gate Out logs
+            const gateOutLogs = containerLogs.filter(l => l.operation === 'GATE_OUT');
+            if (gateOutLogs.length === 0) {
+              // No EDI logs - check if client has EDI enabled
+              gateOutStatusMap.set(container.id, 'no_edi');
+            } else {
+              const successLog = gateOutLogs.find(l => l.status === 'success');
+              if (successLog) {
+                gateOutStatusMap.set(container.id, 'success');
+              } else {
+                const byLastAttempt = [...gateOutLogs].sort(
+                  (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
+                );
+                gateOutStatusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
+              }
             }
-            const byLastAttempt = [...containerLogs].sort(
-              (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
-            );
-            statusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
           }
-          setEdiStatusByContainerId(statusMap);
+
+          setEdiGateInStatusByContainerId(gateInStatusMap);
+          setEdiGateOutStatusByContainerId(gateOutStatusMap);
         }
       } catch (error) {
         handleError(error, 'ContainerList.loadContainers');
@@ -169,7 +195,7 @@ export const ContainerList: React.FC = () => {
       in_depot: { color: 'bg-green-100 text-green-800', label: 'In Depot' },
       gate_out: { color: 'bg-orange-100 text-orange-800', label: 'Gate Out' },
       out_depot: { color: 'bg-gray-100 text-gray-800', label: 'Out Depot' },
-      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
+      in_buffer: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
       cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' }
     };
 
@@ -594,8 +620,8 @@ function filterTable(){
         addAuditLog(container.id, 'edi_regenerated', `EDI successfully regenerated and transmitted for container ${container.number}`);
         toast.success(`EDI regenerated and transmitted for ${container.number}`);
 
-        // Update EDI status to success
-        setEdiStatusByContainerId(prev => {
+        // Update EDI Gate In status to success (regenerateEDI currently only handles Gate In)
+        setEdiGateInStatusByContainerId(prev => {
           const newMap = new Map(prev);
           newMap.set(container.id, 'success');
           return newMap;
@@ -705,7 +731,7 @@ function filterTable(){
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Maintenance</p>
               <p className="text-lg font-semibold text-gray-900">
-                {filteredContainers.filter(c => c.status === 'maintenance').length}
+                {filteredContainers.filter(c => c.status === 'in_buffer').length}
               </p>
             </div>
           </div>
@@ -751,6 +777,7 @@ function filterTable(){
               <option value="in_depot">In Depot</option>
               <option value="gate_out">Gate Out</option>
               <option value="out_depot">Out Depot</option>
+              <option value="in_buffer">Maintenance</option>
             </select>
           </div>
 
@@ -822,7 +849,8 @@ function filterTable(){
                 {canViewAllData() && (<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>)}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate In</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate Out</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Gate In</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Gate Out</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full / Empty</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.actions')}
@@ -891,7 +919,7 @@ function filterTable(){
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {(() => {
-                      const status = ediStatusByContainerId.get(container.id);
+                      const status = ediGateInStatusByContainerId.get(container.id);
                       if (status === 'success') {
                         return (
                           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
@@ -908,10 +936,67 @@ function filterTable(){
                           </span>
                         );
                       }
+                      if (status === 'pending' || status === 'retrying') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {status === 'retrying' ? 'Retrying' : 'Pending'}
+                          </span>
+                        );
+                      }
+                      if (status === 'no_edi') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                            <WifiOff className='h-3 w-3 mr-1' />
+                            No EDI
+                          </span>
+                        );
+                      }
                       return (
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
-                          <WifiOff className="h-3 w-3 mr-1" />
-                          No EDI
+                          -
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(() => {
+                      const status = ediGateOutStatusByContainerId.get(container.id);
+                      if (status === 'success') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                            <Wifi className="h-3 w-3 mr-1" />
+                            EDI Sent
+                          </span>
+                        );
+                      }
+                      if (status === 'failed') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 border border-red-200">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            EDI Failed
+                          </span>
+                        );
+                      }
+                      if (status === 'pending' || status === 'retrying') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {status === 'retrying' ? 'Retrying' : 'Pending'}
+                          </span>
+                        );
+                      }
+                      if (status === 'no_edi') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                            <WifiOff className='h-3 w-3 mr-1' />
+                            No EDI
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                          -
                         </span>
                       );
                     })()}

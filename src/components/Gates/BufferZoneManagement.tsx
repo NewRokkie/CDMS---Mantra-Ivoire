@@ -102,7 +102,7 @@ export const BufferZoneManagement: React.FC<BufferZoneManagementProps> = ({
         releasedBy: user?.id || 'system',
       });
 
-      // Also update gate_in_operation: mark container's damage_reported = false
+      // Also update gate_in_damage_assessments: update assigned location
       const { data: container } = await supabase
         .from('containers')
         .select('id')
@@ -110,14 +110,14 @@ export const BufferZoneManagement: React.FC<BufferZoneManagementProps> = ({
         .single();
 
       if (container) {
-        // Update gate_in operation assigned stack location
+        // Update gate_in_damage_assessments assigned stack location
         await supabase
-          .from('gate_in_operations')
+          .from('gate_in_damage_assessments')
           .update({
             assigned_location: release.selectedStackLocation,
             assigned_stack: release.selectedStackLocation.match(/^S\d+/)?.[0] || null,
           })
-          .eq('id', release.entry!.gateInOperationId || '');
+          .eq('gate_in_operation_id', release.entry!.gateInOperationId || '');
       }
 
       closeReleaseModal();

@@ -27,6 +27,7 @@ export class EdiTransmissionService {
     async transmitGateInEDI(gateInOperationId: string): Promise<EdiTransmissionResult> {
         try {
             // 1. Vérifier si l'EDI a déjà été transmis (guard clause)
+            // Include gate_in_transport_info for equipment_reference
             const { data: operation, error: fetchError } = await supabase
                 .from('gate_in_operations')
                 .select(`
@@ -43,12 +44,16 @@ export class EdiTransmissionService {
           assigned_location,
           classification,
           transaction_type,
-          equipment_reference,
           truck_arrival_date,
           truck_arrival_time,
           operator_name,
           yard_id,
-          edi_gate_in_transmitted
+          edi_gate_in_transmitted,
+          gate_in_transport_info (
+            equipment_reference,
+            transport_company,
+            vehicle_number
+          )
         `)
                 .eq('id', gateInOperationId)
                 .single();
@@ -140,6 +145,9 @@ export class EdiTransmissionService {
     private buildCodecoPayload(operation: any): Record<string, any> {
         const arrivalDate = operation.truck_arrival_date || new Date().toISOString().split('T')[0];
         const arrivalTime = operation.truck_arrival_time || new Date().toTimeString().slice(0, 5);
+        
+        // Get transport info from normalized table (first item in array)
+        const transportInfo = operation.gate_in_transport_info?.[0] || {};
 
         return {
             // Identifiants clés
@@ -157,7 +165,7 @@ export class EdiTransmissionService {
             // Données opération
             transaction_type: 'GATE_IN',
             classification: operation.classification || 'divers',
-            equipment_reference: operation.equipment_reference || null,
+            equipment_reference: transportInfo.equipment_reference || null,
             assigned_location: operation.assigned_location || null,
 
             // Données yard & transport

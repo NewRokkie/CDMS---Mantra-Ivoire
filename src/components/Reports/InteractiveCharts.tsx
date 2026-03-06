@@ -60,15 +60,27 @@ export const InteractivePieChart: React.FC<InteractivePieChartProps> = ({
   const visibleData = data.filter((_, index) => !hiddenSegments.has(index));
   const total = visibleData.reduce((sum, item) => sum + item.value, 0);
 
+  // Handle empty or invalid data
+  if (!data || data.length === 0 || total === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+        <div className="flex items-center justify-center h-40 text-gray-500">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
   // Calculate segments
   let currentAngle = 0;
   const segments = visibleData.map((item, index) => {
     const percentage = (item.value / total) * 100;
     const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
     const strokeDashoffset = -currentAngle * (circumference / 100);
-    
+
     currentAngle += percentage;
-    
+
     return {
       ...item,
       percentage,
@@ -215,6 +227,18 @@ export const InteractiveBarChart: React.FC<InteractiveBarChartProps> = ({
 
   const visibleData = data.filter((_, index) => !hiddenBars.has(index));
   const maxValue = Math.max(...visibleData.map(item => item.value));
+
+  // Handle empty or invalid data
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+        <div className="flex items-center justify-center h-40 text-gray-500">
+          No data available
+        </div>
+      </div>
+    );
+  }
 
   const colors = [
     '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
@@ -372,9 +396,33 @@ export const InteractiveLineChart: React.FC<InteractiveLineChartProps> = ({
   const height = 200;
   const padding = 40;
 
+  // Handle empty or invalid data
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+        <div className="flex items-center justify-center h-40 text-gray-500">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
   const points = data.map((item, index) => {
-    const x = padding + (index / (data.length - 1)) * (width - 2 * padding);
-    const y = height - padding - ((item.value - minValue) / range) * (height - 2 * padding);
+    // Handle case where there's only one data point (avoid division by zero)
+    const x = data.length === 1 
+      ? width / 2 
+      : padding + (index / (data.length - 1)) * (width - 2 * padding);
+    
+    // Handle case where all values are the same (range = 0) or invalid values
+    const safeValue = isNaN(item.value) ? 0 : item.value;
+    const safeMinValue = isNaN(minValue) ? 0 : minValue;
+    const safeMaxValue = isNaN(maxValue) ? 0 : maxValue;
+    const safeRange = safeMaxValue - safeMinValue;
+    
+    const normalizedValue = safeRange === 0 ? 0.5 : ((safeValue - safeMinValue) / safeRange);
+    const y = height - padding - normalizedValue * (height - 2 * padding);
+    
     return { x, y, ...item, index };
   });
 

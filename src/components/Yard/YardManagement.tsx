@@ -5,6 +5,7 @@ import { containerService, stackService } from '../../services/api';
 import { realtimeService } from '../../services/api/realtimeService';
 import { yardsService } from '../../services/api/yardsService';
 import { YardLiveMap } from './YardLiveMap';
+import { BufferZoneManagement } from './BufferZoneManagement';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { Container } from '../../types';
 import { handleError } from '../../services/errorHandling';
@@ -15,6 +16,7 @@ export const YardManagement: React.FC = () => {
   const [allContainers, setAllContainers] = useState<Container[]>([]);
   const [currentYard, setCurrentYard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showBufferZone, setShowBufferZone] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -123,7 +125,31 @@ export const YardManagement: React.FC = () => {
             </div>
           </div>
         ) : (
-          <YardLiveMap yard={currentYard} containers={containers} />
+          <div className="space-y-6">
+            {/* Toggle Button */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">
+                {showBufferZone ? 'Zone Tampon' : 'Live Map'}
+              </h2>
+              <button
+                onClick={() => setShowBufferZone(!showBufferZone)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  showBufferZone
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                }`}
+              >
+                {showBufferZone ? '→ Voir Live Map' : '→ Voir Zone Tampon'}
+              </button>
+            </div>
+
+            {/* Content */}
+            {showBufferZone ? (
+              <BufferZoneManagement />
+            ) : (
+              <YardLiveMap yard={currentYard} containers={containers} />
+            )}
+          </div>
         )}
       </div>
     </>

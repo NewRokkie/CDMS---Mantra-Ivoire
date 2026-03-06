@@ -651,36 +651,59 @@ export const GateIn: React.FC = () => {
         finalContainers = createdContainers || [];
       }
 
-      // 4. Link container ID to gate_in_operation and include damage assessment
-      const updateData: any = {
+      // 4. Link container ID to gate_in_operation
+      const updateOperationData: any = {
         container_id: finalContainers?.[0]?.id,
-        assigned_location: locationData.assignedLocation,
-        assigned_stack: locationData.isBufferZone ? null : extractStackNumber(locationData.assignedLocation),
         completed_at: new Date().toISOString(),
         status: 'completed',
-        is_buffer_assignment: locationData.isBufferZone || false,
       };
 
-      // Add damage assessment data if provided
-      if (locationData.damageAssessment) {
-        updateData.damage_reported = locationData.damageAssessment.hasDamage;
-        updateData.damage_description = locationData.damageAssessment.damageDescription || null;
-        updateData.damage_assessment = JSON.stringify(locationData.damageAssessment);
-        if (locationData.isBufferZone) {
-          updateData.buffer_zone_reason = locationData.damageAssessment.damageType || 'Dommage détecté';
-        }
-      }
-
+      // Update gate_in_operations (basic fields only)
       const { error: updateError } = await supabase
         .from('gate_in_operations')
-        .update(updateData)
+        .update(updateOperationData)
         .eq('id', operation.id);
 
       if (updateError) {
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
       }
 
-      // 4.5. Si zone tampon: créer l'entrée dans container_buffer_zones
+      // 4.5. Create/Update gate_in_damage_assessments with location and damage data
+      const damageAssessmentData: any = {
+        gate_in_operation_id: operation.id,
+        assigned_location: locationData.assignedLocation,
+        assigned_stack: locationData.isBufferZone ? null : extractStackNumber(locationData.assignedLocation),
+        is_buffer_assignment: locationData.isBufferZone || false,
+        damage_reported: false,
+        damage_assessment_stage: 'assignment',
+        damage_assessed_by: user?.name || user?.email,
+        damage_assessed_at: new Date().toISOString(),
+      };
+
+      // Add damage assessment data if provided
+      if (locationData.damageAssessment) {
+        damageAssessmentData.damage_reported = locationData.damageAssessment.hasDamage;
+        damageAssessmentData.damage_description = locationData.damageAssessment.damageDescription || null;
+        damageAssessmentData.damage_type = locationData.damageAssessment.damageType || null;
+        damageAssessmentData.damage_assessment = JSON.stringify(locationData.damageAssessment);
+        if (locationData.isBufferZone) {
+          damageAssessmentData.buffer_zone_reason = locationData.damageAssessment.damageType || 'Dommage détecté';
+        }
+      }
+
+      // Insert or update damage assessment
+      const { error: damageError } = await supabase
+        .from('gate_in_damage_assessments')
+        .upsert(damageAssessmentData, {
+          onConflict: 'gate_in_operation_id'
+        });
+
+      if (damageError) {
+        console.error('Failed to create damage assessment:', damageError);
+        // Don't fail the entire operation, just log the error
+      }
+
+      // 4.6. Si zone tampon: créer l'entrée dans container_buffer_zones
       if (locationData.isBufferZone && locationData.bufferStackId && finalContainers?.[0]?.id) {
         try {
           await bufferZoneService.assignContainerToBufferZone({
@@ -700,7 +723,7 @@ export const GateIn: React.FC = () => {
         }
       }
 
-      // 4.5. Update location occupancy in locations table
+      // 4.7. Update location occupancy in locations table
       console.log('🔍 Starting location occupancy update for:', locationData.assignedLocation);
       try {
         // Parse the location to check if it's a virtual stack

@@ -6,18 +6,64 @@ import { ErrorHandler, GateInError } from '../errorHandling';
 
 export class ContainerService {
   async getAll(): Promise<Container[]> {
-    const { data, error } = await supabase
+    // 1. Get all containers with client info
+    const { data: containers, error: containerError } = await supabase
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name, code),
-        gate_in_operations(edi_transmitted, edi_transmission_date, edi_error_message, transport_company)
+        clients!containers_client_id_fkey(name, code)
       `)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data ? data.map(this.mapToContainer) : [];
+    if (containerError) throw containerError;
+    if (!containers || containers.length === 0) return [];
+
+    // 2. Get gate_in_operation IDs for these containers
+    const containerIds = containers.map(c => c.id);
+    const { data: gateInOps, error: gateInError } = await supabase
+      .from('gate_in_operations')
+      .select('container_id, id')
+      .in('container_id', containerIds);
+
+    if (gateInError) {
+      console.error('Error fetching gate_in_operations:', gateInError);
+    }
+
+    // 3. Get transport info from gate_in_transport_info table
+    const operationIds = gateInOps?.map(op => op.id) || [];
+    let transportMap = new Map<string, string>();
+    
+    if (operationIds.length > 0) {
+      const { data: transportData, error: transportError } = await supabase
+        .from('gate_in_transport_info')
+        .select('gate_in_operation_id, transport_company')
+        .in('gate_in_operation_id', operationIds);
+
+      if (transportError) {
+        console.error('Error fetching gate_in_transport_info:', transportError);
+      }
+
+      // Create map: container_id -> transport_company
+      const opToContainerMap = new Map<string, string>();
+      gateInOps?.forEach(op => {
+        opToContainerMap.set(op.id, op.container_id);
+      });
+
+      transportMap = new Map<string, string>();
+      transportData?.forEach(t => {
+        const containerId = opToContainerMap.get(t.gate_in_operation_id);
+        if (containerId && t.transport_company) {
+          transportMap.set(containerId, t.transport_company);
+        }
+      });
+    }
+
+    // 4. Map containers and add transport info
+    return containers.map(container => ({
+      ...this.mapToContainer(container),
+      transporter: transportMap.get(container.id) || undefined
+    }));
   }
 
   async getById(id: string): Promise<Container | null> {
@@ -25,8 +71,7 @@ export class ContainerService {
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name, code),
-        gate_in_operations(transport_company)
+        clients!containers_client_id_fkey(name, code)
       `)
       .eq('id', id)
       .maybeSingle();
@@ -51,8 +96,7 @@ export class ContainerService {
       .from('containers')
       .select(`
         *,
-        clients!containers_client_id_fkey(name, code),
-        gate_in_operations(transport_company)
+        clients!containers_client_id_fkey(name, code)
       `)
       .eq('yard_id', yardId)
       .order('created_at', { ascending: false });
@@ -172,6 +216,7 @@ export class ContainerService {
       if (updates.transactionType !== undefined) updateData.transaction_type = updates.transactionType; // Add transaction type
       if (updates.damage !== undefined) updateData.damage = updates.damage;
       if (updates.bookingReference !== undefined) updateData.booking_reference = updates.bookingReference;
+      if (updates.gateOutOperationId !== undefined) updateData.gate_out_operation_id = updates.gateOutOperationId;
       if (updates.updatedBy) updateData.updated_by = updates.updatedBy;
 
       // Handle location changes - release old location ONLY when status changes to out_depot (confirmed exit)
@@ -194,23 +239,26 @@ export class ContainerService {
 
       if (error) throw error;
 
-      // Update gate_in_operations table if location has changed
+      // Update gate_in_damage_assessments table if location has changed
+      // NOTE: assigned_location and assigned_stack are now in gate_in_damage_assessments
       if (updates.location !== undefined && updates.location !== currentContainer.location) {
         try {
           // Extract stack from location (e.g., "S04R1H3" → "S04")
           const stackMatch = updates.location?.match(/^(S\d+)/);
           const assignedStack = stackMatch ? stackMatch[1] : null;
 
+          // Update gate_in_damage_assessments instead of gate_in_operations
           await supabase
-            .from('gate_in_operations')
-            .update({ 
+            .from('gate_in_damage_assessments')
+            .update({
               assigned_location: updates.location,
               assigned_stack: assignedStack
             })
-            .eq('container_id', id);
+            .eq('gate_in_operation_id', currentContainer.id)
+            .or(`gate_in_operation_id.is.null,assigned_location.is.null`);
         } catch (gateInError) {
           // Log error but don't fail the entire update
-          console.error('Failed to update gate_in_operations location:', gateInError);
+          console.error('Failed to update gate_in_damage_assessments location:', gateInError);
         }
       }
 
@@ -917,9 +965,12 @@ export class ContainerService {
   }
 
   private mapToContainer(data: any): Container {
-    // Get EDI info from gate_in_operations if available
-    const gateInOp = data.gate_in_operations?.[0];
-    
+    // Get transport info from nested gate_in_transport_info (first item in array)
+    const gateInOp = Array.isArray(data.gate_in_operations) 
+      ? data.gate_in_operations[0] 
+      : data.gate_in_operations;
+    const transportInfo = gateInOp?.gate_in_transport_info?.[0];
+
     return {
       id: data.id,
       number: data.number,
@@ -931,7 +982,7 @@ export class ContainerService {
       location: data.location,
       yardId: data.yard_id,
       clientId: data.client_id,
-      clientName: data.clients?.name || '',
+      clientName: data.clients?.name || '',  // ✅ Now properly mapped from join
       clientCode: data.client_code,
       gateInDate: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
       gateOutDate: data.gate_out_date ? new Date(data.gate_out_date) : undefined,
@@ -945,11 +996,12 @@ export class ContainerService {
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
       placedAt: data.gate_in_date ? new Date(data.gate_in_date) : undefined,
-      // EDI fields and transporter from gate_in_operations
-      transporter: gateInOp?.transport_company ?? undefined,
-      ediTransmitted: gateInOp?.edi_transmitted || false,
-      ediTransmissionDate: gateInOp?.edi_transmission_date ? new Date(gateInOp.edi_transmission_date) : undefined,
-      ediErrorMessage: gateInOp?.edi_error_message,
+      // Transport info from gate_in_transport_info
+      transporter: transportInfo?.transport_company || undefined,  // ✅ Now properly mapped
+      // EDI fields - not available in simple container query (would need separate call)
+      ediTransmitted: false,
+      ediTransmissionDate: undefined,
+      ediErrorMessage: undefined,
       // Soft delete fields
       isDeleted: data.is_deleted || false,
       deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined,

@@ -338,14 +338,15 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredOperations.map((operation) => (
-                  <tr key={operation.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={operation.id} 
+                    onClick={() => handleOperationClick(operation)}
+                    className="hover:bg-blue-50 cursor-pointer transition-colors duration-150"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(operation.completedAt || operation.createdAt)}
                     </td>
@@ -386,15 +387,6 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleOperationClick(operation)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
-                      >
-                        <MapPin className="h-4 w-4" />
-                        <span>Assign Location</span>
-                      </button>
                     </td>
                   </tr>
                 ))}

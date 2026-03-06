@@ -134,7 +134,11 @@ export class ReportService {
       outDepot: containers.filter(c => c.status === 'out_depot').length,
       maintenance: containers.filter(c => c.status === 'maintenance').length,
       cleaning: containers.filter(c => c.status === 'cleaning').length,
-      damaged: containers.filter(c => c.damage && Array.isArray(c.damage) && c.damage.length > 0).length,
+      // Count damaged containers: either have damage array OR are in buffer zone
+      damaged: containers.filter(c => 
+        (c.damage && Array.isArray(c.damage) && c.damage.length > 0) || 
+        c.status === 'in_buffer'
+      ).length,
       byType: {},
       bySize: {},
       byClient: [],
@@ -1808,25 +1812,30 @@ export class ReportService {
    * Get damage assessment report
    */
   async getDamageAssessmentReport(yardId?: string, dateRange?: DateRange) {
+    // Query gate_in_damage_assessments table instead of gate_in_operations
     let query = supabase
-      .from('gate_in_operations')
+      .from('gate_in_damage_assessments')
       .select(`
         id,
-        container_number,
-        client_code,
-        client_name,
+        gate_in_operation_id,
         damage_reported,
         damage_description,
         damage_type,
         damage_assessment_stage,
         damage_assessed_by,
         damage_assessed_at,
-        created_at
+        created_at,
+        gate_in_operations (
+          container_number,
+          client_code,
+          client_name,
+          yard_id
+        )
       `)
       .eq('damage_reported', true);
 
     if (yardId) {
-      query = query.eq('yard_id', yardId);
+      query = query.eq('gate_in_operations.yard_id', yardId);
     }
 
     if (dateRange) {
@@ -1838,8 +1847,17 @@ export class ReportService {
     const { data, error } = await query.order('damage_assessed_at', { ascending: false });
     if (error) throw error;
 
+    // Flatten the data structure
+    const flattenedData = data?.map(item => ({
+      ...item,
+      container_number: item.gate_in_operations?.container_number,
+      client_code: item.gate_in_operations?.client_code,
+      client_name: item.gate_in_operations?.client_name,
+      yard_id: item.gate_in_operations?.yard_id
+    })) || [];
+
     const summary = {
-      totalDamaged: data?.length || 0,
+      totalDamaged: flattenedData?.length || 0,
       byStage: {
         assignment: 0,
         inspection: 0
@@ -1851,7 +1869,7 @@ export class ReportService {
     let totalAssessmentTime = 0;
     let assessmentTimeCount = 0;
 
-    data?.forEach(record => {
+    flattenedData?.forEach(record => {
       // Count by stage
       if (record.damage_assessment_stage === 'assignment') {
         summary.byStage.assignment++;
@@ -1879,7 +1897,7 @@ export class ReportService {
 
     return {
       summary,
-      details: data || []
+      details: flattenedData || []
     };
   }
 

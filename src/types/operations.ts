@@ -1,3 +1,122 @@
+// ============================================
+// NOUVELLES INTERFACES - TABLES NORMALISÉES
+// ============================================
+
+/**
+ * Gate In EDI Details (table normalisée)
+ */
+export interface GateInEdiDetails {
+  id: string;
+  gate_in_operation_id: string;
+  edi_message_id?: string;
+  edi_client_name?: string;
+  edi_client_code?: string;
+  edi_processing_started_at?: string;
+  edi_gate_in_transmitted: boolean;
+  edi_transmission_date?: string;
+  edi_log_id?: string;
+  edi_error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Gate In Transport Info (table normalisée)
+ */
+export interface GateInTransportInfo {
+  id: string;
+  gate_in_operation_id: string;
+  transport_company?: string;
+  driver_name?: string;
+  driver_phone?: string;
+  vehicle_number?: string;
+  truck_arrival_date?: string;
+  truck_arrival_time?: string;
+  booking_reference?: string;
+  equipment_reference?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Gate In Damage Assessment (table normalisée)
+ */
+export interface GateInDamageAssessment {
+  id: string;
+  gate_in_operation_id: string;
+  damage_reported: boolean;
+  damage_description?: string;
+  damage_type?: string;
+  damage_assessment?: any; // JSONB
+  damage_assessment_stage: string;
+  damage_assessed_by?: string;
+  damage_assessed_at?: string;
+  damage_assessment_started_at?: string;
+  damage_assessment_completed_at?: string;
+  is_buffer_assignment: boolean;
+  buffer_zone_reason?: string;
+  assigned_stack?: string;
+  assigned_location?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Gate Out EDI Details (table normalisée)
+ */
+export interface GateOutEdiDetails {
+  id: string;
+  gate_out_operation_id: string;
+  edi_message_id?: string;
+  edi_client_name?: string;
+  edi_processing_started_at?: string;
+  edi_gate_out_transmitted: boolean;
+  edi_transmission_date?: string;
+  edi_log_id?: string;
+  edi_error_message?: string;
+  container_selection_started_at?: string;
+  container_selection_completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Gate Out Transport Info (table normalisée)
+ */
+export interface GateOutTransportInfo {
+  id: string;
+  gate_out_operation_id: string;
+  transport_company?: string;
+  driver_name?: string;
+  driver_phone?: string;
+  vehicle_number?: string;
+  booking_number: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Gate In Operation Complete (avec tables normalisées)
+ * Utilisé pour l'affichage avec toutes les données jointes
+ */
+export interface GateInOperationComplete extends GateInOperation {
+  edi_details?: GateInEdiDetails;
+  transport_info?: GateInTransportInfo;
+  damage_assessment_data?: GateInDamageAssessment;
+}
+
+/**
+ * Gate Out Operation Complete (avec tables normalisées)
+ */
+export interface GateOutOperationComplete extends GateOutOperation {
+  edi_details?: GateOutEdiDetails;
+  transport_info?: GateOutTransportInfo;
+}
+
+// ============================================
+// INTERFACES EXISTANTES (inchangées pour compatibilité)
+// ============================================
+
 export interface GateInOperation {
   id: string;
   containerNumber: string;

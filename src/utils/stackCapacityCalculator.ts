@@ -24,6 +24,8 @@ export class StackCapacityCalculator {
   /**
    * Calculate effective capacity for a list of stacks
    * Handles 40ft pairing logic where paired stacks share capacity
+   * Excludes: Virtual stacks, Buffer Zone stacks
+   * Use calculateTotalCapacityWithBufferZones() for depot-wide capacity including buffer zones
    */
   static calculateEffectiveCapacities(stacks: YardStack[]): StackCapacityInfo[] {
     const result: StackCapacityInfo[] = [];
@@ -40,6 +42,20 @@ export class StackCapacityCalculator {
           effectiveCapacity: 0, // Virtual stacks don't count
           isPaired: false,
           isVirtual: true
+        });
+        continue;
+      }
+
+      // Skip buffer zone stacks - they are not part of regular depot capacity
+      if (stack.isBufferZone) {
+        result.push({
+          stackId: stack.id,
+          stackNumber: stack.stackNumber,
+          containerSize: stack.containerSize || '20ft',
+          individualCapacity: stack.capacity,
+          effectiveCapacity: 0, // Buffer zone stacks don't count toward depot capacity
+          isPaired: false,
+          isVirtual: false
         });
         continue;
       }
@@ -88,6 +104,7 @@ export class StackCapacityCalculator {
 
   /**
    * Calculate total effective capacity for a list of stacks
+   * Excludes virtual stacks and buffer zone stacks
    */
   static calculateTotalEffectiveCapacity(stacks: YardStack[]): number {
     const capacityInfos = this.calculateEffectiveCapacities(stacks);

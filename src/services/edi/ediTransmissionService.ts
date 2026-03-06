@@ -119,10 +119,29 @@ class EDITransmissionServiceImpl {
    */
   async retryTransmission(logId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Get the transmission log
+      // Get the transmission log with normalized tables
       const { data: log, error: logError } = await supabase
         .from('edi_transmission_logs')
-        .select('*, gate_in_operations(*), gate_out_operations(*)')
+        .select(`
+          *,
+          gate_in_operations (
+            *,
+            gate_in_transport_info (
+              transport_company,
+              vehicle_number,
+              truck_arrival_date,
+              truck_arrival_time,
+              equipment_reference
+            )
+          ),
+          gate_out_operations (
+            *,
+            gate_out_transport_info (
+              transport_company,
+              vehicle_number
+            )
+          )
+        `)
         .eq('id', logId)
         .single();
 
@@ -147,34 +166,38 @@ class EDITransmissionServiceImpl {
       // Get operation data
       let gateInData;
       if (log.operation === 'GATE_IN' && log.gate_in_operations) {
-        const op = log.gate_in_operations;
+        const op = log.gate_in_operations[0];
+        const transportInfo = op?.gate_in_transport_info?.[0];
+        
         gateInData = {
           containerNumber: op.container_number,
           containerSize: op.container_size,
           containerType: op.container_type || 'dry',
           clientCode: op.client_code,
           clientName: op.client_name,
-          transportCompany: op.transport_company || 'Unknown',
-          truckNumber: op.truck_number || 'Unknown',
-          arrivalDate: op.truck_arrival_date || new Date().toISOString().split('T')[0],
-          arrivalTime: op.truck_arrival_time || new Date().toTimeString().slice(0, 5),
+          transportCompany: transportInfo?.transport_company || 'Unknown',
+          truckNumber: transportInfo?.vehicle_number || 'Unknown',
+          arrivalDate: transportInfo?.truck_arrival_date || new Date().toISOString().split('T')[0],
+          arrivalTime: transportInfo?.truck_arrival_time || new Date().toTimeString().slice(0, 5),
           assignedLocation: op.assigned_location || 'Unknown',
           yardId: op.yard_id || 'unknown',
           operatorName: 'System',
           operatorId: 'system',
           damageReported: false,
-          equipmentReference: op.equipment_reference
+          equipmentReference: transportInfo?.equipment_reference
         };
       } else if (log.operation === 'GATE_OUT' && log.gate_out_operations) {
-        const op = log.gate_out_operations;
+        const op = log.gate_out_operations[0];
+        const transportInfo = op?.gate_out_transport_info?.[0];
+        
         gateInData = {
           containerNumber: op.booking_number,
           containerSize: '40ft', // Default
           containerType: 'dry',
           clientCode: op.client_code,
           clientName: op.client_name,
-          transportCompany: op.transport_company || 'Unknown',
-          truckNumber: op.truck_number || 'Unknown',
+          transportCompany: transportInfo?.transport_company || 'Unknown',
+          truckNumber: transportInfo?.vehicle_number || 'Unknown',
           arrivalDate: new Date().toISOString().split('T')[0],
           arrivalTime: new Date().toTimeString().slice(0, 5),
           assignedLocation: 'GATE_OUT',
@@ -258,13 +281,22 @@ class EDITransmissionServiceImpl {
    */
   async regenerateEDI(containerId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Get container with gate in operation and client info
+      // Get container with gate in operation and client info (using normalized tables)
       const { data: container, error: containerError } = await supabase
         .from('containers')
         .select(`
           *,
-          gate_in_operations(*),
-          client:clients(name, code)
+          gate_in_operations (
+            *,
+            gate_in_transport_info (
+              transport_company,
+              vehicle_number,
+              truck_arrival_date,
+              truck_arrival_time,
+              equipment_reference
+            )
+          ),
+          client:clients!containers_client_id_fkey(name, code)
         `)
         .eq('id', containerId)
         .single();
@@ -274,6 +306,8 @@ class EDITransmissionServiceImpl {
       }
 
       const gateInOp = container.gate_in_operations?.[0];
+      const transportInfo = gateInOp?.gate_in_transport_info?.[0];
+      
       if (!gateInOp) {
         throw new Error('No gate in operation found for this container');
       }
@@ -297,16 +331,16 @@ class EDITransmissionServiceImpl {
         containerType: container.type || 'dry',
         clientCode: clientCode,
         clientName: clientName,
-        transportCompany: gateInOp.transport_company || 'Unknown',
-        truckNumber: gateInOp.truck_number || 'Unknown',
-        arrivalDate: gateInOp.truck_arrival_date || new Date().toISOString().split('T')[0],
-        arrivalTime: gateInOp.truck_arrival_time || new Date().toTimeString().slice(0, 5),
+        transportCompany: transportInfo?.transport_company || 'Unknown',
+        truckNumber: transportInfo?.vehicle_number || 'Unknown',
+        arrivalDate: transportInfo?.truck_arrival_date || new Date().toISOString().split('T')[0],
+        arrivalTime: transportInfo?.truck_arrival_time || new Date().toTimeString().slice(0, 5),
         assignedLocation: container.location || 'Unknown',
         yardId: container.yard_id || 'unknown',
         operatorName: 'System',
         operatorId: 'system',
         damageReported: false,
-        equipmentReference: gateInOp.equipment_reference
+        equipmentReference: transportInfo?.equipment_reference
       };
 
       // Process with SFTP integration

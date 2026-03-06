@@ -211,7 +211,7 @@ export const DashboardOverview: React.FC = () => {
         utilizationRate,
         containers: depotContainers.length,
         inDepot: inDepotContainers,
-        damaged: depotContainers.filter(c => c.damage && c.damage.length > 0).length,
+        damaged: depotContainers.filter(c => (c.damage && c.damage.length > 0) || c.status === 'in_buffer').length,
         revenue: Math.floor(Math.random() * 50000) + 80000, // Mock revenue (UI demo)
         efficiency: depotContainers.length > 0 ? Math.floor((depotContainers.filter(c => !c.damage || c.damage.length === 0).length / depotContainers.length) * 100) : 100,
         status: depot.isActive ? 'active' : 'inactive'
@@ -261,10 +261,10 @@ export const DashboardOverview: React.FC = () => {
       return acc;
     }, {} as Record<string, Record<string, any>>);
 
-    // Total by damaged or not
+    // Total by damaged or not (include buffer zone as damaged)
     const damagedStats = {
-      damaged: filteredContainers.filter(c => c.damage && c.damage.length > 0).length,
-      undamaged: filteredContainers.filter(c => !c.damage || c.damage.length === 0).length
+      damaged: filteredContainers.filter(c => (c.damage && c.damage.length > 0) || c.status === 'in_buffer').length,
+      undamaged: filteredContainers.filter(c => c.status !== 'in_buffer' && (!c.damage || c.damage.length === 0)).length
     };
 
     // Classification stats (Divers or Alimentaire)
@@ -455,7 +455,7 @@ export const DashboardOverview: React.FC = () => {
         gateInDate: c.gateInDate ? new Date(c.gateInDate).toISOString() : '',
         gateOutDate: c.gateOutDate ? new Date(c.gateOutDate).toISOString() : '',
         depot: c.yardName || currentYard?.name || '',
-        damaged: c.damage && c.damage.length > 0 ? 'Yes' : 'No'
+        damaged: (c.damage && c.damage.length > 0) || c.status === 'in_buffer' ? 'Yes' : 'No'
       }));
 
       // Build CSV
@@ -506,7 +506,7 @@ export const DashboardOverview: React.FC = () => {
           gateOutDate: formatDateShortForExport(c.gateOutDate),
           gateOutTime: formatTimeForExport(c.gateOutDate),
           depot: yardName,
-          damaged: c.damage && c.damage.length > 0 ? 'Oui' : 'Non'
+          damaged: (c.damage && c.damage.length > 0) || c.status === 'in_buffer' ? 'Oui' : 'Non'
         };
       });
 
@@ -1203,14 +1203,14 @@ export const DashboardOverview: React.FC = () => {
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Conteneurs Endommagés</span>
                       <span className="text-sm font-bold text-red-600">
-                        {filteredData.containers.filter(c => c.damaged).length}
-                        ({Math.round(filteredData.containers.filter(c => c.damaged).length / filteredData.containers.length * 100) || 0}%)
+                        {filteredData.containers.filter(c => (c.damage && c.damage.length > 0) || c.status === 'in_buffer').length}
+                        ({Math.round(filteredData.containers.filter(c => (c.damage && c.damage.length > 0) || c.status === 'in_buffer').length / filteredData.containers.length * 100) || 0}%)
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 h-2 rounded-full">
                       <div
                         className="bg-red-500 h-2 rounded-full"
-                        style={{ width: `${Math.round(filteredData.containers.filter(c => c.damaged).length / filteredData.containers.length * 100) || 0}%` }}
+                        style={{ width: `${Math.round(filteredData.containers.filter(c => (c.damage && c.damage.length > 0) || c.status === 'in_buffer').length / filteredData.containers.length * 100) || 0}%` }}
                       ></div>
                     </div>
                   </div>
@@ -1218,14 +1218,14 @@ export const DashboardOverview: React.FC = () => {
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Conteneurs Non Endommagés</span>
                       <span className="text-sm font-bold text-green-600">
-                        {filteredData.containers.filter(c => !c.damaged).length}
-                        ({Math.round(filteredData.containers.filter(c => !c.damaged).length / filteredData.containers.length * 100) || 0}%)
+                        {filteredData.containers.filter(c => c.status !== 'in_buffer' && (!c.damage || c.damage.length === 0)).length}
+                        ({Math.round(filteredData.containers.filter(c => c.status !== 'in_buffer' && (!c.damage || c.damage.length === 0)).length / filteredData.containers.length * 100) || 0}%)
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 h-2 rounded-full">
                       <div
                         className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${Math.round(filteredData.containers.filter(c => !c.damaged).length / filteredData.containers.length * 100) || 0}%` }}
+                        style={{ width: `${Math.round(filteredData.containers.filter(c => c.status !== 'in_buffer' && (!c.damage || c.damage.length === 0)).length / filteredData.containers.length * 100) || 0}%` }}
                       ></div>
                     </div>
                   </div>
@@ -1292,7 +1292,7 @@ export const DashboardOverview: React.FC = () => {
 
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          {(container.damage && container.damage.length > 0) ? (
+                          {((container.damage && container.damage.length > 0) || container.status === 'in_buffer') ? (
                             <>
                               <XCircle className="h-4 w-4 text-red-500" />
                               <span className="text-sm text-red-600 font-medium">Damaged</span>
@@ -1349,8 +1349,9 @@ export const DashboardOverview: React.FC = () => {
                 const customerContainers = filteredContainers.filter(c =>
                   (c.clientCode || c.clientName) === customerKey
                 );
-                const damaged = customerContainers.filter(c => c.damage && c.damage.length > 0).length;
-                const undamaged = customerContainers.filter(c => !c.damage || c.damage.length === 0).length;
+                // Include buffer zone containers as damaged
+                const damaged = customerContainers.filter(c => (c.damage && c.damage.length > 0) || c.status === 'in_buffer').length;
+                const undamaged = customerContainers.filter(c => c.status !== 'in_buffer' && (!c.damage || c.damage.length === 0)).length;
                 const damageRate = customerContainers.length > 0 ? (damaged / customerContainers.length) * 100 : 0;
 
                 return (

@@ -151,26 +151,85 @@ export interface GateInOperation {
   transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // For Excel reports
 }
 
-export interface PendingGateOut {
+// Phase 1: Gate Out Operation (sans conteneurs - créé lors de la première phase)
+export interface GateOutOperation {
   id: string;
-  date: Date;
+  createdAt: Date;
+  
+  // Booking info
   bookingNumber: string;
-  bookingReferenceId?: string; // ID of the booking reference
-  clientCode: string;
-  clientName: string;
+  bookingReferenceId: string;
   bookingType: 'IMPORT' | 'EXPORT';
   totalContainers: number;
-  processedContainers: number;
-  remainingContainers: number;
-  transportCompany: string;
+  
+  // Client info
+  clientCode: string;
+  clientName: string;
+  
+  // Transport info
   driverName: string;
   truckNumber: string;
+  transportCompany: string;
+  
+  // Status et progression
   status: 'pending' | 'in_process' | 'completed' | 'cancelled';
+  processedContainers: number;
+  remainingContainers: number;
+  
+  // Operator
   createdBy: string;
-  createdAt: Date;
-  updatedBy: string;
+  updatedBy?: string;
   updatedAt?: Date;
+  
   notes?: string;
+}
+
+// Phase 2: Gate Out Container (conteneurs individuels sortis - créé lors du traitement)
+export interface GateOutContainer {
+  id: string;
+  gateOutOperationId: string;
+  processedAt: Date;
+  
+  // Container info
+  containerNumber: string;
+  containerSize: '20ft' | '40ft';
+  containerType: string;
+  containerStatus: 'FULL' | 'EMPTY';
+  containerId: string;
+  
+  // Location (d'où sort le conteneur)
+  currentLocation: string;
+  stackId?: string;
+  
+  // Booking info (hérité de l'opération parent)
+  bookingNumber: string;
+  bookingType: 'IMPORT' | 'EXPORT';
+  
+  // Client info (hérité)
+  clientCode: string;
+  clientName: string;
+  
+  // Transport info (hérité)
+  driverName: string;
+  truckNumber: string;
+  transportCompany: string;
+  
+  // EDI transmission (lecture seule - géré par EDI Management)
+  ediTransmitted?: boolean;
+  ediTransmissionDate?: Date;
+  ediLogId?: string;
+  ediErrorMessage?: string;
+  
+  // Operator
+  processedBy: string;
+  
+  notes?: string;
+  transactionType?: 'Livraison' | 'Transfert (OUT)';
+}
+
+// Alias pour compatibilité avec le code existant
+export interface PendingGateOut extends GateOutOperation {
+  date: Date; // Alias pour createdAt
 }
 
 export interface Client {
