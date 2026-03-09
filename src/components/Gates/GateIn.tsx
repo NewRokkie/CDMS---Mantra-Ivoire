@@ -3,6 +3,7 @@ import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, 
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useYard } from '../../hooks/useYard';
+import { useTheme } from '../../hooks/useTheme';
 import { gateService, clientService, containerService, realtimeService, locationManagementService, yardsService } from '../../services/api';
 import { bufferZoneService } from '../../services/bufferZoneService';
 import { ediTransmissionService } from '../../services/ediTransmissionService';
@@ -36,6 +37,7 @@ const extractStackNumber = (location: string): string | null => {
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const { currentYard, validateYardOperation } = useYard();
   const toast = useToast();
 
@@ -1188,8 +1190,8 @@ export const GateIn: React.FC = () => {
 
   // Show skeletons while initial data is loading
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:bg-transparent">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
@@ -1206,7 +1208,7 @@ export const GateIn: React.FC = () => {
           <CardSkeleton />
         </div>
 
-        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden p-4">
           <TableSkeleton />
         </div>
       </div>
@@ -1215,9 +1217,9 @@ export const GateIn: React.FC = () => {
 
   // Main Overview
   return (
-    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:bg-transparent">
       {/* Unified Mobile-First Header */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
@@ -1251,53 +1253,53 @@ export const GateIn: React.FC = () => {
         {/* Mobile: 2x2 Grid | Tablet+: 5x1 Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
           {/* Today's Gate Ins */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
+              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 dark:bg-green-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{todayGateIns.length}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.today')}</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{todayGateIns.length}</p>
+                <p className="text-xs font-medium text-green-700 dark:text-green-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.today')}</p>
               </div>
             </div>
           </div>
 
           {/* Pending Operations */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-orange-500 lg:bg-yellow-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-yellow-600" />
+              <div className="p-3 lg:p-2 bg-orange-500 lg:bg-yellow-100 dark:bg-orange-500 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-yellow-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.pending')}</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{pendingOperations.length}</p>
+                <p className="text-xs font-medium text-orange-700 dark:text-orange-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.pending')}</p>
               </div>
             </div>
           </div>
 
           {/* Containers Processed */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-blue-500 lg:bg-blue-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <ContainerIcon className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-blue-600" />
+              <div className="p-3 lg:p-2 bg-blue-500 lg:bg-blue-100 dark:bg-blue-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <ContainerIcon className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-blue-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{completedOperations.length}</p>
-                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.processed')}</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{completedOperations.length}</p>
+                <p className="text-xs font-medium text-blue-700 dark:text-blue-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.processed')}</p>
               </div>
             </div>
           </div>
 
           {/* Alimentaire Containers */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
+              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 dark:bg-green-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{alimentaireContainersCount}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Alimentaire Containers</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{alimentaireContainersCount}</p>
+                <p className="text-xs font-medium text-green-700 dark:text-green-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">Alimentaire Containers</p>
               </div>
             </div>
           </div>
@@ -1309,22 +1311,22 @@ export const GateIn: React.FC = () => {
         </div>
 
         {/* Unified Search and Filter */}
-        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
             <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
-              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
+              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
                 placeholder="Search operations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 lg:bg-white focus:bg-white transition-colors"
+                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 dark:border-gray-600 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 lg:bg-white dark:lg:bg-gray-800 focus:bg-white dark:focus:bg-gray-700 transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
                 >
                   <X className="h-5 w-5 lg:h-4 lg:w-4" />
                 </button>
@@ -1339,7 +1341,7 @@ export const GateIn: React.FC = () => {
                   onClick={() => setSelectedFilter(filter)}
                   className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${selectedFilter === filter
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95'
                     }`}
                 >
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -1351,7 +1353,7 @@ export const GateIn: React.FC = () => {
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-sm dark:text-white"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -1360,7 +1362,7 @@ export const GateIn: React.FC = () => {
                 <option value="divers">Divers</option>
               </select>
               {searchTerm && (
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg font-medium">
+                <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg font-medium">
                   {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
                 </span>
               )}

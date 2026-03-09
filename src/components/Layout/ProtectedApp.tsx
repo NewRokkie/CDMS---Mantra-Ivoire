@@ -162,7 +162,7 @@ const ProtectedApp: React.FC = () => {
 
   return (
     <YardContext.Provider value={yardProvider}>
-      <div className="flex h-screen bg-gray-100 overflow-hidden">
+      <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
         <Sidebar
           activeModule={activeModule}
           setActiveModule={setActiveModule}
@@ -171,7 +171,7 @@ const ProtectedApp: React.FC = () => {
         />
         <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
           <Header onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-50 dark:bg-gray-900">
             <RouteController />
           </main>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, Check, Building, X } from 'lucide-react';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Client {
   id: string;
@@ -32,6 +33,7 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { theme } = useTheme();
 
   const selectedClient = clients.find(client => client.id === selectedClientId);
 
@@ -149,14 +151,14 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
       `}>
         {/* Input Field */}
         <div className={`
-          relative flex items-center bg-white border-2 rounded-xl transition-all duration-300
+          relative flex items-center bg-white dark:bg-gray-700 border-2 rounded-xl transition-all duration-300
           ${isFocused || isOpen
             ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
             : selectedClient
             ? 'border-green-400 shadow-md shadow-green-400/10'
-            : 'border-gray-200 hover:border-gray-300 shadow-sm'
+            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 shadow-sm'
           }
-          ${disabled ? 'bg-gray-50 border-gray-200 cursor-not-allowed' : 'hover:shadow-md'}
+          ${disabled ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed' : 'hover:shadow-md'}
         `}>
 
           {/* Search Icon */}
@@ -180,9 +182,9 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
             required={required}
             disabled={disabled}
             className={`
-            w-full ${compact ? 'pl-10 pr-16 py-2 text-sm' : 'pl-12 pr-20 py-4 text-sm md:text-base'} bg-transparent text-gray-900 placeholder-gray-400
+            w-full ${compact ? 'pl-10 pr-16 py-2 text-sm' : 'pl-12 pr-20 py-4 text-sm md:text-base'} bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
               focus:outline-none transition-all duration-300
-              ${disabled ? 'cursor-not-allowed text-gray-500' : ''}
+              ${disabled ? 'cursor-not-allowed text-gray-500 dark:text-gray-400' : ''}
               font-medium
             `}
             autoComplete="off"
@@ -222,20 +224,20 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className={`
-          absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl
+          absolute z-50 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl
           max-h-64 overflow-hidden animate-slide-in-up
           ${filteredClients.length > 0 ? '' : 'py-4'}
         `}>
           {filteredClients.length > 0 ? (
             <>
               {/* Search Results Header */}
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+              <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     {filteredClients.length} Client{filteredClients.length !== 1 ? 's' : ''} Found
                   </span>
                   {searchTerm && (
-                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                    <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
                       "{searchTerm}"
                     </span>
                   )}
@@ -252,11 +254,11 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
                     className={`
                       w-full text-left ${compact ? 'px-3 py-2' : 'px-4 py-4'} transition-all duration-200 group
                       ${index === highlightedIndex
-                        ? 'bg-blue-50 border-l-4 border-blue-500'
-                        : 'hover:bg-gray-50 border-l-4 border-transparent'
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-l-4 border-transparent'
                       }
                       ${selectedClientId === client.id
-                        ? 'bg-green-50 border-l-4 border-green-500'
+                        ? 'bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500'
                         : ''
                       }
                     `}
@@ -266,17 +268,17 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
                       <div className={`
                         p-2 rounded-lg transition-all duration-200
                         ${index === highlightedIndex || selectedClientId === client.id
-                          ? 'bg-white shadow-md'
-                          : 'bg-gray-100 group-hover:bg-white group-hover:shadow-sm'
+                          ? 'bg-white dark:bg-gray-600 shadow-md'
+                          : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-white dark:group-hover:bg-gray-600 group-hover:shadow-sm'
                         }
                       `}>
                         <Building className={`
                           h-4 w-4 transition-colors duration-200
                           ${index === highlightedIndex
-                            ? 'text-blue-600'
+                            ? 'text-blue-600 dark:text-blue-400'
                             : selectedClientId === client.id
-                            ? 'text-green-600'
-                            : 'text-gray-500 group-hover:text-gray-700'
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'
                           }
                         `} />
                       </div>
@@ -287,22 +289,22 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
                           <span className={`
                             font-bold text-sm transition-colors duration-200
                             ${index === highlightedIndex
-                              ? 'text-blue-900'
+                              ? 'text-blue-900 dark:text-blue-100'
                               : selectedClientId === client.id
-                              ? 'text-green-900'
-                              : 'text-gray-900'
+                              ? 'text-green-900 dark:text-green-100'
+                              : 'text-gray-900 dark:text-white'
                             }
                           `}>
                             {client.code}
                           </span>
-                          <span className="text-gray-400">•</span>
+                          <span className="text-gray-400 dark:text-gray-500">•</span>
                           <span className={`
                             text-sm truncate transition-colors duration-200
                             ${index === highlightedIndex
-                              ? 'text-blue-700'
+                              ? 'text-blue-700 dark:text-blue-200'
                               : selectedClientId === client.id
-                              ? 'text-green-700'
-                              : 'text-gray-600'
+                              ? 'text-green-700 dark:text-green-200'
+                              : 'text-gray-600 dark:text-gray-300'
                             }
                           `}>
                             {client.name}
@@ -326,11 +328,11 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
           ) : (
             /* Empty State */
             <div className="text-center py-8 px-4">
-              <div className="bg-gray-100 rounded-full p-3 w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                <Building className="h-8 w-8 text-gray-400" />
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-full p-3 w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                <Building className="h-8 w-8 text-gray-400 dark:text-gray-500" />
               </div>
-              <h3 className="text-sm font-medium text-gray-900 mb-1">No clients found</h3>
-              <p className="text-xs text-gray-500">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No clients found</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {searchTerm
                   ? `No results for "${searchTerm}". Try a different search term.`
                   : 'No clients available to select from.'

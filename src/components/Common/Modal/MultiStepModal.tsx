@@ -36,7 +36,6 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
     duration: 1500
   });
 
-  // Use accessibility hooks with custom keyboard handling for steps
   const { modalRef } = useFocusManagement({
     isOpen,
     onClose,
@@ -73,7 +72,6 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
     hideNotification();
     if (onNextStep) {
       onNextStep();
-      // Announce step change
       const nextStepNumber = Math.min(currentStep + 1, totalSteps);
       const stepLabel = stepLabels[nextStepNumber - 1] || `Step ${nextStepNumber}`;
       announce(`Moved to ${stepLabel}`, 'polite');
@@ -84,7 +82,6 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
     hideNotification();
     if (onPrevStep) {
       onPrevStep();
-      // Announce step change
       const prevStepNumber = Math.max(currentStep - 1, 1);
       const stepLabel = stepLabels[prevStepNumber - 1] || `Step ${prevStepNumber}`;
       announce(`Moved to ${stepLabel}`, 'polite');
@@ -94,14 +91,10 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === totalSteps;
 
-
-
-  // Enhanced keyboard navigation for multi-step modals
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Handle Ctrl+Arrow keys for step navigation
       if (event.ctrlKey) {
         if (event.key === 'ArrowRight' && !isLastStep && isStepValid) {
           event.preventDefault();
@@ -112,12 +105,10 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
         }
       }
 
-      // Handle Alt+Number keys to jump to specific steps
       if (event.altKey && /^[1-9]$/.test(event.key)) {
         const stepNumber = parseInt(event.key);
         if (stepNumber <= totalSteps) {
           event.preventDefault();
-          // This would need to be implemented in the parent component
           announce(`Attempting to navigate to step ${stepNumber}`, 'polite');
         }
       }
@@ -127,49 +118,50 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isLastStep, isFirstStep, isStepValid, handleNextStep, handlePrevStep, totalSteps, announce]);
 
+  if (!isOpen) return null;
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       onClick={preventBackdropClose ? undefined : onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
     >
       <div
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-3xl h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl text-gray-900 overflow-hidden ${className}`}
+        className={`w-full max-w-3xl h-[90vh] flex flex-col bg-white dark:bg-gray-900 rounded-3xl shadow-[0_32px_64px_-15px_rgba(0,0,0,0.5)] text-gray-900 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ${className}`}
       >
-        {/* Modal Header with Integrated Progress Bar */}
+        {/* Modal Header */}
         <ModalHeader
           title={title}
-          subtitle={`Étape <span class="font-numeric">${currentStep}</span> sur <span class="font-numeric">${totalSteps}</span>`}
+          subtitle={`Étape ${currentStep} sur ${totalSteps}`}
           icon={icon}
           onClose={showCloseButton ? onClose : undefined}
           showCloseButton={showCloseButton}
-          gradient="from-gray-50 to-gray-100"
+          gradient="from-white via-white to-gray-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/20"
         >
-          {/* Progress Bar integrated in header */}
           {showProgressBar && (
-            <ProgressBar
-              currentStep={currentStep}
-              totalSteps={totalSteps}
-              stepLabels={stepLabels}
-              showLabels={true}
-            />
+            <div className="mt-5 animate-in fade-in slide-in-from-top-2 duration-700 delay-100">
+              <ProgressBar
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                stepLabels={stepLabels}
+                showLabels={true}
+              />
+            </div>
           )}
         </ModalHeader>
 
         {/* Modal Body */}
         <ModalBody scrollable={true}>
-          {/* Notification Area */}
           <NotificationArea
             notification={notification}
             onDismiss={hideNotification}
           />
 
-          {/* Step Content */}
-          <div className="space-y-8">
-            {/* Render children - handle both function and element children */}
+          {/* Animation de transition par étape */}
+          <div key={currentStep} className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             {typeof children === 'function'
               ? children({
                   showNotification,
@@ -179,23 +171,21 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
           </div>
         </ModalBody>
 
-        {/* Modal Footer with Navigation */}
-        <ModalFooter justify="between">
-          {/* Previous Button */}
+        {/* Modal Footer */}
+        <ModalFooter justify="between" className="bg-gray-50/50 dark:bg-gray-800/10 backdrop-blur-md">
           <button
             type="button"
             onClick={handlePrevStep}
             disabled={isFirstStep}
-            className="px-4 py-2 text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 transition disabled:opacity-50 font-gilroy-medium"
+            className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all disabled:opacity-0 disabled:pointer-events-none active:scale-95 flex items-center"
           >
             Précédent
           </button>
 
-          {/* Cancel and Next/Finish Buttons */}
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition font-gilroy-medium"
+              className="px-5 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               Annuler
             </button>
@@ -203,23 +193,23 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
             <button
               type="button"
               onClick={handleNextStep}
-              disabled={!isStepValid}
-              className={`px-4 py-2 text-white rounded-lg transition flex items-center space-x-2 disabled:opacity-50 font-gilroy-medium ${
-                isLastStep
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className={`
+                relative group px-7 py-2.5 text-white text-sm font-bold rounded-xl transition-all active:scale-95 flex items-center space-x-2 shadow-lg
+                ${!isStepValid ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed grayscale' : 
+                  isLastStep ? 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-500' : 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-500'
+                }
+              `}
             >
-              {isLastStep ? (
-                <>
+              <span className="relative z-10">{isLastStep ? 'Terminer' : 'Suivant'}</span>
+              <div className="relative z-10 transition-transform group-hover:translate-x-1">
+                {isLastStep ? (
                   <Check className="h-4 w-4" />
-                  <span>Terminer</span>
-                </>
-              ) : (
-                <>
-                  <span>Suivant</span>
+                ) : (
                   <ChevronRight className="h-4 w-4" />
-                </>
+                )}
+              </div>
+              {isStepValid && (
+                <div className={`absolute inset-0 rounded-xl blur-lg opacity-0 group-hover:opacity-30 transition-opacity ${isLastStep ? 'bg-emerald-400' : 'bg-blue-400'}`} />
               )}
             </button>
           </div>

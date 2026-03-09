@@ -7,8 +7,31 @@
 
 
 @layer components {
+
+  /* Base dark mode styles */
+  .dark body {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+
   body {
     font-family: 'Gilroy-Regular', 'Helvetica Neue', sans-serif;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-in {
+    animation: slideIn 0.4s ease-out forwards;
   }
 
   /* Font family utilities */
@@ -66,11 +89,11 @@
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-2;
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
   }
 
   .input {
-    @apply w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 outline-none transition;
+    @apply w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 outline-none transition bg-white dark:bg-gray-800 dark:text-white;
   }
 
   .input-icon {
@@ -78,19 +101,19 @@
   }
 
   .error-text {
-    @apply mt-1 text-xs text-red-600;
+    @apply mt-1 text-xs text-red-600 dark:text-red-400;
   }
 
   /* DepotFormModal CSS Class Standards */
 
   /* Main section container */
   .depot-section {
-    @apply bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition;
+    @apply bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition;
   }
 
   /* Section header */
   .depot-section-header {
-    @apply font-semibold text-gray-800 mb-5 flex items-center;
+    @apply font-semibold text-gray-800 dark:text-gray-100 mb-5 flex items-center;
   }
 
   /* Section icon */
@@ -105,7 +128,7 @@
 
   /* Field separator */
   .depot-field-separator {
-    @apply md:col-span-2 pt-4 border-t border-gray-100;
+    @apply md:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700;
   }
 
   /* Standard input with error state support */
@@ -523,7 +546,7 @@
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium border border-gray-300;
+    @apply px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 font-medium border border-gray-300 dark:border-gray-600;
   }
 
   /* Extended grid columns for better stack layout */
