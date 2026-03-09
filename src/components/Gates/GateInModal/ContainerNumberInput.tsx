@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { getContainerValidationStatus } from '../utils';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface ContainerNumberInputProps {
   label: string;
@@ -25,6 +26,7 @@ export const ContainerNumberInput: React.FC<ContainerNumberInputProps> = ({
 }) => {
   const confirmationInputRef = useRef<HTMLInputElement>(null);
   const [isPasswordMode, setIsPasswordMode] = useState(false);
+  const { theme } = useTheme();
 
   const validation = getContainerValidationStatus(value);
   const confirmationValidation = getContainerValidationStatus(confirmationValue);
@@ -79,7 +81,7 @@ export const ContainerNumberInput: React.FC<ContainerNumberInputProps> = ({
       <div className="flex flex-col lg:flex-row lg:space-x-4 space-y-4 lg:space-y-0">
         {/* Original Container Number Field */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {label} {required && '*'}
           </label>
           <div className="relative">
@@ -88,11 +90,11 @@ export const ContainerNumberInput: React.FC<ContainerNumberInputProps> = ({
               required={required}
               value={value}
               onChange={(e) => handleInputChange(e.target.value)}
-              className={`form-input w-full ${
+              className={`form-input w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                 value && !validation.isValid
-                  ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                  ? 'border-red-300 bg-red-50 dark:bg-red-900/20 focus:ring-red-500 focus:border-red-500'
                   : value && validation.isValid
-                  ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
+                  ? 'border-green-300 bg-green-50 dark:bg-green-900/20 focus:ring-green-500 focus:border-green-500'
                   : ''
               } text-base py-4`}
               placeholder={placeholder}
@@ -104,12 +106,12 @@ export const ContainerNumberInput: React.FC<ContainerNumberInputProps> = ({
           <div className="mt-2 space-y-1">
             {value && (
               <div className={`flex items-center space-x-1 text-xs font-medium ${
-                validation.isValid ? 'text-green-600' : 'text-red-600'
+                validation.isValid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>
                 {validation.isValid ? (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
                 ) : (
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />
                 )}
                 <span>{validation.message}</span>
               </div>
@@ -119,7 +121,7 @@ export const ContainerNumberInput: React.FC<ContainerNumberInputProps> = ({
 
         {/* Confirmation Field */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Confirm {label} {required && '*'}
           </label>
           <div className="relative">
@@ -130,11 +132,11 @@ export const ContainerNumberInput: React.FC<ContainerNumberInputProps> = ({
               value={confirmationValue}
               onChange={(e) => handleInputChange(e.target.value, true)}
               onFocus={handleConfirmationFocus}
-              className={`form-input w-full ${
+              className={`form-input w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                 hasConfirmationError
-                  ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                  ? 'border-red-300 bg-red-50 dark:bg-red-900/20 focus:ring-red-500 focus:border-red-500'
                   : confirmationValue && isMatching && confirmationValidation.isValid
-                  ? 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500'
+                  ? 'border-green-300 bg-green-50 dark:bg-green-900/20 focus:ring-green-500 focus:border-green-500'
                   : ''
               } text-base py-4`}
               placeholder="Re-enter container number"
@@ -146,12 +148,12 @@ export const ContainerNumberInput: React.FC<ContainerNumberInputProps> = ({
           <div className="mt-2">
             {confirmationValue && (
               <div className={`flex items-center space-x-1 text-xs font-medium ${
-                isMatching && confirmationValidation.isValid ? 'text-green-600' : 'text-red-600'
+                isMatching && confirmationValidation.isValid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>
                 {isMatching && confirmationValidation.isValid ? (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
                 ) : (
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />
                 )}
                 <span>
                   {!confirmationValidation.isValid 

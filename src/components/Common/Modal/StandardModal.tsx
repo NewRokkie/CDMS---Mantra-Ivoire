@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { StandardModalProps, NotificationState } from './types';
 import { ModalHeader } from './components/ModalHeader';
 import { ModalBody } from './components/ModalBody';
@@ -15,17 +15,17 @@ export const StandardModal: React.FC<StandardModalProps> = ({
   icon,
   children,
   onSubmit,
-  submitLabel = 'Save',
-  cancelLabel = 'Cancel',
+  submitLabel = 'Enregistrer',
+  cancelLabel = 'Annuler',
   isSubmitting = false,
   showCloseButton = true,
   preventBackdropClose = false,
   className = '',
-  size = 'lg',
+  size = 'md',
   maxHeight = '90vh',
-  headerGradient = 'from-gray-50 to-gray-100',
+  headerGradient = 'from-white/70 to-gray-50/50 dark:from-gray-800/70 dark:to-gray-900/50',
   headerIcon,
-  headerIconColor = 'text-blue-600',
+  headerIconColor,
   footerJustify = 'end',
   customFooter,
   hideDefaultFooter = false,
@@ -37,10 +37,9 @@ export const StandardModal: React.FC<StandardModalProps> = ({
     message: '',
     show: false,
     autoHide: true,
-    duration: 1500
+    duration: 3000
   });
 
-  // Use accessibility hooks
   const { modalRef } = useFocusManagement({
     isOpen,
     onClose,
@@ -59,7 +58,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
       message,
       show: true,
       autoHide: options?.autoHide ?? (type === 'success'),
-      duration: options?.duration ?? 1500
+      duration: options?.duration ?? 3000
     });
   }, []);
 
@@ -68,11 +67,11 @@ export const StandardModal: React.FC<StandardModalProps> = ({
   }, []);
 
   const handleSubmit = async () => {
-    if (onSubmit) {
+    if (onSubmit && !isSubmitting && isFormValid) {
       try {
         await onSubmit();
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+        const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
         showNotification('error', errorMessage, { autoHide: false });
         announce(errorMessage, 'assertive');
       }
@@ -81,31 +80,41 @@ export const StandardModal: React.FC<StandardModalProps> = ({
 
   if (!isOpen) return null;
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm': return 'max-w-md';
-      case 'md': return 'max-w-lg';
-      case 'lg': return 'max-w-2xl';
-      case 'xl': return 'max-w-4xl';
-      case '2xl': return 'max-w-6xl';
-      default: return 'max-w-3xl';
-    }
-  };
+  const sizeClasses = {
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    '2xl': 'max-w-6xl'
+  }[size] || 'max-w-lg';
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      onClick={preventBackdropClose ? undefined : onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden"
     >
+      {/* Overlay avec flou et fondu */}
+      <div 
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-300"
+        onClick={preventBackdropClose ? undefined : onClose}
+      />
+
+      {/* Modal Content */}
       <div
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full ${getSizeClasses()} flex flex-col bg-white rounded-2xl shadow-2xl text-gray-900 overflow-hidden animate-slide-in-up mx-2 sm:mx-0 ${className}`}
+        className={`
+          relative w-full ${sizeClasses} 
+          flex flex-col 
+          bg-white dark:bg-gray-900 
+          rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] 
+          overflow-hidden 
+          animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-400
+          ${className}
+        `}
         style={{ maxHeight }}
       >
-        {/* Modal Header */}
         <ModalHeader
           title={title}
           subtitle={subtitle}
@@ -116,44 +125,36 @@ export const StandardModal: React.FC<StandardModalProps> = ({
           iconColor={headerIconColor}
         />
 
-        {/* Modal Body */}
-        <ModalBody scrollable={true}>
-          {/* Notification Area */}
+        <ModalBody scrollable={true} className="relative">
           <NotificationArea
             notification={notification}
             onDismiss={hideNotification}
           />
 
-          {/* Content */}
-          <div className="space-y-8">
-            {/* Pass notification functions to children */}
-            {typeof children === 'function' ? (
-              children({ showNotification, hideNotification })
-            ) : (
-              children
-            )}
+          <div className="animate-in fade-in slide-in-from-left-2 duration-500 delay-150 fill-mode-both">
+            {typeof children === 'function' 
+              ? children({ showNotification, hideNotification }) 
+              : children
+            }
           </div>
         </ModalBody>
 
-        {/* Modal Footer */}
         {!hideDefaultFooter && (
-          <ModalFooter justify={footerJustify} className="flex-shrink-0">
+          <ModalFooter justify={footerJustify}>
             {customFooter || (
               <>
-                {/* Validation Summary */}
                 {validationSummary && (
-                  <div className="flex-1">
+                  <div className="flex-1 text-sm text-red-500 animate-in fade-in">
                     {validationSummary}
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 ml-auto">
+                <div className="flex items-center gap-3 ml-auto">
                   <button
                     onClick={onClose}
-                    className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm font-gilroy-medium"
+                    className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors"
                   >
-                    <span className="sm:hidden">✕</span>
-                    <span className="hidden sm:inline">{cancelLabel}</span>
+                    {cancelLabel}
                   </button>
 
                   {onSubmit && (
@@ -161,15 +162,26 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                       type="button"
                       onClick={handleSubmit}
                       disabled={isSubmitting || !isFormValid}
-                      className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm font-gilroy-medium"
+                      className={`
+                        relative group
+                        px-6 py-2 rounded-xl
+                        bg-blue-600 text-white text-sm font-bold
+                        shadow-md shadow-blue-500/20
+                        transition-all active:scale-95
+                        disabled:opacity-50 disabled:grayscale disabled:scale-100
+                        flex items-center justify-center gap-2
+                      `}
                     >
                       {isSubmitting ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>...</span>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Traitement...</span>
                         </>
                       ) : (
-                        <span>{submitLabel}</span>
+                        <>
+                          <span>{submitLabel}</span>
+                          <div className="absolute inset-0 rounded-xl bg-blue-400 blur-lg opacity-0 group-hover:opacity-20 transition-opacity" />
+                        </>
                       )}
                     </button>
                   )}
@@ -177,13 +189,6 @@ export const StandardModal: React.FC<StandardModalProps> = ({
               </>
             )}
           </ModalFooter>
-        )}
-
-        {/* Custom Footer */}
-        {customFooter && hideDefaultFooter && (
-          <div className="flex-shrink-0">
-            {customFooter}
-          </div>
         )}
       </div>
     </div>

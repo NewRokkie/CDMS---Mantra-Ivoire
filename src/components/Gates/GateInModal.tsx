@@ -2,6 +2,7 @@ import React from 'react';
 import { Package, Truck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useTheme } from '../../hooks/useTheme';
 import { GateInModalProps, GateInFormData } from './types';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TimePicker } from '../Common/TimePicker';
@@ -39,6 +40,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
 }) => {
   const { hasModuleAccess } = useAuth();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
 
   const handleFormSubmit = async () => {

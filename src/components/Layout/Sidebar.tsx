@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronRight, Cog, X, LucideIcon } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage'; // Refreshed hook reference
+import { useTheme } from '../../hooks/useTheme';
 import { ModuleAccess } from '../../types';
 import { SyncStatusIndicator } from '../Sync';
 import { handleError } from '../../services/errorHandling';
@@ -28,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, hasModuleAccess, refreshModuleAccess } = useAuth();
   const { t } = useLanguage();
+  const { theme } = useTheme();
 
   // Force re-render when user module access changes
   const userModuleAccessKey = user?.moduleAccess ? JSON.stringify(user.moduleAccess) : 'no-access';
@@ -185,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar */}
       <aside key={userModuleAccessKey} className={`
-        bg-white text-slate-800 h-screen flex flex-col border-r border-slate-200 shadow-sm
+        bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 h-screen flex flex-col border-r border-slate-200 dark:border-gray-700 shadow-sm
         lg:w-72 lg:relative lg:translate-x-0
         fixed top-0 left-0 w-80 z-40 transition-all duration-300 ease-out
         ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
@@ -204,10 +206,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <img src="/assets/logo_favicon.ico" alt="Logo" className="h-10 w-10" />
             </div>
             <div className="flex-1 flex flex-col justify-center">
-              <h2 className="font-gilroy-bold text-lg tracking-tight text-slate-900 leading-none">
+              <h2 className="font-gilroy-bold text-lg tracking-tight text-slate-900 dark:text-white leading-none">
                 MANTRA <span className="text-olam-dark">IVOIRE</span>
               </h2>
-              <p className="text-[10px] uppercase tracking-wider font-gilroy-bold text-slate-400 mt-1">Depot Management System</p>
+              <p className="text-[10px] uppercase tracking-wider font-gilroy-bold text-slate-400 dark:text-gray-500 mt-1">Depot Management System</p>
             </div>
           </div>
 
@@ -233,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <li key={item.id}>
                   {(item.id === 'edi' || item.id === 'reports') && (
                     <div className="py-2">
-                      <div className="h-px bg-slate-100 mx-4"></div>
+                      <div className="h-px bg-slate-100 dark:bg-gray-700 mx-4"></div>
                     </div>
                   )}
                   <button
@@ -241,8 +243,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       handleMainMenuClick(item.id);
                     }}
                     className={`w-full relative flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 group ${isActive
-                      ? 'bg-[#F0F9FA] text-accent-teal'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                      ? 'bg-[#F0F9FA] dark:bg-teal-900/30 text-accent-teal'
+                      : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800'
                       }`}
                   >
                     {isActive && (
@@ -265,8 +267,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     handleConfigurationToggle();
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${isConfigurationActive
-                    ? 'bg-slate-50 text-slate-900'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white'
+                    : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800'
                     }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -278,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Configurations Submenu */}
                 {isConfigurationsOpen && (
-                  <ul className="mt-2 ml-4 space-y-1 border-l-2 border-slate-700 pl-4">
+                  <ul className="mt-2 ml-4 space-y-1 border-l-2 border-slate-700 dark:border-gray-600 pl-4">
                     {filteredConfigurationItems.map((item) => {
                       const isActive = activeModule === item.id;
 
@@ -289,8 +291,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               handleConfigurationItemClick(item.id);
                             }}
                             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sm ${isActive
-                              ? 'bg-slate-50 text-accent-teal font-gilroy-bold'
-                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-gilroy-medium'
+                              ? 'bg-slate-50 dark:bg-gray-800 text-accent-teal font-gilroy-bold'
+                              : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800 font-gilroy-medium'
                               }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-accent-teal' : 'bg-slate-300'}`}></span>
@@ -307,19 +309,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Footer - Fixed */}
-        <div className="p-4 border-t border-slate-200 flex-shrink-0 bg-slate-50/50">
+        <div className="p-4 border-t border-slate-200 dark:border-gray-700 flex-shrink-0 bg-slate-50/50 dark:bg-gray-800/50">
           {user && (
             <div className="flex items-center gap-3 mb-3">
-              <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-xs font-gilroy-bold border border-white shadow-sm">
+              <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-gray-700 flex items-center justify-center text-slate-500 dark:text-gray-400 text-xs font-gilroy-bold border border-white dark:border-gray-600 shadow-sm">
                 {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-gilroy-bold text-slate-700 truncate">{user.name || 'User'}</p>
-                <p className="text-xs text-slate-400 truncate">{user.email || 'user@example.com'}</p>
+                <p className="text-sm font-gilroy-bold text-slate-700 dark:text-gray-200 truncate">{user.name || 'User'}</p>
+                <p className="text-xs text-slate-400 dark:text-gray-500 truncate">{user.email || 'user@example.com'}</p>
               </div>
             </div>
           )}
-          <div className="flex items-center justify-between text-[10px] text-slate-400 font-gilroy-bold uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-gray-500 font-gilroy-bold uppercase tracking-wider">
             <span>v1.0.0</span>
             <span>© 2025 DepotManager</span>
           </div>

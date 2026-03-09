@@ -51,7 +51,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, tr
   const classes = colorClasses[color];
 
   return (
-    <div className={`${classes.bg} rounded-xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}>
+    <div className={`${classes.bg} dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
