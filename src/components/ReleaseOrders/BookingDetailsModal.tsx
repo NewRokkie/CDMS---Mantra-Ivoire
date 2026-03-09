@@ -8,6 +8,7 @@ import { DataDisplayModal } from '../Common/Modal/DataDisplayModal';
 import { handleError } from '../../services/errorHandling';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { useToast } from '../../hooks/useToast';
+import { t } from 'i18next';
 
 interface BookingDetailsModalProps {
   booking: BookingReference | null;
