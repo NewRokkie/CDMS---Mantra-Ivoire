@@ -1,6 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StatCardProps {
   title: string;
@@ -47,7 +47,7 @@ const colorClasses = {
 };
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, color }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const classes = colorClasses[color];
 
   return (

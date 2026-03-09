@@ -301,7 +301,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
                 <span className="text-xs text-yellow-800">
-                  Only showing pending/in-process bookings ready for gate out
+                  {t('common.onlyShowingPending')}
                 </span>
               </div>
             </div>
@@ -378,7 +378,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                               <div className="flex items-center space-x-1">
                                 <User className="h-3 w-3" />
                                 <span className="truncate">
-                                  {canViewAllData ? order.clientName : 'Your Company'}
+                                  {canViewAllData ? order.clientName : t('common.yourCompany')}
                                 </span>
                               </div>
                               {order.bookingType && (
@@ -441,12 +441,12 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                 <FileText className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-sm font-medium text-gray-900 mb-1">
-                {searchTerm ? 'No matching bookings' : 'No bookings available'}
+                {searchTerm ? t('common.noResults') : t('common.noData')}
               </h3>
               <p className="text-xs text-gray-500">
                 {searchTerm
-                  ? `No results for "${searchTerm}". Try a different search term.`
-                  : 'No pending/in-process bookings are ready for gate out.'
+                  ? `${t('common.noResults')} : "${searchTerm}". ${t('common.tryAdjusting')}`
+                  : t('common.noBookingsReady')
                 }
               </p>
             </div>

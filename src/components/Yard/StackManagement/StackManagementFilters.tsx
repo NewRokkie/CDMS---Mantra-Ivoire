@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, Filter } from 'lucide-react';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StackManagementFiltersProps {
   searchTerm: string;
@@ -21,7 +21,7 @@ export const StackManagementFilters: React.FC<StackManagementFiltersProps> = ({
   onSectionFilterChange,
   onStatusFilterChange
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">

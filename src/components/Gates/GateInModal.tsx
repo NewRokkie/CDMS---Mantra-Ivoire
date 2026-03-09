@@ -1,7 +1,7 @@
 import React from 'react';
 import { Package, Truck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { GateInModalProps, GateInFormData } from './types';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { TimePicker } from '../Common/TimePicker';
@@ -38,7 +38,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   validationWarnings = [],
 }) => {
   const { hasModuleAccess } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
 
   const handleFormSubmit = async () => {
@@ -127,7 +127,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
   handleClientChange,
   handleTransactionTypeChange
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -517,8 +517,8 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       </div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Client:</span>
-                      <div className="font-medium">{formData.clientCode ? `${formData.clientCode} - ${formData.clientName}` : 'Not selected'}</div>
+                      <span className="text-gray-600">{t('gate.in.form.client')}:</span>
+                      <div className="font-medium">{formData.clientCode ? `${formData.clientCode} - ${formData.clientName}` : t('containers.notSelected')}</div>
                     </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -540,26 +540,26 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <span className="text-gray-600">Driver:</span>
-                      <div className="font-medium">{formData.driverName || 'Not specified'}</div>
+                      <span className="text-gray-600">{t('gate.in.form.driver')}:</span>
+                      <div className="font-medium">{formData.driverName || t('containers.notSelected')}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Truck:</span>
-                      <div className="font-medium">{formData.truckNumber || 'Not specified'}</div>
+                      <span className="text-gray-600">{t('gate.in.form.truck')}:</span>
+                      <div className="font-medium">{formData.truckNumber || t('containers.notSelected')}</div>
                     </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <span className="text-gray-600">Transport Company:</span>
-                      <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
+                      <span className="text-gray-600">{t('gate.in.form.transport')}:</span>
+                      <div className="font-medium">{formData.transportCompany || t('containers.notSelected')}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Arrival Date:</span>
-                      <div className="font-medium">{formData.truckArrivalDate || 'Not specified'}</div>
+                      <span className="text-gray-600">{t('gate.in.form.arrivalDate')}:</span>
+                      <div className="font-medium">{formData.truckArrivalDate || t('containers.notSelected')}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Arrival Time:</span>
-                      <div className="font-medium">{formData.truckArrivalTime || 'Not specified'}</div>
+                      <span className="text-gray-600">{t('gate.in.form.arrivalTime')}:</span>
+                      <div className="font-medium">{formData.truckArrivalTime || t('containers.notSelected')}</div>
                     </div>
                     </div>
                     {formData.bookingReference && (
@@ -660,11 +660,11 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <span className="text-gray-600">Client:</span>
-                        <div className="font-medium">{formData.clientCode ? `${formData.clientCode} - ${formData.clientName}` : 'Not selected'}</div>
+                        <span className="text-gray-600">{t('gate.in.form.client')}:</span>
+                        <div className="font-medium">{formData.clientCode ? `${formData.clientCode} - ${formData.clientName}` : t('containers.notSelected')}</div>
                       </div>
                       <div>
-                        <span className="text-gray-600">Status:</span>
+                        <span className="text-gray-600">{t('gate.in.form.status')}:</span>
                         <div className="flex items-center space-x-2">
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             formData.status === 'FULL' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
@@ -678,12 +678,12 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {/* Transport Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <span className="text-gray-600">Driver:</span>
-                        <div className="font-medium">{formData.driverName || 'Not specified'}</div>
+                        <span className="text-gray-600">{t('gate.in.form.driver')}:</span>
+                        <div className="font-medium">{formData.driverName || t('containers.notSelected')}</div>
                       </div>
                       <div>
-                        <span className="text-gray-600">Truck:</span>
-                        <div className="font-medium">{formData.truckNumber || 'Not specified'}</div>
+                        <span className="text-gray-600">{t('gate.in.form.truck')}:</span>
+                        <div className="font-medium">{formData.truckNumber || t('containers.notSelected')}</div>
                       </div>
                     </div>
 

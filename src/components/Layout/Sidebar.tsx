@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronRight, Cog, X, LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage'; // Refreshed hook reference
 import { ModuleAccess } from '../../types';
 import { SyncStatusIndicator } from '../Sync';
 import { handleError } from '../../services/errorHandling';
@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsMobileMenuOpen: externalSetIsMobileMenuOpen
 }) => {
   const { user, hasModuleAccess, refreshModuleAccess } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   // Force re-render when user module access changes
   const userModuleAccessKey = user?.moduleAccess ? JSON.stringify(user.moduleAccess) : 'no-access';

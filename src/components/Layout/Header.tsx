@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, User, Globe, LogOut, Menu, X, Crown, Star, Eye, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
 import { usePWA } from '../../hooks/usePWA';
 import { useLocation } from 'react-router-dom';
 import { YardSelector } from './YardSelector';
@@ -16,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
+  const { t, i18n } = useTranslation();
   const { isInstallable, install } = usePWA();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -85,11 +85,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
             <div className="hidden lg:flex items-center space-x-2">
               {/* Language Switcher */}
               <button
-                onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
+                onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'fr' : 'en')}
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <Globe className="h-4 w-4" />
-                <span className="font-gilroy-medium">{language.toUpperCase()}</span>
+                <span className="font-gilroy-medium">{i18n.language.toUpperCase()}</span>
               </button>
 
               {/* Notifications */}
@@ -187,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                   {/* Language Switcher */}
                   <button
                     onClick={() => {
-                      setLanguage(language === 'en' ? 'fr' : 'en');
+                      i18n.changeLanguage(i18n.language === 'en' ? 'fr' : 'en');
                       setIsMobileMenuOpen(false);
                     }}
                     className="flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl hover:from-gray-100 hover:to-gray-200 transition-all border border-gray-200 shadow-sm active:scale-95"
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       <Globe className="h-6 w-6 text-gray-700" />
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-600 font-gilroy-medium">{language.toUpperCase()}</p>
+                      <p className="text-xs text-gray-600 font-gilroy-medium">{i18n.language.toUpperCase()}</p>
                     </div>
                   </button>
 

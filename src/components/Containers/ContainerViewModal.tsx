@@ -2,7 +2,7 @@ import React from 'react';
 import { Package, Truck, FileText, AlertTriangle, CheckCircle, Clock, Building } from 'lucide-react';
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { getDaysBetween } from '../../utils/dateHelpers';
 import { DataDisplayModal } from '../Common/Modal/DataDisplayModal';
 import { getContainerLocationDisplay } from '../../utils/containerLocationDisplay';
@@ -19,7 +19,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
   isOpen
 }) => {
   const { canViewAllData } = useAuth();
-  const { language } = useLanguage();
+  const { language, t } = useTranslation();
 
   const getStatusIcon = (status: Container['status']) => {
     switch (status) {
@@ -101,7 +101,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     title: 'Client Information',
     icon: Building,
     data: {
-      clientName: canViewAllData() ? container.clientName : 'Your Company',
+      clientName: canViewAllData() ? container.clientName : t('common.yourCompany'),
       clientCode: container.clientCode || '-'
     },
     layout: 'grid' as const

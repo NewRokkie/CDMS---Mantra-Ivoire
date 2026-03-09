@@ -1,7 +1,7 @@
 import React from 'react';
 import { Package, TrendingUp, AlertTriangle, Wrench, Building, BarChart3, Activity, Clock, Users } from 'lucide-react';
 import { Yard } from '../../types';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface YardStatsProps {
   stats: {
@@ -17,7 +17,7 @@ interface YardStatsProps {
 }
 
 export const YardStats: React.FC<YardStatsProps> = ({ stats, currentYard }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   const formatPercentage = (value: number) => {
     return `${value.toFixed(1)}%`;

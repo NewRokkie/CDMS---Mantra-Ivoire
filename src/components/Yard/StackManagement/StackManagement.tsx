@@ -4,7 +4,7 @@ import { stackService, yardsService } from '../../../services/api';
 import StackSoftDeleteService from '../../../services/api/stackSoftDeleteService';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { clientPoolService } from '../../../services/api';
 import { StackManagementHeader } from './StackManagementHeader';
 import { StackManagementFilters } from './StackManagementFilters';
@@ -22,7 +22,7 @@ import { useToast } from '../../../hooks/useToast';
 import { useConfirm } from '../../../hooks/useConfirm';
 
 export const StackManagement: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [stacks, setStacks] = useState<YardStack[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -3,7 +3,7 @@ import { X, Save, Loader, Package, CheckCircle, AlertTriangle, Plus, Trash2, Cal
 import { PendingGateOut } from '../types';
 import { validateContainerNumber, formatContainerNumberForDisplay } from '../utils';
 import { Container } from '../../../types';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { containerService } from '../../../services/api';
 
 // Local interface for ContainerInput since it's GateOut-specific
@@ -40,7 +40,7 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   isProcessing
 }) => {
   const { hasModuleAccess } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const canManageTimeTracking = hasModuleAccess('timeTracking');
   
   // Load containers directly from database instead of relying on global store

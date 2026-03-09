@@ -274,11 +274,12 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
           ) : filteredStacks.length === 0 ? (
             <div className="text-center py-12">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Stacks Available</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.noStacksAvailable')}</h3>
               <p className="text-gray-600">
                 {searchTerm || filterSize !== 'all'
-                  ? 'Try adjusting your filters'
-                  : 'All stacks are currently assigned to other pools'}
+                  ? t('common.tryAdjustingFilters')
+                  : t('clientPools.stacksAssignedToOtherPools')
+                }
               </p>
             </div>
           ) : (

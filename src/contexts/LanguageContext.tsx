@@ -1,14 +1,14 @@
-import React, { createContext, ReactNode } from 'react';
-import { Language } from '../types';
+/**
+ * DEPRECATED: This file is no longer used
+ * 
+ * The language context has been replaced by i18n integration.
+ * All language management is now handled by react-i18next.
+ * 
+ * Migration:
+ * - Remove imports of LanguageContext
+ * - Use useTranslation() from 'react-i18next' instead
+ * - Or use the compatibility wrapper useLanguage() from './hooks/useLanguage'
+ */
 
-export interface LanguageContextType {
-    language: Language;
-    setLanguage: (lang: Language) => void;
-    t: (key: string) => string;
-}
-
-export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
-
-export const LanguageProvider: React.FC<{ children: ReactNode; value: LanguageContextType }> = ({ children, value }) => {
-    return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-};
+export const LanguageContext = null;
+export const LanguageProvider = null;

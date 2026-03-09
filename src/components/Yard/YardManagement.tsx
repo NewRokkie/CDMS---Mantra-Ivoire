@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useYard } from '../../hooks/useYard';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { containerService, stackService } from '../../services/api';
 import { realtimeService } from '../../services/api/realtimeService';
 import { yardsService } from '../../services/api/yardsService';
@@ -12,7 +12,7 @@ import { handleError } from '../../services/errorHandling';
 
 export const YardManagement: React.FC = () => {
   const { currentYard: contextYard } = useYard();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [allContainers, setAllContainers] = useState<Container[]>([]);
   const [currentYard, setCurrentYard] = useState<any>(null);
   const [loading, setLoading] = useState(true);

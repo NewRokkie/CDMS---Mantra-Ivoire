@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, X, Clock, Plus, Truck, Package, Search, CheckCircle, Download } from 'lucide-react';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, bookingReferenceService, containerService } from '../../services/api';
@@ -34,7 +34,7 @@ interface GateOutFormData {
 }
 
 export const GateOut: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
   const toast = useToast();

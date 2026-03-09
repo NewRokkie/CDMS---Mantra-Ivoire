@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings, Plus, Minus } from 'lucide-react';
 import { Yard, YardStack } from '../../../types';
 import { FormModal } from '../../Common/Modal/FormModal';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StackFormModalProps {
   isOpen: boolean;
@@ -23,7 +23,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   existingStacks = [],
   isLoading = false
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     stackNumber: 0,
     sectionId: '',

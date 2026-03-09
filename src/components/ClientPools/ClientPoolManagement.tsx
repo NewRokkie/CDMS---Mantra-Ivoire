@@ -667,7 +667,7 @@ export const ClientPoolManagement: React.FC = () => {
             <Users className="h-8 w-8 mx-auto mb-2 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No client pools found</h3>
             <p className="text-gray-600">
-              {searchTerm ? "Try adjusting your search criteria." : "No client pools have been created yet."}
+              {searchTerm ? t('common.tryAdjusting') : t('common.noData')}
             </p>
           </div>
         )}

@@ -540,11 +540,12 @@ const UserManagementContent: React.FC = () => {
                     <div className="flex flex-col items-center space-y-3">
                       <UserIcon className="h-12 w-12 text-gray-400" />
                       <div className="text-gray-500">
-                        <p className="text-lg font-medium">No users found</p>
+                        <p className="text-lg font-medium">{t('common.noResults')}</p>
                         <p className="text-sm">
                           {searchTerm || roleFilter !== 'all' || statusFilter !== 'all'
-                            ? 'Try adjusting your search or filters'
-                            : 'Get started by adding your first user'}
+                            ? t('common.tryAdjustingSearch')
+                            : t('common.getStarted')
+                        }
                         </p>
                       </div>
                       {canManageUsers && !searchTerm && roleFilter === 'all' && statusFilter === 'all' && (
@@ -556,7 +557,7 @@ const UserManagementContent: React.FC = () => {
                           className="mt-4 flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <Plus className="h-4 w-4" />
-                          <span>Add First User</span>
+                          <span>{t('users.addFirstUser')}</span>
                         </button>
                       )}
                     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle, Clock } from 'lucide-react';
 import { Container } from '../../types';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { containerService } from '../../services/api';
@@ -165,7 +165,7 @@ export const ContainerList: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
-  const { t, language } = useLanguage();
+  const { t, i18n } = useTranslation();
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
   const toast = useToast();
@@ -888,7 +888,7 @@ function filterTable(){
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={getContainerLocationClass(container)}>
-                      {getContainerLocationDisplay(container, language)}
+                      {getContainerLocationDisplay(container, i18n.language)}
                     </span>
                   </td>
                   {canViewAllData() && (
@@ -1073,8 +1073,8 @@ function filterTable(){
             <h3 className="text-lg font-medium text-gray-900 mb-2">No containers found</h3>
             <p className="text-gray-600">
               {showClientNotice
-                ? "No containers found for your company. Contact the depot if you expect to see containers here."
-                : "Try adjusting your search criteria or filters."
+                ? t('common.noContainersCompany')
+                : t('common.tryAdjusting')
               }
             </p>
           </div>

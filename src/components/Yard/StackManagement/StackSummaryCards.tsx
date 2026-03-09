@@ -2,14 +2,14 @@ import React from 'react';
 import { Package, Shield, Grid3x3, Users, TrendingUp } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StackSummaryCardsProps {
   stacks: YardStack[];
 }
 
 export const StackSummaryCards: React.FC<StackSummaryCardsProps> = ({ stacks }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   
   // Filter out virtual stacks for calculations
   const physicalStacks = stacks.filter(s => !(s as any).isVirtual);

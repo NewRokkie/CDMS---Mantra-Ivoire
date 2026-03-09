@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import type { UserDetails, User } from '../../types';
 import { userService } from '../../services/api';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useDatabaseRetry } from '../../hooks/useRetry';
@@ -40,7 +40,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   onEdit,
   onDelete
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

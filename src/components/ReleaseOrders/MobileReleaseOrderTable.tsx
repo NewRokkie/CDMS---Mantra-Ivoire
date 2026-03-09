@@ -224,7 +224,7 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                     onClick={() => onViewDetails(order)}
                   >
                     <div className="text-sm font-medium text-gray-900">
-                      {canViewAllData() ? order.clientName : 'Your Company'}
+                      {canViewAllData() ? order.clientName : t('common.yourCompany')}
                     </div>
                     <div className="text-sm text-gray-500">
                       {order.clientCode}
@@ -323,7 +323,7 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-gray-900 text-sm truncate">
-                      {canViewAllData() ? order.clientName : 'Your Company'}
+                      {canViewAllData() ? order.clientName : t('common.yourCompany')}
                     </div>
                     <div className="text-xs text-gray-500 font-mono">{order.clientCode}</div>
                   </div>
@@ -420,7 +420,7 @@ export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = (
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">No booking references found</h3>
             <p className="text-gray-600 text-sm max-w-sm mx-auto">
-              {searchTerm ? "Try adjusting your search criteria or filters." : "No bookings have been created yet."}
+              {searchTerm ? t('common.tryAdjusting') : t('common.noData')}
             </p>
           </div>
         )}

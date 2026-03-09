@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { useYard } from '../../hooks/useYard';
 import { gateService, clientService, containerService, realtimeService, locationManagementService, yardsService } from '../../services/api';
 import { bufferZoneService } from '../../services/bufferZoneService';
@@ -35,7 +35,7 @@ const extractStackNumber = (location: string): string | null => {
 
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const { currentYard, validateYardOperation } = useYard();
   const toast = useToast();
 

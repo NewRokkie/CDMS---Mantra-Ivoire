@@ -315,7 +315,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-gray-600 text-sm px-4">
-                {searchTerm ? "Try adjusting your search criteria." : "No pending gate out operations."}
+                {searchTerm ? t('common.tryAdjusting') : t('common.noPendingOperations')}
               </p>
             </div>
           )}
@@ -463,7 +463,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
               <p className="text-gray-600">
-                {searchTerm ? "Try adjusting your search criteria." : "No pending gate out operations."}
+                {searchTerm ? t('common.tryAdjusting') : t('common.noPendingOperations')}
               </p>
             </div>
           )}

@@ -5,7 +5,7 @@ import { ContainerQuantityBySize, Client } from '../../types';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { clientService } from '../../services/api';
 import { TransactionOutSwitch } from './TransactionOutSwitch';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface BookingReferenceFormData {
   bookingNumber: string;
@@ -38,7 +38,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   initialData,
   isEditMode = false
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -277,7 +277,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
   handleClientSelect,
   handleTransactionTypeChange
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   const getContainerBreakdownText = (): string => {
     const parts = [];
@@ -288,7 +288,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
       parts.push(`${formData.containerQuantities.size40ft} ${t('common.container')}${formData.containerQuantities.size40ft !== 1 ? 's' : ''} of 40"`);
     }
 
-    if (parts.length === 0) return 'No containers specified';
+    if (parts.length === 0) return t('common.noContainers');
 
     const result = parts.join(' and ');
     return `${result} for a total of ${formData.totalContainers} ${t('common.container')}${formData.totalContainers !== 1 ? 's' : ''}`;

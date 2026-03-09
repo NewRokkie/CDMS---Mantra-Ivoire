@@ -441,7 +441,7 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
               <div className="text-xs text-orange-700">
                 {booking.containerQuantities.size20ft > 0 ?
                   `${Math.round((remaining20ft / booking.containerQuantities.size20ft) * 100)}% remaining` :
-                  'No containers'
+                  t('common.noContainers')
                 }
               </div>
             </div>
@@ -467,7 +467,7 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
               <div className="text-xs text-purple-700">
                 {booking.containerQuantities.size40ft > 0 ?
                   `${Math.round((adjustedRemaining40ft / booking.containerQuantities.size40ft) * 100)}% remaining` :
-                  'No containers'
+                  t('common.noContainers')
                 }
               </div>
             </div>

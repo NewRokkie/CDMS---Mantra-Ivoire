@@ -110,7 +110,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
                   <div>
                     <div className="font-medium text-gray-900">{container.number}</div>
                     <div className="text-sm text-gray-600">
-                      {canViewAllData ? container.clientName : 'Your Company'} • {container.location || '-'}
+                      {canViewAllData ? container.clientName : t('common.yourCompany')} • {container.location || '-'}
                     </div>
                   </div>
                   {getStatusBadge(container.status)}
@@ -204,7 +204,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
                   <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">
                     <User className="h-3 w-3" />
                     <span className="truncate">
-                      {canViewAllData ? container.clientName : 'Your Company'}
+                      {canViewAllData ? container.clientName : t('common.yourCompany')}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">
@@ -235,8 +235,8 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
           {containers.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No containers found</p>
-              <p className="text-xs">Try adjusting your search or filters</p>
+              <p className="text-sm">{t('common.noContainers')}</p>
+              <p className="text-xs">{t('common.tryAdjusting')}</p>
             </div>
           )}
 

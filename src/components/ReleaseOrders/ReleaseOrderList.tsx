@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { useYard } from '../../hooks/useYard';
 import { bookingReferenceService } from '../../services/api';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
@@ -17,7 +17,7 @@ import { userService } from '../../services/api';
 // REMOVED: Mock data now managed by global store
 
 export const ReleaseOrderList: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 

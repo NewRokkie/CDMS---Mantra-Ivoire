@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { BasicInformationStep } from './ContainerEditModal/BasicInformationStep';
 import { LocationAssignmentStep } from './ContainerEditModal/LocationAssignmentStep';
@@ -46,7 +46,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   onSave,
 }) => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const canEditContainers = user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'operator';
   const [currentStep, setCurrentStep] = useState(1);
 
