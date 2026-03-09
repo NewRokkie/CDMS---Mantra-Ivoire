@@ -1171,9 +1171,9 @@ export const DashboardOverview: React.FC = () => {
 
               {filteredData.containers.length === 0 && (
                 <div className="text-center py-8">
-                  <Package className="h-10 w-10 mx-auto text-gray-300" />
-                  <h3 className="text-lg font-medium mt-3">{t('common.noContainers')}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{t('common.tryAdjusting')}</p>
+                  <Package className="h-10 w-10 mx-auto text-slate-300 dark:text-gray-600" />
+                  <h3 className="text-lg font-medium mt-3 dark:text-white">{t('common.noContainers')}</h3>
+                  <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">{t('common.tryAdjusting')}</p>
                 </div>
               )}
             </div>
