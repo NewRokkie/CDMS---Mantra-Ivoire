@@ -202,7 +202,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {/* Container Size, High Cube, and Container Type - Three Part Selection */}
                     <div className="depot-form-grid md:grid-cols-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           {t('gate.in.form.containerSize')} *
                         </label>
                         <Switch
@@ -222,7 +222,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           {t('gate.in.form.highCube')}
                         </label>
                         <Switch
@@ -234,7 +234,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                           disabled={formData.containerSize === '20ft'}
                         />
                         {formData.containerSize === '20ft' && (
-                          <p className="text-xs text-gray-500 mt-2">Only available for 40ft</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Only available for 40ft</p>
                         )}
                       </div>
 
@@ -255,7 +255,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {/* Quantity and Transaction - Side by Side */}
                     <div className="depot-form-grid">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           {t('gate.in.form.quantity')} *
                         </label>
                         <Switch
@@ -267,7 +267,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                           disabled={formData.containerSize === '40ft'}
                         />
                         {formData.containerSize === '40ft' && (
-                          <p className="text-xs text-gray-500 mt-2">40ft containers limited to single quantity</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">40ft containers limited to single quantity</p>
                         )}
                       </div>
 
@@ -282,7 +282,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {/* Container Status and Classification - Side by Side on Desktop */}
                     <div className="depot-form-grid">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           {t('gate.in.form.status')} *
                         </label>
                         <Switch
@@ -304,7 +304,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
 
                     {/* Client Selection */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t('gate.in.form.client')} *
                       </label>
                       <ClientSearchField
@@ -321,7 +321,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     {/* Booking Reference - Only for FULL containers */}
                     {formData.status === 'FULL' && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           {t('gate.in.form.booking')} *
                         </label>
                         <input
@@ -337,7 +337,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
 
                     {/* Equipment Reference - Free text field for EDI transmission */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t('gate.in.form.equipmentRef')}
                         <span className="text-xs text-gray-500 ml-1">(for EDI client identification)</span>
                       </label>
@@ -400,7 +400,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                   <div className="depot-step-spacing">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t('gate.in.form.driver')} *
                       </label>
                       <input
@@ -414,7 +414,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t('gate.in.form.truck')} *
                       </label>
                       <input
@@ -428,7 +428,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t('gate.in.form.transport')} *
                       </label>
                       <input
@@ -581,7 +581,7 @@ const GateInFormContent: React.FC<GateInFormContentProps> = ({
 
                 {/* Additional Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('gate.in.form.notes')}
                   </label>
                   <textarea

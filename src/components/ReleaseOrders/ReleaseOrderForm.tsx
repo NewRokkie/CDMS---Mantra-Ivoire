@@ -6,6 +6,7 @@ import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { clientService } from '../../services/api';
 import { TransactionOutSwitch } from './TransactionOutSwitch';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useTheme } from '../../hooks/useTheme';
 
 interface BookingReferenceFormData {
   bookingNumber: string;
@@ -39,6 +40,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
   isEditMode = false
 }) => {
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState(1);
   const [autoSaving, setAutoSaving] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -300,25 +302,25 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
       {currentStep === 1 && (
         <div className="space-y-5 animate-slide-in-right">
           {/* Booking Information Section */}
-          <div className="rounded-xl p-6 shadow-md bg-gray-100">
+          <div className="rounded-xl p-6 shadow-md bg-gray-100 dark:bg-gray-700">
             <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-blue-600 text-white rounded-lg">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-blue-900">{t('releases.form.bookingInfo')}</h4>
-                <p className="text-xs text-blue-700">{t('releases.form.bookingDesc')}</p>
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100">{t('releases.form.bookingInfo')}</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300">{t('releases.form.bookingDesc')}</p>
               </div>
             </div>
 
             <div className="space-y-5">
               {/* Booking Type */}
               <div>
-                <label className="block text-sm font-semibold text-blue-900 mb-3">
+                <label className="block text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
                   {t('releases.form.bookingType')} *
                 </label>
                 <div className="flex items-center space-x-4">
-                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 transition-colors flex-1">
+                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex-1">
                     <input
                       type="radio"
                       name="bookingType"
@@ -327,10 +329,10 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                       onChange={(e) => handleInputChange('bookingType', e.target.value)}
                       className="outline-none h-4 w-4 text-blue-600"
                     />
-                    <span className="text-sm font-medium text-blue-900">IMPORT</span>
+                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">IMPORT</span>
                     <ArrowLeft className="h-4 w-4 text-blue-500 ml-auto" />
                   </label>
-                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 transition-colors flex-1">
+                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex-1">
                     <input
                       type="radio"
                       name="bookingType"
@@ -339,7 +341,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                       onChange={(e) => handleInputChange('bookingType', e.target.value)}
                       className="outline-none h-4 w-4 text-blue-600"
                     />
-                    <span className="text-sm font-medium text-blue-900">EXPORT</span>
+                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">EXPORT</span>
                     <ArrowRight className="h-4 w-4 text-blue-500 ml-auto" />
                   </label>
                 </div>
@@ -355,7 +357,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
 
               {/* Booking Reference Number */}
               <div>
-                <label className="block text-sm font-semibold text-blue-900 mb-2">
+                <label className="block text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
                   {t('releases.form.bookingNumber')} *
                 </label>
                 <input
@@ -364,10 +366,10 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   disabled={isEditMode}
                   value={formData.bookingNumber}
                   onChange={(e) => handleInputChange('bookingNumber', e.target.value.toUpperCase())}
-                  className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm bg-white hover:bg-blue-50 transition-colors disabled:bg-gray-100 disabled:text-gray-500"
+                  className="w-full px-4 py-3 border border-blue-300 dark:border-blue-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm bg-white dark:bg-gray-600 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:text-gray-500"
                   placeholder="e.g., ABJEXXXXXXXX"
                 />
-                <p className="text-xs text-blue-700 mt-2">
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
                   {isEditMode ? t('releases.form.refImmutable') : t('releases.form.refHelp')}
                 </p>
               </div>
@@ -375,19 +377,19 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
           </div>
 
           {/* Client Information Section */}
-          <div className="rounded-xl p-6 shadow-md bg-gray-100">
+          <div className="rounded-xl p-6 shadow-md bg-gray-100 dark:bg-gray-700">
             <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-green-600 text-white rounded-lg">
                 <User className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-green-900">{t('releases.form.clientInfo')}</h4>
-                <p className="text-xs text-green-700">{t('releases.form.clientDesc')}</p>
+                <h4 className="font-semibold text-green-900 dark:text-green-100">{t('releases.form.clientInfo')}</h4>
+                <p className="text-xs text-green-700 dark:text-green-300">{t('releases.form.clientDesc')}</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-green-900 mb-3">
+              <label className="block text-sm font-semibold text-green-900 dark:text-green-100 mb-3">
                 {t('releases.form.client')} *
               </label>
               <ClientSearchField
@@ -398,11 +400,11 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 required
               />
               {formData.clientName && (
-                <div className="mt-3 p-3 bg-white rounded-lg border border-green-200 flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                <div className="mt-3 p-3 bg-white dark:bg-gray-600 rounded-lg border border-green-200 dark:border-green-700 flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{formData.clientName}</p>
-                    <p className="text-xs text-gray-500">{formData.clientCode}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{formData.clientName}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{formData.clientCode}</p>
                   </div>
                 </div>
               )}
@@ -415,19 +417,19 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
       {currentStep === 2 && (
         <div className="space-y-5 animate-slide-in-right">
           {/* Maximum Quantity Threshold */}
-          <div className="rounded-xl p-6 shadow-md bg-gray-50">
+          <div className="rounded-xl p-6 shadow-md bg-gray-50 dark:bg-gray-700">
             <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-purple-600 text-white rounded-lg">
                 <Calculator className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-purple-900">{t('releases.form.qtyControl')}</h4>
-                <p className="text-xs text-purple-700">{t('releases.form.qtyControlDesc')}</p>
+                <h4 className="font-semibold text-purple-900 dark:text-purple-100">{t('releases.form.qtyControl')}</h4>
+                <p className="text-xs text-purple-700 dark:text-purple-300">{t('releases.form.qtyControlDesc')}</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-purple-900 mb-3">
+              <label className="block text-sm font-semibold text-purple-900 dark:text-purple-100 mb-3">
                 {t('releases.form.threshold')} *
               </label>
               <div className="flex items-center space-x-3">
@@ -438,26 +440,26 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   max="100"
                   value={formData.maxQuantityThreshold}
                   onChange={(e) => handleInputChange('maxQuantityThreshold', parseInt(e.target.value) || 1)}
-                  className="flex-1 px-4 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  className="flex-1 px-4 py-3 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm dark:bg-gray-600 dark:text-white"
                   placeholder="10"
                 />
-                <span className="text-sm font-medium text-purple-900">{t('common.containers')}</span>
+                <span className="text-sm font-medium text-purple-900 dark:text-purple-100">{t('common.containers')}</span>
               </div>
-              <p className="text-xs text-purple-700 mt-2">
+              <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
                 {t('releases.form.thresholdHelp')}
               </p>
             </div>
           </div>
 
           {/* Container Quantities by Size */}
-          <div className="rounded-xl p-6 shadow-md bg-gray-50">
+          <div className="rounded-xl p-6 shadow-md bg-gray-50 dark:bg-gray-700">
             <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-orange-600 text-white rounded-lg">
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-orange-900">{t('releases.form.quantitiesTitle')}</h4>
-                <p className="text-xs text-orange-700">
+                <h4 className="font-semibold text-orange-900 dark:text-orange-100">{t('releases.form.quantitiesTitle')}</h4>
+                <p className="text-xs text-orange-700 dark:text-orange-300">
                   {t('common.total')}: <span className="font-bold">{formData.totalContainers}</span> {t('common.container')}{formData.totalContainers !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -465,13 +467,13 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
               {/* 20ft Containers */}
-              <div className="bg-white rounded-lg p-5 border-2 border-blue-200 hover:border-blue-300 transition-colors">
+              <div className="bg-white dark:bg-gray-600 rounded-lg p-5 border-2 border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-500 transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <Package className="h-5 w-5 text-blue-600" />
-                    <span className="font-semibold text-gray-900">{t('releases.form.containers20')}</span>
+                    <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-semibold text-gray-900 dark:text-white">{t('releases.form.containers20')}</span>
                   </div>
-                  <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">{t('common.standard')}</span>
+                  <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{t('common.standard')}</span>
                 </div>
 
                 <div className="flex items-center justify-between space-x-3">
@@ -479,7 +481,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                     type="button"
                     onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft - 1)}
                     disabled={formData.containerQuantities.size20ft <= 0}
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Decrease 20ft containers"
                   >
                     <Minus className="h-4 w-4" />
@@ -491,14 +493,14 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                     max="50"
                     value={formData.containerQuantities.size20ft}
                     onChange={(e) => handleQuantityChange('size20ft', parseInt(e.target.value) || 0)}
-                    className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg"
+                    className="flex-1 text-center px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg dark:bg-gray-700 dark:text-white"
                   />
 
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft + 1)}
                     disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Increase 20ft containers"
                   >
                     <Plus className="h-4 w-4" />
@@ -507,13 +509,13 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               </div>
 
               {/* 40ft Containers */}
-              <div className="bg-white rounded-lg p-5 border-2 border-green-200 hover:border-green-300 transition-colors">
+              <div className="bg-white dark:bg-gray-600 rounded-lg p-5 border-2 border-green-200 dark:border-green-700 hover:border-green-300 dark:hover:border-green-500 transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <Package className="h-5 w-5 text-green-600" />
-                    <span className="font-semibold text-gray-900">{t('releases.form.containers40')}</span>
+                    <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <span className="font-semibold text-gray-900 dark:text-white">{t('releases.form.containers40')}</span>
                   </div>
-                  <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">{t('common.highCapacity')}</span>
+                  <span className="text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{t('common.highCapacity')}</span>
                 </div>
 
                 <div className="flex items-center justify-between space-x-3">
@@ -521,7 +523,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                     type="button"
                     onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft - 1)}
                     disabled={formData.containerQuantities.size40ft <= 0}
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Decrease 40ft containers"
                   >
                     <Minus className="h-4 w-4" />
@@ -533,14 +535,14 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                     max="50"
                     value={formData.containerQuantities.size40ft}
                     onChange={(e) => handleQuantityChange('size40ft', parseInt(e.target.value) || 0)}
-                    className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg"
+                    className="flex-1 text-center px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg dark:bg-gray-700 dark:text-white"
                   />
 
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft + 1)}
                     disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Increase 40ft containers"
                   >
                     <Plus className="h-4 w-4" />
@@ -552,19 +554,19 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
             {/* Container Summary */}
             {formData.totalContainers > 0 && (
               <div className="space-y-3">
-                <div className="p-4 bg-white rounded-lg border-2 border-orange-300">
-                  <h5 className="font-semibold text-orange-900 mb-2">{t('common.summary')}</h5>
-                  <p className="text-sm text-gray-700 leading-relaxed">
+                <div className="p-4 bg-white dark:bg-gray-600 rounded-lg border-2 border-orange-300 dark:border-orange-700">
+                  <h5 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">{t('common.summary')}</h5>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                     {getContainerBreakdownText()}
                   </p>
                 </div>
 
                 {formData.requiresDetailedBreakdown && (
-                  <div className="flex items-start p-4 bg-orange-50 border border-orange-300 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-orange-600 mr-3 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mr-3 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-orange-900">{t('releases.breakdown.required')}</p>
-                      <p className="text-xs text-orange-700 mt-1">
+                      <p className="text-sm font-semibold text-orange-900 dark:text-orange-300">{t('releases.breakdown.required')}</p>
+                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
                         {t('releases.breakdown.help')}
                       </p>
                     </div>
@@ -575,17 +577,17 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
           </div>
 
           {/* Notes Section */}
-          <div className="rounded-xl p-6 bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-200">
+          <div className="rounded-xl p-6 bg-gradient-to-br from-gray-50 dark:from-gray-700 to-slate-50 dark:to-slate-700 border border-gray-200 dark:border-gray-600">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 bg-gray-600 text-white rounded-lg">
                 <FileText className="h-5 w-5" />
               </div>
-              <h4 className="font-semibold text-gray-900">{t('gate.in.form.notes')}</h4>
+              <h4 className="font-semibold text-gray-900 dark:text-white">{t('gate.in.form.notes')}</h4>
             </div>
             <textarea
               value={formData.notes || ''}
               onChange={(e) => handleInputChange('notes', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent resize-none text-sm"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent resize-none text-sm dark:bg-gray-600 dark:text-white"
               rows={3}
               placeholder="Add any additional notes or special instructions..."
             />

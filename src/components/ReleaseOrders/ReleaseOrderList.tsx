@@ -3,6 +3,7 @@ import { BookingReference } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useYard } from '../../hooks/useYard';
+import { useTheme } from '../../hooks/useTheme';
 import { bookingReferenceService } from '../../services/api';
 import { ReleaseOrderForm } from './ReleaseOrderForm';
 import { BookingDetailsModal } from './BookingDetailsModal';
@@ -18,6 +19,7 @@ import { userService } from '../../services/api';
 
 export const ReleaseOrderList: React.FC = () => {
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -184,15 +186,15 @@ export const ReleaseOrderList: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:bg-transparent">
       {/* Unified Mobile-First Header */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{t('releases.booking.title')}</h1>
-              <p className="text-sm text-gray-600 hidden lg:block">{t('releases.subtitle')}</p>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{t('releases.booking.title')}</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 hidden lg:block">{t('releases.subtitle')}</p>
             </div>
           </div>
 
@@ -220,22 +222,22 @@ export const ReleaseOrderList: React.FC = () => {
         )}
 
         {/* Unified Search and Filter */}
-        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
             <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
-              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
+              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
                 placeholder={t('releases.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 lg:bg-white focus:bg-white transition-colors"
+                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 dark:border-gray-600 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 dark:text-white lg:bg-white lg:dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-700 transition-colors"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
                 >
                   <X className="h-5 w-5 lg:h-4 lg:w-4" />
                 </button>
@@ -250,7 +252,7 @@ export const ReleaseOrderList: React.FC = () => {
                   onClick={() => setSelectedFilter(filter)}
                   className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${selectedFilter === filter
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95'
                     }`}
                 >
                   {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('releases.inProcess') : t(`common.status.${filter}`)}
@@ -262,7 +264,7 @@ export const ReleaseOrderList: React.FC = () => {
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 dark:text-white text-sm"
               >
                 <option value="all">{t('common.all')}</option>
                 <option value="pending">{t('common.status.pending')}</option>
@@ -270,7 +272,7 @@ export const ReleaseOrderList: React.FC = () => {
                 <option value="completed">{t('common.status.completed')}</option>
               </select>
               {searchTerm && (
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg font-medium">
+                <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg font-medium">
                   {filteredOrders.length} result{filteredOrders.length !== 1 ? 's' : ''}
                 </span>
               )}
