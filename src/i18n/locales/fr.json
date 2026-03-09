@@ -112,8 +112,11 @@
       "days": "jours"
     },
     "edit": {
+      "title": "Modifier le Conteneur",
       "steps": {
+        "basic": "Informations de Base",
         "location": "Affectation d'Emplacement",
+        "client": "Affectation du Client",
         "damage": "Évaluation des Dommages",
         "review": "Réviser & Confirmer"
       },
@@ -473,9 +476,8 @@
     "update": {
       "success": "Pile mise à jour avec succès !"
     },
-    "create": {
-      "success": "Pile créée avec succès !"
-    },
+    "create": "Créer une Pile",
+    "createSuccess": "Pile créée avec succès !",
     "sizeUpdate": {
       "success": "Pile mise à jour en {size} avec succès !",
       "successMulti": "Mise à jour réussie de {count} piles en {size} !",
@@ -484,7 +486,7 @@
     "assign": {
       "success": "Pile assignée au client {client} avec succès !"
     },
-    "unassigned": {
+    "unassign": {
       "success": "Pile désassignée du pool client avec succès !"
     },
     "stats": {
@@ -575,6 +577,8 @@
     "overview": "Aperçu du Pool Client",
     "noPools": "Aucun pool client trouvé",
     "noPoolsEmpty": "Aucun pool client n'a encore été créé.",
+    "noStacks": "Aucune Pile Sélectionnée",
+    "noStacksHelp": "Cliquez sur le bouton ci-dessus pour sélectionner des piles pour ce pool client",
     "stats": {
       "total": "Total des Pools",
       "active": "Clients Actifs",
@@ -633,6 +637,7 @@
   },
   "clients": {
     "title": "Données Maîtres Clients",
+    "create": "Créer un Client",
     "add": "Ajouter un Client",
     "edit": "Modifier le Client",
     "view": "Voir les Détails",
@@ -974,6 +979,7 @@
   },
   "common": {
     "status": "Statut",
+    "statusLabel": "Statut",
     "actions": "Actions",
     "date": "Date",
     "time": "Heure",
@@ -1004,6 +1010,12 @@
     "optional": "Optionnel",
     "active": "Actif",
     "inactive": "Inactif",
+    "dark": "Sombre",
+    "light": "Clair",
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
     "enabled": "Activé",
     "disabled": "Désactivé",
     "yes": "Oui",

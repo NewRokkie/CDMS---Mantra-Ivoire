@@ -3,6 +3,7 @@ import { X, Search, Check, Grid3X3, Package, Loader, AlertTriangle } from 'lucid
 import { stackService } from '../../services/api';
 import { handleError } from '../../services/errorHandling';
 import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
+import { t } from 'i18next';
 
 interface Stack {
   id: string;

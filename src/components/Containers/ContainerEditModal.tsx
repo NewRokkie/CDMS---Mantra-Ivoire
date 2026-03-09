@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Package } from 'lucide-react';
 import { Container } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -55,7 +55,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
     type: container.type,
     size: container.size,
     status: container.status,
-    location: container.location,
+    location: container.location || '-',
     locationId: container.yardPosition?.id,
     yardId: container.yardId,
     client: container.clientName,
@@ -109,7 +109,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
 
-  const stepValidations = [
+  const stepValidations = useMemo(() => [
     () => {
       const errors: string[] = [];
       if (!formData.number || formData.number.length !== 11) {
@@ -134,58 +134,63 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
         errors.push('Location is required');
         return errors;
       }
-      
+
       // If location hasn't changed from the original, skip validation
       // This allows editing other fields without location validation issues
       if (formData.location === container.location) {
         return errors; // No errors, location is unchanged
       }
-      
+
       // Validate that the selected location is actually available (only if location changed)
       try {
         const { locationManagementService, yardsService, containerService } = await import('../../services/api');
-        
+
         // Check if this is a virtual location (even stack number like S04, S08, S12, etc.)
         const stackNumberMatch = formData.location.match(/S(\d+)/);
         const stackNumber = stackNumberMatch ? parseInt(stackNumberMatch[1]) : 0;
         const isVirtualLocation = stackNumber % 2 === 0;
-        
+
         if (isVirtualLocation) {
           // For virtual locations, validate against yard configuration and container occupancy
           // instead of database records (since virtual locations may not be in DB yet)
-          
+
           // Get yard configuration
-          const yard = yardsService.getYardById(formData.yardId || container.yardId);
+          const yardIdToUse = formData.yardId || container.yardId;
+          if (!yardIdToUse) {
+            errors.push('Yard ID is required');
+            return errors;
+          }
+          const yard = yardsService.getYardById(yardIdToUse);
           if (!yard) {
             errors.push('Yard not found');
             return errors;
           }
-          
+
           // Find the virtual stack in yard configuration
           const allStacks = yard.sections.flatMap(section => section.stacks);
           const virtualStack = allStacks.find(s => s.stackNumber === stackNumber && s.isVirtual);
-          
+
           if (!virtualStack) {
             errors.push(`Virtual stack S${String(stackNumber).padStart(2, '0')} does not exist in yard configuration`);
             return errors;
           }
-          
+
           // Validate the location format matches stack configuration
           const locationMatch = formData.location.match(/S(\d+)R(\d+)H(\d+)/);
           if (!locationMatch) {
             errors.push('Invalid location format');
             return errors;
           }
-          
+
           const row = parseInt(locationMatch[2]);
           const tier = parseInt(locationMatch[3]);
-          
+
           // Check if row is valid
           if (row < 1 || row > virtualStack.rows) {
             errors.push(`Invalid row number. Stack has ${virtualStack.rows} rows`);
             return errors;
           }
-          
+
           // Check if tier is valid (considering custom tier config)
           let maxTiersForRow = virtualStack.maxTiers;
           if (virtualStack.rowTierConfig && virtualStack.rowTierConfig.length > 0) {
@@ -194,31 +199,31 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
               maxTiersForRow = rowConfig.maxTiers;
             }
           }
-          
+
           if (tier < 1 || tier > maxTiersForRow) {
             errors.push(`Invalid tier number. Row ${row} has maximum ${maxTiersForRow} tiers`);
             return errors;
           }
-          
+
           // Check if location is already occupied by another container
           const allContainers = await containerService.getAll();
-          const occupyingContainer = allContainers.find(c => 
+          const occupyingContainer = allContainers.find(c =>
             c.location === formData.location && c.id !== container.id
           );
-          
+
           if (occupyingContainer) {
             errors.push(`Location ${formData.location} is already occupied by container ${occupyingContainer.number}`);
           }
         } else {
           // For physical locations, validate against database
           const location = await locationManagementService.getByLocationId(formData.location);
-          
+
           if (!location) {
             errors.push('Selected location does not exist');
           } else {
             // Check if location is occupied by a DIFFERENT container
             const isOccupiedByOther = location.containerId && location.containerId !== container.id;
-            
+
             if (isOccupiedByOther) {
               errors.push(`Location ${formData.location} is already occupied by container ${location.containerNumber || 'another container'}`);
             } else if (location.isOccupied && !location.containerId) {
@@ -234,7 +239,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
         console.error('Error validating location:', error);
         errors.push('Could not validate location availability');
       }
-      
+
       return errors;
     },
     () => {
@@ -250,7 +255,7 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
       return errors;
     },
     () => []
-  ];
+  ], [formData, container.location, container.id, container.yardId]);
 
   // Validate current step
   useEffect(() => {
@@ -261,9 +266,9 @@ export const ContainerEditModal: React.FC<ContainerEditModalProps> = ({
       setValidationErrors(errors);
       setIsValidating(false);
     };
-    
+
     validateStep();
-  }, [currentStep, formData]);
+  }, [currentStep, formData, stepValidations]);
 
   const isStepValid = validationErrors.length === 0 && !isValidating;
 

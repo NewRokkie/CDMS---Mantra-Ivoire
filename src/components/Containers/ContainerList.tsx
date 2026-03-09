@@ -85,8 +85,8 @@ export const ContainerList: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   // EDI Status per container - separate tracking for Gate In and Gate Out
-  const [ediGateInStatusByContainerId, setEdiGateInStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
-  const [ediGateOutStatusByContainerId, setEdiGateOutStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
+  const [ediGateInStatusByContainerId, setEdiGateInStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>>(new Map());
+  const [ediGateOutStatusByContainerId, setEdiGateOutStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>>(new Map());
 
   useEffect(() => {
     async function loadContainers() {
@@ -888,7 +888,7 @@ function filterTable(){
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={getContainerLocationClass(container)}>
-                      {getContainerLocationDisplay(container, i18n.language)}
+                      {getContainerLocationDisplay(container, i18n.language as 'en' | 'fr')}
                     </span>
                   </td>
                   {canViewAllData() && (

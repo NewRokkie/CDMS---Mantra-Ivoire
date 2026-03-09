@@ -551,19 +551,19 @@ export const DashboardOverview: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      in_depot: { color: 'bg-green-50 text-green-700', label: 'In Depot' },
-      out_depot: { color: 'bg-blue-50 text-blue-700', label: 'Out Depot' },
-      in_service: { color: 'bg-yellow-50 text-yellow-800', label: 'In Service' },
-      maintenance: { color: 'bg-red-50 text-red-800', label: 'Maintenance' },
-      cleaning: { color: 'bg-purple-50 text-purple-800', label: 'Cleaning' }
+    const statusConfig: Record<string, { color: string; labelKey: string }> = {
+      in_depot: { color: 'bg-green-50 text-green-700', labelKey: 'status.inDepot' },
+      out_depot: { color: 'bg-blue-50 text-blue-700', labelKey: 'status.outDepot' },
+      in_service: { color: 'bg-yellow-50 text-yellow-800', labelKey: 'status.inService' },
+      maintenance: { color: 'bg-red-50 text-red-800', labelKey: 'status.maintenance' },
+      cleaning: { color: 'bg-purple-50 text-purple-800', labelKey: 'status.cleaning' }
     };
 
-    const config = (statusConfig as any)[status] || { color: 'bg-slate-50 text-slate-700', label: status };
+    const config = (statusConfig as any)[status] || { color: 'bg-slate-50 text-slate-700', labelKey: null };
 
     return (
       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
-        {config.label}
+        {config.labelKey ? t(config.labelKey) : status}
       </span>
     );
   };

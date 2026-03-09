@@ -7,6 +7,7 @@ import { yardsService } from '../../../services/api/yardsService';
 import { containerService } from '../../../services/api/containerService';
 import { StandardModal } from '../../Common/Modal/StandardModal';
 import { handleError } from '../../../services/errorHandling';
+import { t } from 'i18next';
 
 export interface StackLocation {
   id: string;
@@ -520,9 +521,9 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
             ) : (
               <div className="text-center py-12">
                 <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Available Positions</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.noResults')}</h3>
                 <p className="text-gray-600">
-                  No stack positions match your criteria. Try adjusting your filters or search terms.
+                  {t('common.noStackPositionsMatch')}
                 </p>
               </div>
             )}

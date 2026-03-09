@@ -112,8 +112,11 @@
       "days": "days"
     },
     "edit": {
+      "title": "Edit Container",
       "steps": {
+        "basic": "Basic Information",
         "location": "Location Assignment",
+        "client": "Client Assignment",
         "damage": "Damage Assessment",
         "review": "Review & Confirm"
       },
@@ -473,9 +476,8 @@
     "update": {
       "success": "Stack updated successfully!"
     },
-    "create": {
-      "success": "Stack created successfully!"
-    },
+    "create": "Create Stack",
+    "createSuccess": "Stack created successfully!",
     "sizeUpdate": {
       "success": "Stack updated to {size} successfully!",
       "successMulti": "Successfully updated {count} stacks to {size}!",
@@ -484,7 +486,7 @@
     "assign": {
       "success": "Stack assigned to client {client} successfully!"
     },
-    "unassigned": {
+    "unassign": {
       "success": "Stack unassigned from client pool successfully!"
     },
     "stats": {
@@ -575,6 +577,8 @@
     "overview": "Client Pool Overview",
     "noPools": "No client pools found",
     "noPoolsEmpty": "No client pools have been created yet.",
+    "noStacks": "No Stacks Selected",
+    "noStacksHelp": "Click the button above to select stacks for this client pool",
     "stats": {
       "total": "Total Pools",
       "active": "Active Clients",
@@ -633,6 +637,7 @@
   },
   "clients": {
     "title": "Client Master Data",
+    "create": "Create Client",
     "add": "Add Client",
     "edit": "Edit Client",
     "view": "View Details",
@@ -975,6 +980,7 @@
   },
   "common": {
     "status": "Status",
+    "statusLabel": "Status",
     "actions": "Actions",
     "date": "Date",
     "time": "Time",
@@ -1005,6 +1011,12 @@
     "optional": "Optional",
     "active": "Active",
     "inactive": "Inactive",
+    "dark": "Dark",
+    "light": "Light",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
     "enabled": "Enabled",
     "disabled": "Disabled",
     "yes": "Yes",

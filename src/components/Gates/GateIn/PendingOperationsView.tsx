@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, X, Package, User, Truck, Calendar, Clock, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
 import { LocationValidationModal } from './LocationValidationModal';
+import { t } from 'i18next';
 
 interface PendingOperation {
   id: string;

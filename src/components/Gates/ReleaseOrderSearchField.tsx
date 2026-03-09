@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ChevronDown, Check, FileText, X, Calendar, Package, User, AlertTriangle, Filter } from 'lucide-react';
 import { BookingReference } from '../../types';
+import { t } from 'i18next';
 
 interface ReleaseOrderSearchFieldProps {
   bookings: BookingReference[];

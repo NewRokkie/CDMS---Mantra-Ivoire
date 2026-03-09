@@ -164,9 +164,9 @@ export const StackManagement: React.FC = () => {
         // Show success notification
         setCreatedStackNumber(newStack.stackNumber);
         setShowSuccessNotification(true);
-        
-        toast.success(t('stack.create.success'));
-        
+
+        toast.success(t('stack.createSuccess'));
+
         // Refresh the yardsService cache to update stack suggestions
         if (currentYard?.id) {
           await yardsService.refreshYardData(currentYard.id);
@@ -273,7 +273,7 @@ export const StackManagement: React.FC = () => {
 
       setShowClientAssignment(false);
       setSelectedStack(null);
-      toast.success(clientCode ? t('stack.assign.success').replace('{client}', clientCode) : t('stack.unassigned.success'));
+      toast.success(clientCode ? t('stack.assign.success').replace('{client}', clientCode) : t('stack.unassign.success'));
     } catch (error) {
       handleError(error, 'StackManagement.handleClientAssignment');
       toast.error(t('common.error') + ': ' + (error as Error).message);

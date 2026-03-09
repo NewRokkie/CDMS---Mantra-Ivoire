@@ -14,6 +14,7 @@ import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useUserManagementRetry } from '../../hooks/useRetry';
 import { toDate } from '../../utils/dateHelpers';
 import { handleError } from '../../services/errorHandling';
+import { t } from 'i18next';
 
 // Helper function to get module access based on role
 const getModuleAccessForRole = (role: User['role']): ModuleAccess => {

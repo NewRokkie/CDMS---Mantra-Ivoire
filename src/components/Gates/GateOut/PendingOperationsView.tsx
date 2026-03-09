@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Search, X, FileText, Package, User, Truck, Calendar } from 'lucide-react';
 import { PendingGateOut } from '../types';
 import { getStatusBadgeConfig } from '../utils';
+import { useTranslation } from 'react-i18next';
 import { GateOutCompletionModal } from './GateOutCompletionModal';
 
 interface PendingOperationsViewProps {
@@ -21,6 +22,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   onComplete,
   isProcessing
 }) => {
+  const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
@@ -449,7 +451,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeConfig(operation.status).color}`}>
-                        {getStatusBadgeConfig(operation.status).label}
+                        {t(getStatusBadgeConfig(operation.status).labelKey || 'status.pending')}
                       </span>
                     </td>
                   </tr>

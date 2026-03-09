@@ -6,6 +6,7 @@ import { useYard } from '../../hooks/useYard';
 import { handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
 import { useSuccessNotification, useErrorNotification } from '../Common/Notifications/NotificationSystem';
+import { t } from 'i18next';
 
 interface SimpleOperationsTabProps {
   viewMode?: 'current' | 'global';
@@ -986,7 +987,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{operator.operations.toLocaleString()}</div>
                       <div className="text-sm text-gray-500">
-                        {operator.operations > 0 ? 'Active operator' : 'No operations'}
+                        {operator.operations > 0 ? t('common.activeOperator') : t('common.noOperations')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

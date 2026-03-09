@@ -357,9 +357,9 @@ export const LocationAssignmentStep: React.FC<LocationAssignmentStepProps> = ({
                   ) : filteredLocations.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                      <p className="text-sm">No locations found</p>
+                      <p className="text-sm">{t('common.noResults')}</p>
                       {locationSearch && (
-                        <p className="text-xs text-gray-400 mt-1">Try adjusting your search</p>
+                        <p className="text-xs text-gray-400 mt-1">{t('common.tryAdjustingSearch')}</p>
                       )}
                     </div>
                   ) : (

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, X, Package, MapPin, Calendar, User, AlertTriangle } from 'lucide-react';
 import { Container } from '../../types';
+import { t } from 'i18next';
 
 interface ContainerSearchPanelProps {
   containers: Container[];
@@ -50,7 +51,7 @@ export const ContainerSearchPanel: React.FC<ContainerSearchPanelProps> = ({
       in_depot: { color: 'bg-green-100 text-green-800', label: 'In Depot' },
       gate_out: { color: 'bg-orange-100 text-orange-800', label: 'Gate Out' },
       out_depot: { color: 'bg-gray-100 text-gray-800', label: 'Out Depot' },
-      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
+      in_buffer: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
       cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' }
     };
 

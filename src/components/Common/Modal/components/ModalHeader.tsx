@@ -13,7 +13,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   children
 }) => {
   return (
-    <div className={`relative overflow-hidden border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-xl bg-gradient-to-r ${gradient} rounded-t-2xl animate-in fade-in slide-in-from-bottom-2 duration-400`}>
+    <div className={`relative overflow-hidden border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-xl bg-gradient-to-r ${gradient} rounded-t-2xl animate-in fade-in slide-in-from-bottom-2 duration-400 flex-shrink-0`}>
       
       {/* Lueur décorative subtile */}
       <div className="absolute -top-10 -left-10 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl" />

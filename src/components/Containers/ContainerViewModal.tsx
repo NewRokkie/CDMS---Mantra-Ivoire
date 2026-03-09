@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { getDaysBetween } from '../../utils/dateHelpers';
 import { DataDisplayModal } from '../Common/Modal/DataDisplayModal';
 import { getContainerLocationDisplay } from '../../utils/containerLocationDisplay';
+import i18n from '../../i18n/config';
 
 interface ContainerViewModalProps {
   container: Container;
@@ -19,7 +20,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
   isOpen
 }) => {
   const { canViewAllData } = useAuth();
-  const { language, t } = useTranslation();
+  const { t } = useTranslation();
 
   const getStatusIcon = (status: Container['status']) => {
     switch (status) {
@@ -82,7 +83,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     data: {
       containerNumber: container.number,
       type: `${container.type.charAt(0).toUpperCase() + container.type.slice(1)} • ${container.size}`,
-      currentLocation: getContainerLocationDisplay(container, language),
+      currentLocation: getContainerLocationDisplay(container),
       gateInDate: container.gateInDate?.toLocaleString() || '-',
       gateOutDate: container.gateOutDate?.toLocaleString() || '-',
       daysInDepot: container.gateInDate

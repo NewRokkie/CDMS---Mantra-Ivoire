@@ -13,6 +13,7 @@ import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { handleError } from '../../services/errorHandling';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
+import { t } from 'i18next';
 
 export const ClientPoolManagement: React.FC = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);

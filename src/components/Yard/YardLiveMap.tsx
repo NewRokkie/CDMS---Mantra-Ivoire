@@ -238,7 +238,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         c.status === 'gate_in' ||
         c.status === 'in_depot' ||
         c.status === 'gate_out' ||
-        c.status === 'maintenance' ||
+        c.status === 'in_buffer' ||
         c.status === 'cleaning'
       );
     }
@@ -439,13 +439,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
           const containerSlots: ContainerSlot[] = virtualContainers.map(c => {
             // Handle both formats: "S01-R3-H3" and "S01R3H3"
-            const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+            const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
             const row = locMatch ? parseInt(locMatch[1]) : 1;
             const tier = locMatch ? parseInt(locMatch[2]) : 1;
 
             let status: ContainerSlot['status'] = 'occupied';
             if (c.damage && c.damage.length > 0) status = 'damaged';
-            else if (c.status === 'maintenance') status = 'priority';
+            else if (c.status === 'in_buffer') status = 'priority';
 
             return {
               containerId: c.id,
@@ -560,12 +560,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
           // Build container slots per row so R1, R2, etc. show correct count (e.g. 1) in cells
           const containerSlots: ContainerSlot[] = all40ftContainers.map(c => {
-            const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+            const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
             const row = locMatch ? parseInt(locMatch[1]) : 1;
             const tier = locMatch ? parseInt(locMatch[2]) : 1;
             let status: ContainerSlot['status'] = 'occupied';
             if (c.damage && c.damage.length > 0) status = 'damaged';
-            else if (c.status === 'maintenance') status = 'priority';
+            else if (c.status === 'in_buffer') status = 'priority';
             return {
               containerId: c.id,
               containerNumber: c.number,
@@ -610,13 +610,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
         const containerSlots: ContainerSlot[] = stackContainers.map(c => {
           // Handle both formats: "S01-R3-H3" and "S01R3H3"
-          const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+          const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
           const row = locMatch ? parseInt(locMatch[1]) : 1;
           const tier = locMatch ? parseInt(locMatch[2]) : 1;
 
           let status: ContainerSlot['status'] = 'occupied';
           if (c.damage && c.damage.length > 0) status = 'damaged';
-          else if (c.status === 'maintenance') status = 'priority';
+          else if (c.status === 'in_buffer') status = 'priority';
 
           return {
             containerId: c.id,
@@ -698,13 +698,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             });
 
             const virtualContainerSlots: ContainerSlot[] = virtual40ftContainers.map(c => {
-              const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+              const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
               const row = locMatch ? parseInt(locMatch[1]) : 1;
               const tier = locMatch ? parseInt(locMatch[2]) : 1;
 
               let status: ContainerSlot['status'] = 'occupied';
               if (c.damage && c.damage.length > 0) status = 'damaged';
-              else if (c.status === 'maintenance') status = 'priority';
+              else if (c.status === 'in_buffer') status = 'priority';
 
               return {
                 containerId: c.id,
@@ -1399,7 +1399,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     selectedContainer.status === 'in_depot' ? 'bg-green-100 text-green-800 border-2 border-green-300' :
                       selectedContainer.status === 'gate_out' ? 'bg-orange-100 text-orange-800 border-2 border-orange-300' :
                         selectedContainer.status === 'out_depot' ? 'bg-gray-100 text-gray-800 border-2 border-gray-300' :
-                          selectedContainer.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' :
+                          selectedContainer.status === 'in_buffer' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' :
                             selectedContainer.status === 'cleaning' ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' :
                               'bg-gray-100 text-gray-800 border-2 border-gray-300'
                   }`}>
@@ -1407,7 +1407,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                       selectedContainer.status === 'in_depot' ? 'bg-green-500' :
                         selectedContainer.status === 'gate_out' ? 'bg-orange-500' :
                           selectedContainer.status === 'out_depot' ? 'bg-gray-500' :
-                            selectedContainer.status === 'maintenance' ? 'bg-yellow-500' :
+                            selectedContainer.status === 'in_buffer' ? 'bg-yellow-500' :
                               selectedContainer.status === 'cleaning' ? 'bg-purple-500' :
                                 'bg-gray-500'
                     }`} />

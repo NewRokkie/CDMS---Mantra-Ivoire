@@ -13,6 +13,7 @@ import { useYard } from '../../../hooks/useYard';
 import { userService } from '../../../services/api/userService';
 import { FormModal } from '../../Common/Modal/FormModal';
 import { handleError } from '../../../services/errorHandling';
+import { t } from 'i18next';
 
 interface DepotAssignmentModalProps {
   isOpen: boolean;

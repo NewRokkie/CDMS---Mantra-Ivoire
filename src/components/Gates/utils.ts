@@ -137,16 +137,17 @@ export const validateGateInStep = (step: number, formData: GateInFormData): bool
 
 /**
  * Gets status badge configuration for operations
+ * Note: Returns labelKey for i18n translation
  */
 export const getStatusBadgeConfig = (status: string) => {
-  const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-    completed: { color: 'bg-green-100 text-green-800', label: 'Completed' },
-    in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process' },
-    cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
+  const statusConfig: Record<string, { color: string; label: string; labelKey?: string }> = {
+    pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending', labelKey: 'status.pending' },
+    completed: { color: 'bg-green-100 text-green-800', label: 'Completed', labelKey: 'status.completed' },
+    in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process', labelKey: 'status.inProcess' },
+    cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled', labelKey: 'status.cancelled' }
   };
 
-  return statusConfig[status as keyof typeof statusConfig] || { color: 'bg-gray-100 text-gray-800', label: status };
+  return statusConfig[status as keyof typeof statusConfig] || { color: 'bg-gray-100 text-gray-800', label: status, labelKey: null };
 };
 
 /**

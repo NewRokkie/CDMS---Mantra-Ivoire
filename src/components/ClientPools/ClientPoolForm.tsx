@@ -8,6 +8,7 @@ import { handleError } from '../../services/errorHandling';
 import { StackSelectionModal } from './StackSelectionModal';
 import { useToast } from '../../hooks/useToast';
 import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
+import { t } from 'i18next';
 
 interface ClientPoolFormProps {
   isOpen: boolean;
@@ -437,9 +438,9 @@ export const ClientPoolForm: React.FC<ClientPoolFormProps> = ({
               ) : (
                 <div className="p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 text-center">
                   <Package className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Stacks Selected</h4>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">{t('clientPools.noStacks')}</h4>
                   <p className="text-sm text-gray-600 mb-4">
-                    Click the button above to select stacks for this client pool
+                    {t('clientPools.noStacksHelp')}
                   </p>
                   <button
                     type="button"
