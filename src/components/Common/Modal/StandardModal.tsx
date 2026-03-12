@@ -105,15 +105,15 @@ export const StandardModal: React.FC<StandardModalProps> = ({
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
         className={`
-          relative w-full ${sizeClasses} 
-          flex flex-col 
-          bg-white dark:bg-gray-900 
-          rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] 
-          overflow-hidden 
+          relative w-full ${sizeClasses}
+          flex flex-col
+          bg-white dark:bg-gray-900
+          rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]
+          overflow-hidden
           animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-400
           ${className}
         `}
-        style={{ maxHeight }}
+        style={{ maxHeight: '90vh' }}
       >
         <ModalHeader
           title={title}
@@ -125,21 +125,21 @@ export const StandardModal: React.FC<StandardModalProps> = ({
           iconColor={headerIconColor}
         />
 
-        <ModalBody scrollable={true} className="relative">
+        <ModalBody scrollable={true} className="relative min-h-0 flex-1">
           <NotificationArea
             notification={notification}
             onDismiss={hideNotification}
           />
 
           <div className="animate-in fade-in slide-in-from-left-2 duration-500 delay-150 fill-mode-both">
-            {typeof children === 'function' 
-              ? children({ showNotification, hideNotification }) 
+            {typeof children === 'function'
+              ? children({ showNotification, hideNotification })
               : children
             }
           </div>
         </ModalBody>
 
-        {!hideDefaultFooter && (
+        {(!hideDefaultFooter || customFooter) && (
           <ModalFooter justify={footerJustify}>
             {customFooter || (
               <>
