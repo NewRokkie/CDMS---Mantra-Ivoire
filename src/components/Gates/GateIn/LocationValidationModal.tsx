@@ -258,36 +258,34 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   );
 
   const CustomFooter = () => (
-    <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-      <div className="flex items-center justify-between gap-2">
-        <ValidationSummary />
-        <div className="flex items-center gap-2 ml-auto">
-          <button
-            onClick={onClose}
-            className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
-          >
-            <span className="sm:hidden">✕</span>
-            <span className="hidden sm:inline">Annuler</span>
-          </button>
-          <button
-            onClick={handleComplete}
-            disabled={isProcessing || !isFormValid}
-            className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
-          >
-            {isProcessing ? (
-              <>
-                <Loader className="h-4 w-4 animate-spin" />
-                <span>...</span>
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                <span className="sm:hidden">Finaliser</span>
-                <span className="hidden sm:inline">Finaliser l'Opération</span>
-              </>
-            )}
-          </button>
-        </div>
+    <div className="w-full flex items-center justify-between gap-2">
+      <ValidationSummary />
+      <div className="flex items-center gap-2 ml-auto">
+        <button
+          onClick={onClose}
+          className="btn-secondary px-3 py-2 sm:px-6 sm:py-2 text-sm"
+        >
+          <span className="sm:hidden">✕</span>
+          <span className="hidden sm:inline">Annuler</span>
+        </button>
+        <button
+          onClick={handleComplete}
+          disabled={isProcessing || !isFormValid}
+          className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2 text-sm"
+        >
+          {isProcessing ? (
+            <>
+              <Loader className="h-4 w-4 animate-spin" />
+              <span>...</span>
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              <span className="sm:hidden">Finaliser</span>
+              <span className="hidden sm:inline">Finaliser l'Opération</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
