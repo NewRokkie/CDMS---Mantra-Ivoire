@@ -92,7 +92,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden"
     >
       {/* Overlay avec flou et fondu */}
       <div 
@@ -113,7 +113,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
           animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-400
           ${className}
         `}
-        style={{ maxHeight: '90vh' }}
+        style={{ maxHeight }}
       >
         <ModalHeader
           title={title}
