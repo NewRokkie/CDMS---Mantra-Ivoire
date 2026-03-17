@@ -226,7 +226,12 @@ class SFTPIntegrationService {
       // Get EDI codes (includes partner_code which is used as customer in EDI)
       const ediCodes = await this.getEDICodesForClient(gateInData.clientCode);
 
-      // Format dates and times for EDI
+      // Pre-generation validation (non-blocking — log warnings, send anyway)
+      const preValidation = this.validateGateInData(gateInData);
+      if (!preValidation.isValid) {
+        console.warn('EDI pre-generation validation warnings (Gate In):', preValidation.errors);
+      }
+
       const arrivalDate = new Date(gateInData.arrivalDate);
       const operationDate = arrivalDate.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD
       const operationTime = gateInData.arrivalTime.replace(/:/g, '') + '00'; // HHMMSS
@@ -384,6 +389,12 @@ class SFTPIntegrationService {
 
       // Get EDI codes (includes partner_code which is used as customer in EDI)
       const ediCodes = await this.getEDICodesForClient(gateOutData.clientCode);
+
+      // Pre-generation validation (non-blocking — log warnings, send anyway)
+      const preValidationOut = this.validateGateOutData(gateOutData);
+      if (!preValidationOut.isValid) {
+        console.warn('EDI pre-generation validation warnings (Gate Out):', preValidationOut.errors);
+      }
 
       // Process first container (can be extended for multiple containers)
       const containerNumber = gateOutData.containerNumbers[0];
@@ -657,6 +668,95 @@ class SFTPIntegrationService {
         message: error instanceof Error ? error.message : 'Connection test failed',
       };
     }
+  }
+  /**
+   * Validate Gate In data before EDI generation
+   */
+  private validateGateInData(data: {
+    containerNumber: string;
+    containerSize: string;
+    containerType: string;
+    clientCode: string;
+    clientName: string;
+    transportCompany: string;
+    truckNumber: string;
+    arrivalDate: string;
+    arrivalTime: string;
+    assignedLocation: string;
+    yardId: string;
+    operatorName: string;
+    operatorId: string;
+  }): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!data.containerNumber) errors.push('Container number is required');
+    else if (!/^[A-Z]{4}[0-9]{7}$/.test(data.containerNumber))
+      errors.push(`Container number "${data.containerNumber}" does not match ISO 6346 format (ABCD1234567)`);
+
+    if (!data.clientCode) errors.push('Client code is required');
+    if (!data.clientName) errors.push('Client name is required');
+    if (!data.transportCompany) errors.push('Transport company is required');
+    if (!data.truckNumber) errors.push('Truck number is required');
+    if (!data.operatorName) errors.push('Operator name is required');
+
+    if (!data.arrivalDate) {
+      errors.push('Arrival date is required');
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(data.arrivalDate)) {
+      errors.push(`Arrival date "${data.arrivalDate}" must be in YYYY-MM-DD format`);
+    }
+
+    if (!data.arrivalTime) {
+      errors.push('Arrival time is required');
+    } else if (!/^\d{2}:\d{2}/.test(data.arrivalTime)) {
+      errors.push(`Arrival time "${data.arrivalTime}" must be in HH:MM format`);
+    }
+
+    return { isValid: errors.length === 0, errors };
+  }
+
+  /**
+   * Validate Gate Out data before EDI generation
+   */
+  private validateGateOutData(data: {
+    containerNumbers: string[];
+    clientCode: string;
+    clientName: string;
+    transportCompany: string;
+    truckNumber: string;
+    gateOutDate: string;
+    gateOutTime: string;
+    operatorName: string;
+  }): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!data.containerNumbers || data.containerNumbers.length === 0) {
+      errors.push('At least one container number is required');
+    } else {
+      data.containerNumbers.forEach((cn, i) => {
+        if (!/^[A-Z]{4}[0-9]{7}$/.test(cn))
+          errors.push(`Container ${i + 1} "${cn}" does not match ISO 6346 format`);
+      });
+    }
+
+    if (!data.clientCode) errors.push('Client code is required');
+    if (!data.clientName) errors.push('Client name is required');
+    if (!data.transportCompany) errors.push('Transport company is required');
+    if (!data.truckNumber) errors.push('Truck number is required');
+    if (!data.operatorName) errors.push('Operator name is required');
+
+    if (!data.gateOutDate) {
+      errors.push('Gate out date is required');
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(data.gateOutDate)) {
+      errors.push(`Gate out date "${data.gateOutDate}" must be in YYYY-MM-DD format`);
+    }
+
+    if (!data.gateOutTime) {
+      errors.push('Gate out time is required');
+    } else if (!/^\d{2}:\d{2}/.test(data.gateOutTime)) {
+      errors.push(`Gate out time "${data.gateOutTime}" must be in HH:MM format`);
+    }
+
+    return { isValid: errors.length === 0, errors };
   }
 }
 

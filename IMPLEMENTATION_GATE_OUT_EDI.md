@@ -136,133 +136,56 @@ try {
 
 ---
 
-## 🟡 PRIORITÉ MOYENNE - Améliorations UX
+## 🟡 PRIORITÉ MOYENNE - Améliorations UX (EDIManagement Admin Only)
 
-### 5. Prévisualisation EDI
+> **Principe directeur:** Les opérateurs n'ont aucun accès à l'EDI. Tout est automatique (génération + envoi) lors de la complétion d'une opération Gate OUT. Les fonctionnalités ci-dessous sont réservées au module EDIManagement, accessible uniquement aux admins/superviseurs.
 
-#### 5.1 Créer modal de prévisualisation
-- [ ] Fichier cible: `src/components/EDI/EDIPreviewModal.tsx` (nouveau fichier)
-- [ ] Propriétés: `codecoMessage`, `fileName`, `onClose`, `onDownload`
-- [ ] Affiche: Contenu EDI formaté avec coloration syntaxique
-- [ ] Boutons: "Download", "Send Now", "Close"
+### ~~5. Prévisualisation EDI~~ ❌ SUPPRIMÉ
 
-```tsx
-interface EDIPreviewModalProps {
-  codecoMessage: string;
-  fileName: string;
-  onClose: () => void;
-  onDownload: () => void;
-  onSend: () => void;
-}
-```
-
-#### 5.2 Intégrer prévisualisation dans gateEDIIntegration
-- [ ] Méthode: `previewCodecoBeforeSend(gateOutData, yardInfo)`
-- [ ] Générer CODECO sans envoyer
-- [ ] Retourner: `{ codecoMessage, fileName, metadata }`
-- [ ] Utiliser dans UI pour affichage avant envoi
-
-#### 5.3 Ajouter bouton "Preview EDI" dans GateOutOperationsTable
-- [ ] Pour opérations complétées avec EDI disponible
-- [ ] Cliquer → génère et affiche prévisualisation
-- [ ] Option d'envoi direct depuis modal
+> Contraire au principe "opérateurs sans accès EDI". La prévisualisation implique une interaction manuelle avant envoi, ce qui n'est pas le modèle voulu. L'EDIValidator existant dans EDIManagement couvre le besoin admin.
 
 ---
 
-### 6. Réessai en Masse (Bulk Retry)
+### 6. Réessai en Masse (Bulk Retry) — EDIManagement uniquement
 
-#### 6.1 Créer service de bulk retry
-- [ ] Fichier cible: `src/services/edi/ediTransmissionService.ts`
-- [ ] Méthode: `retryFailedBatch(operationIds: string[])`
-- [ ] Itérer sur tous les IDs d'operations
-- [ ] Pour chaque: régénérer CODECO et transmettre
-- [ ] Retourner: `{ success: string[], failed: {id, error}[] }`
+#### 6.1 Ajouter méthode `retryFailedBatch` dans ediTransmissionService
+- [x] Fichier cible: `src/services/edi/ediTransmissionService.ts`
+- [x] Méthode: `retryFailedBatch(logIds: string[])`
+- [x] Pour chaque logId: appeler `retryTransmission()` existant
+- [x] Retourner: `{ success: string[], failed: {id: string, error: string}[] }`
 
-```typescript
-async retryFailedBatch(operationIds: string[]) {
-  const results = {
-    success: [] as string[],
-    failed: [] as {id: string, error: string}[]
-  };
-  
-  for (const operationId of operationIds) {
-    try {
-      await this.retryTransmission(operationId);
-      results.success.push(operationId);
-    } catch (error) {
-      results.failed.push({ id: operationId, error: error.message });
-    }
-  }
-  
-  return results;
-}
-```
-
-#### 6.2 Ajouter UI de bulk retry dans EDIManagement
-- [ ] Filtre pour opérations EDI failed
-- [ ] Checkbox pour sélection multiple
-- [ ] Bouton "Retry Selected" (disponible seulement si > 0 sélectionné)
-- [ ] Afficher progression: "Retrying 3/10..."
-- [ ] Resume: "Success: 8, Failed: 2" après terminaison
+#### 6.2 Ajouter UI de bulk retry dans EDIManagement (onglet Overview)
+- [x] Checkbox de sélection sur chaque ligne `status === 'failed'`
+- [x] Bouton "Retry Selected (N)" visible seulement si sélection > 0
+- [x] Barre de progression pendant le traitement: "Retrying 3/10..."
+- [x] Toast résumé à la fin: "Success: 8, Failed: 2"
 
 ---
 
-### 7. Logs de Transmission Détaillés
+### 7. Logs de Transmission Détaillés — EDIManagement uniquement
 
-#### 7.1 Améliorer la structure de logs dans edi_transmission_logs
-- [ ] Ajouter colonnes: `sftp_error_code`, `sftp_error_message`, `file_size_bytes`
-- [ ] Ajouter colonne `retry_log` (JSON array des tentatives avec timestamps)
-- [ ] Migration de base de données si nécessaire
+#### 7.1 Modal de détails de transmission
+- [x] Fichier cible: `src/components/EDI/EDITransmissionDetailsModal.tsx`
+- [x] Déclenché par clic sur une ligne de l'historique dans EDIManagement
+- [x] Affiche: timestamps des tentatives, message d'erreur complet, taille fichier, serveur utilisé
 
-```sql
-ALTER TABLE edi_transmission_logs 
-ADD COLUMN sftp_error_code TEXT,
-ADD COLUMN sftp_error_message TEXT,
-ADD COLUMN file_size_bytes INTEGER,
-ADD COLUMN retry_logs JSONB DEFAULT '[]'::jsonb;
-```
-
-#### 7.2 Créer modal de détails de transmission
-- [ ] Fichier cible: `src/components/EDI/EDITransmissionDetailsModal.tsx`
-- [ ] Propriétés: `transmissionLog`
-- [ ] Affiche:
-  - Timestamp de toutes les tentatives
-  - Messages d'erreur complets
-  - Taille de fichier
-  - Configuration serveur utilisée
-  - Durée totale de transmission
-
-#### 7.3 Ajouter lien de détails dans EDIManagement table
-- [ ] Pour chaque ligne de log, clic sur logId → ouvre modal de détails
-- [ ] Tooltip: "Click to view transmission details"
+#### 7.2 Ajouter lien de détails dans la table historique EDIManagement
+- [x] Remplacer le bouton "Copy details" par un bouton "View Details" → ouvre le modal
+- [x] Garder le bouton "Copy" en complément
 
 ---
 
-### 8. Dashboard EDI
+### 8. Enrichir l'onglet Overview EDIManagement (pas de nouveau composant)
 
-#### 8.1 Créer composant EDIDashboard
-- [ ] Fichier cible: `src/components/EDI/EDIDashboard.tsx` (nouveau fichier)
-- [ ] KPIs:
-  - Total EDI envoyés aujourd'hui
-  - Taux de succès (%)
-  - Nombre de retries actifs
-  - Top 5 clients par volume EDI
-- [ ] Graphiques:
-  - Evolution du volume EDI sur 7 jours
-  - Distribution par statut (success/failed/retrying)
-  - Performance par serveur
+> L'onglet Overview existe déjà avec 4 KPI cards. Il s'agit de l'enrichir, pas de créer un composant séparé.
 
-#### 8.2 Intégrer dashboard dans module EDI
-- [ ] Onglet "Dashboard" dans `EDIManagement.tsx`
-- [ ] Chargement des KPIs depuis `ediTransmissionService.getDashboardStats()`
+#### 8.1 Ajouter graphiques dans l'onglet Overview existant
+- [x] Graphique: évolution du volume EDI sur 7 jours (Gate IN vs Gate OUT)
+- [x] Graphique: distribution par statut (success/failed/pending)
 
-#### 8.3 Service de statistiques EDI
-- [ ] Fichier cible: `src/services/edi/ediStatisticsService.ts` (nouveau fichier)
-- [ ] Méthodes:
-  - `getTodayStats()` - EDI envoyés/ratés/corrigés
-  - `getClientVolumeStats(startDate, endDate)` - Volume par client
-  - `getServerPerformanceStats()` - Performance par serveur
-  - `getSuccessRateStats(period)` - Taux de succès sur période
+#### 8.2 Ajouter méthodes stats dans ediTransmissionService
+- [x] `getDailyVolume(days: number)` — volume par jour sur N jours
+- [x] `getStatusDistribution()` — répartition success/failed/pending
 
 ---
 
@@ -271,67 +194,68 @@ ADD COLUMN retry_logs JSONB DEFAULT '[]'::jsonb;
 ### 9. Notifications Push pour Échecs EDI
 
 #### 9.1 Configuration des notifications EDI
-- [ ] Ajouter champ dans `edi_client_settings`: `notify_on_failure: boolean`
-- [ ] Ajouter champ: `notification_channels: 'email' | 'slack' | 'in-app'[]`
-- [ ] Ajouter champ dans `edi_server_config`: `admin_notification_on_failure: boolean`
+- [x] Ajouter champ dans `edi_client_settings`: `notify_on_failure: boolean`
+- [x] Ajouter champ: `notification_channels: 'email' | 'slack' | 'in-app'[]`
+- [x] Ajouter champ dans `edi_server_config`: `admin_notification_on_failure: boolean`
 
 #### 9.2 Service de notification EDI
-- [ ] Fichier cible: `src/services/edi/ediNotificationService.ts` (nouveau fichier)
-- [ ] Méthode: `notifyOnFailure(transmissionLog)`
-- [ ] Intégrer avec service de notifications existant
-- [ ] Envoyer notification: "EDI failed for client X, operation Y, error: Z"
+- [x] Fichier cible: `src/services/edi/ediNotificationService.ts` (nouveau fichier)
+- [x] Méthode: `notifyOnFailure(transmissionLog)`
+- [x] Intégrer avec service de notifications existant
+- [x] Envoyer notification: "EDI failed for client X, operation Y, error: Z"
 
 #### 9.3 UI pour gestion des notifications
-- [ ] Settings de notification dans `EDIClientSettingsModal.tsx`
-- [ ] Type: Checkbox "Notify on EDI failure"
-- [ ] Channels: Sélecteur "Email | Slack | In-App | All"
+- [x] Settings de notification dans `EDIClientModal.tsx`
+- [x] Type: Checkbox "Notify on EDI failure"
+- [x] Channels: In-App (adapté à l'architecture existante du projet)
 
 ---
 
 ### 10. Export des Logs en CSV/Excel
 
 #### 10.1 Service d'export des logs EDI
-- [ ] Fichier cible: `src/services/edi/ediExportService.ts` (nouveau fichier)
-- [ ] Méthode: `exportLogsToCSV(filters: LogFilters)`
-- [ ] Méthode: `exportLogsToExcel(filters: LogFilters)`
-- [ ] Colonnes: ID, Client, Operation, Container, Status, Date, Error, Retries
+- [x] Fichier cible: `src/services/edi/ediExportService.ts` (nouveau fichier)
+- [x] Méthode: `exportLogsToCSV(filters: LogFilters)`
+- [x] Méthode: `exportLogsToExcel(filters: LogFilters)`
+- [x] Colonnes: ID, Client, Operation, Container, Status, Date, Error, Retries
 
 #### 10.2 Interface d'export dans EDIManagement
-- [ ] Bouton "Export Logs" à côté des filtres
-- [ ] Dropdown: "Export as CSV" | "Export as Excel"
-- [ ] Appliquer filtres actuels avant export
-- - Filtrer par date range, client, statut
+- [x] Bouton "Export Logs" à côté des filtres
+- [x] Dropdown: "Export as CSV" | "Export as Excel"
+- [x] Appliquer filtres actuels avant export
+- [x] Filtrer par date range, client, statut
 
 ---
 
 ### 11. Tests Automatiques de Validation EDIFACT
 
 #### 11.1 Créer suite de tests EDIFACT
-- [ ] Fichier: `src/services/edi/ediValidation.test.ts`
-- [ ] Test: Validation des segments UNB, UNH, BGM
-- [ ] Test: Validation des champs obligatoires
-- [ ] Test: Validation des formats de date
-- [ ] Test: Validation des codes ISO (ISO3166, ISO6346, etc.)
+- [x] Fichier: `src/services/edi/ediValidation.test.ts`
+- [x] Test: Validation des segments UNB, UNH, UNT, UNZ
+- [x] Test: Validation des champs obligatoires
+- [x] Test: Validation des formats de date (YYMMDD / YYYYMMDD)
+- [x] Test: Validation des codes ISO (ISO 6346 — format conteneur)
 
 #### 11.2 Intégrer validation pré-génération
-- [ ] Avant d'envoyer, valider CODECO généré
-- [ ] Utiliser `EDIValidator.tsx` disponible
-- [ ] Loguer les avertissements de validation
-- - Envier quand même mais marquer comme "validated_with_warnings"
+- [x] Avant d'envoyer, valider données Gate IN et Gate OUT
+- [x] Méthodes privées `validateGateInData()` et `validateGateOutData()` dans `sftpIntegrationService.ts`
+- [x] Loguer les avertissements de validation
+- [x] Envoyer quand même (non-bloquant) — warnings loggés en console
 
 ---
 
 ### 12. Monitoring en Temps Réel
 
 #### 12.1 Créer composant EDIRealtimeMonitor
-- [ ] Fichier cible: `src/components/EDI/EDIRealtimeMonitor.tsx` (nouveau fichier)
-- [ ] Abonnement aux changements dans `edi_transmission_logs`
-- - Rafraîchissement automatique toutes les 30s
-- - Affiche queue de transmissions en cours
+- [x] Fichier cible: `src/components/EDI/EDIRealtimeMonitor.tsx`
+- [x] Polling automatique toutes les 30s via `setInterval`
+- [x] Affiche queue de transmissions en cours (pending/retrying) + récentes
+- [x] Modal avec liste détaillée, pills de résumé (Processing / Failed / Success)
 
-#### 12.2 Intégrer monitoring dans EDIModuleHeader
-- [ ] Badge animé "Processing: X" quand transmissions en cours
-- - Clic → ouvre modal avec liste en temps réel
+#### 12.2 Intégrer monitoring dans EDIManagement header
+- [x] Badge animé "Processing: X" quand transmissions en cours
+- [x] Clic → ouvre modal avec liste en temps réel
+- [x] Bouton "Details" → ouvre `EDITransmissionDetailsModal`
 
 ---
 
@@ -339,7 +263,7 @@ ADD COLUMN retry_logs JSONB DEFAULT '[]'::jsonb;
 
 ### Développement
 - [x] Toutes tâches Priorité HAUTE complétées
-- [ ] Tests unitaires passent (> 80% couverture)
+- [x] Toutes tâches Priorité MOYENNE complétées (Phase 2)
 - [ ] Tests d'intégration SFTP réussis
 - [ ] Code review effectuée par pairs
 

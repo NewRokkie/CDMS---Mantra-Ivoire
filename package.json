@@ -9,7 +9,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "vite --host 0.0.0.0 --port $PORT",
-    "deploy-migrations": "tsx scripts/deploy-migrations.ts"
+    "db:backup": "tsx scripts/backup-database.ts",
+    "db:restore": "tsx scripts/restore-database.ts",
+    "db:backup:test": "echo 1 | tsx scripts/backup-database.ts",
+    "db:backup:prod": "echo 2 | tsx scripts/backup-database.ts",
+    "db:restore:test": "echo -e \"1\\n1\\nOUI\" | tsx scripts/restore-database.ts",
+    "db:restore:prod": "echo -e \"2\\n1\\nOUI\" | tsx scripts/restore-database.ts"
   },
   "dependencies": {
     "@mykelcodes/container-number-validation": "^1.0.2",
