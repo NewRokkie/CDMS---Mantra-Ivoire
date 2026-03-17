@@ -1,7 +1,8 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
 import { PendingGateOut } from '../types';
 import { getStatusBadgeConfig } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 // Helper function to get status badge JSX
 const getStatusBadge = (status: string) => {
@@ -9,6 +10,32 @@ const getStatusBadge = (status: string) => {
   return (
     <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
       {config.label}
+    </span>
+  );
+};
+
+// EDI status badge - distinguishes between: sent (true), failed (false), not configured (null)
+const getEDIBadge = (ediTransmitted?: boolean | null) => {
+  if (ediTransmitted === true) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+        <CheckCircle className="h-3 w-3" />
+        EDI Sent
+      </span>
+    );
+  }
+  if (ediTransmitted === false) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+        <XCircle className="h-3 w-3" />
+        EDI Failed
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+      <MinusCircle className="h-3 w-3" />
+      No EDI
     </span>
   );
 };
@@ -24,6 +51,7 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
   searchTerm,
   onOperationClick
 }) => {
+  const { t } = useTranslation();
   const filteredOperations = operations.filter(op =>
     op.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,6 +91,9 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                EDI
               </th>
             </tr>
           </thead>
@@ -139,6 +170,9 @@ export const GateOutOperationsTable: React.FC<GateOutOperationsTableProps> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {getStatusBadge(operation.status)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {getEDIBadge(operation.ediTransmitted)}
                 </td>
               </tr>
             ))}

@@ -30,9 +30,6 @@ export const validateContainerNumber = (containerNumber: string): ContainerValid
   }
 
   if (!isValidContainer(cleanNumber)) {
-    if (typeof window !== 'undefined') {
-      alert(`Le numéro de conteneur ${cleanNumber} est invalide selon la norme ISO 6346.`);
-    }
     return { isValid: false, message: 'Invalid ISO 6346 container number' };
   }
 

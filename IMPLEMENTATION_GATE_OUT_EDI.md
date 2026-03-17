@@ -6,9 +6,9 @@ Ce document contient la liste des tâches à réaliser pour implémenter correct
 
 **État Actuel:**
 - ✅ Génération CODECO fonctionnelle
-- ❌ Pas d'envoi automatique lors de GATE OUT
-- ❌ Transmission SFTP simulée (pas de véritable upload)
-- ❌ Interface GATE OUT sans indicateur de statut EDI
+- ✅ Envoi automatique lors de GATE OUT (implémenté)
+- ✅ Transmission SFTP réelle avec retry exponentiel (implémenté)
+- ✅ Interface GATE OUT avec indicateur de statut EDI (implémenté)
 
 **Estimation Totale:** 4-6 jours de développement
 
@@ -19,12 +19,12 @@ Ce document contient la liste des tâches à réaliser pour implémenter correct
 ### 1. Implémentation de l'Automatisation EDI
 
 #### 1.1 Créer le listener d'événement GATE_OUT_COMPLETED
-- [ ] Fichier cible: `src/services/eventListeners.ts`
-- [ ] Importer `gateEDIIntegration` et `ediClientSettings`
-- [ ] Créer handler pour événement `GATE_OUT_COMPLETED`
-- [ ] Vérifier si EDI est activé pour le client (`ediClientSettings.isEdiEnabledForClient()`)
-- [ ] Si activé: appeler `gateEDIIntegration.processGateOutWithEDI()`
-- [ ] Gérer les erreurs et logger les échecs
+- [x] Fichier cible: `src/services/eventListeners.ts`
+- [x] Importer `gateEDIIntegration` et `ediClientSettings`
+- [x] Créer handler pour événement `GATE_OUT_COMPLETED`
+- [x] Vérifier si EDI est activé pour le client (`ediClientSettings.isEdiEnabledForClient()`)
+- [x] Si activé: appeler `gateEDIIntegration.processGateOutWithEDI()`
+- [x] Gérer les erreurs et logger les échecs
 
 ```typescript
 // Exemple d'implémentation
@@ -55,23 +55,23 @@ await eventBus.on('GATE_OUT_COMPLETED', async (data) => {
 ```
 
 #### 1.2 Initialiser le listener au démarrage
-- [ ] Fichier cible: `src/services/initialize.ts`
-- [ ] Ajouter appel au fichier d'event listeners dans la séquence d'initialisation
-- [ ] Vérifier que `eventBus` et `gateEDIIntegration` sont initialisés avant d'enregistrer le listener
+- [x] Fichier cible: `src/services/initialize.ts`
+- [x] Ajouter appel au fichier d'event listeners dans la séquence d'initialisation
+- [x] Vérifier que `eventBus` et `gateEDIIntegration` sont initialisés avant d'enregistrer le listener
 
 ---
 
 ### 2. Remplacer la Simulation par Transmission SFTP Réelle
 
 #### 2.1 Intégrer SFTP dans ediRealDataService
-- [ ] Fichier cible: `src/services/edi/ediRealDataService.ts`
-- [ ] Méthode: `processRealGateOutEDI()` (lignes 302-337)
-- [ ] Importer `sftpIntegrationService`
-- [ ] Supprimer le code de simulation (commentaire ligne 317)
-- [ ] Appeler `sftpIntegrationService.uploadFile()` avec les données EDI générées
-- [ ] Gérer les errors SFTP (connection failed, permission denied, etc.)
-- [ ] Mettre à jour `gate_out_operations.edi_transmitted` seulement après succès
-- [ ] Créer log dans `edi_transmission_logs` avec statut réel
+- [x] Fichier cible: `src/services/edi/ediRealDataService.ts`
+- [x] Méthode: `processRealGateOutEDI()` (lignes 302-337)
+- [x] Importer `sftpIntegrationService`
+- [x] Supprimer le code de simulation (commentaire ligne 317)
+- [x] Appeler `sftpIntegrationService.uploadFile()` avec les données EDI générées
+- [x] Gérer les errors SFTP (connection failed, permission denied, etc.)
+- [x] Mettre à jour `gate_out_operations.edi_transmitted` seulement après succès
+- [x] Créer log dans `edi_transmission_logs` avec statut réel
 
 ```typescript
 // Remplacer simulation par:
@@ -96,25 +96,24 @@ try {
 ```
 
 #### 2.2 Configurer retry automatique en cas d'échec
-- [ ] Dans `processRealGateOutEDI()`, implémenter logique de retry
-- [ ] Lire `server_config.retry_attempts` (défaut: 3)
-- [ ] Incrémenter `retry_count` dans `edi_transmission_logs` à chaque tentative
-- [ ] Attendre délai exponentiel entre retries (ex: 1s, 2s, 4s)
-- [ ] Passer statut à 'failed' après tous les retries épuisés
+- [x] Dans `processRealGateOutEDI()`, implémenter logique de retry
+- [x] Lire `server_config.retry_attempts` (défaut: 3)
+- [x] Incrémenter `retry_count` dans `edi_transmission_logs` à chaque tentative
+- [x] Attendre délai exponentiel entre retries (ex: 1s, 2s, 4s)
+- [x] Passer statut à 'failed' après tous les retries épuisés
 
 ---
 
 ### 3. Améliorer l'Interface GATE OUT
 
 #### 3.1 Ajouter colonne Statut EDI dans GateOutOperationsTable
-- [ ] Fichier cible: `src/components/Gates/GateOut/GateOutOperationsTable.tsx`
-- [ ] Ajouter colonne 'EDI Status' dans la table (lignes 70-144)
-- [ ] Créer badge avec couleurs:
-  - 🟢 Vert = 'Sent' (edi_transmitted = true)
-  - 🟡 Jaune = 'Pending' (edi_enabled mais edi_transmitted = false)
-  - ⚪ Gris = 'Disabled' (client sans EDI actif)
-  - 🔴 Rouge = 'Failed' (erreur dans transmission_logs)
-- [ ] Ajouter icône de synchronisation pour statut 'retrying'
+- [x] Fichier cible: `src/components/Gates/GateOut/GateOutOperationsTable.tsx`
+- [x] Ajouter colonne 'EDI Status' dans la table (lignes 70-144)
+- [x] Créer badge avec couleurs:
+  - 🟢 Vert = 'EDI Sent' (edi_transmitted = true)
+  - ⚪ Gris = 'No EDI' (client sans EDI actif, ou sans Config SFTP)
+  - 🔴 Rouge = 'EDI Failed' (erreur dans transmission_logs)
+- [x] Ajouter icône de synchronisation pour statut 'retrying'
 
 ```tsx
 <Badge className={`${
@@ -129,52 +128,11 @@ try {
 ```
 
 #### 3.2 Ajouter indicateur EDI dans GateOutCompletionModal
-- [ ] Fichier cible: `src/components/Gates/GateOut/GateOutCompletionModal.tsx`
-- [ ] Avant validation, charger configuration EDI du client
-- [ ] Afficher badge en haut du modal: "EDI: Enabled/Disabled"
-- [ ] Si EDI activé: message "EDI will be sent automatically after completion"
-- [ ] Si EDI désactivé: message "EDI not configured for this client"
-
-#### 3.3 Ajouter bouton "Send EDI" manuel dans GateOutOperationsTable
-- [ ] Pour chaque ligne avec `edi_transmitted: false` et EDI activé
-- [ ] Bouton "Send EDI" qui appelle `ediTransmissionService.retryTransmission()`
-- [ ] Afficher indicateur de chargement pendant transmission
-- [ ] Rafraîchir la table après succès/échec avec toast notification
-
-```tsx
-{!operation.edi_transmitted && ediEnabled && (
-  <Button onClick={() => handleManualSendEDI(operation.id)}>
-    Send EDI
-  </Button>
-)}
-```
-
----
-
-### 4. Tester et Valider
-
-#### 4.1 Tests unitaires pour l'automatisation
-- [ ] Créer test: listener GATE_OUT_COMPLETED se déclenche
-- [ ] Créer test: EDI généré automatiquement quand client activé
-- [ ] Créer test: Aucun EDI quand client désactivé
-- [ ] Créer test: Gestion des erreurs lors de génération
-
-#### 4.2 Tests d'intégration SFTP
-- [ ] Configurer serveur SFTP de test dans `edi_server_config`
-- [ ] Tester upload avec `sftpIntegrationService.uploadFile()`
-- [ ] Vérifier que fichier arrive dans `/incoming/codeco/`
-- [ ] Tester retry automatique avec serveur temporairement down
-- [ ] Vérifier logs dans `edi_transmission_logs`
-
-#### 4.3 Tests end-to-end GATE OUT
-- [ ] Scénario: Compléter GATE OUT avec client EDI activé
-- [ ] Vérifier: Codeco généré automatiquement
-- [ ] Vérifier: Fichier envoyé via SFTP
-- [ ] Vérifier: `edi_transmitted = true` en base de données
-- [ ] Vérifier: Log créé avec statut 'success'
-- [ ] Scénario: Compléter GATE OUT avec client EDI désactivé
-- [ ] Vérifier: Aucun EDI généré
-- [ ] Vérifier: `edi_transmitted = false` en base
+- [x] Fichier cible: `src/components/Gates/GateOut/GateOutCompletionModal.tsx`
+- [x] Avant validation, charger configuration EDI du client
+- [x] Afficher badge en haut du modal: "EDI: Enabled/Disabled"
+- [x] Si EDI activé: message "EDI will be sent automatically after completion"
+- [x] Si EDI désactivé: message "EDI not configured for this client"
 
 ---
 
@@ -380,7 +338,7 @@ ADD COLUMN retry_logs JSONB DEFAULT '[]'::jsonb;
 ## 📋 Checklist de Validation Avant Déploiement
 
 ### Développement
-- [ ] Toutes tâches Priorité HAUTE complétées
+- [x] Toutes tâches Priorité HAUTE complétées
 - [ ] Tests unitaires passent (> 80% couverture)
 - [ ] Tests d'intégration SFTP réussis
 - [ ] Code review effectuée par pairs

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader, Package, CheckCircle, AlertTriangle, Plus, Trash2, Calendar } from 'lucide-react';
+import { X, Save, Loader, Package, CheckCircle, AlertTriangle, Plus, Trash2, Calendar, Wifi, WifiOff } from 'lucide-react';
 import { PendingGateOut } from '../types';
 import { validateContainerNumber, formatContainerNumberForDisplay } from '../utils';
 import { Container } from '../../../types';
 import { useTranslation } from 'react-i18next';
 import { containerService } from '../../../services/api';
+import { sftpIntegrationService } from '../../../services/edi/sftpIntegrationService';
 
 // Local interface for ContainerInput since it's GateOut-specific
 interface ContainerInput {
@@ -55,13 +56,30 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
   const [inConfirmation, setInConfirmation] = useState(false);
   const [error, setError] = useState<string>('');
   const [truckCapacityError, setTruckCapacityError] = useState<string>('');
-
+  const [ediEnabled, setEdiEnabled] = useState<boolean | null>(null);
   // Load containers when modal opens
   useEffect(() => {
     if (isOpen) {
       loadContainers();
     }
   }, [isOpen]);
+
+  // Load EDI status for the client when operation changes
+  useEffect(() => {
+    if (!isOpen) {
+      setEdiEnabled(null);
+      return;
+    }
+    if (operation?.clientCode) {
+      setEdiEnabled(null);
+      sftpIntegrationService.isClientEDIEnabled(operation.clientCode, 'GATE_OUT')
+        .then(setEdiEnabled)
+        .catch((error) => {
+          console.error('Failed to check EDI status:', error);
+          setEdiEnabled(false);
+        });
+    }
+  }, [isOpen, operation?.clientCode]);
 
   const loadContainers = async () => {
     try {
@@ -107,6 +125,16 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
       return {
         isValid: false,
         message: `Container belongs to client ${container.clientCode}, but booking is for ${operation.clientCode}`,
+        container
+      };
+    }
+
+    // Check if container belongs to this booking (using releaseOrderId)
+    if (operation && container.releaseOrderId && operation.bookingReferenceId && 
+        container.releaseOrderId !== operation.bookingReferenceId) {
+      return {
+        isValid: false,
+        message: `Container belongs to booking ${container.releaseOrderId}, not ${operation.bookingReferenceId}`,
         container
       };
     }
@@ -371,6 +399,27 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* EDI Status Indicator */}
+        {ediEnabled !== null && (
+          <div className={`px-4 sm:px-6 py-2 border-b text-xs flex items-center gap-2 ${
+            ediEnabled
+              ? 'bg-blue-50 border-blue-100 text-blue-700'
+              : 'bg-gray-50 border-gray-100 text-gray-500'
+          }`}>
+            {ediEnabled ? (
+              <>
+                <Wifi className="h-3.5 w-3.5 flex-shrink-0" />
+                <span>EDI enabled — CODECO will be sent automatically after completion</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-3.5 w-3.5 flex-shrink-0" />
+                <span>EDI not configured for this client</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">

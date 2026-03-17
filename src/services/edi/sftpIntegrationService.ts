@@ -75,7 +75,7 @@ class SFTPIntegrationService {
         .select('edi_enabled, enable_gate_in, enable_gate_out')
         .eq('client_code', clientCode)
         .eq('edi_enabled', true)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         return false;
@@ -107,7 +107,7 @@ class SFTPIntegrationService {
         `)
         .eq('client_code', clientCode)
         .eq('edi_enabled', true)
-        .single();
+        .maybeSingle();
 
       if (clientError || !clientSettings) {
         console.log(`No EDI settings found for client: ${clientCode}`);
@@ -160,7 +160,7 @@ class SFTPIntegrationService {
           server_config:edi_server_configurations(sender_code, partner_code)
         `)
         .eq('client_code', clientCode)
-        .single();
+        .maybeSingle();
 
       interface ServerConfig {
         sender_code: string;
@@ -495,7 +495,7 @@ class SFTPIntegrationService {
         .from('clients')
         .select('id')
         .eq('code', data.clientCode)
-        .single();
+        .maybeSingle();
 
       if (!client) {
         throw new Error(`Client not found: ${data.clientCode}`);
@@ -506,7 +506,7 @@ class SFTPIntegrationService {
         .from('edi_client_settings')
         .select('server_config_id, server_config:edi_server_configurations(partner_code)')
         .eq('client_code', data.clientCode)
-        .single();
+        .maybeSingle();
 
       const serverConfig = clientSettings?.server_config as unknown as { partner_code: string } | null;
 
@@ -606,7 +606,7 @@ class SFTPIntegrationService {
         .from('edi_client_settings')
         .select('server_config_id')
         .eq('client_code', data.clientCode)
-        .single();
+        .maybeSingle();
 
       // Insert transmission log
       const { error } = await supabase

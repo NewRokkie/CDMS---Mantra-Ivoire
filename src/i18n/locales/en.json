@@ -247,6 +247,7 @@
         "yourCompany": "Your Company"
       },
       "completion": {
+        "title": "Complete Gate Out",
         "submit": "Complete Gate Out",
         "containers": "Container Numbers",
         "confirm": "Confirm Container Number",
@@ -1116,12 +1117,6 @@
     "summary": "Summary",
     "fixErrors": "Please fix the following errors:",
     "pleaseReview": "Please review:",
-    "submissionFailed": "Submission Failed",
-    "time": {
-      "never": "Never",
-      "justNow": "Just now",
-      "hoursAgo": "h ago",
-      "daysAgo": "d ago"
-    }
+    "submissionFailed": "Submission Failed"
   }
 }

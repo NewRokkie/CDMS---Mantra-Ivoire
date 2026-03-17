@@ -182,6 +182,10 @@ export interface GateOutOperation {
   updatedAt?: Date;
   
   notes?: string;
+  
+  // EDI transmission status
+  ediTransmitted?: boolean;
+  ediTransmissionDate?: Date;
 }
 
 // Phase 2: Gate Out Container (conteneurs individuels sortis - créé lors du traitement)

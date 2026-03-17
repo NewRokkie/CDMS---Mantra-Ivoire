@@ -95,10 +95,19 @@ export class ValidationService {
           userMessage: 'Numéro de conteneur invalide (ISO 6346)'
         });
 
-        // As a fallback directly alert the user as requested, if window is available
-        if (typeof window !== 'undefined') {
-          alert(`Le numéro de conteneur ${cleanNumber} est invalide selon la norme ISO 6346.`);
-        }
+        // As a fallback, just return the validation result without alert
+        return {
+          isValid: false,
+          errors: [
+            {
+              field: fieldName,
+              code: 'INVALID_CONTAINER_CHECKSUM',
+              message: `Le numéro de conteneur ${cleanNumber} est invalide selon la norme ISO 6346.`,
+              userMessage: 'Numéro de conteneur invalide (ISO 6346)'
+            }
+          ],
+          warnings: []
+        };
       }
     }
 
@@ -158,9 +167,6 @@ export class ValidationService {
 
     // New check: ISO 6346
     if (!isValidContainer(formattedNumber)) {
-      if (typeof window !== 'undefined') {
-        alert(`Le numéro de conteneur ${formattedNumber} est invalide selon la norme ISO 6346.`);
-      }
       return {
         isValid: false,
         message: 'Numéro de conteneur invalide (ISO 6346)',
