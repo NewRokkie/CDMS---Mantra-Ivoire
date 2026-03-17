@@ -17,7 +17,7 @@ export const ModalBody: React.FC<ModalBodyProps> = ({
       className={`
         flex-1 
         px-4 sm:px-8 
-        py-6 
+        py-4
         dark:text-gray-200 
         leading-relaxed
         ${scrollable ? `overflow-y-auto ${scrollbarStyles}` : 'overflow-hidden'}
@@ -26,10 +26,7 @@ export const ModalBody: React.FC<ModalBodyProps> = ({
         ${className}
       `}
     >
-      {/* 2. Conteneur interne pour gérer l'espacement et l'accessibilité */}
-      <div className="relative">
-        {children}
-      </div>
+      {children}
     </div>
   );
 };
