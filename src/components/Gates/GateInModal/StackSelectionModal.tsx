@@ -366,9 +366,9 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     return true;
   };
 
-  // Validate stack format (S##R#H# pattern)
+  // Validate stack format (S##R#H# or S###R#H# pattern)
   const validateStackFormat = (formattedId: string): boolean => {
-    const stackPattern = /^S\d{2}R\d+H\d+$/;
+    const stackPattern = /^S\d{2,3}R\d+H\d+$/;
     return stackPattern.test(formattedId);
   };
 

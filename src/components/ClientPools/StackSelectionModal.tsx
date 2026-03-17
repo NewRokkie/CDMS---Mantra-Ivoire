@@ -165,12 +165,23 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     }));
 
   // Calculate total capacity using effective capacity logic
-  const selectedStacks = Array.from(selectedStackIds).map(stackId => stacks.find(s => s.id === stackId)).filter(Boolean);
+  const selectedStacks = Array.from(selectedStackIds)
+    .map(stackId => stacks.find(s => s.id === stackId))
+    .filter((stack): stack is Stack => stack !== undefined);
   const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(selectedStacks.map(stack => ({
-    ...stack,
+    id: stack.id,
+    stackNumber: stack.stackNumber,
     capacity: stack.maxCapacity,
     containerSize: stack.containerSize,
-    isVirtual: stack.isVirtual
+    isVirtual: stack.isVirtual,
+    isBufferZone: false, // Client pools don't use buffer zones
+    sectionId: stack.sectionId,
+    rows: stack.rows,
+    maxTiers: stack.maxTiers,
+    currentOccupancy: stack.currentOccupancy,
+    position: { x: 0, y: 0, z: 0 }, // Default position - not used in capacity calculation
+    dimensions: { width: 0, length: 0 }, // Default dimensions - not used in capacity calculation
+    containerPositions: [] // Default empty array - not used in capacity calculation
   })));
 
   if (!isOpen) return null;
