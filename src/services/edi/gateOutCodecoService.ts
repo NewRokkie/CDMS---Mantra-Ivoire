@@ -9,6 +9,9 @@ import { EDITransmissionLog } from '../../types/edi';
 import { logger } from '../../utils/logger';
 
 interface GateOutCodecoData {
+  // Gate Out Operation ID - REQUIRED for EDI tracking
+  operationId: string;
+  
   // Container Information - REQUIRED: Container Number
   containerNumbers: string[];
   containerSizes: ('20ft' | '40ft')[];
@@ -165,7 +168,8 @@ class GateOutCodecoService {
             status: 'GATE_OUT' as const,
             timestamp: gateOutData.completedAt || gateOutData.createdAt,
             location: gateOutData.fromLocation,
-            yardId: gateOutData.yardId
+            yardId: gateOutData.yardId,
+            operationId: gateOutData.operationId // Add the real operation ID
           };
 
           // Transmit via EDI management service
@@ -353,6 +357,9 @@ class GateOutCodecoService {
     const now = new Date();
     
     return {
+      // Gate Out Operation ID - REQUIRED for EDI tracking
+      operationId: gateOutOperation.id,
+      
       // Container Information - REQUIRED: Container Number
       containerNumbers: containers.map(c => c.number),
       containerSizes: containers.map(c => c.size || '20ft'),

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Package, Grid3x3 as Grid3X3, AlertTriangle, Shield, Settings, Plus, Minus } from 'lucide-react';
 import { Yard, YardStack } from '../../../types';
-import { yardsService } from '../../../services/api/yardsService';
 import { FormModal } from '../../Common/Modal/FormModal';
-import { handleError } from '../../../services/errorHandling';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StackFormModalProps {
   isOpen: boolean;
@@ -12,6 +10,7 @@ interface StackFormModalProps {
   onSubmit: (data: Partial<YardStack>) => void;
   selectedStack?: YardStack | null;
   yard: Yard;
+  existingStacks?: YardStack[];
   isLoading?: boolean;
 }
 
@@ -21,9 +20,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   onSubmit,
   selectedStack,
   yard,
+  existingStacks = [],
   isLoading = false
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     stackNumber: 0,
     sectionId: '',
@@ -32,12 +32,12 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
     rows: 4,
     maxTiers: 5,
     useCustomRowTiers: false,
-    rowTierConfig: [] as Array<{ row: number; maxTiers: number }>
+    rowTierConfig: [] as Array<{ row: number; maxTiers: number }>,
+    isBufferZone: false
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [rowValidationWarning, setRowValidationWarning] = useState<string | null>(null);
-  const [suggestedStackNumber, setSuggestedStackNumber] = useState<number>(1);
 
   // Initialize form data
   useEffect(() => {
@@ -47,7 +47,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       const stackType = selectedStack.isSpecialStack ? 'special' : 'regular';
 
       const hasCustomRowTiers = !!(selectedStack.rowTierConfig && selectedStack.rowTierConfig.length > 0);
-      
+
       setFormData({
         stackNumber: selectedStack.stackNumber,
         sectionId: selectedStack.sectionId || '',
@@ -56,32 +56,22 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         rows: selectedStack.rows,
         maxTiers: selectedStack.maxTiers,
         useCustomRowTiers: hasCustomRowTiers,
-        rowTierConfig: hasCustomRowTiers && selectedStack.rowTierConfig ? selectedStack.rowTierConfig : []
+        rowTierConfig: hasCustomRowTiers && selectedStack.rowTierConfig ? selectedStack.rowTierConfig : [],
+        isBufferZone: !!selectedStack.isBufferZone
       });
     } else if (yard?.sections && yard.sections.length > 0) {
-      // Reset for new stack - always get fresh suggested number when modal opens
+      // Reset for new stack
       const firstSection = yard.sections[0];
-
-      let suggestedNumber = 1;
-      try {
-        if (firstSection && yard.id && isOpen) {
-          // Force fresh calculation by calling the service directly
-          suggestedNumber = yardsService.getNextStackNumber(yard.id, firstSection.id);
-        }
-      } catch (error) {
-        handleError(error, 'StackFormModal.getNextStackNumber');
-        suggestedNumber = 1;
-      }
-
       setFormData({
-        stackNumber: suggestedNumber,
+        stackNumber: 1,
         sectionId: firstSection?.id || '',
         containerSize: '20ft',
         stackType: 'regular',
         rows: 5,
         maxTiers: 5,
         useCustomRowTiers: false,
-        rowTierConfig: []
+        rowTierConfig: [],
+        isBufferZone: firstSection?.name === 'Zone Tampon'
       });
     } else {
       // Provide default values even if no sections are available
@@ -93,7 +83,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
         rows: 5,
         maxTiers: 5,
         useCustomRowTiers: false,
-        rowTierConfig: []
+        rowTierConfig: [],
+        isBufferZone: false
       });
     }
     setErrors({});
@@ -136,10 +127,21 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       newValidationErrors.push(t('stack.validation.specialNo40'));
     }
 
+    // Check for duplicate stack number in the same yard
+    const isDuplicate = existingStacks.some(stack =>
+      stack.stackNumber === formData.stackNumber &&
+      (!selectedStack || stack.id !== selectedStack.id)
+    );
+
+    if (isDuplicate) {
+      newErrors.stackNumber = t('stack.validation.duplicateNumber');
+      newValidationErrors.push(t('stack.validation.duplicateNumber'));
+    }
+
     setErrors(newErrors);
     setValidationErrors(newValidationErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, selectedStack, t]);
+  }, [formData, selectedStack, existingStacks, t]);
 
   const handleInputChange = async (field: string, value: string | number | boolean, triggerAutoSave?: () => void) => {
     // Validate row reduction if editing existing stack
@@ -243,9 +245,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       rowTierConfig: formData.useCustomRowTiers ? formData.rowTierConfig : undefined,
       capacity: calculateCapacity(),
       isActive: true,
+      isBufferZone: formData.isBufferZone,
     };
 
-    onSubmit(stackData);
+    await onSubmit(stackData);
   };
 
   const generateDefaultRowTierConfig = useCallback((): Array<{ row: number; maxTiers: number }> => {
@@ -259,14 +262,14 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
   const updateRowTierConfig = (row: number, maxTiers: number) => {
     const newConfig = [...formData.rowTierConfig];
     const existingIndex = newConfig.findIndex(c => c.row === row);
-    
+
     if (existingIndex >= 0) {
       newConfig[existingIndex] = { row, maxTiers };
     } else {
       newConfig.push({ row, maxTiers });
       newConfig.sort((a, b) => a.row - b.row);
     }
-    
+
     setFormData(prev => ({ ...prev, rowTierConfig: newConfig }));
   };
 
@@ -282,41 +285,29 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
       : t('stack.form.specialDesc');
   };
 
-  // Recalculate suggested stack number whenever section changes
+  // Auto-set isBufferZone based on selected section
   useEffect(() => {
-    if (!selectedStack && yard?.id && formData.sectionId && isOpen) {
-      try {
-        const suggested = yardsService.getNextStackNumber(yard.id, formData.sectionId);
-        setSuggestedStackNumber(suggested);
-        
-        // Auto-update the stack number field if it's currently using the old suggested number
-        // or if it's the initial load (stackNumber is 0)
-        if (formData.stackNumber === 0 || formData.stackNumber === suggestedStackNumber) {
-          setFormData(prev => ({ ...prev, stackNumber: suggested }));
-        }
-      } catch (error) {
-        handleError(error, 'StackFormModal.recalculateSuggestedNumber');
-        setSuggestedStackNumber(1);
-      }
-    } else {
-      setSuggestedStackNumber(1);
+    if (!selectedStack && yard?.sections && formData.sectionId) {
+      const selectedSection = yard.sections.find(s => s.id === formData.sectionId);
+      const isBuffer = selectedSection?.name === 'Zone Tampon';
+      setFormData(prev => ({ ...prev, isBufferZone: isBuffer }));
     }
-  }, [yard?.id, formData.sectionId, selectedStack, isOpen, formData.stackNumber, suggestedStackNumber]);
+  }, [formData.sectionId, yard?.sections, selectedStack]);
 
   // Synchronize rowTierConfig when rows change and custom tier configuration is enabled
   useEffect(() => {
     if (formData.useCustomRowTiers) {
       const currentRowCount = formData.rows;
       const configRowCount = formData.rowTierConfig.length;
-      
+
       if (currentRowCount !== configRowCount) {
         const newConfig: Array<{ row: number; maxTiers: number }> = [];
         for (let i = 1; i <= currentRowCount; i++) {
           // Try to preserve existing config for this row, otherwise use default maxTiers
           const existingConfig = formData.rowTierConfig.find(c => c.row === i);
-          newConfig.push({ 
-            row: i, 
-            maxTiers: existingConfig?.maxTiers || formData.maxTiers 
+          newConfig.push({
+            row: i,
+            maxTiers: existingConfig?.maxTiers || formData.maxTiers
           });
         }
         setFormData(prev => ({ ...prev, rowTierConfig: newConfig }));
@@ -371,35 +362,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   placeholder={t('stack.form.number')}
                   disabled={!!selectedStack} // Don't allow changing stack number when editing
                 />
-                {!selectedStack && suggestedStackNumber > 0 && formData.stackNumber !== suggestedStackNumber && (
-                  <button
-                    type="button"
-                    onClick={() => handleInputChange('stackNumber', suggestedStackNumber)}
-                    className="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap"
-                    title={t('stack.form.useSuggested').replace('{number}', suggestedStackNumber.toString())}
-                  >
-                    {t('stack.form.useSuggested').replace('{number}', suggestedStackNumber.toString())}
-                  </button>
-                )}
               </div>
               {errors.stackNumber && <p className="mt-1 text-sm text-red-600">{errors.stackNumber}</p>}
-              {yard?.layout === 'tantarelli' && !selectedStack && (
-                <div className="mt-1 flex items-center gap-2">
-                  <p className="text-xs text-blue-600">
-                    {t('stack.form.suggested').replace('{number}', suggestedStackNumber > 0 ? suggestedStackNumber.toString() : 'N/A')}
-                  </p>
-                  {suggestedStackNumber > 0 && formData.stackNumber !== suggestedStackNumber && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800">
-                      {t('stack.form.differentFromSuggested')}
-                    </span>
-                  )}
-                  {suggestedStackNumber > 0 && formData.stackNumber === suggestedStackNumber && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800">
-                      {t('stack.form.usingSuggested')}
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
 
             <div>
@@ -425,8 +389,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       {section.name} ({section.stacks.length} {t('common.containers')})
                     </option>
                   )) || (
-                    <option value="" disabled>{t('stack.form.noSections')}</option>
-                  )}
+                      <option value="" disabled>{t('stack.form.noSections')}</option>
+                    )}
                 </select>
               )}
               {errors.sectionId && <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>}
@@ -455,11 +419,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInputChange('containerSize', '20ft')}
-                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                    formData.containerSize === '20ft'
-                      ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                  }`}
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${formData.containerSize === '20ft'
+                    ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20'
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">📦</div>
@@ -482,13 +445,12 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   type="button"
                   onClick={() => handleInputChange('containerSize', '40ft')}
                   disabled={formData.stackType === 'special'}
-                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                    formData.containerSize === '40ft'
-                      ? 'border-orange-500 bg-orange-50 shadow-lg shadow-orange-500/20'
-                      : formData.stackType === 'special'
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${formData.containerSize === '40ft'
+                    ? 'border-orange-500 bg-orange-50 shadow-lg shadow-orange-500/20'
+                    : formData.stackType === 'special'
                       ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
                       : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50'
-                  }`}
+                    }`}
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">📦📦</div>
@@ -532,11 +494,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInputChange('stackType', 'regular')}
-                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                    formData.stackType === 'regular'
-                      ? 'border-green-500 bg-green-50 shadow-lg shadow-green-500/20'
-                      : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
-                  }`}
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${formData.stackType === 'regular'
+                    ? 'border-green-500 bg-green-50 shadow-lg shadow-green-500/20'
+                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                    }`}
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">⚙️</div>
@@ -558,11 +519,10 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInputChange('stackType', 'special')}
-                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${
-                    formData.stackType === 'special'
-                      ? 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-500/20'
-                      : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                  }`}
+                  className={`p-6 border-2 rounded-xl transition-all duration-300 ${formData.stackType === 'special'
+                    ? 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-500/20'
+                    : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                    }`}
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-2">🛡️</div>
@@ -582,6 +542,29 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Buffer Zone Toggle - Only for Zone Tampon */}
+            {yard?.sections?.find(s => s.id === formData.sectionId)?.name === 'Zone Tampon' && (
+              <div className="pt-4 border-t border-gray-100">
+                <label className="flex items-center space-x-3 cursor-pointer p-4 bg-orange-50 border-2 border-orange-200 rounded-xl hover:bg-orange-100 transition-all duration-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.isBufferZone}
+                    onChange={(e) => handleInputChange('isBufferZone', e.target.checked)}
+                    className="w-5 h-5 text-orange-600 border-2 border-orange-300 rounded focus:ring-orange-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <Shield className="h-5 w-5 text-orange-600" />
+                      <span className="font-bold text-orange-900">Zone Tampon (Buffer Zone)</span>
+                    </div>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Cochez cette case pour désigner ce stack comme une zone de stockage pour conteneurs endommagés.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
@@ -633,9 +616,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       max="7"
                       value={formData.rows}
                       onChange={(e) => handleInputChange('rows', parseInt(e.target.value) || 1)}
-                      className={`flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        errors.rows || rowValidationWarning ? 'border-red-300 bg-red-50' : ''
-                      }`}
+                      className={`flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.rows || rowValidationWarning ? 'border-red-300 bg-red-50' : ''}`}
                     />
 
                     <button
@@ -654,7 +635,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       {errors.rows}
                     </p>
                   )}
-                  
+
                   {rowValidationWarning && (
                     <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
                       <div className="flex items-start gap-2">
@@ -676,7 +657,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                       <Package className="h-5 w-5 text-green-600" />
                       <span className="font-semibold text-gray-900">{t('stack.form.tiers')}</span>
                     </div>
-                    <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">1-8</span>
+                    <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded">1-5</span>
                   </div>
 
                   <div className="flex items-center justify-between space-x-3">
@@ -692,18 +673,16 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     <input
                       type="number"
                       min="1"
-                      max="8"
+                      max="5"
                       value={formData.maxTiers}
                       onChange={(e) => handleInputChange('maxTiers', parseInt(e.target.value) || 1)}
-                      className={`flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        errors.maxTiers ? 'border-red-300 bg-red-50' : ''
-                      }`}
+                      className={`flex-1 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.maxTiers ? 'border-red-300 bg-red-50' : ''}`}
                     />
 
                     <button
                       type="button"
-                      onClick={() => handleInputChange('maxTiers', Math.min(8, formData.maxTiers + 1))}
-                      disabled={formData.maxTiers >= 8}
+                      onClick={() => handleInputChange('maxTiers', Math.min(5, formData.maxTiers + 1))}
+                      disabled={formData.maxTiers >= 5}
                       className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Plus className="h-4 w-4" />
@@ -729,7 +708,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     {formData.useCustomRowTiers ? t('stack.form.customLayout') : `${formData.rows} × ${formData.maxTiers}`}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-center py-4">
                   <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(formData.rows, 12)}, 1fr)` }}>
                     {formData.useCustomRowTiers && formData.rowTierConfig.length > 0 ? (
@@ -792,7 +771,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   )}
                 </div>
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h5 className="font-semibold text-slate-900">{t('stack.form.customTiers')}</h5>
@@ -814,7 +793,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                         {Array.from({ length: formData.rows }, (_, i) => i + 1).map(rowNum => {
                           const rowConfig = formData.rowTierConfig.find(c => c.row === rowNum);
                           const currentTiers = rowConfig?.maxTiers || formData.maxTiers;
-                          
+
                           return (
                             <div key={rowNum} className="grid grid-cols-3 gap-4 px-4 py-4 hover:bg-slate-50 transition-colors">
                               {/* Row Name Column */}
@@ -865,7 +844,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                                   <input
                                     type="number"
                                     min="1"
-                                    max="8"
+                                    max="5"
                                     value={currentTiers}
                                     onChange={(e) => updateRowTierConfig(rowNum, parseInt(e.target.value) || 1)}
                                     className="w-full text-center py-1 px-2 text-sm font-medium bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -874,8 +853,8 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
 
                                 <button
                                   type="button"
-                                  onClick={() => updateRowTierConfig(rowNum, Math.min(8, currentTiers + 1))}
-                                  disabled={currentTiers >= 8}
+                                  onClick={() => updateRowTierConfig(rowNum, Math.min(5, currentTiers + 1))}
+                                  disabled={currentTiers >= 5}
                                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                   <Plus className="h-4 w-4" />
@@ -917,7 +896,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                     <div className="text-sm text-slate-600">{t('stack.form.positions')}</div>
                   </div>
                 </div>
-                
+
                 <div className="text-right">
                   <div className="text-sm font-medium text-slate-700 mb-1">{t('common.filter')}</div>
                   <div className="text-xs text-slate-500">
@@ -938,7 +917,7 @@ export const StackFormModal: React.FC<StackFormModalProps> = ({
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span>{t('stack.form.calculation')}</span>
                     <span>
-                      {formData.useCustomRowTiers 
+                      {formData.useCustomRowTiers
                         ? `${formData.rowTierConfig.map(c => c.maxTiers).join(' + ')} = ${calculateCapacity()}`
                         : `${formData.rows} × ${formData.maxTiers} = ${calculateCapacity()}`
                       }

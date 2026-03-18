@@ -8,6 +8,9 @@ import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
 
 // Helper function to calculate virtual location for 40ft containers
 const getVirtualLocation = (container: Container, getStackConfiguration: (stackNum: number) => any): string => {
+  // If container has no location (e.g., out_depot), return a placeholder
+  if (!container.location) return 'N/A';
+  
   // Handle both formats: "S01-R3-H3" and "S01R3H3"
   const match = container.location.match(/S(\d+)[-]?R(\d+)[-]?H(\d+)/);
   if (!match) return container.location;
@@ -87,11 +90,16 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       // Use effective capacity calculation that handles 40ft pairing logic
       const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(stacks);
       const occupied = stacks.reduce((sum, s) => sum + s.currentOccupancy, 0);
-      const zoneName = `Zone ${String.fromCharCode(65 + index)}`;
+
+      // Assign default colors based on index/name
+      const defaultColors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899'];
+      const zoneColor = defaultColors[index % defaultColors.length];
+
+      const zoneName = section.name || `Zone ${String.fromCharCode(65 + index)}`;
       return {
         id: section.id,
         name: zoneName,
-        color: section.color || '#3b82f6',
+        color: zoneColor,
         capacity: totalCapacity,
         occupied,
         percentage: totalCapacity > 0 ? (occupied / totalCapacity) * 100 : 0
@@ -203,17 +211,6 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
   const handleSearchChange = (value: string) => {
     const validated = validateContainerInput(value);
     setSearchTerm(validated);
-
-    if (validated.length >= 2) {
-      const suggestions = allContainers.filter(c =>
-        c.number.toUpperCase().startsWith(validated)
-      ).slice(0, 5);
-      setSearchSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
-    } else {
-      setSearchSuggestions([]);
-      setShowSuggestions(false);
-    }
   };
 
   const filteredContainers = useMemo(() => {
@@ -235,11 +232,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       }
     } else {
       // For 'all' status, include containers that are physically in the yard
-      // This includes: gate_in, in_depot, maintenance, cleaning
-      filtered = filtered.filter(c => 
-        c.status === 'gate_in' || 
-        c.status === 'in_depot' || 
-        c.status === 'maintenance' || 
+      // This includes: gate_in, in_depot, gate_out (still has location), maintenance, cleaning
+      // Excludes: out_depot (confirmed exit, no location)
+      filtered = filtered.filter(c =>
+        c.status === 'gate_in' ||
+        c.status === 'in_depot' ||
+        c.status === 'gate_out' ||
+        c.status === 'in_buffer' ||
         c.status === 'cleaning'
       );
     }
@@ -250,6 +249,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         const stackNumbers = section.stacks.map(s => s.stackNumber);
         filtered = filtered.filter(c => {
           // Handle both formats: "S01-R3-H3" and "S01R3H3"
+          if (!c.location) return false;
           const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
           return match && stackNumbers.includes(parseInt(match[1]));
         });
@@ -261,11 +261,26 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   const searchedContainer = useMemo(() => {
     if (!searchTerm.trim()) return null;
-    const found = allContainers.find(c =>
+    // Only search in containers that are physically in the yard (filteredContainers)
+    const found = filteredContainers.find(c =>
       c.number.toUpperCase() === searchTerm.toUpperCase()
     );
     return found || null;
-  }, [allContainers, searchTerm]);
+  }, [filteredContainers, searchTerm]);
+
+  // Update search suggestions based on filteredContainers (only containers in yard)
+  useEffect(() => {
+    if (searchTerm.length >= 2) {
+      const suggestions = filteredContainers.filter(c =>
+        c.number.toUpperCase().startsWith(searchTerm.toUpperCase())
+      ).slice(0, 5);
+      setSearchSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchTerm, filteredContainers]);
 
   useEffect(() => {
     if (highlightedStacks.length > 0) {
@@ -278,6 +293,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
   const scrollToContainer = () => {
     if (!searchedContainer) return;
+
+    // If container has no location (e.g., out_depot), don't try to scroll
+    if (!searchedContainer.location) return;
 
     const match = searchedContainer.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
     if (!match) return;
@@ -295,9 +313,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       // If container is found in a virtual stack, highlight the virtual stack and its paired physical stacks
       if (containerStackViz.isVirtual) {
         stacksToHighlight.push(containerStackViz.stackNumber);
-        
+
         // Also highlight the paired physical stacks
-        const pairedPhysicalStacks = stacksData.filter(s => 
+        const pairedPhysicalStacks = stacksData.filter(s =>
           !s.isVirtual && s.isPaired && s.pairedWith === containerStackViz.stackNumber
         );
         pairedPhysicalStacks.forEach(s => stacksToHighlight.push(s.stackNumber));
@@ -312,13 +330,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       } else {
         // Container is in a physical stack
         stacksToHighlight.push(containerStackViz.stackNumber);
-        
+
         // If this physical stack is paired with a virtual stack, also highlight the virtual stack
         if (containerStackViz.isPaired && containerStackViz.pairedWith) {
           stacksToHighlight.push(containerStackViz.pairedWith);
-          
+
           // Also highlight the other paired physical stack
-          const otherPairedStack = stacksData.find(s => 
+          const otherPairedStack = stacksData.find(s =>
             !s.isVirtual && s.isPaired && s.pairedWith === containerStackViz.pairedWith && s.stackNumber !== containerStackViz.stackNumber
           );
           if (otherPairedStack) {
@@ -337,7 +355,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     } else {
       // Fallback: use the original logic if container not found in stacksData
       stacksToHighlight.push(stackNumber);
-      
+
       // For 40ft containers, also try to highlight virtual stack
       if (searchedContainer.size === '40ft') {
         const config = getStackConfiguration(stackNumber);
@@ -360,14 +378,14 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     const inDepot = allContainers.filter(c => c.status === 'in_depot').length;
     const fullContainers = allContainers.filter(c => c.fullEmpty === 'FULL' && c.status === 'in_depot').length;
     const emptyContainers = allContainers.filter(c => c.fullEmpty === 'EMPTY' && c.status === 'in_depot').length;
-    
+
     // Calculate effective capacity using our new logic instead of relying on yard.totalCapacity
     const allStacks = yard ? yard.sections.flatMap(section => section.stacks) : [];
     const effectiveCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(allStacks);
-    
+
     // Free space is the number of available locations (capacity - current occupancy)
     const freeSpace = effectiveCapacity - (yard?.currentOccupancy || 0);
-    
+
     const occupancyRate = effectiveCapacity > 0 ? ((yard?.currentOccupancy || 0) / effectiveCapacity * 100) : 0;
 
     return { total, inDepot, fullContainers, emptyContainers, freeSpace, occupancyRate, effectiveCapacity };
@@ -390,22 +408,30 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
       sortedStacks.forEach(stack => {
         if (processedStacks.has(stack.stackNumber)) return;
 
+        // Skip buffer zone stacks - they are shown in BufferZoneManagement
+        const isBufferZone = (stack as any).isBufferZone === true;
+        if (isBufferZone) {
+          processedStacks.add(stack.stackNumber);
+          return;
+        }
+
         // Check if this stack is virtual (from database)
         const isVirtualStack = (stack as any).isVirtual === true;
-        
+
         // For virtual stacks, render them directly - but only if they are active
         if (isVirtualStack && stack.isActive) {
           processedStacks.add(stack.stackNumber);
-          
+
           // For virtual stacks, collect 40ft containers from BOTH paired physical stacks
           const virtualStackData = stack as any;
           const pairedStackIds = [virtualStackData.stack1Id, virtualStackData.stack2Id].filter(Boolean);
           const pairedPhysicalStacks = sortedStacks.filter(s => pairedStackIds.includes(s.id));
           const pairedStackNumbers = pairedPhysicalStacks.map(s => s.stackNumber);
-          
+
           const virtualContainers = filteredContainers.filter(c => {
             // Include 40ft containers from paired physical stacks (S03, S05) OR virtual location (S04)
             if (c.size !== '40ft') return false;
+            if (!c.location) return false;
             const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
             const stackNum = match ? parseInt(match[1]) : null;
             return stackNum !== null && (pairedStackNumbers.includes(stackNum) || stackNum === stack.stackNumber);
@@ -413,13 +439,13 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
           const containerSlots: ContainerSlot[] = virtualContainers.map(c => {
             // Handle both formats: "S01-R3-H3" and "S01R3H3"
-            const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+            const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
             const row = locMatch ? parseInt(locMatch[1]) : 1;
             const tier = locMatch ? parseInt(locMatch[2]) : 1;
 
             let status: ContainerSlot['status'] = 'occupied';
             if (c.damage && c.damage.length > 0) status = 'damaged';
-            else if (c.status === 'maintenance') status = 'priority';
+            else if (c.status === 'in_buffer') status = 'priority';
 
             return {
               containerId: c.id,
@@ -436,7 +462,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
           // Calculate proper capacity for virtual stack
           let virtualCapacity = stack.capacity;
-          
+
           // If capacity is 0 or invalid, calculate it properly
           if (!virtualCapacity || virtualCapacity <= 0) {
             if (stack.rowTierConfig && stack.rowTierConfig.length > 0) {
@@ -471,7 +497,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         let isPairedPhysicalStack = false;
         let pairedVirtualStackNumber: number | null = null;
         let pairedStackId: string | null = null;
-        
+
         if (stackContainerSize === '40ft') {
           // Find any virtual stack that includes this physical stack in its pairing
           const virtualStack = sortedStacks.find(s => {
@@ -479,7 +505,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             const virtualStackData = s as any;
             return virtualStackData.stack1Id === stack.id || virtualStackData.stack2Id === stack.id;
           });
-          
+
           if (virtualStack) {
             pairedVirtualStackNumber = virtualStack.stackNumber;
             isPairedPhysicalStack = true;
@@ -506,7 +532,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
         // Calculate proper capacity for physical stack
         let physicalCapacity = stack.capacity;
-        
+
         // If capacity is 0 or invalid, calculate it properly
         if (!physicalCapacity || physicalCapacity <= 0) {
           if (stack.rowTierConfig && stack.rowTierConfig.length > 0) {
@@ -523,9 +549,10 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           // Get all 40ft containers from BOTH paired stacks (S03 and S05)
           const pairedStack = sortedStacks.find(s => s.id === pairedStackId);
           const bothStackNumbers = [stack.stackNumber, pairedStack?.stackNumber].filter(Boolean);
-          
+
           const all40ftContainers = filteredContainers.filter(c => {
             if (c.size !== '40ft') return false;
+            if (!c.location) return false;
             const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
             const stackNum = match ? parseInt(match[1]) : null;
             return stackNum !== null && (bothStackNumbers.includes(stackNum) || stackNum === pairedVirtualStackNumber);
@@ -533,12 +560,12 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
           // Build container slots per row so R1, R2, etc. show correct count (e.g. 1) in cells
           const containerSlots: ContainerSlot[] = all40ftContainers.map(c => {
-            const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+            const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
             const row = locMatch ? parseInt(locMatch[1]) : 1;
             const tier = locMatch ? parseInt(locMatch[2]) : 1;
             let status: ContainerSlot['status'] = 'occupied';
             if (c.damage && c.damage.length > 0) status = 'damaged';
-            else if (c.status === 'maintenance') status = 'priority';
+            else if (c.status === 'in_buffer') status = 'priority';
             return {
               containerId: c.id,
               containerNumber: c.number,
@@ -576,19 +603,20 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
         // Regular stack processing (for 20ft stacks or unpaired stacks)
         const stackContainers = filteredContainers.filter(c => {
           // Handle both formats: "S01-R3-H3" and "S01R3H3"
+          if (!c.location) return false;
           const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
           return match && parseInt(match[1]) === stack.stackNumber;
         });
 
         const containerSlots: ContainerSlot[] = stackContainers.map(c => {
           // Handle both formats: "S01-R3-H3" and "S01R3H3"
-          const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+          const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
           const row = locMatch ? parseInt(locMatch[1]) : 1;
           const tier = locMatch ? parseInt(locMatch[2]) : 1;
 
           let status: ContainerSlot['status'] = 'occupied';
           if (c.damage && c.damage.length > 0) status = 'damaged';
-          else if (c.status === 'maintenance') status = 'priority';
+          else if (c.status === 'in_buffer') status = 'priority';
 
           return {
             containerId: c.id,
@@ -605,7 +633,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
         // Calculate proper capacity for regular stack
         let regularCapacity = stack.capacity;
-        
+
         // If capacity is 0 or invalid, calculate it properly
         if (!regularCapacity || regularCapacity <= 0) {
           if (stack.rowTierConfig && stack.rowTierConfig.length > 0) {
@@ -642,40 +670,41 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     // and create them temporarily for 40ft paired stacks
     const virtualStacksToAdd: StackVisualization[] = [];
     const processedVirtualStacks = new Set<number>();
-    
+
     allStacks.forEach(stackViz => {
       if (stackViz.isPaired && !stackViz.isVirtual && stackViz.pairedWith) {
         const virtualStackNumber = stackViz.pairedWith;
-        
+
         // Check if virtual stack already exists or was already processed
-        if (!processedVirtualStacks.has(virtualStackNumber) && 
-            !allStacks.some(s => s.stackNumber === virtualStackNumber && s.isVirtual)) {
-          
+        if (!processedVirtualStacks.has(virtualStackNumber) &&
+          !allStacks.some(s => s.stackNumber === virtualStackNumber && s.isVirtual)) {
+
           processedVirtualStacks.add(virtualStackNumber);
-          
+
           // Find the paired physical stack
-          const pairedPhysicalStack = allStacks.find(s => 
+          const pairedPhysicalStack = allStacks.find(s =>
             s.isPaired && !s.isVirtual && s.pairedWith === virtualStackNumber && s.stackNumber !== stackViz.stackNumber
           );
-          
+
           if (pairedPhysicalStack) {
             // Get all 40ft containers from both paired stacks
             const bothStackNumbers = [stackViz.stackNumber, pairedPhysicalStack.stackNumber];
             const virtual40ftContainers = filteredContainers.filter(c => {
               if (c.size !== '40ft') return false;
+              if (!c.location) return false;
               const match = c.location.match(/S(\d+)[-]?R\d+[-]?H\d+/);
               const stackNum = match ? parseInt(match[1]) : null;
               return stackNum !== null && (bothStackNumbers.includes(stackNum) || stackNum === virtualStackNumber);
             });
 
             const virtualContainerSlots: ContainerSlot[] = virtual40ftContainers.map(c => {
-              const locMatch = c.location.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
+              const locMatch = c.location?.match(/S\d+[-]?R(\d+)[-]?H(\d+)/);
               const row = locMatch ? parseInt(locMatch[1]) : 1;
               const tier = locMatch ? parseInt(locMatch[2]) : 1;
 
               let status: ContainerSlot['status'] = 'occupied';
               if (c.damage && c.damage.length > 0) status = 'damaged';
-              else if (c.status === 'maintenance') status = 'priority';
+              else if (c.status === 'in_buffer') status = 'priority';
 
               return {
                 containerId: c.id,
@@ -692,7 +721,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
             // Calculate proper capacity for virtual stack
             let virtualCapacity = stackViz.capacity;
-            
+
             // If capacity is 0 or invalid, calculate it properly
             if (!virtualCapacity || virtualCapacity <= 0) {
               if (stackViz.stack?.rowTierConfig && stackViz.stack.rowTierConfig.length > 0) {
@@ -776,7 +805,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
     if (stackViz.isPaired && !stackViz.isVirtual) {
       return; // Do nothing for paired physical stacks
     }
-    
+
     if (stackViz.stack) {
       setSelectedStack(stackViz.stack);
       setSelectedStackViz(stackViz);
@@ -870,176 +899,176 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
             </button>
           </div>
 
-        <div className="grid grid-cols-5 gap-2 mb-2">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded px-2 py-1.5 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-blue-600 font-medium uppercase">Total</div>
-                <div className="text-lg font-bold text-blue-900">{stats.total}</div>
-              </div>
-              <Package className="h-5 w-5 text-blue-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded px-2 py-1.5 border border-green-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-green-600 font-medium uppercase">In Depot</div>
-                <div className="text-lg font-bold text-green-900">{stats.inDepot}</div>
-              </div>
-              <TrendingUp className="h-5 w-5 text-green-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded px-2 py-1.5 border border-orange-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-orange-600 font-medium uppercase">Free Space</div>
-                <div className="text-lg font-bold text-orange-900">{stats.freeSpace}</div>
-              </div>
-              <MapPin className="h-5 w-5 text-orange-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded px-2 py-1.5 border border-purple-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-purple-600 font-medium uppercase">FULL</div>
-                <div className="text-lg font-bold text-purple-900">{stats.fullContainers}</div>
-              </div>
-              <Package className="h-5 w-5 text-purple-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded px-2 py-1.5 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-gray-600 font-medium uppercase">Empty</div>
-                <div className="text-lg font-bold text-gray-900">{stats.emptyContainers}</div>
-              </div>
-              <Package className="h-5 w-5 text-gray-600 opacity-50" />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search container..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent font-mono"
-              maxLength={11}
-            />
-
-            {showSuggestions && searchSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-auto">
-                {searchSuggestions.map(container => (
-                  <div
-                    key={container.id}
-                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                    onClick={() => {
-                      setSearchTerm(container.number);
-                      setShowSuggestions(false);
-                    }}
-                  >
-                    <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
-                    <div className="text-xs text-gray-500">{container.clientName} • {getVirtualLocation(container, getStackConfiguration)}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchedContainer && !showSuggestions && (
-              <div
-                className="absolute top-full left-0 mt-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 shadow-lg z-10 flex items-center gap-2"
-                onMouseDown={(e) => e.preventDefault()}
-              >
+          <div className="grid grid-cols-5 gap-2 mb-2">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded px-2 py-1.5 border border-blue-200">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700 font-medium">Found: {getVirtualLocation(searchedContainer, getStackConfiguration)}</p>
-                  <p className="text-xs text-green-600">{searchedContainer.size} • {searchedContainer.type}</p>
-                  {highlightedStacks.length > 0 && (
-                    <p className="text-xs text-green-500 italic">Stack highlighted for {Math.ceil(8000/1000)}s</p>
-                  )}
+                  <div className="text-[10px] text-blue-600 font-medium uppercase">Total</div>
+                  <div className="text-lg font-bold text-blue-900">{stats.total}</div>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    scrollToContainer();
-                  }}
-                  className="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors flex items-center gap-1"
-                >
-                  <Eye className="h-3 w-3" />
-                  {highlightedStacks.length > 0 ? 'Re-highlight' : 'View'}
-                </button>
+                <Package className="h-5 w-5 text-blue-600 opacity-50" />
               </div>
-            )}
-            {searchTerm && !searchedContainer && !showSuggestions && (
-              <div className="absolute top-full left-0 mt-1 bg-red-50 border border-red-200 rounded px-2 py-1 text-xs text-red-700 whitespace-nowrap z-10">
-                Container not found
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded px-2 py-1.5 border border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-green-600 font-medium uppercase">In Depot</div>
+                  <div className="text-lg font-bold text-green-900">{stats.inDepot}</div>
+                </div>
+                <TrendingUp className="h-5 w-5 text-green-600 opacity-50" />
               </div>
-            )}
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded px-2 py-1.5 border border-orange-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-orange-600 font-medium uppercase">Free Space</div>
+                  <div className="text-lg font-bold text-orange-900">{stats.freeSpace}</div>
+                </div>
+                <MapPin className="h-5 w-5 text-orange-600 opacity-50" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded px-2 py-1.5 border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-purple-600 font-medium uppercase">FULL</div>
+                  <div className="text-lg font-bold text-purple-900">{stats.fullContainers}</div>
+                </div>
+                <Package className="h-5 w-5 text-purple-600 opacity-50" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded px-2 py-1.5 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-gray-600 font-medium uppercase">Empty</div>
+                  <div className="text-lg font-bold text-gray-900">{stats.emptyContainers}</div>
+                </div>
+                <Package className="h-5 w-5 text-gray-600 opacity-50" />
+              </div>
+            </div>
           </div>
 
-          <select
-            value={selectedZone}
-            onChange={(e) => setSelectedZone(e.target.value)}
-            className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Zones</option>
-            {zones.map(zone => (
-              <option key={zone.id} value={zone.id}>
-                {zone.name} ({zone.percentage.toFixed(0)}%)
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search container..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent font-mono"
+                maxLength={11}
+              />
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Status</option>
-            <option value="gate_in">Gate In</option>
-            <option value="in_depot">In Depot</option>
-            <option value="gate_out">Gate Out</option>
-            <option value="out_depot">Out Depot</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="cleaning">Cleaning</option>
-            <option value="damaged">Damaged</option>
-            <option value="empty">Empty Stacks</option>
-          </select>
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-auto">
+                  {searchSuggestions.map(container => (
+                    <div
+                      key={container.id}
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      onClick={() => {
+                        setSearchTerm(container.number);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      <div className="font-mono text-sm font-medium text-gray-900">{container.number}</div>
+                      <div className="text-xs text-gray-500">{container.clientName} • {getVirtualLocation(container, getStackConfiguration)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-          <div className="flex items-center gap-3 text-xs ml-auto">
-            <span className="font-medium text-gray-600">Legend:</span>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-100 border border-green-300 rounded" />
-              <span className="text-gray-600">Empty</span>
+              {searchedContainer && !showSuggestions && (
+                <div
+                  className="absolute top-full left-0 mt-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 shadow-lg z-10 flex items-center gap-2"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <div>
+                    <p className="text-xs text-green-700 font-medium">Found: {getVirtualLocation(searchedContainer, getStackConfiguration)}</p>
+                    <p className="text-xs text-green-600">{searchedContainer.size} • {searchedContainer.type}</p>
+                    {highlightedStacks.length > 0 && (
+                      <p className="text-xs text-green-500 italic">Stack highlighted for {Math.ceil(8000 / 1000)}s</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      scrollToContainer();
+                    }}
+                    className="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors flex items-center gap-1"
+                  >
+                    <Eye className="h-3 w-3" />
+                    {highlightedStacks.length > 0 ? 'Re-highlight' : 'View'}
+                  </button>
+                </div>
+              )}
+              {searchTerm && !searchedContainer && !showSuggestions && (
+                <div className="absolute top-full left-0 mt-1 bg-red-50 border border-red-200 rounded px-2 py-1 text-xs text-red-700 whitespace-nowrap z-10">
+                  Container not found
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-blue-500 rounded" />
-              <span className="text-gray-600">20ft</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-orange-400 rounded" />
-              <span className="text-gray-600">40ft</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-purple-500 rounded" />
-              <span className="text-gray-600">Maint.</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-500 rounded" />
-              <span className="text-gray-600">Damaged</span>
+
+            <select
+              value={selectedZone}
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Zones</option>
+              {zones.map(zone => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.name} ({zone.percentage.toFixed(0)}%)
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Status</option>
+              <option value="gate_in">Gate In</option>
+              <option value="in_depot">In Depot</option>
+              <option value="gate_out">Gate Out</option>
+              <option value="out_depot">Out Depot</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="cleaning">Cleaning</option>
+              <option value="damaged">Damaged</option>
+              <option value="empty">Empty Stacks</option>
+            </select>
+
+            <div className="flex items-center gap-3 text-xs ml-auto">
+              <span className="font-medium text-gray-600">Legend:</span>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-green-100 border border-green-300 rounded" />
+                <span className="text-gray-600">Empty</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-blue-500 rounded" />
+                <span className="text-gray-600">20ft</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-orange-400 rounded" />
+                <span className="text-gray-600">40ft</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-purple-500 rounded" />
+                <span className="text-gray-600">Maint.</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-red-500 rounded" />
+                <span className="text-gray-600">Damaged</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
 
       <div className="flex-1 p-4 overflow-auto relative">
@@ -1079,21 +1108,19 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                   {/* Connection lines using pseudo-elements and borders */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     {/* Left line */}
-                    <div className={`absolute left-0 top-1/2 w-1/3 h-1 bg-gradient-to-r transition-all duration-300 ${
-                      highlightedStacks.includes(stackViz.stackNumber)
+                    <div className={`absolute left-0 top-1/2 w-1/3 h-1 bg-gradient-to-r transition-all duration-300 ${highlightedStacks.includes(stackViz.stackNumber)
                         ? 'from-yellow-300 to-yellow-500 h-2 shadow-lg shadow-yellow-400/50'
                         : 'from-orange-400 to-orange-500'
-                    }`} style={{ transform: 'translateY(-50%)' }}>
+                      }`} style={{ transform: 'translateY(-50%)' }}>
                       {highlightedStacks.includes(stackViz.stackNumber) && (
                         <div className="absolute inset-0 bg-yellow-400 opacity-40 animate-pulse"></div>
                       )}
                     </div>
                     {/* Right line */}
-                    <div className={`absolute right-0 top-1/2 w-1/3 h-1 bg-gradient-to-l transition-all duration-300 ${
-                      highlightedStacks.includes(stackViz.stackNumber)
+                    <div className={`absolute right-0 top-1/2 w-1/3 h-1 bg-gradient-to-l transition-all duration-300 ${highlightedStacks.includes(stackViz.stackNumber)
                         ? 'from-yellow-300 to-yellow-500 h-2 shadow-lg shadow-yellow-400/50'
                         : 'from-orange-400 to-orange-500'
-                    }`} style={{ transform: 'translateY(-50%)' }}>
+                      }`} style={{ transform: 'translateY(-50%)' }}>
                       {highlightedStacks.includes(stackViz.stackNumber) && (
                         <div className="absolute inset-0 bg-yellow-400 opacity-40 animate-pulse"></div>
                       )}
@@ -1102,20 +1129,17 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
                   {/* Orange circle - reduced size */}
                   <div
-                    className={`w-20 h-20 rounded-full bg-gradient-to-br cursor-pointer hover:scale-110 transition-all flex flex-col items-center justify-center relative z-10 ${
-                      highlightedStacks.includes(stackViz.stackNumber)
+                    className={`w-20 h-20 rounded-full bg-gradient-to-br cursor-pointer hover:scale-110 transition-all flex flex-col items-center justify-center relative z-10 ${highlightedStacks.includes(stackViz.stackNumber)
                         ? 'from-yellow-300 to-yellow-500 border-4 border-yellow-400 shadow-2xl shadow-yellow-400/80 ring-8 ring-yellow-300/60 animate-pulse scale-125'
                         : 'from-orange-400 to-orange-600 border-4 border-orange-700 shadow-xl'
-                    }`}
+                      }`}
                     onClick={() => handleStackClick(stackViz)}
                     title={`Click to view ${stackViz.currentOccupancy} containers`}
                   >
-                    <span className={`font-bold text-lg ${
-                      highlightedStacks.includes(stackViz.stackNumber) ? 'text-gray-800' : 'text-white'
-                    }`}>S{stackViz.stackNumber.toString().padStart(2, '0')}</span>
-                    <span className={`text-[10px] font-semibold mt-0.5 ${
-                      highlightedStacks.includes(stackViz.stackNumber) ? 'text-gray-700' : 'text-white'
-                    }`}>{stackViz.currentOccupancy}/{stackViz.capacity}</span>
+                    <span className={`font-bold text-lg ${highlightedStacks.includes(stackViz.stackNumber) ? 'text-gray-800' : 'text-white'
+                      }`}>S{stackViz.stackNumber.toString().padStart(2, '0')}</span>
+                    <span className={`text-[10px] font-semibold mt-0.5 ${highlightedStacks.includes(stackViz.stackNumber) ? 'text-gray-700' : 'text-white'
+                      }`}>{stackViz.currentOccupancy}/{stackViz.capacity}</span>
                   </div>
                 </div>
               );
@@ -1128,22 +1152,20 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 ref={(el) => {
                   if (el) stackRefs.current.set(stackViz.stackNumber, el);
                 }}
-                className={`rounded-lg border-2 transition-all overflow-hidden ${
-                  stackViz.isPaired && !stackViz.isVirtual
-                    ? 'cursor-not-allowed bg-gray-100 opacity-60 border-gray-300' 
+                className={`rounded-lg border-2 transition-all overflow-hidden ${stackViz.isPaired && !stackViz.isVirtual
+                    ? 'cursor-not-allowed bg-gray-100 opacity-60 border-gray-300'
                     : 'cursor-pointer bg-white hover:border-blue-400'
-                } ${
-                  highlightedStacks.includes(stackViz.stackNumber)
+                  } ${highlightedStacks.includes(stackViz.stackNumber)
                     ? 'border-yellow-400 shadow-2xl shadow-yellow-400/60 ring-4 ring-yellow-300/50 animate-pulse scale-105 bg-yellow-50'
                     : stackViz.isPaired ? 'border-gray-300' : 'border-gray-200'
-                }`}
+                  }`}
                 onClick={() => handleStackClick(stackViz)}
                 title={
                   stackViz.isPaired && !stackViz.isVirtual
                     ? `Physical stack paired with virtual S${stackViz.pairedWith?.toString().padStart(2, '0')} - Click virtual stack to view containers`
-                    : stackViz.currentOccupancy > 0 
-                    ? `Click to view ${stackViz.currentOccupancy} containers`
-                    : 'Click to view stack details'
+                    : stackViz.currentOccupancy > 0
+                      ? `Click to view ${stackViz.currentOccupancy} containers`
+                      : 'Click to view stack details'
                 }
               >
                 <div
@@ -1373,24 +1395,22 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
 
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 block">Status</label>
-                <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-lg ${
-                  selectedContainer.status === 'gate_in' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' :
-                  selectedContainer.status === 'in_depot' ? 'bg-green-100 text-green-800 border-2 border-green-300' :
-                  selectedContainer.status === 'gate_out' ? 'bg-orange-100 text-orange-800 border-2 border-orange-300' :
-                  selectedContainer.status === 'out_depot' ? 'bg-gray-100 text-gray-800 border-2 border-gray-300' :
-                  selectedContainer.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' :
-                  selectedContainer.status === 'cleaning' ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' :
-                  'bg-gray-100 text-gray-800 border-2 border-gray-300'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                    selectedContainer.status === 'gate_in' ? 'bg-blue-500' :
-                    selectedContainer.status === 'in_depot' ? 'bg-green-500' :
-                    selectedContainer.status === 'gate_out' ? 'bg-orange-500' :
-                    selectedContainer.status === 'out_depot' ? 'bg-gray-500' :
-                    selectedContainer.status === 'maintenance' ? 'bg-yellow-500' :
-                    selectedContainer.status === 'cleaning' ? 'bg-purple-500' :
-                    'bg-gray-500'
-                  }`} />
+                <span className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-lg ${selectedContainer.status === 'gate_in' ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' :
+                    selectedContainer.status === 'in_depot' ? 'bg-green-100 text-green-800 border-2 border-green-300' :
+                      selectedContainer.status === 'gate_out' ? 'bg-orange-100 text-orange-800 border-2 border-orange-300' :
+                        selectedContainer.status === 'out_depot' ? 'bg-gray-100 text-gray-800 border-2 border-gray-300' :
+                          selectedContainer.status === 'in_buffer' ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' :
+                            selectedContainer.status === 'cleaning' ? 'bg-purple-100 text-purple-800 border-2 border-purple-300' :
+                              'bg-gray-100 text-gray-800 border-2 border-gray-300'
+                  }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${selectedContainer.status === 'gate_in' ? 'bg-blue-500' :
+                      selectedContainer.status === 'in_depot' ? 'bg-green-500' :
+                        selectedContainer.status === 'gate_out' ? 'bg-orange-500' :
+                          selectedContainer.status === 'out_depot' ? 'bg-gray-500' :
+                            selectedContainer.status === 'in_buffer' ? 'bg-yellow-500' :
+                              selectedContainer.status === 'cleaning' ? 'bg-purple-500' :
+                                'bg-gray-500'
+                    }`} />
                   {selectedContainer.status.replace('_', ' ').toUpperCase()}
                 </span>
               </div>
@@ -1484,9 +1504,9 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           stack={selectedStack}
           stackViz={selectedStackViz}
           containers={stackContainers}
-          onClose={() => { 
-            setSelectedStack(null); 
-            setSelectedStackViz(null); 
+          onClose={() => {
+            setSelectedStack(null);
+            setSelectedStackViz(null);
           }}
           onSelectContainer={(container) => {
             setSelectedContainer(container);

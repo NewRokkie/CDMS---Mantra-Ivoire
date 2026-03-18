@@ -1,0 +1,1122 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "containers": "Containers",
+    "gateIn": "Gate In",
+    "gateOut": "Gate Out",
+    "bookingReference": "Booking Reference",
+    "releases": "Release Orders",
+    "edi": "EDI Management",
+    "yard": "Yard Management",
+    "reports": "Reports",
+    "configurations": "Configurations",
+    "depotManagement": "Depot Management",
+    "stackManagement": "Stack Management",
+    "clientPools": "Client Pools",
+    "clientMasterData": "Client Master Data",
+    "userManagement": "User Management",
+    "moduleAccess": "Module Access",
+    "logout": "Sign Out"
+  },
+  "dashboard": {
+    "title": "Container Depot Management",
+    "welcome": "Welcome back",
+    "stats": {
+      "containers": "Total Containers",
+      "in": "Containers In",
+      "out": "Containers Out",
+      "pending": "Pending Release Orders",
+      "movements": "Today's Movements",
+      "revenue": "Monthly Revenue",
+      "occupancy": "Occupancy Rate",
+      "damaged": "Damaged Containers",
+      "maintenance": "In Maintenance",
+      "cleaning": "In Cleaning",
+      "vsLastMonth": "vs last month"
+    },
+    "multiDepot": {
+      "global": "Global Performance",
+      "current": "Current Depot",
+      "allDepots": "All Depots"
+    },
+    "clientNotice": "You are viewing data for your company only"
+  },
+  "containers": {
+    "title": "Container Management",
+    "gate_in": "Gate In",
+    "gate_out": "Gate Out",
+    "search": "Search containers...",
+    "searchYour": "Search your containers...",
+    "status": {
+      "inDepot": "In Depot",
+      "outDepot": "Out Depot",
+      "inService": "In Service",
+      "maintenance": "Maintenance",
+      "cleaning": "Cleaning"
+    },
+    "location": {
+      "outDepot": "Out of Depot",
+      "pending": "Pending Assignment"
+    },
+    "type": {
+      "dry": "Dry Container",
+      "reefer": "Reefer Container",
+      "tank": "Tank Container",
+      "flatRack": "Flat Rack",
+      "openTop": "Open Top"
+    },
+    "size": {
+      "20ft": "20 Feet",
+      "40ft": "40 Feet"
+    },
+    "viewDetails": "View Details",
+    "editContainer": "Edit Container",
+    "auditLog": "Audit Log",
+    "damage": {
+      "reports": "Damage Reports",
+      "none": "No damage reports recorded",
+      "add": "Add Damage Report",
+      "describe": "Describe damage..."
+    },
+    "export": {
+      "csv": "Export CSV",
+      "excel": "Export Excel",
+      "html": "Export HTML",
+      "button": "Export"
+    },
+    "list": {
+      "noContainers": "No containers found",
+      "noContainersClient": "No containers found for your company. Contact the depot if you expect to see containers here."
+    },
+    "table": {
+      "gateIn": "Gate In",
+      "gateOut": "Gate Out",
+      "fullEmpty": "Full / Empty",
+      "damagesReported": "damage(s) reported",
+      "container": "Container"
+    },
+    "filter": {
+      "from": "From",
+      "to": "To",
+      "filterByClient": "Filter by client...",
+      "allStatus": "All Status"
+    },
+    "stats": {
+      "yourContainers": "Your Containers",
+      "withDamage": "With Damage"
+    },
+    "details": {
+      "title": "Container Details",
+      "statusType": "Status & Type Details",
+      "yourCompany": "Your Company",
+      "days": "days"
+    },
+    "edit": {
+      "title": "Edit Container",
+      "steps": {
+        "basic": "Basic Information",
+        "location": "Location Assignment",
+        "client": "Client Assignment",
+        "damage": "Damage Assessment",
+        "review": "Review & Confirm"
+      },
+      "validationErrors": "Validation Errors:",
+      "validating": "Validating...",
+      "noPermission": "You do not have permission to edit containers."
+    },
+    "delete": {
+      "title": "Delete Container",
+      "confirmMessage": "This will mark the container as deleted.",
+      "success": "Container deleted successfully!",
+      "blocked": "Cannot delete this container:",
+      "actionRequired": "Action Required:"
+    },
+    "update": {
+      "success": "Container updated successfully!"
+    },
+    "notSelected": "Not selected",
+    "containersSpecified": "containers specified"
+  },
+  "status": {
+    "full": "FULL",
+    "empty": "EMPTY",
+    "inDepot": "In Depot",
+    "outDepot": "Out Depot",
+    "gateIn": "Gate In",
+    "gateOut": "Gate Out",
+    "pending": "Pending",
+    "inProcess": "In Process",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "maintenance": "Maintenance",
+    "cleaning": "Cleaning",
+    "inService": "In Service",
+    "inBuffer": "In Buffer"
+  },
+  "bookingType": {
+    "import": "IMPORT",
+    "export": "EXPORT"
+  },
+  "transactionType": {
+    "positionnement": "Positionnement",
+    "transfertOut": "Transfert (OUT)",
+    "transfertIn": "Transfert (IN)",
+    "retourLivraison": "Retour Livraison"
+  },
+  "containerStatus": {
+    "full": "Full",
+    "empty": "Empty",
+    "damaged": "Damaged",
+    "underMaintenance": "Under Maintenance",
+    "inCleaning": "In Cleaning"
+  },
+  "gate": {
+    "in": {
+      "title": "Gate In Management",
+      "new": "New Gate In",
+      "pending": "Pending Operations",
+      "completed": "Completed Operations",
+      "subtitle": "Container entry management",
+      "search": "Search operations...",
+      "success": "Gate In operation completed successfully",
+      "summary": "Operation Summary",
+      "stats": {
+        "today": "Today's Gate Ins",
+        "pending": "Pending Operations",
+        "processed": "Containers Processed",
+        "damaged": "Damaged Containers",
+        "alimentaire": "Alimentaire Containers"
+      },
+      "form": {
+        "containerInfo": "Container Information",
+        "transportInfo": "Transport Information",
+        "timeTracking": "Time Tracking",
+        "containerNumber": "Container Number",
+        "containerSize": "Container Size",
+        "containerType": "Container Type",
+        "quantity": "Quantity",
+        "status": "Container Status",
+        "damage": "Damage Status",
+        "client": "Client",
+        "booking": "Booking Reference",
+        "driver": "Driver Name",
+        "truck": "Truck Number",
+        "transport": "Transport Company",
+        "arrivalDate": "Arrival Date",
+        "arrivalTime": "Arrival Time",
+        "highCube": "Is High Cube ?",
+        "equipmentRef": "Equipment Reference",
+        "searchClient": "Search client by name or code...",
+        "arrival": "Truck Arrival Time"
+      },
+      "validation": {
+        "required": "This field is required",
+        "containerFormat": "Invalid container number format",
+        "validFormat": "Valid format"
+      },
+      "pendingNotice": {
+        "title": "Pending Operation",
+        "desc": "This Gate In operation will be created with Pending status. Stack assignment and damage assessment will be done later."
+      }
+    },
+    "out": {
+      "title": "Gate Out Management",
+      "new": "New Gate Out",
+      "pending": "Pending Operations",
+      "subtitle": "Container exit management",
+      "summary": "Operation Summary",
+      "stats": {
+        "today": "Today's Gate Outs",
+        "pending": "Pending Operations",
+        "processed": "Containers Processed",
+        "issues": "Issues Reported",
+        "remaining": "Containers Remaining"
+      },
+      "form": {
+        "booking": "Booking Selection",
+        "transport": "Transport Information",
+        "containers": "Container Numbers",
+        "selectBooking": "Select Booking",
+        "driver": "Driver Name",
+        "vehicle": "Vehicle Number",
+        "company": "Transport Company",
+        "vehicleNumberError": "Truck {truck} has a pending operation in progress. Please complete or cancel the existing operation before proceeding.",
+        "searchBooking": "Search and select a booking...",
+        "selectedBooking": "Selected Booking",
+        "selectBookingMessage": "Please select a booking to continue.",
+        "yourCompany": "Your Company"
+      },
+      "completion": {
+        "title": "Complete Gate Out",
+        "submit": "Complete Gate Out",
+        "containers": "Container Numbers",
+        "confirm": "Confirm Container Number",
+        "gateOutTime": "Gate Out Date & Time"
+      },
+      "truckRules": {
+        "title": "Truck Capacity Rules",
+        "40ft": "Maximum 1 container of 40ft per truck",
+        "20ft": "Maximum 2 containers of 20ft per truck",
+        "mix": "Cannot mix 20ft and 40ft containers in same truck",
+        "disabled40ft": "Disabled (40ft truck full)"
+      },
+      "error": {
+        "containerNotFound": "Container not found in yard",
+        "invalidStatus": "Invalid status: {status}"
+      },
+      "success": {
+        "validated": "Container Validated"
+      }
+    }
+  },
+  "releases": {
+    "title": "Release Orders",
+    "booking": {
+      "title": "Booking Management"
+    },
+    "create": "Create Release Order",
+    "createBooking": "Create Booking",
+    "pending": "Pending Validation",
+    "validated": "Validated",
+    "executed": "Executed",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "inProcess": "In Process",
+    "subtitle": "Release orders & container bookings",
+    "search": "Search bookings...",
+    "stats": {
+      "total": "Total Bookings",
+      "pending": "Pending",
+      "validated": "Validated",
+      "completed": "Completed"
+    },
+    "form": {
+      "bookingInfo": "Booking Information",
+      "clientInfo": "Client Information",
+      "quantities": "Container Quantities",
+      "bookingNumber": "Booking Reference Number",
+      "bookingType": "Booking Type",
+      "client": "Select Client",
+      "threshold": "Maximum Quantity Threshold",
+      "containers20": "20\" Containers",
+      "containers40": "40\" Containers",
+      "notes": "Notes",
+      "subtitle": {
+        "edit": "Update booking reference",
+        "create": "Generate new booking reference"
+      },
+      "bookingDesc": "Define the booking type and reference number",
+      "refImmutable": "Reference number cannot be changed",
+      "refHelp": "This will be used as the booking ID throughout the application",
+      "clientDesc": "Select the client for this booking",
+      "qtyControl": "Quantity Control",
+      "qtyControlDesc": "Set limits for container allocation",
+      "thresholdHelp": "Maximum containers allowed before requiring detailed breakdown per size",
+      "quantitiesTitle": "Container Quantities by Size"
+    },
+    "clientNotice": {
+      "viewingCompany": "You are viewing bookings for <strong>{{company}}</strong> only",
+      "inYard": "in <strong>{{yard}}</strong>"
+    },
+    "breakdown": {
+      "required": "Detailed breakdown required",
+      "summary": "Container Summary",
+      "help": "Total exceeds threshold. Detailed breakdown will be required for processing."
+    }
+  },
+  "yard": {
+    "title": "Yard Management",
+    "loading": "Loading Yard Management...",
+    "noYardSelected": "No yard selected",
+    "selectYardMessage": "Please select a yard to continue",
+    "search": "Container Search",
+    "searchContainer": "Search & Locate",
+    "selectedContainer": "Selected Container",
+    "resetView": "Reset to Full Yard View",
+    "resetViewShort": "Reset View",
+    "occupancy": "Occupancy",
+    "capacity": "Capacity",
+    "utilization": "Utilization",
+    "sections": "Sections",
+    "stacks": "Total Stacks",
+    "stackCapacity": "Total Stack Capacity",
+    "containersVisible": "containers visible",
+    "selected": "selected",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "showLegend": "Show Legend",
+    "hideLegend": "Hide Legend",
+    "depotAssignment": {
+      "noUsersAvailable": "No users available for assignment"
+    },
+    "legend": {
+      "title": "Legend",
+      "tips": "Tips:",
+      "tip1": "Click containers to select",
+      "tip2": "Right-click + drag to pan",
+      "tip3": "Scroll to zoom in/out",
+      "availableSlot": "Available Slot",
+      "availableSlotDesc": "Empty container position",
+      "containerInDepot": "Container In Depot",
+      "containerInDepotDesc": "Container stored in yard",
+      "underMaintenance": "Under Maintenance",
+      "underMaintenanceDesc": "Container being repaired",
+      "beingCleaned": "Being Cleaned",
+      "beingCleanedDesc": "Container in cleaning process",
+      "damagedContainer": "Damaged Container",
+      "damagedContainerDesc": "Container with damage reports",
+      "selectedContainer": "Selected Container",
+      "selectedContainerDesc": "Currently selected container"
+    },
+    "stats": {
+      "title": "Yard Statistics",
+      "activeContainers": "Active Containers",
+      "maintenance": "Under Maintenance",
+      "cleaning": "Being Cleaned",
+      "damaged": "Damaged",
+      "totalStacks": "Total Stacks"
+    },
+    "info": {
+      "title": "Yard Information",
+      "layout": "Layout:",
+      "sections": "Sections:",
+      "totalCapacity": "Total Capacity:",
+      "currentOccupancy": "Current Occupancy:"
+    }
+  },
+  "depot": {
+    "title": "Depot Management",
+    "create": "Create Depot",
+    "edit": "Edit Depot",
+    "view": "View Details",
+    "assign": "Assign Users",
+    "delete": "Delete Depot",
+    "subtitle": "Manage container depots and their configurations",
+    "search": "Search depots...",
+    "overview": "Depot Overview",
+    "noDepots": "No depots found",
+    "noDepotsEmpty": "No depots have been created yet.",
+    "stats": {
+      "total": "Total Depots",
+      "active": "Active Depots",
+      "capacity": "Total Capacity",
+      "occupancy": "Total Occupancy"
+    },
+    "form": {
+      "basicInfo": "Basic Information",
+      "contactInfo": "Contact Information",
+      "address": "Address Information",
+      "name": "Depot Name",
+      "code": "Depot Code",
+      "description": "Description",
+      "location": "Location",
+      "capacity": "Total Capacity",
+      "layout": "Layout Type",
+      "manager": "Manager Name",
+      "phone": "Phone",
+      "email": "Email",
+      "street": "Street Address",
+      "city": "City",
+      "state": "State/Region",
+      "zipCode": "ZIP Code",
+      "country": "Country",
+      "timezone": "Timezone",
+      "status": "Status"
+    },
+    "layout": {
+      "yirima": "Yirima Grid",
+      "tantarelli": "Tantarelli Layout"
+    },
+    "delete": {
+      "confirm": "Are you sure you want to delete the depot \"{name}\"? This action is irreversible.",
+      "success": "Depot \"{name}\" deleted successfully!",
+      "errorCurrent": "Cannot delete the currently selected depot. Please switch to another depot first."
+    }
+  },
+  "stack": {
+    "title": "Stack Management",
+    "subtitle": "Configure container size assignments for all stacks",
+    "configuration": "Stack Configuration",
+    "configurationDesc": "Configure container size assignments for each stack (paired stacks will be updated together)",
+    "create": "Create Stack",
+    "edit": "Edit Stack",
+    "delete": "Delete Stack",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "rules": "Configuration Rules",
+    "pairing": "Valid Stack Pairs for 40ft Containers",
+    "search": "Search stacks or sections...",
+    "size20": "20ft",
+    "size40": "40ft",
+    "special": "Special",
+    "regular": "Regular",
+    "assigned": "Assigned Client",
+    "unassigned": "Unassigned",
+    "exclusive": "Exclusive",
+    "shared": "Shared",
+    "saveChanges": "Save Changes",
+    "resetChanges": "Reset",
+    "noStacks": "No stacks found. Create your first stack to get started.",
+    "refreshed": "Stack configuration refreshed successfully!",
+    "advancedFilter": "Advanced Filter",
+    "allStacks": "All Stacks",
+    "allSections": "All Sections",
+    "loadingConfig": "Please wait while we load the yard configuration.",
+    "rules": {
+      "special": "Special Stacks (01, 31, 101, 103): Can only be set to 20ft containers.",
+      "regular": "Regular Stacks: Can be set to either 20ft or 40ft containers.",
+      "pairing": "40ft Assignment: Only available for regular stacks that have an adjacent regular stack to form valid pairs.",
+      "updates": "Paired Updates: When changing a regular stack to 40ft, its adjacent pair will automatically be updated to match."
+    },
+    "delete": {
+      "title": "Soft Delete Stack",
+      "confirm": "Are you sure you want to soft delete Stack S{number}? This will deactivate the stack and all its locations, but preserve all data for potential recovery. You can reactivate it later if needed.",
+      "success": "Stack S{number} soft deleted successfully! You can reactivate it later if needed.",
+      "error": "Failed to soft delete stack"
+    },
+    "update": {
+      "success": "Stack updated successfully!"
+    },
+    "create": "Create Stack",
+    "createSuccess": "Stack created successfully!",
+    "sizeUpdate": {
+      "success": "Stack updated to {size} successfully!",
+      "successMulti": "Successfully updated {count} stacks to {size}!",
+      "errorOccupied": "Cannot change stack size: Virtual stack locations are occupied. Please relocate all containers from the paired stacks first."
+    },
+    "assign": {
+      "success": "Stack assigned to client {client} successfully!"
+    },
+    "unassign": {
+      "success": "Stack unassigned from client pool successfully!"
+    },
+    "stats": {
+      "total": "Total Stacks",
+      "40ft": "Total 40ft Stacks",
+      "20ft": "Total 20ft Stacks",
+      "special": "Special Stacks",
+      "regular": "Regular Stacks",
+      "clientAssigned": "Client Assigned",
+      "all": "All stacks",
+      "logicalPairs": "Logical pairs",
+      "single": "Single stacks",
+      "buffer": "Buffer zones",
+      "standardOps": "Standard ops",
+      "unassignedCount": "{count} unassigned"
+    },
+    "table": {
+      "stack": "Stack",
+      "section": "Section",
+      "containerSize": "Container Size",
+      "assignedClient": "Assigned Client",
+      "capacity": "Capacity",
+      "actions": "Actions",
+      "manage": "Manage",
+      "pair": "Pair",
+      "noPair": "No pair",
+      "specialNo40": "Special stacks cannot be configured for 40ft",
+      "updatePair": "Will also update Stack {number}"
+    },
+    "help": {
+      "title": "Stack Configuration Help",
+      "desc": "View rules and guidelines for managing yard stacks."
+    },
+    "form": {
+      "information": "Stack Information",
+      "number": "Stack Number",
+      "section": "Section",
+      "sizeConfig": "Container Size Configuration",
+      "typeConfig": "Stack Type Configuration",
+      "capacityConfig": "Capacity Configuration",
+      "dimensions": "Stack Dimensions",
+      "dimensionsDesc": "Configure the physical layout of your stack",
+      "rows": "Rows (Depth)",
+      "tiers": "Max Tiers (Height)",
+      "customTiers": "Custom Tier Configuration",
+      "preview": "Stack Preview",
+      "useSuggested": "Use {number}",
+      "suggested": "Suggested: {number}",
+      "differentFromSuggested": "Different from suggested",
+      "usingSuggested": "Using suggested",
+      "selectSection": "Select section",
+      "noSections": "No sections available",
+      "sectionImmutable": "Section cannot be changed when editing an existing stack",
+      "20ftDesc": "Standard Size",
+      "40ftDesc": "High Capacity",
+      "specialWarning": "Special stacks are limited to 20ft containers only",
+      "regularDesc": "Standard Operations",
+      "specialDesc": "Limited Operations",
+      "rowsDesc": "Container rows from front to back",
+      "tiersDesc": "Maximum containers stacked vertically",
+      "customTiersDesc": "Configure different maximum tier heights for each row based on ground conditions or equipment limitations",
+      "previewLayout": "Stack Layout Preview",
+      "totalCapacity": "Total Stack Capacity",
+      "capacityDesc": "Maximum container positions available",
+      "positions": "Container positions",
+      "uniformLayout": "Uniform layout",
+      "customLayout": "Custom layout",
+      "calculation": "Calculation",
+      "specialNotice": "This stack will be limited to 20ft containers only and cannot accommodate 40ft containers.",
+      "40ftNotice": "This stack will be configured for high-capacity 40ft containers and may require pairing with adjacent stacks."
+    },
+    "validation": {
+      "numberRequired": "Stack number must be greater than 0",
+      "sectionRequired": "Section is required",
+      "rowsRange": "Rows must be between 1 and 10",
+      "tiersRange": "Max tiers must be between 1 and 8",
+      "specialNo40": "Special stacks can only accommodate 20ft containers",
+      "duplicateNumber": "Stack number already exists in this yard",
+      "rowChangeError": "Unable to validate row change. Please try again."
+    }
+  },
+  "clientPools": {
+    "title": "Client Pool Management",
+    "create": "Create Client Pool",
+    "edit": "Edit Client Pool",
+    "subtitle": "Manage customer-specific stack assignments and capacity allocation",
+    "search": "Search client pools...",
+    "overview": "Client Pool Overview",
+    "noPools": "No client pools found",
+    "noPoolsEmpty": "No client pools have been created yet.",
+    "noStacks": "No Stacks Selected",
+    "noStacksHelp": "Click the button above to select stacks for this client pool",
+    "stats": {
+      "total": "Total Pools",
+      "active": "Active Clients",
+      "stacks": "Assigned Stacks",
+      "utilization": "Avg Utilization"
+    },
+    "form": {
+      "clientInfo": "Client Information",
+      "stackAssignment": "Stack Assignment",
+      "additionalInfo": "Additional Information",
+      "selectClient": "Select Client",
+      "contractStart": "Contract Start Date",
+      "contractEnd": "Contract End Date",
+      "notes": "Notes & Special Instructions",
+      "capacity": "Capacity",
+      "selected": "Selected",
+      "stacks": "stacks",
+      "containers": "containers",
+      "subtitle": {
+        "edit": "Update client pool configuration",
+        "create": "Assign dedicated stacks to a client"
+      },
+      "selectClientPlaceholder": "Select a client...",
+      "selectStacks": "Select Stacks",
+      "modifySelection": "Modify Selection",
+      "noStacks": "No Stacks Selected",
+      "noStacksHelp": "Click the button above to select stacks for this client pool",
+      "noAvailableStacks": "No Available Stacks",
+      "noAvailableStacksHelp": "All stacks are currently assigned to other clients",
+      "progress": {
+        "client": "Client Selected",
+        "stacks": "Stacks Assigned",
+        "contract": "Contract Date Set"
+      }
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "table": {
+      "stacks": "stacks",
+      "viewStacks": "View stack details →"
+    },
+    "delete": {
+      "title": "Delete Client Pool",
+      "confirm": "Are you sure you want to delete the pool for {client}? This action cannot be undone."
+    },
+    "utilization": {
+      "title": "Pool Utilization Overview"
+    },
+    "stackSelection": {
+      "title": "Select Stacks for Client Pool",
+      "subtitle": "Choose stacks to assign to {client} (Physical stacks only - virtual stacks assigned automatically)"
+    }
+  },
+  "clients": {
+    "title": "Client Master Data",
+    "create": "Create Client",
+    "add": "Add Client",
+    "edit": "Edit Client",
+    "view": "View Details",
+    "delete": "Delete Client",
+    "search": "Search clients...",
+    "noClients": "No clients found",
+    "noClientsEmpty": "Get started by adding your first client.",
+    "stats": {
+      "total": "Total Customers",
+      "active": "Active Customers",
+      "creditLimit": "Total Credit Limit",
+      "avgPayment": "Avg Payment Terms"
+    },
+    "form": {
+      "basicInfo": "Basic Information",
+      "address": "Company Address",
+      "contact": "Contact Person",
+      "billing": "Billing Address",
+      "financial": "Financial Configuration",
+      "name": "Company Name",
+      "code": "Client Code",
+      "subtitle": {
+        "edit": "Modification of client {client}",
+        "create": "Creation of a new client"
+      },
+      "step": {
+        "basic": "Basic Information",
+        "address": "Address & Contact",
+        "config": "Configuration"
+      },
+      "companyName": "Company Name",
+      "mainEmail": "Main Email",
+      "mainPhone": "Main Phone",
+      "taxId": "Tax Identification Number",
+      "addressTitle": "Company Address",
+      "addressDesc": "Location and company details",
+      "street": "Full Address",
+      "city": "City",
+      "district": "Commune/District",
+      "zipCode": "Zip Code",
+      "country": "Country",
+      "contactTitle": "Contact Person",
+      "contactDesc": "Main person responsible for communications",
+      "contactName": "Full Name",
+      "contactPosition": "Position/Job Title",
+      "contactEmail": "Contact Email",
+      "contactPhone": "Contact Phone",
+      "billingTitle": "Billing Address",
+      "billingDesc": "Address for sending invoices",
+      "sameAddress": "Same as company address",
+      "financialTitle": "Financial Configuration",
+      "financialDesc": "Billing settings and payment terms",
+      "creditLimit": "Credit Limit",
+      "paymentTerms": "Payment Terms (days)",
+      "freeDays": "Free Storage Days",
+      "dailyRate": "Daily Rate",
+      "currency": "Currency",
+      "previewTitle": "Billing Preview",
+      "previewDesc": "Simulation of storage costs",
+      "freeDaysLabel": "Free Days",
+      "rateLabel": "Rate/Day",
+      "termsLabel": "Payment Days",
+      "calculationExample": "Calculation example:",
+      "exampleTenDays": "Container placed for 10 days",
+      "exampleFreeDays": "Free days:",
+      "exampleBillable": "Billable days:",
+      "exampleTotal": "Total amount:",
+      "notesTitle": "Notes and Special Instructions",
+      "notesDesc": "Additional information and specific instructions",
+      "systemTitle": "System Configuration",
+      "systemDesc": "System settings and integrations",
+      "activeLabel": "Active Client",
+      "activeDesc": "The client can perform operations",
+      "autoEdiLabel": "Automatic EDI Transmission",
+      "autoEdiDesc": "Automatic sending of CODECO messages",
+      "ediActive": "EDI Transmission activated:",
+      "notes": "Notes and Special Instructions",
+      "active": "Active Client"
+    },
+    "table": {
+      "contact": "Contact Information"
+    },
+    "delete": {
+      "title": "Delete Client",
+      "confirm": "Are you sure you want to delete {client}? This action cannot be undone."
+    },
+    "success": {
+      "update": "Client updated successfully!",
+      "create": "Client created successfully!",
+      "delete": "Client deleted successfully!"
+    },
+    "error": {
+      "save": "Error saving client:"
+    }
+  },
+  "users": {
+    "title": "User Management",
+    "add": "Add User",
+    "edit": "Edit User",
+    "view": "View Details",
+    "delete": "Delete User",
+    "search": "Search users...",
+    "noUsers": "No users found",
+    "noUsersEmpty": "Get started by adding your first user",
+    "addFirstUser": "Add First User",
+    "subtitle": {
+      "managing": "Managing users for:"
+    },
+    "stats": {
+      "total": "Total Users",
+      "active": "Active Users",
+      "admins": "Administrators",
+      "online": "Online Today"
+    },
+    "form": {
+      "basicInfo": "Basic Information",
+      "role": "User Role",
+      "yardAssignments": "Yard Assignments",
+      "name": "Full Name",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "department": "Department",
+      "company": "Company",
+      "password": "Password",
+      "active": "Active User",
+      "subtitle": {
+        "edit": "Update user information and permissions",
+        "create": "Add a new user to the system"
+      },
+      "status": "User Status",
+      "profileInfo": "Profile Information",
+      "permissionsOverview": "Permissions Overview"
+    },
+    "role": {
+      "admin": "Administrator",
+      "supervisor": "Supervisor",
+      "operator": "Operator",
+      "client": "Client",
+      "description": {
+        "admin": "Full system access across all modules",
+        "supervisor": "Operations oversight and management",
+        "operator": "Daily operations and container handling",
+        "client": "View containers and create release orders"
+      },
+      "adminDesc": "Full system access across all modules",
+      "supervisorDesc": "Operations oversight and management",
+      "operatorDesc": "Daily operations and container handling",
+      "clientDesc": "View containers and create release orders"
+    },
+    "table": {
+      "user": "User",
+      "role": "Role",
+      "department": "Department",
+      "lastLogin": "Last Login"
+    },
+    "activity": {
+      "recent": "Recent Activity",
+      "history": "Login History"
+    },
+    "delete": {
+      "title": "Delete User",
+      "confirm": "Are you sure you want to delete {user}? This action will safely remove the user from the system while preserving data integrity."
+    },
+    "success": {
+      "update": "User updated successfully",
+      "create": "User created successfully",
+      "delete": "User deleted successfully"
+    },
+    "error": {
+      "save": "Failed to save user",
+      "delete": "Failed to delete user"
+    },
+    "validation": {
+      "nameRequired": "Full name is required",
+      "nameMin": "Name must be at least 2 characters",
+      "nameMax": "Name must be less than 100 characters",
+      "emailRequired": "Email address is required",
+      "emailInvalid": "Please enter a valid email address",
+      "phoneInvalid": "Please enter a valid phone number",
+      "passwordRequired": "Password is required for new users",
+      "passwordMin": "Password must be at least 6 characters",
+      "passwordMax": "Password must be less than 128 characters"
+    }
+  },
+  "moduleAccess": {
+    "title": "Module Access Management",
+    "bulkActions": "Bulk Actions",
+    "applyRoleBased": "Apply Role-Based Access",
+    "enableAll": "Enable All",
+    "disableAll": "Disable All",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "stats": {
+      "totalUsers": "Total Users",
+      "modules": "Available Modules",
+      "admins": "Admin Users",
+      "selected": "Selected Users"
+    },
+    "category": {
+      "core": "Core",
+      "operations": "Operations",
+      "management": "Management",
+      "admin": "Admin"
+    },
+    "roleRestricted": "Role Restricted",
+    "protected": "Protected",
+    "system": "System"
+  },
+  "reports": {
+    "title": "Reports & Analytics",
+    "billing": "Billing & Free Days",
+    "analytics": "Analytics",
+    "operations": "Operations",
+    "export": "Export Report",
+    "dateRange": "Date Range",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "currentDepot": "Current Depot",
+    "allDepots": "All Depots",
+    "globalView": "Global View",
+    "billing": {
+      "title": "Container Billing Details",
+      "freeDays": "Free days calculation and billing information",
+      "totalRevenue": "Total Revenue",
+      "activeContainers": "Active Containers"
+    }
+  },
+  "edi": {
+    "title": "EDI Management",
+    "subtitle": "Manage EDI transmissions, server configurations, and client settings",
+    "configuration": "Configuration",
+    "tabs": {
+      "overview": "Overview",
+      "servers": "FTP/SFTP Servers",
+      "clients": "Client EDI Settings",
+      "validator": "EDI Validator",
+      "history": "Transmission History"
+    },
+    "stats": {
+      "total": "Total Operations",
+      "success": "EDI Success Rate",
+      "clients": "Clients with EDI",
+      "servers": "Servers Configured",
+      "sent": "Total Sent",
+      "pending": "Pending",
+      "failed": "Failed",
+      "acknowledged": "Acknowledged"
+    },
+    "recentOperations": "Recent EDI Operations",
+    "servers": {
+      "title": "FTP/SFTP Server Configuration",
+      "configure": "Configure Servers",
+      "emptyAction": "Configure your first server"
+    },
+    "clients": {
+      "title": "Client EDI Settings",
+      "empty": "No clients configured for EDI",
+      "emptyAction": "Configure your first client"
+    },
+    "history": {
+      "title": "Transmission History",
+      "empty": "No transmission logs found",
+      "table": {
+        "container": "Container",
+        "operation": "Operation",
+        "status": "Status",
+        "client": "Client",
+        "date": "Transmission Date"
+      }
+    },
+    "error": {
+      "load": "Failed to load EDI data",
+      "retry": "Retry failed",
+      "clientDelete": "Failed to remove client EDI configuration"
+    },
+    "success": {
+      "refresh": "Data refreshed successfully",
+      "retry": "Transmission retry initiated",
+      "clientDelete": "Client EDI configuration removed",
+      "clientSave": "Client EDI configuration saved"
+    },
+    "delete": {
+      "confirm": "Are you sure you want to remove EDI configuration for this client?"
+    },
+    "configModal": {
+      "title": "EDI Configuration",
+      "listTitle": "Configurations",
+      "emptyTitle": "No Configuration Selected",
+      "emptyDesc": "Select a configuration from the list to view details, or create a new one.",
+      "defaultLabel": "Default",
+      "form": {
+        "name": "Configuration Name",
+        "type": "Server Type",
+        "host": "Host",
+        "port": "Port",
+        "username": "Username",
+        "password": "Password",
+        "remotePath": "Remote Path",
+        "partnerCode": "Partner Code",
+        "senderCode": "Sender Code",
+        "timeout": "Timeout (ms)",
+        "retry": "Retry Attempts",
+        "filePattern": "File Name Pattern",
+        "assignedClients": "Assigned Clients",
+        "noClients": "No clients assigned",
+        "searchPlaceholder": "Search or add client...",
+        "addCustom": "Add \"{client}\"",
+        "testMode": "Test Mode",
+        "testModeDesc": "In test mode, transmissions are simulated and no real files are uploaded.",
+        "isDefault": "Set as Default",
+        "testConnection": "Test Connection",
+        "passwordPlaceholder": "Protected",
+        "filePatternHint": "Tokens: {timestamp}, {container}, {operation}, {client}"
+      }
+    },
+    "clientModal": {
+      "editTitle": "Edit Client EDI Configuration",
+      "createTitle": "Add Client EDI Configuration",
+      "form": {
+        "enableEdi": "Enable EDI for this client",
+        "enableIn": "Enable Gate In EDI",
+        "enableOut": "Enable Gate Out EDI"
+      }
+    },
+    "checkAcknowledgments": "Check Acknowledgments",
+    "processFile": "Process EDI from File",
+    "fileType": "File Type",
+    "operation": "Operation",
+    "selectFile": "Select File",
+    "processSend": "Process & Send",
+    "transmissionHistory": "Transmission History",
+    "status": {
+      "pending": "Pending",
+      "sent": "Sent",
+      "failed": "Failed",
+      "acknowledged": "Acknowledged"
+    },
+    "retry": "Retry",
+    "view": "View"
+  },
+  "common": {
+    "status": "Status",
+    "statusLabel": "Status",
+    "actions": "Actions",
+    "date": "Date",
+    "time": "Time",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "edit": "Edit",
+    "view": "View",
+    "delete": "Delete",
+    "create": "Create",
+    "update": "Update",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "saving": "Saving...",
+    "updating": "Updating...",
+    "creating": "Creating...",
+    "deleting": "Deleting...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Information",
+    "required": "Required",
+    "optional": "Optional",
+    "active": "Active",
+    "inactive": "Inactive",
+    "dark": "Dark",
+    "light": "Light",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None",
+    "total": "Total",
+    "available": "Available",
+    "capacity": "Capacity",
+    "utilization": "Utilization",
+    "location": "Location",
+    "client": "Client",
+    "container": "Container",
+    "containers": "Containers",
+    "type": "Type",
+    "size": "Size",
+    "quantity": "Quantity",
+    "notes": "Notes",
+    "description": "Description",
+    "name": "Name",
+    "code": "Code",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "city": "City",
+    "country": "Country",
+    "department": "Department",
+    "company": "Company",
+    "role": "Role",
+    "permission": "Permission",
+    "access": "Access",
+    "denied": "Access Denied",
+    "restricted": "Access Restricted",
+    "unauthorized": "You don't have permission to access this module",
+    "contactAdmin": "Contact your administrator to request access",
+    "noData": "No data found",
+    "noResults": "No results found",
+    "noContainers": "No containers found",
+    "noContainersCompany": "No containers found for your company. Contact the depot if you expect to see containers here.",
+    "noStacks": "No stacks found",
+    "noStacksSelected": "No stacks selected",
+    "noPendingOperations": "No pending operations",
+    "noBookingsReady": "No pending/in-process bookings are ready for gate out",
+    "onlyShowingPending": "Only showing pending/in-process bookings ready for gate out",
+    "yourCompany": "Your Company",
+    "notSelected": "Not selected",
+    "pending": "Pending",
+    "assessed": "Assessed",
+    "noDataFound": "No data found",
+    "noBookingsFound": "No booking references found",
+    "noOperationsFound": "No operations found",
+    "noClientPoolsFound": "No client pools found",
+    "noStacksFound": "No stacks found",
+    "noStacksAvailable": "No stacks available",
+    "activeOperator": "Active operator",
+    "noOperations": "No operations",
+    "tryAdjustingSearch": "Try adjusting your search criteria",
+    "tryAdjustingSearchFilters": "Try adjusting your search criteria or filters",
+    "tryAdjustingFilters": "Try adjusting your filters",
+    "noMatchingCriteria": "No containers match the selected filter criteria",
+    "noOperationsMatchSearch": "No operations match your current search or filter criteria",
+    "noStackPositionsMatch": "No stack positions match your criteria",
+    "pleaseCreateStacks": "Please create stacks in Stack Management first",
+    "getStarted": "Get started",
+    "addFirstUser": "Add First User",
+    "noUsersAvailable": "No users available for assignment",
+    "stacksAssignedToOtherPools": "All stacks are currently assigned to other pools",
+    "tryAdjusting": "Try adjusting your search criteria",
+    "selectDate": "Select date",
+    "selectTime": "Select time",
+    "currentTime": "Current time",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisYear": "This year",
+    "damaged": "Damaged",
+    "undamaged": "Good condition",
+    "priority": "Priority",
+    "urgent": "Urgent",
+    "normal": "Normal",
+    "low": "Low",
+    "appSubtitle": "Depot Management System (DMS)",
+    "loggedInAs": "Logged in as:",
+    "install": "Install",
+    "newNotifications": "New",
+    "quickActions": "Quick Actions",
+    "appFooter": "Container Depot Management v1.0",
+    "copyright": "© 2025 DepotManager",
+    "createdBy": "Created by",
+    "createdDate": "Created Date",
+    "updatedDate": "Updated Date",
+    "standard": "Standard",
+    "highCapacity": "High Capacity",
+    "summary": "Summary",
+    "fixErrors": "Please fix the following errors:",
+    "pleaseReview": "Please review:",
+    "submissionFailed": "Submission Failed"
+  }
+}

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronRight, Cog, X, LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage'; // Refreshed hook reference
+import { useTheme } from '../../hooks/useTheme';
 import { ModuleAccess } from '../../types';
 import { SyncStatusIndicator } from '../Sync';
 import { handleError } from '../../services/errorHandling';
@@ -27,7 +28,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsMobileMenuOpen: externalSetIsMobileMenuOpen
 }) => {
   const { user, hasModuleAccess, refreshModuleAccess } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
+  const { theme } = useTheme();
 
   // Force re-render when user module access changes
   const userModuleAccessKey = user?.moduleAccess ? JSON.stringify(user.moduleAccess) : 'no-access';
@@ -185,27 +187,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar */}
       <aside key={userModuleAccessKey} className={`
-        bg-slate-900 text-white h-screen flex flex-col transition-all duration-300 ease-out
+        bg-white dark:bg-gray-900 text-slate-800 dark:text-gray-100 h-screen flex flex-col border-r border-slate-200 dark:border-gray-700 shadow-sm
         lg:w-72 lg:relative lg:translate-x-0
-        fixed top-0 left-0 w-80 z-40
+        fixed top-0 left-0 w-80 z-40 transition-all duration-300 ease-out
         ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Mobile Close Button */}
         <button
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden absolute top-6 right-6 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors z-10"
+          className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-accent-teal transition-colors z-10"
         >
           <X className="h-6 w-6" />
         </button>
         {/* Header - Fixed with proper spacing */}
-        <div className="p-6 pb-4 flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Container className="h-6 w-6 text-white" />
+        <div className="p-6 pb-2 flex-shrink-0">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="h-10 w-10 bg-transparent flex items-center justify-center">
+              <img src="/assets/logo_favicon.ico" alt="Logo" className="h-10 w-10" />
             </div>
-            <div className="flex-1">
-              <h2 className="font-gilroy-bold text-lg">MANTRA IVOIRE</h2>
-              <p className="text-xs font-gilroy text-slate-400">Depot Management System (DMS)</p>
+            <div className="flex-1 flex flex-col justify-center">
+              <h2 className="font-gilroy-bold text-lg tracking-tight text-slate-900 dark:text-white leading-none">
+                MANTRA <span className="text-olam-dark">IVOIRE</span>
+              </h2>
+              <p className="text-[10px] uppercase tracking-wider font-gilroy-bold text-slate-400 dark:text-gray-500 mt-1">Depot Management System</p>
             </div>
           </div>
 
@@ -229,17 +233,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               return (
                 <li key={item.id}>
+                  {(item.id === 'edi' || item.id === 'reports') && (
+                    <div className="py-2">
+                      <div className="h-px bg-slate-100 dark:bg-gray-700 mx-4"></div>
+                    </div>
+                  )}
                   <button
                     onClick={() => {
                       handleMainMenuClick(item.id);
                     }}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${isActive
-                      ? 'bg-blue-600 text-white shadow-lg transform scale-105'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    className={`w-full relative flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 group ${isActive
+                      ? 'bg-[#F0F9FA] dark:bg-teal-900/30 text-accent-teal'
+                      : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800'
                       }`}
                   >
-                    <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span className="font-gilroy-medium">{item.label}</span>
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-olam-green rounded-r-md"></div>
+                    )}
+                    <Icon className={`h-[22px] w-[22px] flex-shrink-0 ${isActive ? 'text-accent-teal' : 'text-slate-400 group-hover:text-accent-teal transition-colors'}`} />
+                    <span className={`text-sm ${isActive ? 'font-gilroy-bold text-accent-teal' : 'font-gilroy-medium'}`}>{item.label}</span>
                   </button>
                 </li>
               );
@@ -247,31 +259,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Configurations Dropdown */}
             {hasConfigurationAccess && (
-              <li>
+              <li className="pt-2">
+                <div className="mx-4 my-2 border-t border-slate-100" />
                 {/* Configurations Header */}
                 <button
                   onClick={() => {
                     handleConfigurationToggle();
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${isConfigurationActive
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-slate-50 dark:bg-gray-800 text-slate-900 dark:text-white'
+                    : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800'
                     }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Cog className={`h-5 w-5 flex-shrink-0 ${isConfigurationActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span className="font-gilroy-medium">Configurations</span>
+                    <Cog className={`h-[22px] w-[22px] flex-shrink-0 text-accent-teal`} />
+                    <span className="font-gilroy-bold text-sm">Configurations</span>
                   </div>
-                  <div className={`transition-transform duration-200 ${isConfigurationsOpen ? 'rotate-90' : ''}`}>
-                    <ChevronRight className="h-4 w-4" />
-                  </div>
+                  <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${isConfigurationsOpen ? 'rotate-90' : ''}`} />
                 </button>
 
                 {/* Configurations Submenu */}
                 {isConfigurationsOpen && (
-                  <ul className="mt-2 ml-4 space-y-1 border-l-2 border-slate-700 pl-4">
+                  <ul className="mt-2 ml-4 space-y-1 border-l-2 border-slate-700 dark:border-gray-600 pl-4">
                     {filteredConfigurationItems.map((item) => {
-                      const Icon = item.icon;
                       const isActive = activeModule === item.id;
 
                       return (
@@ -281,12 +291,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               handleConfigurationItemClick(item.id);
                             }}
                             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sm ${isActive
-                              ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                              ? 'bg-slate-50 dark:bg-gray-800 text-accent-teal font-gilroy-bold'
+                              : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800 font-gilroy-medium'
                               }`}
                           >
-                            <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                            <span className="font-gilroy-medium">{item.label}</span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-accent-teal' : 'bg-slate-300'}`}></span>
+                            <span>{item.label}</span>
                           </button>
                         </li>
                       );
@@ -299,15 +309,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Footer - Fixed */}
-        <div className="p-4 border-t border-slate-800 flex-shrink-0">
-          <div className="text-xs font-gilroy text-slate-400">
-            <p>© <span className="font-numeric">2025</span> DepotManager</p>
-            <p>Version <span className="font-numeric">1.0.0</span></p>
-            {user && (
-              <p className="mt-2 text-slate-300">
-                Logged in as: {user.role}
-              </p>
-            )}
+        <div className="p-4 border-t border-slate-200 dark:border-gray-700 flex-shrink-0 bg-slate-50/50 dark:bg-gray-800/50">
+          {user && (
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-gray-700 flex items-center justify-center text-slate-500 dark:text-gray-400 text-xs font-gilroy-bold border border-white dark:border-gray-600 shadow-sm">
+                {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-gilroy-bold text-slate-700 dark:text-gray-200 truncate">{user.name || 'User'}</p>
+                <p className="text-xs text-slate-400 dark:text-gray-500 truncate">{user.email || 'user@example.com'}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-gray-500 font-gilroy-bold uppercase tracking-wider">
+            <span>v1.0.0</span>
+            <span>© 2025 DepotManager</span>
           </div>
         </div>
       </aside>

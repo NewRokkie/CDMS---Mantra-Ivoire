@@ -70,7 +70,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
 
             // Find container at this position
             const container = containers.find(c => {
-              const locationMatch = c.location.match(/Stack S(\d+)-Row (\d+)-Tier (\d+)/);
+              const locationMatch = c.location?.match(/Stack S(\d+)-Row (\d+)-Tier (\d+)/);
               if (locationMatch) {
                 const [, stackNum, rowNum, tierNum] = locationMatch;
                 return parseInt(stackNum) === stack.stackNumber &&
@@ -180,7 +180,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
           case 'in_depot':
             fillColor = '#3b82f6'; // Blue
             break;
-          case 'maintenance':
+          case 'in_buffer':
             fillColor = '#f59e0b'; // Orange
             break;
           case 'cleaning':
@@ -393,7 +393,7 @@ export const YardGrid: React.FC<YardGridProps> = ({
           </div>
           <div className={`mt-1 px-2 py-1 rounded text-xs font-medium ${
             hoveredSlot.container.status === 'in_depot' ? 'bg-green-600' :
-            hoveredSlot.container.status === 'maintenance' ? 'bg-orange-600' :
+            hoveredSlot.container.status === 'in_buffer' ? 'bg-orange-600' :
             hoveredSlot.container.status === 'cleaning' ? 'bg-purple-600' :
             'bg-gray-600'
           }`}>

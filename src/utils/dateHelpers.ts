@@ -10,12 +10,12 @@ export const toDate = (date: Date | string | undefined | null): Date | null => {
 
 export const safeToLocaleDateString = (date: Date | string | undefined | null): string => {
   const d = toDate(date);
-  return d ? d.toLocaleDateString() : 'N/A';
+  return d ? d.toLocaleDateString() : '-';
 };
 
 export const safeToDateString = (date: Date | string | undefined | null): string => {
   const d = toDate(date);
-  return d ? d.toDateString() : 'N/A';
+  return d ? d.toDateString() : '-';
 };
 
 export const safeGetTime = (date: Date | string | undefined | null): number => {
@@ -25,7 +25,7 @@ export const safeGetTime = (date: Date | string | undefined | null): number => {
 
 export const formatDate = (date: Date | string | undefined | null, format: 'short' | 'long' = 'short'): string => {
   const d = toDate(date);
-  if (!d) return 'N/A';
+  if (!d) return '-';
 
   if (format === 'long') {
     return d.toLocaleString();

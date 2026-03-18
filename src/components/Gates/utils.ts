@@ -1,4 +1,5 @@
 import { ContainerValidation, GateInFormData } from './types';
+import { isValidContainer } from '@mykelcodes/container-number-validation';
 
 // ========== CONTAINER UTILITIES ==========
 
@@ -28,6 +29,10 @@ export const validateContainerNumber = (containerNumber: string): ContainerValid
     return { isValid: false, message: 'Last 7 must be numbers' };
   }
 
+  if (!isValidContainer(cleanNumber)) {
+    return { isValid: false, message: 'Invalid ISO 6346 container number' };
+  }
+
   return { isValid: true, message: 'Valid format' };
 };
 
@@ -49,10 +54,10 @@ export const formatContainerNumberForDisplay = (containerNumber: string): string
  */
 export const formatContainerNumberInput = (containerNumber: string): string => {
   if (!containerNumber) return '';
-  
+
   // Auto-capitalize and clean the input
   const cleaned = containerNumber.trim().toUpperCase();
-  
+
   // Ensure we don't exceed 11 characters
   return cleaned.substring(0, 11);
 };
@@ -84,6 +89,10 @@ export const getContainerValidationStatus = (containerNumber: string) => {
     return { isValid: false, message: 'Last 7 must be numbers' };
   }
 
+  if (!isValidContainer(cleanNumber)) {
+    return { isValid: false, message: 'Invalid ISO 6346' };
+  }
+
   return { isValid: true, message: 'Valid format' };
 };
 
@@ -100,20 +109,20 @@ export const validateGateInStep = (step: number, formData: GateInFormData): bool
       const hasContainerConfirmation = formData.containerNumberConfirmation.trim() !== '';
       const isValidFirstConfirmation = hasContainerConfirmation && validateContainerNumber(formData.containerNumberConfirmation).isValid;
       const isFirstContainerMatching = formData.containerNumber.trim().toUpperCase() === formData.containerNumberConfirmation.trim().toUpperCase();
-      
+
       const hasSecondContainer = formData.containerQuantity === 1 || formData.secondContainerNumber.trim() !== '';
       const isValidSecondContainer = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumber).isValid;
       const hasSecondContainerConfirmation = formData.containerQuantity === 1 || formData.secondContainerNumberConfirmation.trim() !== '';
       const isValidSecondConfirmation = formData.containerQuantity === 1 || validateContainerNumber(formData.secondContainerNumberConfirmation).isValid;
-      const isSecondContainerMatching = formData.containerQuantity === 1 || 
+      const isSecondContainerMatching = formData.containerQuantity === 1 ||
         (formData.secondContainerNumber.trim().toUpperCase() === formData.secondContainerNumberConfirmation.trim().toUpperCase());
-      
+
       const hasClient = formData.clientId !== '';
       const hasBookingRef = formData.status === 'EMPTY' || formData.bookingReference.trim() !== '';
-      
+
       return isValidFirstContainer && hasContainerConfirmation && isValidFirstConfirmation && isFirstContainerMatching &&
-             hasSecondContainer && isValidSecondContainer && hasSecondContainerConfirmation && isValidSecondConfirmation && isSecondContainerMatching &&
-             hasClient && hasBookingRef;
+        hasSecondContainer && isValidSecondContainer && hasSecondContainerConfirmation && isValidSecondConfirmation && isSecondContainerMatching &&
+        hasClient && hasBookingRef;
     case 2:
       return formData.driverName !== '' && formData.truckNumber !== '' && formData.transportCompany !== '';
     default:
@@ -125,16 +134,17 @@ export const validateGateInStep = (step: number, formData: GateInFormData): bool
 
 /**
  * Gets status badge configuration for operations
+ * Note: Returns labelKey for i18n translation
  */
 export const getStatusBadgeConfig = (status: string) => {
-  const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-    completed: { color: 'bg-green-100 text-green-800', label: 'Completed' },
-    in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process' },
-    cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
+  const statusConfig: Record<string, { color: string; label: string; labelKey?: string }> = {
+    pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending', labelKey: 'status.pending' },
+    completed: { color: 'bg-green-100 text-green-800', label: 'Completed', labelKey: 'status.completed' },
+    in_process: { color: 'bg-blue-100 text-blue-800', label: 'In Process', labelKey: 'status.inProcess' },
+    cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled', labelKey: 'status.cancelled' }
   };
 
-  return statusConfig[status as keyof typeof statusConfig] || { color: 'bg-gray-100 text-gray-800', label: status };
+  return statusConfig[status as keyof typeof statusConfig] || { color: 'bg-gray-100 text-gray-800', label: status, labelKey: null };
 };
 
 /**

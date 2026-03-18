@@ -1,6 +1,6 @@
 import React from 'react';
 import { Save, RotateCcw, Plus, RefreshCw, HelpCircle } from 'lucide-react';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StackManagementHeaderProps {
   hasChanges: boolean;
@@ -21,7 +21,7 @@ export const StackManagementHeader: React.FC<StackManagementHeaderProps> = ({
   onShowHelp,
   isRefreshing = false
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

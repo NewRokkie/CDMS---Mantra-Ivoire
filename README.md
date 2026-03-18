@@ -12,6 +12,50 @@ Container Depot Management System with integrated EDI (Electronic Data Interchan
 - Real-time dashboard analytics
 - EDI file processing (XML ↔ EDI conversion)
 
+## Database & Migrations
+
+This project uses **Supabase** as the database backend. Migrations follow the Supabase naming convention: `YYYYMMDDHHMMSS_description.sql`.
+
+### Migration Structure
+
+```
+supabase/
+└── migrations/
+    ├── README.md                              # Documentation complète
+    ├── 20260304000000_consolidated_schema.sql # Schéma complet
+    ├── 20260304000001_functions_and_triggers.sql # Fonctions & Triggers
+    └── generated/
+        ├── README.md                          # Documentation migrations générées
+        ├── 20260304000000_consolidated_schema.sql
+        ├── 20260304000001_custom_functions.sql
+        └── 20260304000002_*.sql à 20260304000027_*.sql (tables individuelles)
+```
+
+### Applying Migrations
+
+```bash
+# Via Supabase CLI
+npx supabase db push --file supabase/migrations/20260304000000_consolidated_schema.sql
+npx supabase db push --file supabase/migrations/20260304000001_functions_and_triggers.sql
+
+# Or via Dashboard Supabase (SQL Editor)
+# Copy/paste the content of the migration files
+```
+
+### Regenerating Migrations
+
+If the database schema changes, you can regenerate the migrations:
+
+```bash
+# Generate migrations from current database (Supabase format automatique)
+npx tsx scripts/generate-migrations.ts
+```
+
+The generator automatically produces files in Supabase format:
+- `YYYYMMDDHHMMSS_description.sql` naming convention
+- Tables in dependency order (no FK dependencies first)
+- Sanitized filenames (lowercase, underscores)
+
 ## Deployment
 
 This application is configured for deployment on Heroku:

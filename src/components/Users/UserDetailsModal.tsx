@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import type { UserDetails, User } from '../../types';
 import { userService } from '../../services/api';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useDatabaseRetry } from '../../hooks/useRetry';
@@ -40,7 +40,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   onEdit,
   onDelete
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -182,9 +182,9 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   };
 
   const formatDate = (date: Date | string | undefined) => {
-    if (!date) return 'N/A';
+    if (!date) return '-';
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    if (!dateObj || isNaN(dateObj.getTime())) return 'N/A';
+    if (!dateObj || isNaN(dateObj.getTime())) return '-';
     return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -199,411 +199,410 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
       <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl w-full max-w-3xl shadow-strong max-h-[90vh] overflow-hidden flex flex-col">
 
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <UserIcon className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">{user.name}</h3>
-                <p className="text-sm text-gray-600">{user.email}</p>
+          {/* Modal Header */}
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center">
+                  <UserIcon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">{user.name}</h3>
+                  <p className="text-sm text-gray-600">{user.email}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {getRoleBadge(user.role)}
+                  <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${user.isActive
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                    }`}>
+                    {user.isActive ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        {t('common.status.active')}
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-3 w-3 mr-1" />
+                        {t('common.status.inactive')}
+                      </>
+                    )}
+                  </span>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
-                {getRoleBadge(user.role)}
-                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                  user.isActive
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {user.isActive ? (
-                    <>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      {t('common.status.active')}
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-3 w-3 mr-1" />
-                      {t('common.status.inactive')}
-                    </>
-                  )}
-                </span>
+                <button
+                  onClick={() => onEdit(user)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  {t('common.edit')}
+                </button>
+                <button
+                  onClick={() => onDelete(user.id)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  {t('common.delete')}
+                </button>
+                <button
+                  onClick={onClose}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => onEdit(user)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                {t('common.edit')}
-              </button>
-              <button
-                onClick={() => onDelete(user.id)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-              >
-                {t('common.delete')}
-              </button>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
           </div>
-        </div>
 
-        {/* Modal Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {loading && !userDetails ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-900">{t('common.loading')}</p>
-                <p className="text-sm text-gray-600">Please wait while we fetch the information</p>
-                {retryCount > 0 && (
-                  <p className="text-xs text-orange-600 mt-2">Retry attempt {retryCount}</p>
-                )}
+          {/* Modal Body - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {loading && !userDetails ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-gray-900">{t('common.loading')}</p>
+                  <p className="text-sm text-gray-600">Please wait while we fetch the information</p>
+                  {retryCount > 0 && (
+                    <p className="text-xs text-orange-600 mt-2">Retry attempt {retryCount}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : error && !userDetails ? (
-            <div className="py-12">
-              <UserManagementErrorFallback
-                error={error}
-                onRetry={handleRetry}
-                operation="loading"
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            ) : error && !userDetails ? (
+              <div className="py-12">
+                <UserManagementErrorFallback
+                  error={error}
+                  onRetry={handleRetry}
+                  operation="loading"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* Left Column - User Profile */}
-            <div className="lg:col-span-1 space-y-6">
+                {/* Left Column - User Profile */}
+                <div className="lg:col-span-1 space-y-6">
 
-              {/* Basic Information */}
-              <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
-                  <UserIcon className="h-5 w-5 mr-2" />
-                  {t('users.form.profileInfo')}
-                </h4>
+                  {/* Basic Information */}
+                  <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                    <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
+                      <UserIcon className="h-5 w-5 mr-2" />
+                      {t('users.form.profileInfo')}
+                    </h4>
 
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">{t('users.form.email')}</p>
-                      <p className="text-sm text-blue-700">{user.email}</p>
-                    </div>
-                  </div>
-
-                  {user.phone && (
-                    <div className="flex items-center space-x-3">
-                      <Phone className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">{t('users.form.phone')}</p>
-                        <p className="text-sm text-blue-700">{user.phone}</p>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <Mail className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-800">{t('users.form.email')}</p>
+                          <p className="text-sm text-blue-700">{user.email}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
 
-                  {user.department && (
-                    <div className="flex items-center space-x-3">
-                      <Building className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">{t('users.form.department')}</p>
-                        <p className="text-sm text-blue-700">{user.department}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {user.company && (
-                    <div className="flex items-center space-x-3">
-                      <Building className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">{t('users.form.company')}</p>
-                        <p className="text-sm text-blue-700">{user.company}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center space-x-3">
-                    <Calendar className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">Created</p>
-                      <p className="text-sm text-blue-700">{formatDate(user.createdAt)}</p>
-                      {user.createdBy && user.createdBy !== 'System' && (
-                        <p className="text-xs text-blue-600">
-                          by {userDetails?.createdByName || user.createdBy}
-                        </p>
+                      {user.phone && (
+                        <div className="flex items-center space-x-3">
+                          <Phone className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">{t('users.form.phone')}</p>
+                            <p className="text-sm text-blue-700">{user.phone}</p>
+                          </div>
+                        </div>
                       )}
+
+                      {user.department && (
+                        <div className="flex items-center space-x-3">
+                          <Building className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">{t('users.form.department')}</p>
+                            <p className="text-sm text-blue-700">{user.department}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {user.company && (
+                        <div className="flex items-center space-x-3">
+                          <Building className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">{t('users.form.company')}</p>
+                            <p className="text-sm text-blue-700">{user.company}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-800">Created</p>
+                          <p className="text-sm text-blue-700">{formatDate(user.createdAt)}</p>
+                          {user.createdBy && user.createdBy !== 'System' && (
+                            <p className="text-xs text-blue-600">
+                              by {userDetails?.createdByName || user.createdBy}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-800">{t('users.form.status')}</p>
+                          <p className="text-sm text-blue-700">{formatLastLogin(user.lastLogin)}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">{t('users.form.status')}</p>
-                      <p className="text-sm text-blue-700">{formatLastLogin(user.lastLogin)}</p>
-                    </div>
+                  {/* Permissions Summary */}
+                  <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                    <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
+                      <Settings className="h-5 w-5 mr-2" />
+                      Permissions Overview
+                    </h4>
+
+                    {dataLoadingStates.permissionSummary ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader className="h-5 w-5 animate-spin text-purple-600" />
+                        <span className="ml-2 text-sm text-purple-600">Loading permissions...</span>
+                      </div>
+                    ) : error && !userDetails?.permissionSummary ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
+                          <AlertCircle className="h-4 w-4" />
+                          <span className="text-sm">Unable to load detailed permissions</span>
+                        </div>
+                        <button
+                          onClick={handleRetry}
+                          className="w-full px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                        >
+                          Retry Loading
+                        </button>
+                        {/* Show basic permissions from user object as fallback */}
+                        <div className="bg-white rounded p-3 border border-purple-200">
+                          <p className="text-xs text-purple-600 mb-2">Basic permissions (from user profile):</p>
+                          <div className="text-xs text-purple-700">
+                            {user.moduleAccess ? (
+                              <div className="grid grid-cols-2 gap-1">
+                                {Object.entries(user.moduleAccess).map(([module, enabled]) => (
+                                  <div key={module} className={`px-2 py-1 rounded text-xs ${enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                    {module}: {enabled ? 'Yes' : 'No'}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-gray-500">No permission data available</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : userDetails?.permissionSummary ? (
+                      <div className="space-y-3">
+                        <div className="text-sm text-purple-700">
+                          <p className="font-medium">Module Access Summary</p>
+                          <p className="text-xs mt-1">
+                            {userDetails.permissionSummary.enabledModules} of {userDetails.permissionSummary.totalModules} modules enabled
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-white rounded p-2 border border-purple-200">
+                            <p className="font-medium text-purple-800">Enabled</p>
+                            <p className="text-green-600 font-semibold">{userDetails.permissionSummary.enabledModules}</p>
+                          </div>
+                          <div className="bg-white rounded p-2 border border-purple-200">
+                            <p className="font-medium text-purple-800">Disabled</p>
+                            <p className="text-red-600 font-semibold">{userDetails.permissionSummary.disabledModules}</p>
+                          </div>
+                        </div>
+
+                        {/* Module categories breakdown */}
+                        <div className="space-y-2">
+                          {['core', 'operations', 'management', 'admin'].map(category => {
+                            const categoryModules = userDetails.permissionSummary.moduleList.filter(m => m.category === category);
+                            const enabledInCategory = categoryModules.filter(m => m.enabled).length;
+
+                            return (
+                              <div key={category} className="bg-white rounded p-2 border border-purple-200">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs font-medium text-purple-800 capitalize">{category}</span>
+                                  <span className="text-xs text-purple-600">
+                                    {enabledInCategory}/{categoryModules.length}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-purple-600">
+                        <Settings className="h-6 w-6 mx-auto mb-2 text-purple-400" />
+                        <p className="text-sm font-medium">No detailed permission data available</p>
+                        <p className="text-xs text-purple-500 mt-1">
+                          Permission details could not be loaded. Check user's module access settings.
+                        </p>
+                        <button
+                          onClick={handleRetry}
+                          className="mt-2 px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Column - Activity and Information */}
+                <div className="lg:col-span-2 space-y-6">
+
+                  {/* User Activity History */}
+                  <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+                    <h4 className="font-semibold text-orange-900 mb-4 flex items-center">
+                      <Activity className="h-5 w-5 mr-2" />
+                      Recent Activity
+                      <span className="ml-2 text-xs text-orange-600">(Last 30 days)</span>
+                    </h4>
+
+                    {dataLoadingStates.activityHistory ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader className="h-5 w-5 animate-spin text-orange-600" />
+                        <span className="ml-2 text-sm text-orange-600">Loading activity history...</span>
+                      </div>
+                    ) : userDetails?.activityHistory && userDetails.activityHistory.length > 0 ? (
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {userDetails.activityHistory.map((activity) => (
+                          <div key={activity.id} className="bg-white rounded-lg p-4 border border-orange-200">
+                            <div className="flex items-start space-x-3">
+                              <div className="p-2 bg-orange-600 text-white rounded-lg">
+                                <Monitor className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-orange-900">{activity.action}</p>
+                                <p className="text-xs text-orange-700 mt-1">{activity.details}</p>
+                                <div className="flex items-center space-x-4 mt-2 text-xs text-orange-600">
+                                  <span>{formatDate(activity.timestamp)}</span>
+                                  {activity.ipAddress && (
+                                    <span>IP: {activity.ipAddress}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-orange-600">
+                        <Activity className="h-8 w-8 mx-auto mb-2 text-orange-400" />
+                        <p className="text-sm font-medium">Activity tracking is being set up</p>
+                        <p className="text-xs text-orange-500 mt-1">
+                          User activities like creating depots, managing users, and system operations will appear here once the activity tracking system is fully configured.
+                        </p>
+                        <div className="mt-4 p-3 bg-orange-100 rounded-lg">
+                          <p className="text-xs text-orange-700">
+                            <strong>Note:</strong> Activity tracking may require additional database setup.
+                            Contact your system administrator if you expect to see activity data here.
+                          </p>
+                        </div>
+                        {error && (
+                          <button
+                            onClick={handleRetry}
+                            className="mt-3 px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                          >
+                            Retry Loading Activity
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Login History */}
+                  <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                      <Globe className="h-5 w-5 mr-2" />
+                      Login History
+                      <span className="ml-2 text-xs text-gray-600">(Recent sessions)</span>
+                    </h4>
+
+                    {dataLoadingStates.loginHistory ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader className="h-5 w-5 animate-spin text-gray-600" />
+                        <span className="ml-2 text-sm text-gray-600">Loading login history...</span>
+                      </div>
+                    ) : userDetails?.loginHistory && userDetails.loginHistory.length > 0 ? (
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {userDetails.loginHistory.map((login) => (
+                          <div key={login.id} className="bg-white rounded-lg p-4 border border-gray-200">
+                            <div className="flex items-start space-x-3">
+                              <div className="p-2 bg-gray-600 text-white rounded-lg">
+                                <Clock className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium text-gray-900">Login Session</p>
+                                  {login.sessionDuration && (
+                                    <span className="text-xs text-gray-500">
+                                      {login.sessionDuration} min
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="mt-1 space-y-1 text-xs text-gray-600">
+                                  <p>Login: {formatDate(login.loginTime)}</p>
+                                  {login.logoutTime && (
+                                    <p>Logout: {formatDate(login.logoutTime)}</p>
+                                  )}
+                                  {login.ipAddress && (
+                                    <p>IP: {login.ipAddress}</p>
+                                  )}
+                                  {login.userAgent && (
+                                    <p className="truncate" title={login.userAgent}>
+                                      Browser: {login.userAgent.split(' ')[0]}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-600">
+                        <Globe className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm font-medium">Detailed login history not available</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Session tracking requires additional database configuration to store detailed login records.
+                        </p>
+
+                        {user.lastLogin && (
+                          <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                            <p className="text-sm font-medium text-gray-700 mb-1">Current Session Info</p>
+                            <p className="text-xs text-gray-600">
+                              Last known login: {formatLastLogin(user.lastLogin)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              This shows the most recent login time, but detailed session history requires additional setup.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-xs text-blue-700">
+                            <strong>Note:</strong> To enable detailed login history tracking, the system administrator
+                            needs to configure the login_history table and related tracking mechanisms.
+                          </p>
+                        </div>
+
+                        {error && (
+                          <button
+                            onClick={handleRetry}
+                            className="mt-3 px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                          >
+                            Check Login History
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Permissions Summary */}
-              <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-                <h4 className="font-semibold text-purple-900 mb-4 flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  Permissions Overview
-                </h4>
-
-                {dataLoadingStates.permissionSummary ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader className="h-5 w-5 animate-spin text-purple-600" />
-                    <span className="ml-2 text-sm text-purple-600">Loading permissions...</span>
-                  </div>
-                ) : error && !userDetails?.permissionSummary ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm">Unable to load detailed permissions</span>
-                    </div>
-                    <button
-                      onClick={handleRetry}
-                      className="w-full px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
-                    >
-                      Retry Loading
-                    </button>
-                    {/* Show basic permissions from user object as fallback */}
-                    <div className="bg-white rounded p-3 border border-purple-200">
-                      <p className="text-xs text-purple-600 mb-2">Basic permissions (from user profile):</p>
-                      <div className="text-xs text-purple-700">
-                        {user.moduleAccess ? (
-                          <div className="grid grid-cols-2 gap-1">
-                            {Object.entries(user.moduleAccess).map(([module, enabled]) => (
-                              <div key={module} className={`px-2 py-1 rounded text-xs ${enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {module}: {enabled ? 'Yes' : 'No'}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500">No permission data available</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : userDetails?.permissionSummary ? (
-                  <div className="space-y-3">
-                    <div className="text-sm text-purple-700">
-                      <p className="font-medium">Module Access Summary</p>
-                      <p className="text-xs mt-1">
-                        {userDetails.permissionSummary.enabledModules} of {userDetails.permissionSummary.totalModules} modules enabled
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-white rounded p-2 border border-purple-200">
-                        <p className="font-medium text-purple-800">Enabled</p>
-                        <p className="text-green-600 font-semibold">{userDetails.permissionSummary.enabledModules}</p>
-                      </div>
-                      <div className="bg-white rounded p-2 border border-purple-200">
-                        <p className="font-medium text-purple-800">Disabled</p>
-                        <p className="text-red-600 font-semibold">{userDetails.permissionSummary.disabledModules}</p>
-                      </div>
-                    </div>
-
-                    {/* Module categories breakdown */}
-                    <div className="space-y-2">
-                      {['core', 'operations', 'management', 'admin'].map(category => {
-                        const categoryModules = userDetails.permissionSummary.moduleList.filter(m => m.category === category);
-                        const enabledInCategory = categoryModules.filter(m => m.enabled).length;
-
-                        return (
-                          <div key={category} className="bg-white rounded p-2 border border-purple-200">
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs font-medium text-purple-800 capitalize">{category}</span>
-                              <span className="text-xs text-purple-600">
-                                {enabledInCategory}/{categoryModules.length}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-purple-600">
-                    <Settings className="h-6 w-6 mx-auto mb-2 text-purple-400" />
-                    <p className="text-sm font-medium">No detailed permission data available</p>
-                    <p className="text-xs text-purple-500 mt-1">
-                      Permission details could not be loaded. Check user's module access settings.
-                    </p>
-                    <button
-                      onClick={handleRetry}
-                      className="mt-2 px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column - Activity and Information */}
-            <div className="lg:col-span-2 space-y-6">
-
-              {/* User Activity History */}
-              <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
-                <h4 className="font-semibold text-orange-900 mb-4 flex items-center">
-                  <Activity className="h-5 w-5 mr-2" />
-                  Recent Activity
-                  <span className="ml-2 text-xs text-orange-600">(Last 30 days)</span>
-                </h4>
-
-                {dataLoadingStates.activityHistory ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader className="h-5 w-5 animate-spin text-orange-600" />
-                    <span className="ml-2 text-sm text-orange-600">Loading activity history...</span>
-                  </div>
-                ) : userDetails?.activityHistory && userDetails.activityHistory.length > 0 ? (
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {userDetails.activityHistory.map((activity) => (
-                      <div key={activity.id} className="bg-white rounded-lg p-4 border border-orange-200">
-                        <div className="flex items-start space-x-3">
-                          <div className="p-2 bg-orange-600 text-white rounded-lg">
-                            <Monitor className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-orange-900">{activity.action}</p>
-                            <p className="text-xs text-orange-700 mt-1">{activity.details}</p>
-                            <div className="flex items-center space-x-4 mt-2 text-xs text-orange-600">
-                              <span>{formatDate(activity.timestamp)}</span>
-                              {activity.ipAddress && (
-                                <span>IP: {activity.ipAddress}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-orange-600">
-                    <Activity className="h-8 w-8 mx-auto mb-2 text-orange-400" />
-                    <p className="text-sm font-medium">Activity tracking is being set up</p>
-                    <p className="text-xs text-orange-500 mt-1">
-                      User activities like creating depots, managing users, and system operations will appear here once the activity tracking system is fully configured.
-                    </p>
-                    <div className="mt-4 p-3 bg-orange-100 rounded-lg">
-                      <p className="text-xs text-orange-700">
-                        <strong>Note:</strong> Activity tracking may require additional database setup. 
-                        Contact your system administrator if you expect to see activity data here.
-                      </p>
-                    </div>
-                    {error && (
-                      <button
-                        onClick={handleRetry}
-                        className="mt-3 px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
-                      >
-                        Retry Loading Activity
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Login History */}
-              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                  <Globe className="h-5 w-5 mr-2" />
-                  Login History
-                  <span className="ml-2 text-xs text-gray-600">(Recent sessions)</span>
-                </h4>
-
-                {dataLoadingStates.loginHistory ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader className="h-5 w-5 animate-spin text-gray-600" />
-                    <span className="ml-2 text-sm text-gray-600">Loading login history...</span>
-                  </div>
-                ) : userDetails?.loginHistory && userDetails.loginHistory.length > 0 ? (
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {userDetails.loginHistory.map((login) => (
-                      <div key={login.id} className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-start space-x-3">
-                          <div className="p-2 bg-gray-600 text-white rounded-lg">
-                            <Clock className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium text-gray-900">Login Session</p>
-                              {login.sessionDuration && (
-                                <span className="text-xs text-gray-500">
-                                  {login.sessionDuration} min
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1 space-y-1 text-xs text-gray-600">
-                              <p>Login: {formatDate(login.loginTime)}</p>
-                              {login.logoutTime && (
-                                <p>Logout: {formatDate(login.logoutTime)}</p>
-                              )}
-                              {login.ipAddress && (
-                                <p>IP: {login.ipAddress}</p>
-                              )}
-                              {login.userAgent && (
-                                <p className="truncate" title={login.userAgent}>
-                                  Browser: {login.userAgent.split(' ')[0]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-600">
-                    <Globe className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm font-medium">Detailed login history not available</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Session tracking requires additional database configuration to store detailed login records.
-                    </p>
-                    
-                    {user.lastLogin && (
-                      <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-                        <p className="text-sm font-medium text-gray-700 mb-1">Current Session Info</p>
-                        <p className="text-xs text-gray-600">
-                          Last known login: {formatLastLogin(user.lastLogin)}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          This shows the most recent login time, but detailed session history requires additional setup.
-                        </p>
-                      </div>
-                    )}
-                    
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-xs text-blue-700">
-                        <strong>Note:</strong> To enable detailed login history tracking, the system administrator 
-                        needs to configure the login_history table and related tracking mechanisms.
-                      </p>
-                    </div>
-                    
-                    {error && (
-                      <button
-                        onClick={handleRetry}
-                        className="mt-3 px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                      >
-                        Check Login History
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
-          )}
         </div>
-      </div>
       </div>
     </ErrorBoundary>
   );

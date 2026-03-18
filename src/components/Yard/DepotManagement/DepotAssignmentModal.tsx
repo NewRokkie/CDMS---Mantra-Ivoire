@@ -13,6 +13,7 @@ import { useYard } from '../../../hooks/useYard';
 import { userService } from '../../../services/api/userService';
 import { FormModal } from '../../Common/Modal/FormModal';
 import { handleError } from '../../../services/errorHandling';
+import { t } from 'i18next';
 
 interface DepotAssignmentModalProps {
   isOpen: boolean;
@@ -246,11 +247,11 @@ export const DepotAssignmentModal: React.FC<DepotAssignmentModalProps> = ({
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-            <p className="text-sm">No users found</p>
+            <p className="text-sm">{t('common.noResults')}</p>
             <p className="text-xs">
               {searchTerm
-                ? "Try adjusting your search criteria."
-                : "No users available for assignment"
+                ? t('common.tryAdjustingSearch')
+                : t('depotAssignment.noUsersAvailable')
               }
             </p>
           </div>

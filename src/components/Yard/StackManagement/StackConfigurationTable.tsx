@@ -2,7 +2,7 @@ import React from 'react';
 import { Settings, Shield, Trash2, Users, RefreshCw } from 'lucide-react';
 import { YardStack } from '../../../types/yard';
 import { stackService } from '../../../services/api';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StackConfigurationTableProps {
   stacks: YardStack[];
@@ -21,7 +21,7 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
   onAssignClient,
   isRefreshing = false
 }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
 
   const getAdjacentStackNumber = (stackNumber: number): number | null => {
     return stackService.getAdjacentStackNumber(stackNumber);

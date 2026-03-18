@@ -5,6 +5,7 @@
 import { supabase } from '../api/supabaseClient';
 import { ediDatabaseService, Client } from './ediDatabaseService';
 import { ediConfigurationDatabaseService } from './ediConfigurationDatabase';
+import { sftpTransmissionService } from './sftpTransmissionService';
 
 export interface RealEDIStats {
   totalOperations: number;
@@ -229,7 +230,7 @@ class EDIRealDataService {
    */
   async isEDIEnabledForOperation(
     clientCode: string, 
-    operation: 'GATE_IN' | 'GATE_OUT'
+    _operation: 'GATE_IN' | 'GATE_OUT'
   ): Promise<boolean> {
     try {
       // Vérifier d'abord si le client a l'EDI activé dans la base
@@ -261,7 +262,7 @@ class EDIRealDataService {
    */
   async processRealGateInEDI(
     operationId: string,
-    containerNumber: string,
+    _containerNumber: string,
     clientCode: string
   ): Promise<{ success: boolean; message: string; logId?: string }> {
     try {
@@ -297,11 +298,11 @@ class EDIRealDataService {
   }
 
   /**
-   * Traite une opération Gate Out avec EDI réel
+   * Traite une opération Gate Out avec EDI réel + transmission SFTP + retry
    */
   async processRealGateOutEDI(
     operationId: string,
-    bookingNumber: string,
+    _bookingNumber: string,
     clientCode: string
   ): Promise<{ success: boolean; message: string; logId?: string }> {
     try {
@@ -314,17 +315,145 @@ class EDIRealDataService {
         };
       }
 
-      // Simuler le traitement EDI (en production, cela ferait la vraie transmission)
-      const logId = `edi_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-      
-      // Mettre à jour le statut EDI dans la base
-      await ediDatabaseService.updateGateOutEdiStatus(operationId, true, new Date());
+      // Récupérer la configuration serveur pour ce client
+      const client = await ediDatabaseService.getClientByCodeOrName(clientCode);
+      if (!client) {
+        return { success: false, message: `Client ${clientCode} not found` };
+      }
 
-      console.log(`EDI transmission initiated for Gate Out operation ${operationId}`);
+      const serverConfig = await ediConfigurationDatabaseService.getConfigurationForClient(
+        client.code,
+        client.name
+      );
+
+      if (!serverConfig || !serverConfig.enabled) {
+        return { success: false, message: 'No enabled SFTP server configuration found for this client' };
+      }
+
+      // Récupérer les détails de l'opération Gate Out depuis la base
+      const { data: operation, error: opError } = await supabase
+        .from('gate_out_operations')
+        .select('*')
+        .eq('id', operationId)
+        .maybeSingle();
+
+      if (opError || !operation) {
+        return { success: false, message: `Gate out operation ${operationId} not found` };
+      }
+
+      // Récupérer les conteneurs traités pour cette opération
+      const containerIds: string[] = operation.processed_container_ids || [];
+      if (containerIds.length === 0) {
+        return { success: false, message: 'No containers found for this gate out operation' };
+      }
+
+      const { data: containers } = await supabase
+        .from('containers')
+        .select('number, size, type')
+        .in('id', containerIds);
+
+      if (!containers || containers.length === 0) {
+        return { success: false, message: 'Could not fetch container details' };
+      }
+
+      const maxRetries = serverConfig.retryAttempts ?? 3;
+      const logId = `edi_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      let lastError = '';
+      let anyTransmitted = false;
+
+      // Générer et transmettre un EDI par conteneur
+      for (const container of containers) {
+        let transmitted = false;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            // Délai exponentiel entre retries (sauf premier essai)
+            if (attempt > 1) {
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
+            }
+
+            const gateOutDate = operation.completed_at
+              ? new Date(operation.completed_at)
+              : new Date();
+
+            // Helper functions for proper date formatting
+            const formatEDIDate = (date: Date) => {
+              return date.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD
+            };
+
+            const formatEDITime = (date: Date) => {
+              return date.toTimeString().slice(0, 5).replace(':', '') + '00'; // HHMMSS
+            };
+
+            const operationDate = formatEDIDate(gateOutDate);
+            const operationTime = formatEDITime(gateOutDate);
+
+            // Générer le contenu EDI CODECO
+            const generateResult = await sftpTransmissionService.generateCodeco({
+              sender: serverConfig.senderCode || 'CIABJ31',
+              receiver: serverConfig.partnerCode || 'UNKNOWN',
+              companyCode: serverConfig.senderCode || 'CIABJ31',
+              customer: serverConfig.partnerCode || 'UNKNOWN',
+              containerNumber: container.number,
+              containerSize: (container.size || '20ft').replace('ft', ''),
+              containerType: container.type || 'dry',
+              transportCompany: operation.transport_company || '',
+              vehicleNumber: operation.vehicle_number || '',
+              operationType: 'GATE_OUT',
+              operationDate,
+              operationTime,
+              locationCode: 'CIABJ',
+              locationDetails: 'Gate Out',
+              operatorName: operation.operator_name || 'System',
+              operatorId: operation.operator_id || 'system',
+              yardId: operation.yard_id || '',
+              bookingReference: operation.booking_number,
+            });
+
+            if (!generateResult.success || !generateResult.ediContent || !generateResult.ediFile) {
+              throw new Error(generateResult.error || 'Failed to generate EDI content');
+            }
+
+            // Envoyer via SFTP
+            const sendResult = await sftpTransmissionService.sendEDI({
+              fileName: generateResult.ediFile,
+              fileContent: generateResult.ediContent,
+              clientName: client.name,
+              clientCode: client.code,
+              containerNumber: container.number,
+              operation: 'GATE_OUT',
+            });
+
+            if (sendResult.success) {
+              transmitted = true;
+              anyTransmitted = true;
+              console.log(`EDI transmitted for container ${container.number} (attempt ${attempt})`);
+              break;
+            } else {
+              lastError = sendResult.error || 'Transmission failed';
+              console.warn(`EDI attempt ${attempt} failed for ${container.number}: ${lastError}`);
+            }
+          } catch (attemptError) {
+            lastError = attemptError instanceof Error ? attemptError.message : 'Unknown error';
+            console.warn(`EDI attempt ${attempt} error for ${container.number}: ${lastError}`);
+          }
+        }
+
+        if (!transmitted) {
+          console.error(`EDI transmission failed after ${maxRetries} attempts for container ${container.number}`);
+        }
+      }
+
+      // Mettre à jour le statut EDI dans la base seulement si au moins un conteneur a été transmis
+      if (anyTransmitted) {
+        await ediDatabaseService.updateGateOutEdiStatus(operationId, true, new Date());
+      }
+
+      console.log(`EDI processing completed for Gate Out operation ${operationId}`);
 
       return {
-        success: true,
-        message: 'EDI transmission initiated successfully',
+        success: anyTransmitted,
+        message: anyTransmitted ? 'EDI transmission completed' : `EDI transmission failed: ${lastError || 'All containers failed'}`,
         logId
       };
     } catch (error) {

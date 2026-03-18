@@ -58,16 +58,16 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
   // Generate mock history data (in real app, this would come from API)
   const historyEntries = useMemo(() => {
     const entries: ReportHistoryEntry[] = [];
-    
+
     reports.forEach(report => {
       if (report.lastSent) {
         // Generate some mock history entries
         const numberOfEntries = Math.floor(Math.random() * 10) + 1;
-        
+
         for (let i = 0; i < numberOfEntries; i++) {
           const sentDate = new Date(report.lastSent);
           sentDate.setDate(sentDate.getDate() - (i * 7)); // Weekly entries going back
-          
+
           entries.push({
             id: `${report.id}-${i}`,
             reportId: report.id,
@@ -82,7 +82,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
         }
       }
     });
-    
+
     return entries.sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime());
   }, [reports]);
 
@@ -90,12 +90,12 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
   const filteredEntries = useMemo(() => {
     return historyEntries.filter(entry => {
       const matchesSearch = entry.reportName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           entry.recipients.some(email => email.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+        entry.recipients.some(email => email.toLowerCase().includes(searchTerm.toLowerCase()));
+
       const matchesStatus = statusFilter === 'all' || entry.status === statusFilter;
-      
+
       const matchesReport = reportFilter === 'all' || entry.reportId === reportFilter;
-      
+
       return matchesSearch && matchesStatus && matchesReport;
     });
   }, [historyEntries, searchTerm, statusFilter, reportFilter]);
@@ -106,7 +106,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
     const sent = historyEntries.filter(e => e.status === 'sent').length;
     const failed = historyEntries.filter(e => e.status === 'failed').length;
     const successRate = total > 0 ? ((sent / total) * 100).toFixed(1) : '0';
-    
+
     return { total, sent, failed, successRate };
   }, [historyEntries]);
 
@@ -160,7 +160,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="bg-green-50 p-4 rounded-lg">
             <div className="flex items-center space-x-3">
               <FileText className="h-8 w-8 text-green-600" />
@@ -170,7 +170,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="bg-red-50 p-4 rounded-lg">
             <div className="flex items-center space-x-3">
               <Mail className="h-8 w-8 text-red-600" />
@@ -180,7 +180,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="bg-purple-50 p-4 rounded-lg">
             <div className="flex items-center space-x-3">
               <Calendar className="h-8 w-8 text-purple-600" />
@@ -206,7 +206,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
               />
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             <select
               value={statusFilter}
@@ -218,7 +218,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
               <option value="failed">Failed</option>
               <option value="pending">Pending</option>
             </select>
-            
+
             <select
               value={reportFilter}
               onChange={(e) => setReportFilter(e.target.value)}
@@ -316,7 +316,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {entry.fileSize || 'N/A'}
+                        {entry.fileSize || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         {entry.status === 'sent' && (

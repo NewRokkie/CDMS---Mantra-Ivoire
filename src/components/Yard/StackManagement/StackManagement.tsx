@@ -4,7 +4,7 @@ import { stackService, yardsService } from '../../../services/api';
 import StackSoftDeleteService from '../../../services/api/stackSoftDeleteService';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { clientPoolService } from '../../../services/api';
 import { StackManagementHeader } from './StackManagementHeader';
 import { StackManagementFilters } from './StackManagementFilters';
@@ -22,7 +22,7 @@ import { useToast } from '../../../hooks/useToast';
 import { useConfirm } from '../../../hooks/useConfirm';
 
 export const StackManagement: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [stacks, setStacks] = useState<YardStack[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -164,9 +164,9 @@ export const StackManagement: React.FC = () => {
         // Show success notification
         setCreatedStackNumber(newStack.stackNumber);
         setShowSuccessNotification(true);
-        
-        toast.success(t('stack.create.success'));
-        
+
+        toast.success(t('stack.createSuccess'));
+
         // Refresh the yardsService cache to update stack suggestions
         if (currentYard?.id) {
           await yardsService.refreshYardData(currentYard.id);
@@ -273,7 +273,7 @@ export const StackManagement: React.FC = () => {
 
       setShowClientAssignment(false);
       setSelectedStack(null);
-      toast.success(clientCode ? t('stack.assign.success').replace('{client}', clientCode) : t('stack.unassigned.success'));
+      toast.success(clientCode ? t('stack.assign.success').replace('{client}', clientCode) : t('stack.unassign.success'));
     } catch (error) {
       handleError(error, 'StackManagement.handleClientAssignment');
       toast.error(t('common.error') + ': ' + (error as Error).message);
@@ -385,7 +385,7 @@ export const StackManagement: React.FC = () => {
           }}
           selectedStack={selectedStack}
           onSubmit={handleSaveStack}
-          yard={currentYard}
+          yard={currentYard} existingStacks={stacks}
         />
       )}
 

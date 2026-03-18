@@ -48,8 +48,8 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
           position: container.location || `S${String(stack.stackNumber).padStart(2, '0')}-R01-T01`
         })).sort((a, b) => {
           // Extraire Row et Height pour le tri
-          const locationMatchA = a.location.match(/S(\d+)[-]?R(\d+)[-]?[TH](\d+)/);
-          const locationMatchB = b.location.match(/S(\d+)[-]?R(\d+)[-]?[TH](\d+)/);
+          const locationMatchA = a.location?.match(/S(\d+)[-]?R(\d+)[-]?[TH](\d+)/);
+          const locationMatchB = b.location?.match(/S(\d+)[-]?R(\d+)[-]?[TH](\d+)/);
           
           if (!locationMatchA && !locationMatchB) return 0;
           if (!locationMatchA) return 1;
@@ -187,7 +187,7 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
                   <tbody className="bg-white divide-y divide-gray-200">
                     {containerDetails.map((container) => {
                       // Extraire Row et Height de la location (format: S07-R02-T03 ou S07R02T03)
-                      const locationMatch = container.location.match(/S(\d+)[-]?R(\d+)[-]?[TH](\d+)/);
+                      const locationMatch = container.location?.match(/S(\d+)[-]?R(\d+)[-]?[TH](\d+)/);
                       const row = locationMatch ? `R${locationMatch[2]}` : '-';
                       const height = locationMatch ? `H${locationMatch[3]}` : '-';
                       const locationId = locationMatch 
@@ -227,7 +227,7 @@ export const StackDetailsModal: React.FC<StackDetailsModalProps> = ({
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {container.clientCode || container.clientName}
+                              {container.clientName || container.clientCode || '—'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

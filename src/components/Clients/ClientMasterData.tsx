@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { clientService } from '../../services/api';
 import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
@@ -14,7 +14,7 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 
 export const ClientMasterData: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();

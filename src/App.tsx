@@ -9,6 +9,7 @@ import ConfirmModal from './components/UI/ConfirmModal';
 import { useToast } from './hooks/useToast';
 import { useConfirm } from './hooks/useConfirm';
 import { PWAManifestManager } from './components/PWA/PWAManifestManager';
+import { ThemeProvider } from './hooks/useTheme';
 
 /**
  * Enhanced Application with:
@@ -25,32 +26,35 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      {/* PWA Support */}
-      <PWAManifestManager />
+      {/* Theme Provider for Dark/Light Mode */}
+      <ThemeProvider>
+        {/* PWA Support */}
+        <PWAManifestManager />
 
-      {/* Global UI Components */}
-      <ToastContainer toasts={toasts} onClose={removeToast} />
-      {isOpen && options && (
-        <ConfirmModal
-          isOpen={isOpen}
-          title={options.title}
-          message={options.message}
-          confirmText={options.confirmText}
-          cancelText={options.cancelText}
-          variant={options.variant}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-        />
-      )}
+        {/* Global UI Components */}
+        <ToastContainer toasts={toasts} onClose={removeToast} />
+        {isOpen && options && (
+          <ConfirmModal
+            isOpen={isOpen}
+            title={options.title}
+            message={options.message}
+            confirmText={options.confirmText}
+            cancelText={options.cancelText}
+            variant={options.variant}
+            onConfirm={handleConfirm}
+            onCancel={handleCancel}
+          />
+        )}
 
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Protected Application Routes */}
-        <Route path="/*" element={<ProtectedApp />} />
-      </Routes>
+          {/* Protected Application Routes */}
+          <Route path="/*" element={<ProtectedApp />} />
+        </Routes>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 };

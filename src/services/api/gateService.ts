@@ -4,7 +4,7 @@ import { bookingReferenceService } from './bookingReferenceService';
 import { auditService } from './auditService';
 import { eventBus } from '../eventBus';
 import { Container } from '../../types';
-import { GateInOperation, GateOutOperation } from '../../types/operations';
+import { GateInOperation, GateInOperationComplete, GateOutOperation } from '../../types/operations';
 import { RetryManager, GateInError, handleAsyncOperation } from '../errorHandling';
 import { ValidationService } from '../validationService';
 
@@ -21,7 +21,7 @@ export interface GateInData {
   transportCompany: string;
   driverName: string;
   truckNumber: string;
-  location: string;
+  location: string | null;
   truckArrivalDate?: string;
   truckArrivalTime?: string;
   operatorId: string;
@@ -87,28 +87,28 @@ export class GateService {
       return { success: true, containerId: newContainer.id };
 
     }, { maxAttempts: 3, baseDelay: 1000 })
-    .catch((error: GateInError) => {
-      // Log the actual error details before converting to generic response
-      console.error('🔴 [gateService.processGateIn] Error caught:', {
-        code: error.code,
-        message: error.message,
-        userMessage: error.userMessage,
-        technicalDetails: error.technicalDetails,
-        stack: error.stack,
-      });
+      .catch((error: GateInError) => {
+        // Log the actual error details before converting to generic response
+        console.error('🔴 [gateService.processGateIn] Error caught:', {
+          code: error.code,
+          message: error.message,
+          userMessage: error.userMessage,
+          technicalDetails: error.technicalDetails,
+          stack: error.stack,
+        });
 
-      // Emit failure event
-      eventBus.emitSync('GATE_IN_FAILED', {
-        containerNumber: data.containerNumber,
-        error: error.userMessage || error.message
-      });
+        // Emit failure event
+        eventBus.emitSync('GATE_IN_FAILED', {
+          containerNumber: data.containerNumber,
+          error: error.userMessage || error.message
+        });
 
-      return {
-        success: false,
-        error: error.message,
-        userMessage: error.userMessage
-      };
-    });
+        return {
+          success: false,
+          error: error.message,
+          userMessage: error.userMessage
+        };
+      });
   }
 
   /**
@@ -229,13 +229,13 @@ export class GateService {
     let gateInDateTime: Date;
     if (data.truckArrivalDate && data.truckArrivalTime) {
       // Handle time format - if it already has seconds (HH:MM:SS), use as-is, otherwise add :00
-      const timeWithSeconds = data.truckArrivalTime.split(':').length === 3 
-        ? data.truckArrivalTime 
+      const timeWithSeconds = data.truckArrivalTime.split(':').length === 3
+        ? data.truckArrivalTime
         : `${data.truckArrivalTime}:00`;
-      
+
       const dateTimeString = `${data.truckArrivalDate}T${timeWithSeconds}`;
       gateInDateTime = new Date(dateTimeString);
-      
+
       // Validate the parsed date
       if (isNaN(gateInDateTime.getTime())) {
         console.error('🔴 [createContainerSafely] Invalid date/time:', dateTimeString);
@@ -339,7 +339,12 @@ export class GateService {
   }
 
   /**
-   * Creates Gate In operation record
+   * Creates Gate In operation record (with normalized tables)
+   * NOTE: Data is now split across multiple tables:
+   * - gate_in_operations: base operation data
+   * - gate_in_edi_details: EDI information
+   * - gate_in_transport_info: Transport information
+   * - gate_in_damage_assessments: Damage assessment
    */
   private async createGateInOperation(data: GateInData, client: any, container: any): Promise<any> {
     const result = await handleAsyncOperation(async () => {
@@ -349,6 +354,7 @@ export class GateService {
         ? data.secondContainerNumber.trim().toUpperCase()
         : null;
 
+      // 1. Insert into gate_in_operations (base fields only)
       const { data: operation, error: opError } = await supabase
         .from('gate_in_operations')
         .insert({
@@ -361,32 +367,22 @@ export class GateService {
           container_type: data.containerType,
           container_size: data.containerSize,
           is_high_cube: data.isHighCube === true,
-          full_empty: data.fullEmpty || 'FULL', // Add full/empty status from form data
-          transport_company: data.transportCompany,
-          driver_name: data.driverName,
-          vehicle_number: data.truckNumber,
-          truck_arrival_date: data.truckArrivalDate || new Date().toISOString().split('T')[0], // Store truck arrival date
-          truck_arrival_time: data.truckArrivalTime || new Date().toTimeString().slice(0, 5), // Store truck arrival time
-          assigned_location: null,
+          full_empty: data.fullEmpty || 'FULL',
           classification: data.classification || 'divers',
-          transaction_type: data.transactionType || 'Retour Livraison', // Transaction type for reports
-          equipment_reference: data.equipmentReference, // Equipment reference for EDI transmission
-          container_iso_code: data.containerIsoCode || null, // ISO type from dropdown (e.g. 45G1)
-          damage_reported: data.damageAssessment?.hasDamage || data.damageReported || false,
-          damage_description: data.damageAssessment?.damageDescription || data.damageDescription,
-          damage_assessment_stage: data.damageAssessment?.assessmentStage || 'assignment',
-          damage_assessed_by: data.damageAssessment?.assessedBy,
-          damage_assessed_at: data.damageAssessment?.assessedAt?.toISOString(),
-          damage_type: data.damageAssessment?.damageType,
-          // NOTE: 'weight' column does NOT exist in gate_in_operations table → removed
-          booking_reference: data.bookingReference || null,
+          transaction_type: data.transactionType || 'Retour Livraison',
+          container_iso_code: data.containerIsoCode || null,
+          assigned_location: data.location || null, // Store the assigned location
           notes: data.notes || null,
           status: 'pending',
           operator_id: data.operatorId,
           operator_name: data.operatorName,
           yard_id: data.yardId,
-          edi_transmitted: false,
-          completed_at: null
+          edi_transmitted: null, // null = not attempted/not configured; false = failed; true = sent
+          completed_at: null,
+          // Use manual entry date/time if provided (Time Tracking module), otherwise use system date/time
+          entry_date: data.truckArrivalDate || new Date().toISOString().split('T')[0],
+          entry_time: data.truckArrivalTime || new Date().toTimeString().slice(0, 8)
+          // ❌ REMOVED: transport_*, damage_*, booking_reference → moved to normalized tables
         })
         .select()
         .maybeSingle();
@@ -405,6 +401,53 @@ export class GateService {
         console.error('🔴 [createGateInOperation] INSERT OK mais data null — RLS SELECT bloqué sur gate_in_operations');
       } else {
         console.log('🟢 [createGateInOperation] INSERT OK, operation id:', operation.id);
+      }
+
+      // 2. Insert into gate_in_transport_info (normalized)
+      if (data.transportCompany || data.driverName || data.truckNumber) {
+        const { error: transportError } = await supabase
+          .from('gate_in_transport_info')
+          .insert({
+            gate_in_operation_id: operation.id,
+            transport_company: data.transportCompany,
+            driver_name: data.driverName,
+            vehicle_number: data.truckNumber,
+            truck_arrival_date: data.truckArrivalDate || new Date().toISOString().split('T')[0],
+            truck_arrival_time: data.truckArrivalTime || new Date().toTimeString().slice(0, 5),
+            booking_reference: data.bookingReference || null,
+            equipment_reference: data.equipmentReference || null,
+          });
+
+        if (transportError) {
+          console.error('⚠️  [createGateInOperation] Failed to insert transport info:', transportError.message);
+          // Don't throw - transport info is optional
+        }
+      }
+
+      // 3. Insert into gate_in_damage_assessments (normalized, if damage reported)
+      if (data.damageAssessment?.hasDamage || data.damageReported) {
+        const { error: damageError } = await supabase
+          .from('gate_in_damage_assessments')
+          .insert({
+            gate_in_operation_id: operation.id,
+            damage_reported: true,
+            damage_description: data.damageAssessment?.damageDescription || data.damageDescription,
+            damage_type: data.damageAssessment?.damageType,
+            damage_assessment: data.damageAssessment ? JSON.stringify({
+              hasDamage: data.damageAssessment.hasDamage,
+              damageType: data.damageAssessment.damageType,
+              damageDescription: data.damageAssessment.damageDescription,
+            }) : null,
+            damage_assessment_stage: data.damageAssessment?.assessmentStage || 'assignment',
+            damage_assessed_by: data.damageAssessment?.assessedBy,
+            damage_assessed_at: data.damageAssessment?.assessedAt?.toISOString() || new Date().toISOString(),
+            is_buffer_assignment: false,
+          });
+
+        if (damageError) {
+          console.error('⚠️  [createGateInOperation] Failed to insert damage assessment:', damageError.message);
+          // Don't throw - damage info is optional
+        }
       }
 
       return operation;
@@ -455,14 +498,25 @@ export class GateService {
    */
   async checkPendingOperationByTruckNumber(vehicleNumber: string): Promise<boolean> {
     try {
-      const { data: operations, error } = await supabase
-        .from('gate_out_operations')
-        .select('*')
-        .eq('vehicle_number', vehicleNumber.trim().toUpperCase())
-        .eq('status', 'pending');
+      // Query gate_out_transport_info table instead of gate_out_operations
+      const { data: transportRecords, error } = await supabase
+        .from('gate_out_transport_info')
+        .select(`
+          vehicle_number,
+          gate_out_operations (
+            status
+          )
+        `)
+        .eq('vehicle_number', vehicleNumber.trim().toUpperCase());
 
       if (error) throw error;
-      return (operations?.length || 0) > 0;
+
+      // Filter for pending operations
+      const pendingOperations = transportRecords?.filter(t =>
+        (t.gate_out_operations as any)?.status === 'pending'
+      ) || [];
+
+      return pendingOperations.length > 0;
     } catch (error: any) {
       console.error('Error checking pending operations by truck number:', error);
       return false;
@@ -508,9 +562,6 @@ export class GateService {
           processed_containers: 0,
           remaining_containers: bookingReference.remainingContainers,
           processed_container_ids: [],
-          transport_company: data.transportCompany,
-          driver_name: data.driverName,
-          vehicle_number: data.vehicleNumber,
           status: 'pending',
           operator_id: data.operatorId,
           operator_name: data.operatorName,
@@ -521,6 +572,35 @@ export class GateService {
         .single();
 
       if (opError) throw opError;
+
+      // Create gate_out_transport_info record ONLY if we have actual data
+      const hasTransportData =
+        (data.transportCompany && data.transportCompany.trim()) ||
+        (data.driverName && data.driverName.trim()) ||
+        (data.vehicleNumber && data.vehicleNumber.trim());
+
+      if (hasTransportData) {
+        try {
+          const insertData = {
+            gate_out_operation_id: operation.id,
+            booking_number: bookingReference.bookingNumber || operation.booking_number || '',
+            transport_company: data.transportCompany?.trim() || undefined,
+            driver_name: data.driverName?.trim() || undefined,
+            vehicle_number: data.vehicleNumber?.trim().toUpperCase() || undefined
+          };
+
+          const { error: insertError } = await supabase
+            .from('gate_out_transport_info')
+            .insert(insertData)
+            .select();
+
+          if (insertError) {
+            console.warn('Failed to create gate_out_transport_info:', insertError);
+          }
+        } catch (transportError: any) {
+          console.warn('Failed to create gate_out_transport_info:', transportError);
+        }
+      }
 
       // Create audit log
       await auditService.log({
@@ -560,6 +640,7 @@ export class GateService {
       for (const container of validContainers) {
         await containerService.update(container.id, {
           status: 'out_depot',
+          location: null, // Clear location when container leaves depot
           gateOutDate: new Date(),
           updatedBy: data.operatorName
         });
@@ -598,9 +679,6 @@ export class GateService {
           processed_containers: data.containerIds.length,
           remaining_containers: newRemaining,
           processed_container_ids: data.containerIds,
-          transport_company: data.transportCompany,
-          driver_name: data.driverName,
-          vehicle_number: data.truckNumber,
           status: 'completed',
           operator_id: data.operatorId,
           operator_name: data.operatorName,
@@ -612,6 +690,35 @@ export class GateService {
         .single();
 
       if (opError) throw opError;
+
+      // Create gate_out_transport_info record ONLY if we have actual data
+      const hasTransportData =
+        (data.transportCompany && data.transportCompany.trim()) ||
+        (data.driverName && data.driverName.trim()) ||
+        (data.truckNumber && data.truckNumber.trim());
+
+      if (hasTransportData) {
+        try {
+          const insertData = {
+            gate_out_operation_id: operation.id,
+            booking_number: bookingReference.bookingNumber || operation.booking_number || '',
+            transport_company: data.transportCompany?.trim() || undefined,
+            driver_name: data.driverName?.trim() || undefined,
+            vehicle_number: data.truckNumber?.trim().toUpperCase() || undefined
+          };
+
+          const { error: insertError } = await supabase
+            .from('gate_out_transport_info')
+            .insert(insertData)
+            .select();
+
+          if (insertError) {
+            console.warn('Failed to create gate_out_transport_info:', insertError);
+          }
+        } catch (transportError: any) {
+          console.warn('Failed to create gate_out_transport_info:', transportError);
+        }
+      }
 
       // Get updated booking reference
       const updatedBookingReference = await bookingReferenceService.getById(data.bookingReferenceId);
@@ -639,13 +746,17 @@ export class GateService {
     }
   }
 
+  /**
+   * Get Gate In Operations (using normalized view for complete data)
+   */
   async getGateInOperations(filters?: {
     yardId?: string;
     status?: string;
     dateRange?: [Date, Date];
   }): Promise<GateInOperation[]> {
+    // Use the normalized view to get all data in one query
     let query = supabase
-      .from('gate_in_operations')
+      .from('v_gate_in_operations_full')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -666,10 +777,30 @@ export class GateService {
     const { data, error } = await query;
 
     if (error) {
+      console.error('🔴 [getGateInOperations] Error fetching operations:', error.message);
       throw error;
     }
 
     return data?.map(this.mapToGateInOperation) || [];
+  }
+
+  /**
+   * Get Gate In Operation with full normalized details
+   * Returns complete data including EDI, Transport, and Damage info
+   */
+  async getGateInOperationWithDetails(operationId: string): Promise<GateInOperationComplete | null> {
+    const { data, error } = await supabase
+      .from('v_gate_in_operations_full')
+      .select('*')
+      .eq('id', operationId)
+      .single();
+
+    if (error) {
+      console.error('🔴 [getGateInOperationWithDetails] Error:', error.message);
+      return null;
+    }
+
+    return data as GateInOperationComplete;
   }
 
   async updateGateOutOperation(operationId: string, data: {
@@ -699,13 +830,22 @@ export class GateService {
 
       // Process containers - update their status based on operation completion
       for (const containerId of data.containerIds) {
+        // Status: 'gate_out' when pending, 'out_depot' when operation is completed
         const containerStatus = newStatus === 'completed' ? 'out_depot' : 'gate_out';
 
-        await containerService.update(containerId, {
-          status: containerStatus, // Status 03: Gate Out (pending) or 04: Out Depot (completed)
-          gateOutDate: newStatus === 'completed' ? new Date() : undefined,
+        const containerUpdates: any = {
+          status: containerStatus,
+          gateOutOperationId: operationId,
           updatedBy: data.operatorName
-        });
+        };
+
+        // Only set location and gateOutDate when operation is completed
+        if (newStatus === 'completed') {
+          containerUpdates.location = null; // Clear location when container leaves depot
+          containerUpdates.gateOutDate = new Date();
+        }
+
+        await containerService.update(containerId, containerUpdates);
 
         // Create audit log
         await auditService.log({
@@ -718,40 +858,44 @@ export class GateService {
         });
       }
 
+      // Log the update data for debugging
+      const operationUpdateData = {
+        processed_containers: processedCount,
+        remaining_containers: remainingCount,
+        processed_container_ids: newContainerIds,
+        status: newStatus,
+        completed_at: newStatus === 'completed' ? new Date().toISOString() : null
+      };
+      console.log('🔍 [GateService.updateGateOutOperation] Update data:', JSON.stringify(operationUpdateData, null, 2));
+
       const { error: updateError } = await supabase
         .from('gate_out_operations')
-        .update({
-          processed_containers: processedCount,
-          remaining_containers: remainingCount,
-          processed_container_ids: newContainerIds,
-          status: newStatus,
-          completed_at: newStatus === 'completed' ? new Date().toISOString() : null
-        })
+        .update(operationUpdateData)
         .eq('id', operationId)
         .select()
         .single();
 
-      if (updateError) throw updateError;
-
-      // Update booking reference and all containers if completed
-      if (newStatus === 'completed') {
-        await bookingReferenceService.update(currentOp.release_order_id, {
-          remainingContainers: 0,
-          status: 'completed'
-        });
-
-        // Update ALL containers in the operation to 'out_depot' status
-        for (const containerId of newContainerIds) {
-          const container = await containerService.getById(containerId);
-          if (container && container.status === 'gate_out') {
-            await containerService.update(containerId, {
-              status: 'out_depot',
-              gateOutDate: new Date(),
-              updatedBy: data.operatorName
-            });
-          }
-        }
+      if (updateError) {
+        console.error('❌ [GateService.updateGateOutOperation] Supabase error:', updateError);
+        throw updateError;
       }
+
+      // Get current booking to calculate new remaining containers
+      const currentBooking = await bookingReferenceService.getById(currentOp.release_order_id);
+      if (!currentBooking) {
+        return { success: false, error: 'Booking reference not found' };
+      }
+
+      // Calculate new booking remaining containers
+      const newBookingRemaining = currentBooking.remainingContainers - data.containerIds.length;
+      const bookingStatus = newBookingRemaining === 0 ? 'completed' : 'active';
+
+      // Update booking reference with new remaining count
+      await bookingReferenceService.update(currentOp.release_order_id, {
+        remainingContainers: Math.max(0, newBookingRemaining),
+        status: bookingStatus,
+        completedAt: bookingStatus === 'completed' ? new Date() : undefined
+      });
 
       return { success: true };
     } catch (error: any) {
@@ -764,9 +908,17 @@ export class GateService {
     status?: string;
     dateRange?: [Date, Date];
   }): Promise<GateOutOperation[]> {
+    // Fetch gate_out_operations with joined booking_references for accurate container counts
     let query = supabase
       .from('gate_out_operations')
-      .select('*')
+      .select(`
+        *,
+        booking_references (
+          total_containers,
+          remaining_containers,
+          container_quantities
+        )
+      `)
       .order('created_at', { ascending: false });
 
     if (filters?.yardId) {
@@ -783,10 +935,39 @@ export class GateService {
         .lte('created_at', filters.dateRange[1].toISOString());
     }
 
-    const { data, error } = await query;
+    const { data: operations, error: queryError } = await query;
 
-    if (error) throw error;
-    return data.map(this.mapToGateOutOperation);
+    if (queryError) throw queryError;
+    if (!operations || operations.length === 0) return [];
+
+    // Fetch transport info separately and merge
+    const operationIds = operations.map(op => op.id);
+    const { data: transportData } = await supabase
+      .from('gate_out_transport_info')
+      .select('gate_out_operation_id, driver_name, vehicle_number, transport_company')
+      .in('gate_out_operation_id', operationIds);
+
+    // Create map: operation_id -> transport_info
+    const transportInfoMap = new Map<string, any>();
+    transportData?.forEach(t => {
+      transportInfoMap.set(t.gate_out_operation_id, t);
+    });
+
+    // Merge and map, using booking_references data for accurate counts
+    return operations.map(op => {
+      const transportInfo = transportInfoMap.get(op.id) || {};
+      const booking = op.booking_references;
+
+      // Use booking_references data if available, otherwise fallback to operation data
+      return this.mapToGateOutOperation({
+        ...op,
+        total_containers: booking?.total_containers ?? op.total_containers,
+        remaining_containers: booking?.remaining_containers ?? op.remaining_containers,
+        driver_name: transportInfo.driver_name || op.driver_name,
+        vehicle_number: transportInfo.vehicle_number || op.vehicle_number,
+        transport_company: transportInfo.transport_company || op.transport_company
+      });
+    });
   }
 
   private mapToGateInOperation(data: any): GateInOperation {
@@ -825,7 +1006,7 @@ export class GateService {
       operatorId: data.operator_id,
       operatorName: data.operator_name,
       yardId: data.yard_id,
-      ediTransmitted: data.edi_transmitted,
+      ediTransmitted: data.edi_transmitted === null ? undefined : data.edi_transmitted,
       createdAt: new Date(data.created_at),
       completedAt: data.completed_at ? new Date(data.completed_at) : undefined
     };
@@ -850,11 +1031,261 @@ export class GateService {
       createdBy: data.operator_name,
       operatorName: data.operator_name,
       yardId: data.yard_id,
-      ediTransmitted: data.edi_transmitted,
+      ediTransmitted: data.edi_transmitted === null ? undefined : data.edi_transmitted,
       createdAt: new Date(data.created_at),
       completedAt: data.completed_at ? new Date(data.completed_at) : undefined,
       bookingReferenceId: data.release_order_id
     };
+  }
+
+  /**
+   * Get recent gate out operations with container details
+   * Shows both pending operations and completed containers
+   * 
+   * Status Flow:
+   * - Phase 1: Create gate_out_operation with status 'pending'
+   * - Phase 2: Process containers, set container status to 'gate_out' (03)
+   * - Phase 3: Complete operation, set container status to 'out_depot' (04)
+   * 
+   * This method displays:
+   * 1. All containers with status 'gate_out' or 'out_depot' (completed gate outs)
+   * 2. All pending gate_out_operations (awaiting container processing)
+   */
+  async getRecentGateOutOperations(limit: number = 50): Promise<any[]> {
+    try {
+      // Fetch all gate out operations with transport info from normalized table
+      // Fetch all gate out operations with booking_references join for accurate counts
+      const { data: operations, error: opsError } = await supabase
+        .from('gate_out_operations')
+        .select(`
+          id,
+          created_at,
+          booking_number,
+          booking_type,
+          client_code,
+          client_name,
+          status,
+          total_containers,
+          processed_containers,
+          remaining_containers,
+          processed_container_ids,
+          edi_transmitted,
+          edi_transmission_date,
+          completed_at,
+          booking_references (
+            total_containers,
+            remaining_containers
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (opsError) {
+        console.error('Error fetching gate out operations:', opsError);
+        throw opsError;
+      }
+
+      // Fetch transport info separately and merge
+      let transportInfoMap = new Map<string, any>();
+      if (operations && operations.length > 0) {
+        const operationIds = operations.map(op => op.id);
+        const { data: transportData, error: transportError } = await supabase
+          .from('gate_out_transport_info')
+          .select('gate_out_operation_id, driver_name, vehicle_number, transport_company')
+          .in('gate_out_operation_id', operationIds);
+
+        if (transportError) {
+          console.warn('Failed to fetch transport info:', transportError);
+        } else if (transportData) {
+          transportData.forEach(t => {
+            transportInfoMap.set(t.gate_out_operation_id, t);
+          });
+        }
+      }
+
+      // Merge operations with transport info and booking data
+      const operationsWithTransport = operations?.map(op => {
+        const booking = op.booking_references as any;
+        return {
+          ...op,
+          // Use booking_references data for accurate counts
+          total_containers: booking?.total_containers ?? op.total_containers,
+          remaining_containers: booking?.remaining_containers ?? op.remaining_containers,
+          gate_out_transport_info: transportInfoMap.has(op.id) ? [transportInfoMap.get(op.id)] : []
+        };
+      }) || [];
+
+      // Fetch ALL containers with status 'gate_out' (03) or 'out_depot' (04)
+      // Join with gate_out_operations to get full details
+      const { data: allGateOutContainers, error: containerError } = await supabase
+        .from('containers')
+        .select(`
+          id,
+          number,
+          size,
+          type,
+          booking_reference,
+          gate_out_date,
+          edi_gate_out_transmitted,
+          edi_gate_out_transmission_date,
+          client_code,
+          status,
+          gate_out_operation_id,
+          gate_out_operations:gate_out_operation_id (
+            id,
+            booking_number,
+            booking_type,
+            client_code,
+            client_name,
+            gate_out_transport_info (
+              driver_name,
+              vehicle_number,
+              transport_company
+            )
+          )
+        `)
+        .in('status', ['gate_out', 'out_depot'])
+        .order('gate_out_date', { ascending: false })
+        .limit(limit);
+
+      if (containerError) {
+        console.error('Error fetching gate out containers:', containerError);
+      }
+
+      const results: any[] = [];
+
+      // Add all gate out/out_depot containers as completed operations
+      if (allGateOutContainers && allGateOutContainers.length > 0) {
+        // Get unique client codes to fetch client names
+        const clientCodes = [...new Set(allGateOutContainers.map(c => c.client_code).filter(Boolean))];
+
+        // Fetch client names
+        let clientMap = new Map<string, string>();
+        if (clientCodes.length > 0) {
+          const { data: clients } = await supabase
+            .from('clients')
+            .select('code, name')
+            .in('code', clientCodes);
+
+          if (clients) {
+            clients.forEach(client => {
+              clientMap.set(client.code, client.name);
+            });
+          }
+        }
+
+        allGateOutContainers.forEach(container => {
+          // Use joined operation data if available, otherwise try to find matching operation
+          const linkedOp = container.gate_out_operations as any;
+          const matchingOp = linkedOp || operations?.find(op => op.booking_number === container.booking_reference);
+
+          // Get client name from map, linked operation, or matching operation
+          const clientName = clientMap.get(container.client_code) ||
+            linkedOp?.client_name ||
+            matchingOp?.client_name ||
+            '-';
+
+          // Get transport info from nested gate_out_transport_info array (first item)
+          const transportInfo = linkedOp?.gate_out_transport_info?.[0] || matchingOp?.gate_out_transport_info?.[0] || {};
+
+          results.push({
+            id: `container-${container.id}`,
+            operationId: linkedOp?.id || matchingOp?.id || null,
+            exitDate: container.gate_out_date ? new Date(container.gate_out_date) : null,
+            containerNumber: container.number,
+            containerSize: container.size,
+            containerType: container.type,
+            bookingNumber: linkedOp?.booking_number || container.booking_reference || '-',
+            bookingType: linkedOp?.booking_type || matchingOp?.booking_type || null,
+            clientCode: container.client_code || linkedOp?.client_code || matchingOp?.client_code || '-',
+            clientName: clientName,
+            driverName: transportInfo.driver_name || '-',
+            truckNumber: transportInfo.vehicle_number || '-',
+            transportCompany: transportInfo.transport_company || '-',
+            status: 'completed',
+            ediTransmitted: container.edi_gate_out_transmitted || false,
+            ediTransmissionDate: container.edi_gate_out_transmission_date ? new Date(container.edi_gate_out_transmission_date) : null
+          });
+        });
+      }
+
+      // Add pending operations (Phase 1 - awaiting container processing)
+      if (operationsWithTransport && operationsWithTransport.length > 0) {
+        // Fetch containers linked to these pending bookings
+        const pendingBookingNumbers = operationsWithTransport
+          .filter(op => op.status === 'pending' || op.processed_containers === 0)
+          .map(op => op.booking_number);
+
+        let containersByBooking = new Map<string, any[]>();
+        if (pendingBookingNumbers.length > 0) {
+          const { data: bookingContainers } = await supabase
+            .from('containers')
+            .select('id, number, size, type, status, booking_reference')
+            .in('booking_reference', pendingBookingNumbers);
+
+          if (bookingContainers) {
+            bookingContainers.forEach(c => {
+              if (!containersByBooking.has(c.booking_reference)) {
+                containersByBooking.set(c.booking_reference, []);
+              }
+              containersByBooking.get(c.booking_reference)!.push(c);
+            });
+          }
+        }
+
+        operationsWithTransport.forEach(op => {
+          if (op.status === 'pending' || op.processed_containers === 0) {
+            // Get transport info from merged data
+            const transportInfo = op.gate_out_transport_info?.[0] || {};
+
+            // Get containers for this booking
+            const bookingContainers = containersByBooking.get(op.booking_number) || [];
+
+            // Use booking_references data for accurate counts (from the join)
+            const totalCount = op.total_containers || 0;
+            const processedCount = op.processed_containers || 0;
+
+            results.push({
+              id: `operation-${op.id}`,
+              operationId: op.id,
+              exitDate: null,
+              containerNumber: null,
+              containerSize: null,
+              containerType: null,
+              bookingNumber: op.booking_number,
+              bookingType: op.booking_type,
+              clientCode: op.client_code,
+              clientName: op.client_name,
+              driverName: transportInfo.driver_name || '-',
+              truckNumber: transportInfo.vehicle_number || '-',
+              transportCompany: transportInfo.transport_company || '-',
+              status: op.status,
+              ediTransmitted: false,
+              ediTransmissionDate: null,
+              // Container tracking - use accurate counts from booking_references
+              processedContainers: processedCount,
+              totalContainers: totalCount,
+              remainingContainers: op.remaining_containers || (totalCount - processedCount),
+              // List of container numbers for this booking
+              containerNumbers: bookingContainers.map(c => c.number),
+              processedContainerIds: op.processed_container_ids || []
+            });
+          }
+        });
+      }
+
+      // Sort by date (most recent first)
+      results.sort((a, b) => {
+        const dateA = a.exitDate || new Date(0);
+        const dateB = b.exitDate || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Error in getRecentGateOutOperations:', error);
+      return [];
+    }
   }
 }
 

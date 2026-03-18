@@ -615,8 +615,8 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
               </Pie>
               <Tooltip
                 formatter={(value, name, props) => [
-                  `${value} containers`,
-                  canViewAllData() ? props.payload.clientName : 'Your Company'
+                  `${value} ${t('common.containers')}`,
+                  canViewAllData() ? props.payload.clientName : t('common.yourCompany')
                 ]}
                 contentStyle={{
                   backgroundColor: '#ffffff',

@@ -21,22 +21,22 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ formData, container }) =
     ) : null
   );
 
-  const ComparisonRow = ({ label, oldValue, newValue, changed }: { 
-    label: string; 
-    oldValue: any; 
-    newValue: any; 
+  const ComparisonRow = ({ label, oldValue, newValue, changed }: {
+    label: string;
+    oldValue: any;
+    newValue: any;
     changed: boolean;
   }) => (
     <div className={`p-3 rounded-lg ${changed ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'}`}>
       <div className="text-xs font-medium text-gray-600 mb-1">{label}</div>
       {changed ? (
         <div className="flex items-center space-x-2 text-sm">
-          <span className="text-gray-500 line-through">{oldValue || 'N/A'}</span>
+          <span className="text-gray-500 line-through">{oldValue || '-'}</span>
           <ArrowRight className="h-3 w-3 text-yellow-600" />
-          <span className="font-medium text-gray-900">{newValue || 'N/A'}</span>
+          <span className="font-medium text-gray-900">{newValue || '-'}</span>
         </div>
       ) : (
-        <div className="text-sm text-gray-900">{newValue || 'N/A'}</div>
+        <div className="text-sm text-gray-900">{newValue || '-'}</div>
       )}
     </div>
   );
@@ -64,12 +64,12 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ formData, container }) =
         <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
           <Package className="h-5 w-5 mr-2 text-blue-600" />
           Basic Information
-          {(hasChanges('number', formData.number) || 
-            hasChanges('type', formData.type) || 
-            hasChanges('size', formData.size) || 
+          {(hasChanges('number', formData.number) ||
+            hasChanges('type', formData.type) ||
+            hasChanges('size', formData.size) ||
             hasChanges('status', formData.status)) && (
-            <ChangeIndicator changed={true} />
-          )}
+              <ChangeIndicator changed={true} />
+            )}
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <ComparisonRow
@@ -127,10 +127,10 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ formData, container }) =
         <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
           <Building className="h-5 w-5 mr-2 text-purple-600" />
           Client Assignment
-          {(hasChanges('clientName', formData.client) || 
+          {(hasChanges('clientName', formData.client) ||
             hasChanges('clientCode', formData.clientCode)) && (
-            <ChangeIndicator changed={true} />
-          )}
+              <ChangeIndicator changed={true} />
+            )}
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <ComparisonRow
@@ -229,7 +229,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ formData, container }) =
           <div className="flex-1">
             <h5 className="text-sm font-medium text-blue-900 mb-1">Ready to Save</h5>
             <p className="text-xs text-blue-700">
-              Click "Save Changes" to update the container information. All changes will be logged 
+              Click "Save Changes" to update the container information. All changes will be logged
               in the audit trail for compliance and tracking purposes.
             </p>
           </div>

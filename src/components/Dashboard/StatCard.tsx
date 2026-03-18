@@ -1,6 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 interface StatCardProps {
   title: string;
@@ -47,11 +47,11 @@ const colorClasses = {
 };
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, color }) => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const classes = colorClasses[color];
 
   return (
-    <div className={`${classes.bg} rounded-xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}>
+    <div className={`${classes.bg} dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>

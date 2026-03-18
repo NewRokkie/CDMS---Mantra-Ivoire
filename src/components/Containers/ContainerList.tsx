@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle } from 'lucide-react';
+import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle, Clock } from 'lucide-react';
 import { Container } from '../../types';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { containerService } from '../../services/api';
@@ -20,6 +20,7 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 import { containerTypeOptions } from '../Gates/constants';
+import { getContainerLocationDisplay, getContainerLocationClass } from '../../utils/containerLocationDisplay';
 
 // Get ISO code from type + size + isHighCube (matches Gate In / EDI codes)
 function getContainerIsoCode(type: string, size: string, isHighCube?: boolean): string {
@@ -55,27 +56,27 @@ const formatContainerTypeSize = (container: { type?: string; size?: string; isHi
 // Helper function to format date as DD/MM/YY - HH:MM
 const formatGateInDate = (date?: Date | null): string => {
   if (!date) return '-';
-  
+
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
-  
+
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = String(d.getFullYear()).slice(-2);
-  
+
   return `${day}/${month}/${year}`;
 };
 
 // Helper function to format date as DD/MM/YY - HH:MM
 const formatGateInTime = (date?: Date | null): string => {
   if (!date) return '-';
-  
+
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
-  
+
   const hours = String(d.getHours()).padStart(2, '0');
   const minutes = String(d.getMinutes()).padStart(2, '0');
-  
+
   return `${hours}:${minutes}`;
 };
 // REMOVED: Mock data now managed by global store
@@ -83,8 +84,9 @@ const formatGateInTime = (date?: Date | null): string => {
 export const ContainerList: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
-  // EDI Status per container: 'success' | 'failed' | 'pending' | 'retrying' | null (no logs)
-  const [ediStatusByContainerId, setEdiStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>>(new Map());
+  // EDI Status per container - separate tracking for Gate In and Gate Out
+  const [ediGateInStatusByContainerId, setEdiGateInStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>>(new Map());
+  const [ediGateOutStatusByContainerId, setEdiGateOutStatusByContainerId] = useState<Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>>(new Map());
 
   useEffect(() => {
     async function loadContainers() {
@@ -95,28 +97,53 @@ export const ContainerList: React.FC = () => {
           return [];
         });
         setContainers(data || []);
-        
-        // Load EDI status from transmission history (same logic as Recent EDI Operations: prefer success if any)
+
+        // Load EDI status from transmission history - separate for Gate In and Gate Out
         if (data && data.length > 0) {
           const logs = await ediTransmissionService.getTransmissionHistory();
-          const statusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | null>();
+          const gateInStatusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>();
+          const gateOutStatusMap = new Map<string, 'success' | 'failed' | 'pending' | 'retrying' | 'no_edi' | null>();
+
           for (const container of data) {
             const containerLogs = logs.filter(l => l.containerNumber === container.number);
-            if (containerLogs.length === 0) {
-              statusMap.set(container.id, null);
-              continue;
+
+            // Process Gate In logs
+            const gateInLogs = containerLogs.filter(l => l.operation === 'GATE_IN');
+            if (gateInLogs.length === 0) {
+              // No EDI logs - check if client has EDI enabled
+              gateInStatusMap.set(container.id, 'no_edi');
+            } else {
+              const successLog = gateInLogs.find(l => l.status === 'success');
+              if (successLog) {
+                gateInStatusMap.set(container.id, 'success');
+              } else {
+                const byLastAttempt = [...gateInLogs].sort(
+                  (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
+                );
+                gateInStatusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
+              }
             }
-            const successLog = containerLogs.find(l => l.status === 'success');
-            if (successLog) {
-              statusMap.set(container.id, 'success');
-              continue;
+
+            // Process Gate Out logs
+            const gateOutLogs = containerLogs.filter(l => l.operation === 'GATE_OUT');
+            if (gateOutLogs.length === 0) {
+              // No EDI logs - check if client has EDI enabled
+              gateOutStatusMap.set(container.id, 'no_edi');
+            } else {
+              const successLog = gateOutLogs.find(l => l.status === 'success');
+              if (successLog) {
+                gateOutStatusMap.set(container.id, 'success');
+              } else {
+                const byLastAttempt = [...gateOutLogs].sort(
+                  (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
+                );
+                gateOutStatusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
+              }
             }
-            const byLastAttempt = [...containerLogs].sort(
-              (a, b) => new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime()
-            );
-            statusMap.set(container.id, byLastAttempt[0].status as 'failed' | 'pending' | 'retrying');
           }
-          setEdiStatusByContainerId(statusMap);
+
+          setEdiGateInStatusByContainerId(gateInStatusMap);
+          setEdiGateOutStatusByContainerId(gateOutStatusMap);
         }
       } catch (error) {
         handleError(error, 'ContainerList.loadContainers');
@@ -138,7 +165,7 @@ export const ContainerList: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
-  const { t } = useLanguage();
+  const { t, i18n } = useTranslation();
   const { user, canViewAllData, getClientFilter, hasModuleAccess } = useAuth();
   const { currentYard } = useYard();
   const toast = useToast();
@@ -168,7 +195,7 @@ export const ContainerList: React.FC = () => {
       in_depot: { color: 'bg-green-100 text-green-800', label: 'In Depot' },
       gate_out: { color: 'bg-orange-100 text-orange-800', label: 'Gate Out' },
       out_depot: { color: 'bg-gray-100 text-gray-800', label: 'Out Depot' },
-      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
+      in_buffer: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance' },
       cleaning: { color: 'bg-purple-100 text-purple-800', label: 'Cleaning' }
     };
 
@@ -211,8 +238,8 @@ export const ContainerList: React.FC = () => {
         // Fallback to original filtering
         const clientName = container.clientName ?? '';
         return container.clientCode === clientFilter ||
-               clientName === user?.company ||
-               clientName.toLowerCase().includes(clientFilter.toLowerCase());
+          clientName === user?.company ||
+          clientName.toLowerCase().includes(clientFilter.toLowerCase());
       });
     }
 
@@ -222,7 +249,7 @@ export const ContainerList: React.FC = () => {
       const number = container.number ?? '';
       const clientName = container.clientName ?? '';
       const matchesSearch = number.toLowerCase().includes(searchLower) ||
-                            clientName.toLowerCase().includes(searchLower);
+        clientName.toLowerCase().includes(searchLower);
       const matchesStatus = statusFilter === 'all' || container.status === statusFilter;
 
       // Date range filter (based on gateInDate / gateOutDate)
@@ -260,17 +287,17 @@ export const ContainerList: React.FC = () => {
       prevContainers.map(container =>
         container.id === containerId
           ? {
-              ...container,
-              auditLogs: [
-                ...(container.auditLogs || []),
-                {
-                  timestamp: new Date(),
-                  user: user?.name || 'Unknown User',
-                  action,
-                  details
-                }
-              ]
-            }
+            ...container,
+            auditLogs: [
+              ...(container.auditLogs || []),
+              {
+                timestamp: new Date(),
+                user: user?.name || 'Unknown User',
+                action,
+                details
+              }
+            ]
+          }
           : container
       )
     );
@@ -321,83 +348,83 @@ export const ContainerList: React.FC = () => {
     toast.success('Container updated successfully!');
   };
 
-const handleDeleteContainer = async (containerId: string) => {
+  const handleDeleteContainer = async (containerId: string) => {
     try {
-        // First, check if container can be deleted
-        const constraints = await containerService.checkDeletionConstraints(containerId);
-        
-        if (!constraints.canDelete) {
-            // Show detailed blocking reason
-            let message = 'Cannot delete this container:\n\n';
-            message += constraints.blockingReason || 'Unknown reason';
-            message += '\n\nContainer Details:\n';
-            message += `• Status: ${constraints.currentStatus}\n`;
-            message += `• Gate-In Operations: ${constraints.gateInCount}\n`;
-            message += `• Gate-Out Operations: ${constraints.gateOutCount}\n`;
-            message += `• Location Assigned: ${constraints.locationAssigned ? 'Yes' : 'No'}\n`;
-            
-            if (constraints.currentStatus === 'in_depot' || constraints.currentStatus === 'gate_in') {
-                message += '\nAction Required:\n';
-                message += '1. Gate out the container first\n';
-                message += '2. Ensure status is "out_depot"\n';
-                message += '3. Then try deleting again';
-            } else if (constraints.locationAssigned) {
-                message += '\nAction Required:\n';
-                message += '1. Remove the location assignment\n';
-                message += '2. Then try deleting again';
-            }
-            
-            toast.error(message);
-            return;
+      // First, check if container can be deleted
+      const constraints = await containerService.checkDeletionConstraints(containerId);
+
+      if (!constraints.canDelete) {
+        // Show detailed blocking reason
+        let message = 'Cannot delete this container:\n\n';
+        message += constraints.blockingReason || 'Unknown reason';
+        message += '\n\nContainer Details:\n';
+        message += `• Status: ${constraints.currentStatus}\n`;
+        message += `• Gate-In Operations: ${constraints.gateInCount}\n`;
+        message += `• Gate-Out Operations: ${constraints.gateOutCount}\n`;
+        message += `• Location Assigned: ${constraints.locationAssigned ? 'Yes' : 'No'}\n`;
+
+        if (constraints.currentStatus === 'in_depot' || constraints.currentStatus === 'gate_in') {
+          message += '\nAction Required:\n';
+          message += '1. Gate out the container first\n';
+          message += '2. Ensure status is "out_depot"\n';
+          message += '3. Then try deleting again';
+        } else if (constraints.locationAssigned) {
+          message += '\nAction Required:\n';
+          message += '1. Remove the location assignment\n';
+          message += '2. Then try deleting again';
         }
 
-        // Show confirmation with details
-        const container = containers.find(c => c.id === containerId);
-        const containerNumber = container?.number || 'Unknown';
-        
-        let confirmMessage = `Delete Container: ${containerNumber}\n\n`;
-        confirmMessage += 'This will mark the container as deleted.\n';
-        if (constraints.gateInCount > 0 || constraints.gateOutCount > 0) {
-            confirmMessage += `\nNote: This container has ${constraints.gateInCount} gate-in and ${constraints.gateOutCount} gate-out operation(s) in history.\n`;
-            confirmMessage += 'These records will be preserved.\n';
+        toast.error(message);
+        return;
+      }
+
+      // Show confirmation with details
+      const container = containers.find(c => c.id === containerId);
+      const containerNumber = container?.number || 'Unknown';
+
+      let confirmMessage = `Delete Container: ${containerNumber}\n\n`;
+      confirmMessage += 'This will mark the container as deleted.\n';
+      if (constraints.gateInCount > 0 || constraints.gateOutCount > 0) {
+        confirmMessage += `\nNote: This container has ${constraints.gateInCount} gate-in and ${constraints.gateOutCount} gate-out operation(s) in history.\n`;
+        confirmMessage += 'These records will be preserved.\n';
+      }
+      confirmMessage += '\nAre you sure you want to continue?';
+
+      confirm({
+        title: 'Delete Container',
+        message: confirmMessage,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        variant: 'danger',
+        onConfirm: async () => {
+          try {
+            // Perform soft delete
+            await containerService.delete(containerId);
+
+            // Add audit log
+            addAuditLog(containerId, 'deleted', 'Container soft deleted from system');
+
+            // Refresh the container list from database
+            await refreshContainers();
+
+            toast.success('Container deleted successfully!');
+          } catch (error: any) {
+            handleError(error, 'ContainerList.handleDeleteContainer');
+
+            // Show user-friendly error message
+            const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
+            toast.error(`Delete Failed: ${errorMessage}`);
+          }
         }
-        confirmMessage += '\nAre you sure you want to continue?';
-        
-        confirm({
-            title: 'Delete Container',
-            message: confirmMessage,
-            confirmText: 'Delete',
-            cancelText: 'Cancel',
-            variant: 'danger',
-            onConfirm: async () => {
-                try {
-                    // Perform soft delete
-                    await containerService.delete(containerId);
-
-                    // Add audit log
-                    addAuditLog(containerId, 'deleted', 'Container soft deleted from system');
-
-                    // Refresh the container list from database
-                    await refreshContainers();
-
-                    toast.success('Container deleted successfully!');
-                } catch (error: any) {
-                    handleError(error, 'ContainerList.handleDeleteContainer');
-                    
-                    // Show user-friendly error message
-                    const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
-                    toast.error(`Delete Failed: ${errorMessage}`);
-                }
-            }
-        });
+      });
     } catch (error: any) {
-        handleError(error, 'ContainerList.handleDeleteContainer');
-        
-        // Show user-friendly error message
-        const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
-        toast.error(`Delete Failed: ${errorMessage}`);
+      handleError(error, 'ContainerList.handleDeleteContainer');
+
+      // Show user-friendly error message
+      const errorMessage = error?.userMessage || error?.message || 'Failed to delete container';
+      toast.error(`Delete Failed: ${errorMessage}`);
     }
-};
+  };
 
   // --------------------------
   // Export helpers
@@ -453,7 +480,7 @@ const handleDeleteContainer = async (containerId: string) => {
         }).join(',');
       }).join('\n')
     ].join('\n');
-    downloadFile(csv, `containers_export_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8');
+    downloadFile(csv, `containers_export_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8');
   };
 
   const exportExcel = (rows: Container[]) => {
@@ -548,7 +575,7 @@ const handleDeleteContainer = async (containerId: string) => {
         <td>${r.inOut}</td>
         <td>${r.gateIn ? new Date(r.gateIn).toLocaleString() : ''}</td>
         <td>${r.gateOut ? new Date(r.gateOut).toLocaleString() : ''}</td>
-        <td>${r.client} ${r.clientCode ? '('+r.clientCode+')' : ''}</td>
+        <td>${r.client} ${r.clientCode ? '(' + r.clientCode + ')' : ''}</td>
       </tr>`).join('')}
     </tbody>
   </table>
@@ -573,7 +600,7 @@ function filterTable(){
 </script>
 </body>
 </html>`;
-    downloadFile(html, `containers_export_${new Date().toISOString().slice(0,10)}.html`, 'text/html;charset=utf-8');
+    downloadFile(html, `containers_export_${new Date().toISOString().slice(0, 10)}.html`, 'text/html;charset=utf-8');
   };
 
   const handleExport = (type: 'csv' | 'excel' | 'html') => {
@@ -586,15 +613,15 @@ function filterTable(){
   const regenerateEDI = async (container: Container) => {
     try {
       toast.info(`Regenerating EDI for ${container.number}...`);
-      
+
       const result = await ediTransmissionService.regenerateEDI(container.id);
-      
+
       if (result.success) {
         addAuditLog(container.id, 'edi_regenerated', `EDI successfully regenerated and transmitted for container ${container.number}`);
         toast.success(`EDI regenerated and transmitted for ${container.number}`);
-        
-        // Update EDI status to success
-        setEdiStatusByContainerId(prev => {
+
+        // Update EDI Gate In status to success (regenerateEDI currently only handles Gate In)
+        setEdiGateInStatusByContainerId(prev => {
           const newMap = new Map(prev);
           newMap.set(container.id, 'success');
           return newMap;
@@ -704,7 +731,7 @@ function filterTable(){
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Maintenance</p>
               <p className="text-lg font-semibold text-gray-900">
-                {filteredContainers.filter(c => c.status === 'maintenance').length}
+                {filteredContainers.filter(c => c.status === 'in_buffer').length}
               </p>
             </div>
           </div>
@@ -750,6 +777,7 @@ function filterTable(){
               <option value="in_depot">In Depot</option>
               <option value="gate_out">Gate Out</option>
               <option value="out_depot">Out Depot</option>
+              <option value="in_buffer">Maintenance</option>
             </select>
           </div>
 
@@ -821,7 +849,8 @@ function filterTable(){
                 {canViewAllData() && (<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>)}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate In</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate Out</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Gate In</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EDI Gate Out</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full / Empty</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.actions')}
@@ -857,8 +886,10 @@ function filterTable(){
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(container.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <strong>{container.location || '-'}</strong>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={getContainerLocationClass(container)}>
+                      {getContainerLocationDisplay(container, i18n.language as 'en' | 'fr')}
+                    </span>
                   </td>
                   {canViewAllData() && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -872,23 +903,23 @@ function filterTable(){
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div>
-                        {container.gateInDate ? (<>
-                          <div className="font-medium">{formatGateInDate(container.gateInDate)}</div>
-                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateInDate)}</div>
-                        </>) : '-'}
+                      {container.gateInDate ? (<>
+                        <div className="font-medium">{formatGateInDate(container.gateInDate)}</div>
+                        <div className="text-xs text-gray-500">{formatGateInTime(container.gateInDate)}</div>
+                      </>) : '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div>
-                        {container.gateOutDate ? (<>
-                          <div className="font-medium">{formatGateInDate(container.gateOutDate)}</div>
-                          <div className="text-xs text-gray-500">{formatGateInTime(container.gateOutDate)}</div>
-                        </>) : '-'}
+                      {container.gateOutDate ? (<>
+                        <div className="font-medium">{formatGateInDate(container.gateOutDate)}</div>
+                        <div className="text-xs text-gray-500">{formatGateInTime(container.gateOutDate)}</div>
+                      </>) : '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {(() => {
-                      const status = ediStatusByContainerId.get(container.id);
+                      const status = ediGateInStatusByContainerId.get(container.id);
                       if (status === 'success') {
                         return (
                           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
@@ -905,20 +936,76 @@ function filterTable(){
                           </span>
                         );
                       }
+                      if (status === 'pending' || status === 'retrying') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {status === 'retrying' ? 'Retrying' : 'Pending'}
+                          </span>
+                        );
+                      }
+                      if (status === 'no_edi') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                            <WifiOff className='h-3 w-3 mr-1' />
+                            No EDI
+                          </span>
+                        );
+                      }
                       return (
                         <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
-                          <WifiOff className="h-3 w-3 mr-1" />
-                          No EDI
+                          -
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(() => {
+                      const status = ediGateOutStatusByContainerId.get(container.id);
+                      if (status === 'success') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                            <Wifi className="h-3 w-3 mr-1" />
+                            EDI Sent
+                          </span>
+                        );
+                      }
+                      if (status === 'failed') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 border border-red-200">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            EDI Failed
+                          </span>
+                        );
+                      }
+                      if (status === 'pending' || status === 'retrying') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {status === 'retrying' ? 'Retrying' : 'Pending'}
+                          </span>
+                        );
+                      }
+                      if (status === 'no_edi') {
+                        return (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                            <WifiOff className='h-3 w-3 mr-1' />
+                            No EDI
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                          -
                         </span>
                       );
                     })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' :
-                      container.fullEmpty === 'EMPTY' ? 'bg-gray-100 text-gray-800' :
-                      'bg-gray-50 text-gray-500'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${container.fullEmpty === 'FULL' ? 'bg-blue-100 text-blue-800' :
+                        container.fullEmpty === 'EMPTY' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-50 text-gray-500'
+                      }`}>
                       {container.fullEmpty || '-'}
                     </span>
                   </td>
@@ -986,8 +1073,8 @@ function filterTable(){
             <h3 className="text-lg font-medium text-gray-900 mb-2">No containers found</h3>
             <p className="text-gray-600">
               {showClientNotice
-                ? "No containers found for your company. Contact the depot if you expect to see containers here."
-                : "Try adjusting your search criteria or filters."
+                ? t('common.noContainersCompany')
+                : t('common.tryAdjusting')
               }
             </p>
           </div>

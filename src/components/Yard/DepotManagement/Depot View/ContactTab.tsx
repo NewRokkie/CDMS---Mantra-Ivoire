@@ -40,18 +40,18 @@ export const ContactTab: React.FC<Props> = ({ depot }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
     <GlassCard>
       <h3 className="text-lg font-semibold mb-4 text-gray-800">Contact</h3>
-      <DataRow label="Manager" value={depot.contactInfo?.manager || <Badge type="error">N/A</Badge>} />
-      <DataRow label="Phone" value={depot.contactInfo?.phone ? formatPhoneNumber(depot.contactInfo.phone) : <Badge type="error">N/A</Badge>} />
-      <DataRow label="Email" value={depot.contactInfo?.email || <Badge type="error">N/A</Badge>} />
+      <DataRow label="Manager" value={depot.contactInfo?.manager || <Badge type="error">-</Badge>} />
+      <DataRow label="Phone" value={depot.contactInfo?.phone ? formatPhoneNumber(depot.contactInfo.phone) : <Badge type="error">-</Badge>} />
+      <DataRow label="Email" value={depot.contactInfo?.email || <Badge type="error">-</Badge>} />
     </GlassCard>
 
     <GlassCard>
       <h3 className="text-lg font-semibold mb-4 text-gray-800">Address</h3>
-      <DataRow label="Street" value={depot.address?.street || <Badge type="error">N/A</Badge>} />
-      <DataRow label="City" value={depot.address?.city || <Badge type="error">N/A</Badge>} />
-      <DataRow label="State" value={depot.address?.state || <Badge type="error">N/A</Badge>} />
-      <DataRow label="ZIP" value={depot.address?.zipCode || <Badge type="error">N/A</Badge>} />
-      <DataRow label="Country" value={depot.address?.country || <Badge type="error">N/A</Badge>} />
+      <DataRow label="Street" value={depot.address?.street || <Badge type="error">-</Badge>} />
+      <DataRow label="City" value={depot.address?.city || <Badge type="error">-</Badge>} />
+      <DataRow label="State" value={depot.address?.state || <Badge type="error">-</Badge>} />
+      <DataRow label="ZIP" value={depot.address?.zipCode || <Badge type="error">-</Badge>} />
+      <DataRow label="Country" value={depot.address?.country || <Badge type="error">-</Badge>} />
     </GlassCard>
   </div>
 );

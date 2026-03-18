@@ -393,7 +393,19 @@ export class YardsService {
         // Fallback to stack-based calculation
         // Use effective capacity calculation that handles 40ft pairing logic
         yard.totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(stacks);
+        // Count actual containers from all stacks (including virtual stack locations)
         yard.currentOccupancy = stacks.reduce((sum, stack) => sum + stack.currentOccupancy, 0);
+      }
+
+      // Ensure currentOccupancy is at least the number of in_depot containers
+      // This handles virtual stack locations (e.g., S04R1H1 from S03+S05 pairing)
+      if (yard.currentOccupancy === 0) {
+        const { containerService } = await import('./containerService');
+        const yardContainers = await containerService.getByYardId(yard.id);
+        const inDepotContainers = yardContainers.filter(c => c.status === 'in_depot').length;
+        if (inDepotContainers > 0) {
+          yard.currentOccupancy = inDepotContainers;
+        }
       }
 
     } catch (error) {
@@ -569,6 +581,9 @@ export class YardsService {
   isContainerInYard(container: Container, yardId: string): boolean {
     const yard = this.yards.get(yardId);
     if (!yard) return false;
+
+    // Container without location cannot be in yard
+    if (!container.location) return false;
 
     // Utiliser la logique de localisation existante
     if (yard.code === 'DEPOT-01' || yard.name.toLowerCase().includes('tantarelli')) {

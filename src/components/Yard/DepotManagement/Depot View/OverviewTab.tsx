@@ -60,7 +60,7 @@ const Counter: React.FC<{ label: string; value: number; color: string }> = ({ la
 const LocationMock: React.FC<{ address?: any }> = ({ address }) => (
   <div className="relative h-40 rounded-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
     <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg text-xs shadow-sm">
-      📍 {address?.city || 'Unknown'}, {address?.country || 'N/A'}
+      📍 {address?.city || 'Unknown'}, {address?.country || '-'}
     </div>
     <div className="absolute bottom-4 right-4 h-12 w-12 rounded-full bg-blue-500/20 blur-xl" />
     <div className="absolute bottom-4 right-4 h-3 w-3 rounded-full bg-blue-500 animate-pulse" />

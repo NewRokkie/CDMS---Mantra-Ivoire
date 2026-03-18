@@ -14,7 +14,7 @@ export class BookingReferenceService {
   }
 
   async getById(id: string): Promise<BookingReference | null> {
-    const { data, error} = await supabase
+    const { data, error } = await supabase
       .from('booking_references')
       .select('*')
       .eq('id', id)
@@ -95,7 +95,7 @@ export class BookingReferenceService {
     if (updates.requiresDetailedBreakdown !== undefined) updateData.requires_detailed_breakdown = updates.requiresDetailedBreakdown;
     if (updates.status) updateData.status = updates.status;
     if (updates.notes !== undefined) updateData.notes = updates.notes;
-    if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt?.toISOString();
+    if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt ? updates.completedAt.toISOString() : null;
 
     const { data, error } = await supabase
       .from('booking_references')
@@ -104,7 +104,10 @@ export class BookingReferenceService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [BookingReferenceService.update] Supabase error:', error);
+      throw error;
+    }
     return this.mapToBookingReference(data);
   }
 

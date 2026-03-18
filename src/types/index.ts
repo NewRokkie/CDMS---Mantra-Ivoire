@@ -119,13 +119,6 @@ export interface YardSection {
   name: string;
   yardId: string;
   stacks: YardStack[];
-  position: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  dimensions: { width: number; length: number };
-  color?: string; // For visual distinction
 }
 
 export interface RowTierConfig {
@@ -164,6 +157,7 @@ export interface YardStack {
   updatedAt?: Date;
   createdBy?: string;
   updatedBy?: string;
+  isBufferZone?: boolean;
 }
 
 export interface YardBlock {
@@ -213,9 +207,9 @@ export interface Container {
   type: 'dry' | 'high_cube' | 'hard_top' | 'ventilated' | 'reefer' | 'tank' | 'flat_rack' | 'open_top';
   size: '20ft' | '40ft';
   isHighCube?: boolean; // High cube variant (e.g. Dry 40ft HC = 45G1), from Gate In
-  status: 'gate_in' | 'in_depot' | 'gate_out' | 'out_depot' | 'maintenance' | 'cleaning';
+  status: 'gate_in' | 'in_depot' | 'gate_out' | 'out_depot' | 'in_buffer' | 'cleaning';
   fullEmpty?: 'FULL' | 'EMPTY'; // Full or Empty status
-  location: string;
+  location: string | null; // Location can be null when container is out of depot
   yardId?: string; // Add yard ID for direct relations
   yardPosition?: YardPosition;
   gateInDate?: Date;
@@ -230,6 +224,7 @@ export interface Container {
   clientCode?: string; // Add client code for filtering
   transporter?: string; // Transport company from gate-in (e.g. "PROPRE MOYEN")
   releaseOrderId?: string;
+  gateOutOperationId?: string; // Links to gate_out_operations table
   classification?: 'divers' | 'alimentaire'; // Container classification
   transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // Transaction type for Gate In
   damage?: string[];
@@ -247,9 +242,15 @@ export interface Container {
   customsStatus?: 'pending' | 'cleared' | 'hold';
   bookingReference?: string;
   // EDI fields
-  ediTransmitted?: boolean; // Whether EDI was transmitted
-  ediTransmissionDate?: Date; // When EDI was transmitted
+  ediTransmitted?: boolean; // Deprecated: Use edi_gate_in_transmitted instead
+  ediTransmissionDate?: Date; // Deprecated: Use edi_gate_in_transmission_date instead
   ediErrorMessage?: string; // Error message if EDI failed
+  // EDI Gate In fields (CODECO GATE_IN)
+  ediGateInTransmitted?: boolean; // Whether Gate In EDI was transmitted
+  ediGateInTransmissionDate?: Date; // When Gate In EDI was transmitted
+  // EDI Gate Out fields (CODECO GATE_OUT)
+  ediGateOutTransmitted?: boolean; // Whether Gate Out EDI was transmitted
+  ediGateOutTransmissionDate?: Date; // When Gate Out EDI was transmitted
   // Soft delete fields
   isDeleted?: boolean; // Soft delete flag
   deletedAt?: Date; // When container was deleted

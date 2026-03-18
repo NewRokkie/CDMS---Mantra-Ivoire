@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { useYard } from '../../hooks/useYard';
+import { useTheme } from '../../hooks/useTheme';
 import { gateService, clientService, containerService, realtimeService, locationManagementService, yardsService } from '../../services/api';
+import { bufferZoneService } from '../../services/bufferZoneService';
+import { ediTransmissionService } from '../../services/ediTransmissionService';
 import { supabase } from '../../services/api/supabaseClient';
 
 // import moment from 'moment'; // Commented out - not used in current code
@@ -33,7 +36,8 @@ const extractStackNumber = (location: string): string | null => {
 
 export const GateIn: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
+  const { theme } = useTheme();
   const { currentYard, validateYardOperation } = useYard();
   const toast = useToast();
 
@@ -85,29 +89,29 @@ export const GateIn: React.FC = () => {
   }, [currentYard?.id, loadData]);
 
 
-useEffect(() => {
-  if (!currentYard?.id) return;
+  useEffect(() => {
+    if (!currentYard?.id) return;
 
-  const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
-    currentYard.id,
-    () => {
+    const unsubscribeGateIn = realtimeService.subscribeToGateInOperations(
+      currentYard.id,
+      () => {
+        if (document.visibilityState === 'visible') {
+          loadData();
+        }
+      }
+    );
+
+    const unsubscribeContainers = realtimeService.subscribeToContainers(() => {
       if (document.visibilityState === 'visible') {
         loadData();
       }
-    }
-  );
+    });
 
-  const unsubscribeContainers = realtimeService.subscribeToContainers(() => {
-    if (document.visibilityState === 'visible') {
-      loadData();
-    }
-  });
-
-  return () => {
-    try { unsubscribeGateIn(); } catch { /* ignore */ }
-    try { unsubscribeContainers(); } catch { /* ignore */ }
-  };
-}, [currentYard?.id, loadData]);
+    return () => {
+      try { unsubscribeGateIn(); } catch { /* ignore */ }
+      try { unsubscribeContainers(); } catch { /* ignore */ }
+    };
+  }, [currentYard?.id, loadData]);
 
 
   const pendingOperations = gateInOperations.filter(op =>
@@ -141,8 +145,8 @@ useEffect(() => {
     driverName: '',
     truckNumber: '',
     transportCompany: '',
-    truckArrivalDate: new Date().toISOString().split('T')[0], // Default to today
-    truckArrivalTime: new Date().toTimeString().slice(0, 5), // Default to current time
+    truckArrivalDate: '', // Empty by default - will use system time if not manually set
+    truckArrivalTime: '', // Empty by default - will use system time if not manually set
     truckDepartureDate: '',
     truckDepartureTime: '',
     notes: '',
@@ -340,8 +344,8 @@ useEffect(() => {
       driverName: '',
       truckNumber: '',
       transportCompany: '',
-      truckArrivalDate: new Date().toISOString().split('T')[0],
-      truckArrivalTime: new Date().toTimeString().slice(0, 5),
+      truckArrivalDate: '', // Empty by default
+      truckArrivalTime: '', // Empty by default
       truckDepartureDate: '',
       truckDepartureTime: '',
       notes: '',
@@ -471,7 +475,7 @@ useEffect(() => {
         transportCompany: formData.transportCompany,
         driverName: formData.driverName,
         truckNumber: formData.truckNumber,
-        location: formData.assignedLocation || optimalStack?.stackId || 'Pending Assignment',
+        location: formData.assignedLocation || optimalStack?.stackId || null,
         truckArrivalDate: truckArrivalDate,
         truckArrivalTime: truckArrivalTime,
         equipmentReference: formData.equipmentReference, // Equipment reference for EDI transmission
@@ -515,9 +519,8 @@ useEffect(() => {
       }
 
       // Show success message
-      const successMessage = `Gate In operation completed successfully for container ${formData.containerNumber}${
-        formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''
-      }`;
+      const successMessage = `Gate In operation completed successfully for container ${formData.containerNumber}${formData.containerQuantity === 2 ? ` and ${formData.secondContainerNumber}` : ''
+        }`;
 
       toast.success(successMessage);
 
@@ -549,6 +552,12 @@ useEffect(() => {
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
     setIsProcessing(true);
+
+    // Variables pour le rollback en cas d'erreur
+    let createdContainerIds: string[] = [];
+    let updatedContainerIds: string[] = [];
+    let originalContainerStates: Map<string, any> = new Map();
+
     try {
       // Validate required data
       if (!operation?.containerNumber) {
@@ -575,7 +584,7 @@ useEffect(() => {
 
       const { data: existingContainers } = await supabase
         .from('containers')
-        .select('id, number, status')
+        .select('id, number, status, location, updated_at')
         .eq('is_deleted', false)
         .in('number', containerNumbers);
 
@@ -586,12 +595,23 @@ useEffect(() => {
 
       if (isPendingCompletion) {
         // This is completing a pending operation - UPDATE existing containers
+        // Save original states for rollback
+        for (const container of existingContainers) {
+          originalContainerStates.set(container.id, {
+            status: container.status,
+            location: container.location,
+            updated_at: container.updated_at
+          });
+          updatedContainerIds.push(container.id);
+        }
+
+        const newStatus = locationData.isBufferZone ? 'in_buffer' : 'in_depot';
 
         for (const container of existingContainers) {
           const { error: updateError } = await supabase
             .from('containers')
             .update({
-              status: 'in_depot',
+              status: newStatus,
               location: locationData.assignedLocation,
               updated_at: new Date().toISOString(),
               updated_by: user?.id
@@ -604,7 +624,6 @@ useEffect(() => {
         }
       } else {
         // This is a new operation - CREATE containers
-        // This is a new operation - CREATE containers
         console.log('Creating new containers:', containerNumbers);
 
         // 3. Create container(s) in containers table (include is_high_cube, full_empty, etc. from operation)
@@ -613,7 +632,7 @@ useEffect(() => {
           type: operation.containerType || 'dry',
           size: operation.containerSize,
           is_high_cube: operation.isHighCube === true,
-          status: 'in_depot',
+          status: locationData.isBufferZone ? 'in_buffer' : 'in_depot',
           full_empty: operation.fullEmpty || 'FULL',
           location: locationData.assignedLocation,
           yard_id: currentYard?.id,
@@ -647,39 +666,84 @@ useEffect(() => {
         }
 
         finalContainers = createdContainers || [];
+        createdContainerIds = finalContainers.map(c => c.id);
       }
 
-      // 4. Link container ID to gate_in_operation and include damage assessment
-      const updateData: any = {
+      // 4. Link container ID to gate_in_operation and update assigned_location
+      const updateOperationData: any = {
         container_id: finalContainers?.[0]?.id,
         assigned_location: locationData.assignedLocation,
-        assigned_stack: extractStackNumber(locationData.assignedLocation), // Extract stack number
         completed_at: new Date().toISOString(),
-        status: 'completed'
+        status: 'completed',
       };
 
-      // Add damage assessment data if provided
-      if (locationData.damageAssessment) {
-        updateData.damage_reported = locationData.damageAssessment.hasDamage;
-        updateData.damage_description = locationData.damageAssessment.damageDescription || null;
-        updateData.damage_assessment = JSON.stringify(locationData.damageAssessment);
-
-        // Marquer si c'est une zone tampon
-        if (locationData.isBufferZone) {
-          updateData.notes = `ZONE TAMPON - ${locationData.damageAssessment.damageType || 'Dommage détecté'}`;
-        }
-      }
-
+      // Update gate_in_operations (basic fields + location)
+      // Note: assigned_stack is stored in gate_in_damage_assessments, not here
       const { error: updateError } = await supabase
         .from('gate_in_operations')
-        .update(updateData)
+        .update(updateOperationData)
         .eq('id', operation.id);
 
       if (updateError) {
         throw new Error(`Failed to update Gate In operation: ${updateError.message}`);
       }
 
-      // 4.5. Update location occupancy in locations table
+      // 4.5. Create/Update gate_in_damage_assessments with location and damage data
+      const damageAssessmentData: any = {
+        gate_in_operation_id: operation.id,
+        assigned_location: locationData.assignedLocation,
+        assigned_stack: locationData.isBufferZone ? null : extractStackNumber(locationData.assignedLocation),
+        is_buffer_assignment: locationData.isBufferZone || false,
+        damage_reported: false,
+        damage_assessment_stage: 'assignment',
+        damage_assessed_by: user?.name || user?.email,
+        damage_assessed_at: new Date().toISOString(),
+      };
+
+      // Add damage assessment data if provided
+      if (locationData.damageAssessment) {
+        damageAssessmentData.damage_reported = locationData.damageAssessment.hasDamage;
+        damageAssessmentData.damage_description = locationData.damageAssessment.damageDescription || null;
+        damageAssessmentData.damage_type = locationData.damageAssessment.damageType || null;
+        damageAssessmentData.damage_assessment = JSON.stringify(locationData.damageAssessment);
+        if (locationData.isBufferZone) {
+          damageAssessmentData.buffer_zone_reason = locationData.damageAssessment.damageType || 'Dommage détecté';
+        }
+      }
+
+      // Insert or update damage assessment
+      const { error: damageError } = await supabase
+        .from('gate_in_damage_assessments')
+        .upsert(damageAssessmentData, {
+          onConflict: 'gate_in_operation_id'
+        });
+
+      if (damageError) {
+        console.error('Failed to create damage assessment:', damageError);
+        // Don't fail the entire operation, just log the error
+      }
+
+      // 4.6. Si zone tampon: créer l'entrée dans container_buffer_zones
+      if (locationData.isBufferZone && locationData.bufferStackId && finalContainers?.[0]?.id) {
+        try {
+          await bufferZoneService.assignContainerToBufferZone({
+            containerId: finalContainers[0].id,
+            gateInOperationId: operation.id,
+            bufferStackId: locationData.bufferStackId,
+            yardId: currentYard?.id || '',
+            damageType: locationData.damageAssessment?.damageType || 'general',
+            damageDescription: locationData.damageAssessment?.damageDescription,
+            damageAssessment: locationData.damageAssessment,
+            createdBy: user?.id || 'system',
+          });
+          logger.info(`Conteneur ${operation.containerNumber} assigné à la zone tampon`, 'GateIn');
+        } catch (bufferError) {
+          // Ne pas bloquer l'opération si l'entrée buffer échoue
+          logger.error('Impossible de créer l\'entrée zone tampon', 'GateIn', bufferError);
+        }
+      }
+
+      // 4.7. Update location occupancy in locations table
       console.log('🔍 Starting location occupancy update for:', locationData.assignedLocation);
       try {
         // Parse the location to check if it's a virtual stack
@@ -708,7 +772,7 @@ useEffect(() => {
             // Get both physical locations
             const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
             const physicalLocation2 = `S${String(physicalStack2).padStart(2, '0')}R${row}H${tier}`;
-            
+
             console.log(`🔍 Checking both physical locations: ${physicalLocation1} and ${physicalLocation2}`);
 
             const { data: locationRecords, error: locationFindError } = await supabase
@@ -722,10 +786,10 @@ useEffect(() => {
             if (!locationFindError && locationRecords && locationRecords.length === 2) {
               // Check if both locations are available
               const allAvailable = locationRecords.every(loc => !loc.is_occupied);
-              
+
               if (allAvailable) {
                 console.log(`✅ Both physical locations are available, assigning 40ft container`);
-                
+
                 // Assign container to both physical locations
                 for (const locationRecord of locationRecords) {
                   await locationManagementService.assignContainer({
@@ -736,20 +800,25 @@ useEffect(() => {
                   });
                   console.log(`✓ Assigned to physical location ${locationRecord.location_id}`);
                 }
-                
+
                 console.log(`✓ Virtual location ${locationData.assignedLocation} successfully mapped to both physical locations`);
               } else {
                 const occupiedLocations = locationRecords.filter(loc => loc.is_occupied).map(loc => loc.location_id);
                 console.warn(`❌ Cannot assign 40ft container - some physical locations are occupied: ${occupiedLocations.join(', ')}`);
+                throw new Error(`Les emplacements physiques ${occupiedLocations.join(', ')} sont déjà occupés. Impossible d'assigner un conteneur 40ft à ${locationData.assignedLocation}.`);
               }
             } else {
+              const errorMsg = `Les emplacements physiques ${physicalLocation1} et ${physicalLocation2} n'existent pas dans la base de données. Veuillez vérifier que les stacks S${String(physicalStack1).padStart(2, '0')} et S${String(physicalStack2).padStart(2, '0')} sont correctement configurés avec des locations générées.`;
               console.warn(`❌ Could not find both physical locations for virtual ${locationData.assignedLocation}`);
+              console.warn(`   Expected: ${physicalLocation1} and ${physicalLocation2}`);
+              console.warn(`   Found: ${locationRecords?.length || 0} location(s)`);
+              throw new Error(errorMsg);
             }
           } else if (isVirtualStack && operation.containerSize === '20ft') {
             // For 20ft containers on virtual stacks, use just one physical location
             const physicalStack1 = stackNum - 1;
             const physicalLocation1 = `S${String(physicalStack1).padStart(2, '0')}R${row}H${tier}`;
-            
+
             console.log(`🔍 Checking physical location for 20ft: ${physicalLocation1}`);
 
             const { data: locationRecord, error: locationFindError } = await supabase
@@ -767,8 +836,12 @@ useEffect(() => {
                 clientPoolId: undefined
               });
               console.log(`✓ 20ft container assigned to physical location ${physicalLocation1}`);
+            } else if (locationRecord?.is_occupied) {
+              console.warn(`❌ Physical location ${physicalLocation1} is already occupied`);
+              throw new Error(`L'emplacement physique ${physicalLocation1} est déjà occupé. Impossible d'assigner le conteneur 20ft.`);
             } else {
-              console.warn(`❌ Physical location ${physicalLocation1} not available`);
+              console.warn(`❌ Physical location ${physicalLocation1} not found in locations table`);
+              throw new Error(`L'emplacement physique ${physicalLocation1} n'existe pas dans la base de données. Veuillez vérifier que le stack S${String(physicalStack1).padStart(2, '0')} est correctement configuré.`);
             }
           } else {
             console.log(`📍 Physical stack detected, using direct mapping`);
@@ -784,6 +857,7 @@ useEffect(() => {
 
             if (locationFindError) {
               console.error('Error finding location:', locationFindError);
+              throw new Error(`Erreur lors de la recherche de l'emplacement ${locationData.assignedLocation}: ${locationFindError.message}`);
             } else if (locationRecord) {
               await locationManagementService.assignContainer({
                 locationId: locationRecord.id,
@@ -794,6 +868,7 @@ useEffect(() => {
               console.log(`✓ Physical location ${locationData.assignedLocation} marked as occupied`);
             } else {
               console.warn(`Physical location ${locationData.assignedLocation} not found in locations table`);
+              throw new Error(`L'emplacement ${locationData.assignedLocation} n'existe pas dans la base de données. Veuillez vérifier que le stack est correctement configuré avec des locations générées.`);
             }
           }
         }
@@ -802,95 +877,79 @@ useEffect(() => {
         // Don't fail the entire operation if location update fails
       }
 
-      // 5. Process EDI transmission conditionally using new SFTP integration
+      // 5. Transmission EDI GATE IN (seulement si le client a l'EDI activé)
       let ediStatus = 'not_attempted';
+      // edi_transmitted DB value: null = not attempted/not configured, false = failed, true = sent
+      let ediTransmittedDbValue: boolean | null = null;
+      try {
+        // Vérifier si le client a l'EDI activé
+        const { data: ediStatusData, error: ediStatusError } = await supabase
+          .rpc('get_client_edi_status', {
+            p_client_code: operation.clientCode,
+            p_client_name: operation.clientName,
+            p_operation: 'gate_in'
+          })
+          .single();
 
-      // EDI seulement si pas de dommages (ediShouldTransmit = true)
-      if (locationData.ediShouldTransmit !== false) {
-        try {
-          // Import SFTP integration service
-          const { sftpIntegrationService } = await import('../../services/edi/sftpIntegrationService');
-
-          // Prepare Gate In data for SFTP transmission
-          const gateInData = {
-            containerNumber: operation.containerNumber,
-            containerSize: operation.containerSize,
-            containerType: operation.containerType || 'dry',
-            clientCode: operation.clientCode,
-            clientName: operation.clientName,
-            transportCompany: operation.transportCompany || 'Unknown',
-            truckNumber: operation.truckNumber || 'Unknown',
-            arrivalDate: operation.truckArrivalDate || new Date().toISOString().split('T')[0],
-            arrivalTime: operation.truckArrivalTime || new Date().toTimeString().slice(0, 5),
-            assignedLocation: locationData.assignedLocation,
-            yardId: currentYard?.id || 'unknown',
-            operatorName: user?.name || 'System',
-            operatorId: user?.id || 'system',
-            damageReported: locationData.damageAssessment?.hasDamage || false,
-            damageType: locationData.damageAssessment?.damageType,
-            damageDescription: locationData.damageAssessment?.damageDescription,
-            damageAssessedBy: user?.name || 'System',
-            damageAssessedAt: new Date().toISOString(),
-            equipmentReference: operation.equipmentReference
-          };
-
-          // Process Gate In with automatic SFTP transmission
-          const sftpResult = await sftpIntegrationService.processGateInWithSFTP(gateInData);
-
-          if (sftpResult.transmitted) {
-            // Update gate_in_operation with EDI transmission info
-            await supabase
-              .from('gate_in_operations')
-              .update({
-                edi_transmitted: true,
-                edi_transmission_date: new Date().toISOString(),
-                edi_error_message: null
-              })
-              .eq('id', operation.id);
-            ediStatus = 'transmitted';
-          } else if (sftpResult.error) {
-            throw new Error(sftpResult.error);
-          } else {
-            // EDI not enabled for this client
-            ediStatus = 'not_enabled';
-          }
-        } catch (ediError) {
-          // EDI transmission failed, but don't fail the entire operation
-          console.error('EDI SFTP transmission failed:', ediError);
-
-          // Update gate_in_operation to indicate EDI failure
-          await supabase
-            .from('gate_in_operations')
-            .update({
-              edi_transmitted: false,
-              edi_error_message: ediError instanceof Error ? ediError.message : 'EDI SFTP transmission failed'
-            })
-            .eq('id', operation.id);
-          ediStatus = 'failed';
+        if (ediStatusError) {
+          logger.warn(`Impossible de vérifier le statut EDI du client ${operation.clientCode}`, 'GateIn', ediStatusError);
         }
-      } else {
-        // Conteneur endommagé - EDI en PENDING
+
+        const typedEdiStatusData = ediStatusData as { edi_enabled?: boolean; gate_in_enabled?: boolean } | null;
+        const hasEdiEnabled = typedEdiStatusData?.edi_enabled && typedEdiStatusData?.gate_in_enabled;
+
+        if (hasEdiEnabled) {
+          // Le client a l'EDI activé, procéder à la transmission
+          logger.info(`EDI activé pour le client ${operation.clientCode}, transmission en cours...`, 'GateIn');
+          const ediResult = await ediTransmissionService.transmitGateInEDI(operation.id);
+          if (ediResult.success) {
+            ediStatus = ediResult.error?.includes('déjà transmis') ? 'already_sent' : 'transmitted';
+            ediTransmittedDbValue = true;
+          } else {
+            ediStatus = 'failed';
+            ediTransmittedDbValue = false;
+            logger.error(`EDI non transmis: ${ediResult.error}`, 'GateIn');
+          }
+        } else {
+          // Le client n'a pas l'EDI activé, ignorer la transmission
+          logger.info(`EDI non activé pour le client ${operation.clientCode}, transmission ignorée`, 'GateIn');
+          ediStatus = 'not_configured';
+          ediTransmittedDbValue = null; // Explicit: not configured = null (shows "No EDI")
+        }
+
+        // Persist EDI transmission result to gate_in_operations table
+        // This ensures the status survives page refreshes
         await supabase
           .from('gate_in_operations')
-          .update({
-            edi_transmitted: false,
-            edi_error_message: 'EDI en attente - Conteneur endommagé nécessite traitement manuel'
-          })
+          .update({ edi_transmitted: ediTransmittedDbValue })
           .eq('id', operation.id);
-        ediStatus = 'pending_manual';
+
+      } catch (ediError) {
+        // EDI transmission failed, but don't fail the entire operation
+        logger.error('EDI: Erreur inattendue', 'GateIn', ediError);
+        ediStatus = 'failed';
+        ediTransmittedDbValue = false;
+        // Still persist the failure status in DB
+        try {
+          await supabase
+            .from('gate_in_operations')
+            .update({ edi_transmitted: false })
+            .eq('id', operation.id);
+        } catch { /* ignore secondary failure */ }
       }
 
       // 6. Update local state
       setGateInOperations(prev => prev.map(op =>
         op.id === operation.id
           ? {
-              ...op,
-              containerId: finalContainers?.[0]?.id,
-              assignedLocation: locationData.assignedLocation,
-              completedAt: new Date(),
-              status: 'completed',
-              ediTransmitted: ediStatus === 'transmitted',
-            }
+            ...op,
+            containerId: finalContainers?.[0]?.id,
+            assignedLocation: locationData.assignedLocation,
+            completedAt: new Date(),
+            status: 'completed',
+            // null = no EDI configured, false = failed, true = sent
+            ediTransmitted: ediTransmittedDbValue,
+          }
           : op
       ));
 
@@ -908,34 +967,70 @@ useEffect(() => {
       }
 
       // 8. Show success message with EDI status
-      const damageStatus = locationData.damageAssessment?.hasDamage
-        ? 'assigné en zone tampon (endommagé)'
-        : 'en bon état';
+      const damageStatus = locationData.isBufferZone
+        ? 'Zone Tampon'
+        : 'Emplacement physique';
 
       let ediStatusMessage = '';
       switch (ediStatus) {
         case 'transmitted':
-          ediStatusMessage = '✓ EDI transmis automatiquement via SFTP';
+          ediStatusMessage = '✓ EDI GATE IN transmis';
+          break;
+        case 'already_sent':
+          ediStatusMessage = '• EDI déjà transmis (ignoré)';
           break;
         case 'failed':
-          ediStatusMessage = '⚠ Transmission EDI échouée';
-          break;
-        case 'pending_manual':
-          ediStatusMessage = '⏳ EDI en attente (traitement manuel requis)';
-          break;
-        case 'not_enabled':
-          ediStatusMessage = '• EDI non activé pour ce client';
+          ediStatusMessage = '⚠ Transmission EDI échouée (vérifier logs)';
           break;
         default:
           ediStatusMessage = '• EDI non tenté';
       }
 
-      toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné avec succès à ${locationData.assignedLocation} (${damageStatus}) - ${ediStatusMessage}`);
+      toast.success(`Conteneur ${operation.containerNumber}${operation.containerQuantity === 2 ? ` et ${operation.secondContainerNumber}` : ''} assigné → ${damageStatus}: ${locationData.assignedLocation} — ${ediStatusMessage}`);
       setActiveView('overview');
     } catch (error) {
+      // ROLLBACK: Annuler toutes les modifications en cas d'erreur
+      console.error('❌ Erreur détectée, rollback en cours...', error);
+
+      try {
+        // Rollback 1: Supprimer les conteneurs créés
+        if (createdContainerIds.length > 0) {
+          console.log(`🔄 Rollback: Suppression de ${createdContainerIds.length} conteneur(s) créé(s)...`);
+          await supabase
+            .from('containers')
+            .delete()
+            .in('id', createdContainerIds);
+          console.log('✓ Conteneurs créés supprimés');
+        }
+
+        // Rollback 2: Restaurer l'état original des conteneurs mis à jour
+        if (updatedContainerIds.length > 0) {
+          console.log(`🔄 Rollback: Restauration de ${updatedContainerIds.length} conteneur(s) mis à jour...`);
+          for (const containerId of updatedContainerIds) {
+            const originalState = originalContainerStates.get(containerId);
+            if (originalState) {
+              await supabase
+                .from('containers')
+                .update({
+                  status: originalState.status,
+                  location: originalState.location,
+                  updated_at: originalState.updated_at
+                })
+                .eq('id', containerId);
+            }
+          }
+          console.log('✓ Conteneurs mis à jour restaurés');
+        }
+
+        console.log('✅ Rollback terminé avec succès');
+      } catch (rollbackError) {
+        console.error('❌ Erreur lors du rollback:', rollbackError);
+        logger.error('Erreur critique: rollback échoué', 'GateIn.handleLocationValidation', rollbackError);
+      }
+
       handleError(error, 'GateIn.handleLocationValidation');
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(`Error completing operation: ${errorMessage}`);
+      toast.error(`Erreur lors de l'opération: ${errorMessage}. Les modifications ont été annulées.`);
     } finally {
       setIsProcessing(false);
     }
@@ -952,9 +1047,9 @@ useEffect(() => {
       (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesFilter = selectedFilter === 'all' ||
-                         op.status === selectedFilter ||
-                         (selectedFilter === 'alimentaire' && op.classification === 'alimentaire') ||
-                         (selectedFilter === 'divers' && op.classification === 'divers');
+      op.status === selectedFilter ||
+      (selectedFilter === 'alimentaire' && op.classification === 'alimentaire') ||
+      (selectedFilter === 'divers' && op.classification === 'divers');
 
     return matchesSearch && matchesFilter;
   });
@@ -1095,8 +1190,8 @@ useEffect(() => {
 
   // Show skeletons while initial data is loading
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:bg-transparent">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
@@ -1113,7 +1208,7 @@ useEffect(() => {
           <CardSkeleton />
         </div>
 
-        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden p-4">
           <TableSkeleton />
         </div>
       </div>
@@ -1122,9 +1217,9 @@ useEffect(() => {
 
   // Main Overview
   return (
-    <div className="min-h-screen bg-gray-50 lg:bg-transparent">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:bg-transparent">
       {/* Unified Mobile-First Header */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
@@ -1158,53 +1253,53 @@ useEffect(() => {
         {/* Mobile: 2x2 Grid | Tablet+: 5x1 Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
           {/* Today's Gate Ins */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
+              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 dark:bg-green-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{todayGateIns.length}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.today')}</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{todayGateIns.length}</p>
+                <p className="text-xs font-medium text-green-700 dark:text-green-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.today')}</p>
               </div>
             </div>
           </div>
 
           {/* Pending Operations */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-orange-500 lg:bg-yellow-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-yellow-600" />
+              <div className="p-3 lg:p-2 bg-orange-500 lg:bg-yellow-100 dark:bg-orange-500 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-yellow-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.pending')}</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{pendingOperations.length}</p>
+                <p className="text-xs font-medium text-orange-700 dark:text-orange-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.pending')}</p>
               </div>
             </div>
           </div>
 
           {/* Containers Processed */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-blue-500 lg:bg-blue-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <ContainerIcon className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-blue-600" />
+              <div className="p-3 lg:p-2 bg-blue-500 lg:bg-blue-100 dark:bg-blue-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <ContainerIcon className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-blue-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{completedOperations.length}</p>
-                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">{t('gate.in.stats.processed')}</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{completedOperations.length}</p>
+                <p className="text-xs font-medium text-blue-700 dark:text-blue-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.processed')}</p>
               </div>
             </div>
           </div>
 
           {/* Alimentaire Containers */}
-          <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-100 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
             <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
+              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 dark:bg-green-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
+                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{alimentaireContainersCount}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">Alimentaire Containers</p>
+                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{alimentaireContainersCount}</p>
+                <p className="text-xs font-medium text-green-700 dark:text-green-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">Alimentaire Containers</p>
               </div>
             </div>
           </div>
@@ -1216,22 +1311,22 @@ useEffect(() => {
         </div>
 
         {/* Unified Search and Filter */}
-        <div className="bg-white rounded-2xl lg:rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
             {/* Search Bar */}
             <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
-              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 lg:h-4 lg:w-4" />
+              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
                 placeholder="Search operations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 lg:bg-white focus:bg-white transition-colors"
+                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 dark:border-gray-600 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 lg:bg-white dark:lg:bg-gray-800 focus:bg-white dark:focus:bg-gray-700 transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
                 >
                   <X className="h-5 w-5 lg:h-4 lg:w-4" />
                 </button>
@@ -1244,11 +1339,10 @@ useEffect(() => {
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
-                    selectedFilter === filter
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
-                  }`}
+                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${selectedFilter === filter
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95'
+                    }`}
                 >
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}
                 </button>
@@ -1259,7 +1353,7 @@ useEffect(() => {
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-sm dark:text-white"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -1268,7 +1362,7 @@ useEffect(() => {
                 <option value="divers">Divers</option>
               </select>
               {searchTerm && (
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg font-medium">
+                <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg font-medium">
                   {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
                 </span>
               )}

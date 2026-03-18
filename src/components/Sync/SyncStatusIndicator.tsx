@@ -27,7 +27,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     };
 
     onSyncStatusChange(handleSyncStatusChange);
-    
+
     // Update initial status
     setSyncStatus(getSyncStatus());
 
@@ -39,7 +39,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
   // Handle manual refresh
   const handleRefresh = async () => {
     if (isRefreshing) return;
-    
+
     setIsRefreshing(true);
     try {
       if (onRefresh) {
@@ -83,60 +83,52 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     if (syncStatus.isHealthy) {
       return {
         icon: CheckCircle,
-        color: 'text-green-400',
-        bgColor: 'bg-green-900/20',
-        borderColor: 'border-green-700/30',
-        message: 'Permissions synchronized'
+        color: 'text-emerald-500',
+        bgColor: 'bg-emerald-50',
+        borderColor: 'border-emerald-200',
+        message: 'System Synced'
       };
     } else if (syncStatus.inconsistencyCount > 0) {
       return {
         icon: AlertTriangle,
-        color: 'text-yellow-400',
-        bgColor: 'bg-yellow-900/20',
-        borderColor: 'border-yellow-700/30',
-        message: 'Permission inconsistencies detected'
+        color: 'text-amber-500',
+        bgColor: 'bg-amber-50',
+        borderColor: 'border-amber-200',
+        message: 'Sync Warnings'
       };
     } else {
       return {
         icon: AlertCircle,
-        color: 'text-red-400',
-        bgColor: 'bg-red-900/20',
-        borderColor: 'border-red-700/30',
-        message: 'Sync issues detected'
+        color: 'text-rose-500',
+        bgColor: 'bg-rose-50',
+        borderColor: 'border-rose-200',
+        message: 'Sync Error'
       };
     }
   };
 
   const statusDisplay = getStatusDisplay();
-  const StatusIcon = statusDisplay.icon;
 
   return (
-    <div className={`flex items-center ${config.container} ${className}`}>
-      {/* Status Icon */}
-      <StatusIcon className={`${config.icon} ${statusDisplay.color}`} />
-      
-      {/* Status Text */}
-      <span className={`${config.text} text-slate-300`}>
-        {statusDisplay.message}
-      </span>
-      
-      {/* Refresh Button */}
-      <button
-        onClick={handleRefresh}
-        disabled={isRefreshing}
-        className={`${config.button} rounded transition-colors ${
-          isRefreshing 
-            ? 'text-slate-500 cursor-not-allowed' 
-            : 'text-slate-400 hover:text-white hover:bg-slate-700'
-        }`}
-        title="Refresh permissions"
-      >
-        <RefreshCw className={`${config.icon} ${isRefreshing ? 'animate-spin' : ''}`} />
-      </button>
+    <div className={`flex flex-col ${className}`}>
+      <div className="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${syncStatus.isHealthy ? 'bg-olam-green animate-pulse' : syncStatus.inconsistencyCount > 0 ? 'bg-amber-500' : 'bg-rose-500'}`}></div>
+          <span className="text-[11px] font-gilroy-bold text-slate-600 uppercase tracking-tight">{statusDisplay.message}</span>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="text-slate-400 hover:text-accent-teal transition-colors"
+          title="Refresh permissions"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
       {/* Detailed Status (when enabled) */}
       {showDetails && !syncStatus.isHealthy && (
-        <div className={`ml-4 p-2 ${statusDisplay.bgColor} border ${statusDisplay.borderColor} rounded ${config.text}`}>
+        <div className={`mt-2 p-2 ${statusDisplay.bgColor} border ${statusDisplay.borderColor} rounded ${config.text}`}>
           <div className={statusDisplay.color}>
             {syncStatus.inconsistencyCount > 0 && (
               <div>• {syncStatus.inconsistencyCount} permission inconsistencies</div>

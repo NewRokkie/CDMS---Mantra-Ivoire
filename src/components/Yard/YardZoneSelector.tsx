@@ -19,7 +19,7 @@ export const YardZoneSelector: React.FC<YardZoneSelectorProps> = ({
     
     if (zone !== 'all') {
       zoneContainers = containers.filter(container => {
-        const stackMatch = container.location.match(/Stack S(\d+)/);
+        const stackMatch = container.location?.match(/Stack S(\d+)/);
         if (stackMatch) {
           const stackNumber = parseInt(stackMatch[1]);
           switch (zone) {
@@ -36,7 +36,7 @@ export const YardZoneSelector: React.FC<YardZoneSelectorProps> = ({
     return {
       total: zoneContainers.length,
       inDepot: zoneContainers.filter(c => c.status === 'in_depot').length,
-      maintenance: zoneContainers.filter(c => c.status === 'maintenance').length,
+      maintenance: zoneContainers.filter(c => c.status === 'in_buffer').length,
       damaged: zoneContainers.filter(c => c.damage && c.damage.length > 0).length
     };
   };

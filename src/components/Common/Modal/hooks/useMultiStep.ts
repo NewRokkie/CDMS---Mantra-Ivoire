@@ -15,7 +15,7 @@ export const useMultiStep = (
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === totalSteps;
 
-  const validateStep = useCallback((step: number, data?: any): boolean => {
+  const validateStep = useCallback((step: number, data?: unknown): boolean => {
     const stepConfig = steps[step - 1];
     if (!stepConfig) return false;
 
@@ -40,7 +40,7 @@ export const useMultiStep = (
     return true;
   }, [totalSteps, onStepChange]);
 
-  const nextStep = useCallback((data?: any) => {
+  const nextStep = useCallback((data?: unknown) => {
     if (isLastStep) return false;
 
     // Validate current step before proceeding
@@ -93,15 +93,15 @@ export const useMultiStep = (
     return true;
   }, [currentStep, isStepCompleted, isStepValid]);
 
-  const getStepLabels = useCallback((): string[] => {
+  const getStepLabels = useCallback(() => {
     return steps.map(step => step.label);
   }, [steps]);
 
-  const getProgressPercentage = useCallback(): number => {
+  const getProgressPercentage = useCallback(() => {
     return ((currentStep - 1) / (totalSteps - 1)) * 100;
   }, [currentStep, totalSteps]);
 
-  const getAllStepsValid = useCallback((data?: any): boolean => {
+  const getAllStepsValid = useCallback((data?: unknown): boolean => {
     return steps.every((_, index) => {
       const stepNumber = index + 1;
       return validateStep(stepNumber, data);

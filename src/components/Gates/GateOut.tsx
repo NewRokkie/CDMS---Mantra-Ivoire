@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Menu, X, Clock, Plus, Truck, Package, Search, Filter, CheckCircle, Download } from 'lucide-react';
-import { useLanguage } from '../../hooks/useLanguage';
+import { AlertTriangle, X, Clock, Plus, Truck, Package, Search, CheckCircle, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
 import { gateService, bookingReferenceService, containerService } from '../../services/api';
@@ -34,7 +34,7 @@ interface GateOutFormData {
 }
 
 export const GateOut: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
   const toast = useToast();
@@ -93,7 +93,7 @@ export const GateOut: React.FC = () => {
 
     const unsubscribeGateOut = realtimeService.subscribeToGateOutOperations(
       currentYard.id,
-      async (payload) => {
+      async () => {
         try {
           const operations = await gateService.getGateOutOperations();
           setGateOutOperations(Array.isArray(operations) ? operations : []);
@@ -105,7 +105,7 @@ export const GateOut: React.FC = () => {
     );
 
     const unsubscribeBookingReferences = realtimeService.subscribeToBookingReferences(
-      async (payload) => {
+      async () => {
         try {
           const orders = await bookingReferenceService.getAll();
           setReleaseOrders(Array.isArray(orders) ? orders : []);
@@ -117,7 +117,7 @@ export const GateOut: React.FC = () => {
     );
 
     const unsubscribeContainers = realtimeService.subscribeToContainers(
-      async (payload) => {
+      async () => {
         try {
           const containers = await containerService.getAll();
           setContainers(Array.isArray(containers) ? containers : []);
@@ -338,6 +338,15 @@ export const GateOut: React.FC = () => {
 
     setIsProcessing(true);
     setError('');
+    
+    // Variables pour le rollback
+    let updatedContainerIds: string[] = [];
+    let originalContainerStates: Map<string, any> = new Map();
+    let operationUpdated = false;
+    let bookingUpdated = false;
+    let originalOperationState: any = null;
+    let originalBookingState: any = null;
+    
     try {
       // Find container IDs from container numbers
       const selectedContainers = containers.filter(c => containerNumbers.includes(c.number));
@@ -346,6 +355,38 @@ export const GateOut: React.FC = () => {
       if (containerIds.length !== containerNumbers.length) {
         setError('Some containers were not found in the system');
         return;
+      }
+
+      // Sauvegarder l'état original de l'opération pour rollback
+      // Use the operation object we already have instead of fetching again
+      originalOperationState = {
+        processed_containers: operation.processedContainers,
+        remaining_containers: operation.remainingContainers,
+        processed_container_ids: (operation as any).processedContainerIds || [],
+        status: operation.status,
+        completed_at: (operation as any).completedAt
+      };
+
+      // Sauvegarder l'état original du booking pour rollback
+      const currentBooking = await bookingReferenceService.getById(operation.bookingReferenceId);
+      if (currentBooking) {
+        originalBookingState = {
+          remainingContainers: currentBooking.remainingContainers,
+          status: currentBooking.status,
+          completedAt: currentBooking.completedAt
+        };
+      }
+
+      // Sauvegarder l'état original des conteneurs pour rollback
+      for (const container of selectedContainers) {
+        originalContainerStates.set(container.id, {
+          status: container.status,
+          location: container.location,
+          gateOutDate: container.gateOutDate,
+          gateOutOperationId: container.gateOutOperationId,
+          updatedAt: container.updatedAt
+        });
+        updatedContainerIds.push(container.id);
       }
 
       // Update operation in database
@@ -359,18 +400,20 @@ export const GateOut: React.FC = () => {
         setError(result.error || 'Failed to process containers');
         return;
       }
+      
+      operationUpdated = true;
+      bookingUpdated = true; // Booking is updated inside updateGateOutOperation
 
       // Process EDI CODECO transmission for Gate Out
       try {
         // Import Gate Out CODECO service
         const { gateOutCodecoService } = await import('../../services/edi/gateOutCodecoService');
 
-        // Find the booking reference using bookingReferenceId if available, otherwise fall back to bookingNumber
-        const booking = operation.bookingNumber
-          ? releaseOrders.find(order => order.id === operation.bookingNumber)
-          : operation.bookingNumber
-            ? releaseOrders.find(order => order.bookingNumber === operation.bookingNumber)
-            : null;
+        // Find the booking reference using bookingReferenceId
+        const booking = releaseOrders.find(order => 
+          order.id === (operation as any).bookingReferenceId || 
+          order.bookingNumber === operation.bookingNumber
+        );
 
         if (booking && selectedContainers.length > 0) {
           // Create Gate Out CODECO data with all required fields
@@ -408,6 +451,12 @@ export const GateOut: React.FC = () => {
               bookingNumber: booking.bookingNumber
             });
           }
+        } else {
+          logger.warn('Booking not found for EDI transmission', 'GateOut', {
+            bookingReferenceId: (operation as any).bookingReferenceId,
+            bookingNumber: operation.bookingNumber,
+            availableBookings: releaseOrders.length
+          });
         }
       } catch (ediError) {
         // EDI transmission failed, but don't fail the entire Gate Out operation
@@ -435,7 +484,106 @@ export const GateOut: React.FC = () => {
 
       setSuccessMessage(statusMessage);
     } catch (error) {
-      setError(`Error completing operation: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('❌ [GateOut.handleCompleteOperation] Error during operation:', error);
+      
+      // ROLLBACK: Restaurer l'état original de la base de données
+      const rollbackErrors: string[] = [];
+      
+      try {
+        // 1. Restaurer les conteneurs à leur état original
+        if (updatedContainerIds.length > 0) {
+          console.log('🔄 [GateOut.Rollback] Restoring containers to original state...');
+          
+          for (const containerId of updatedContainerIds) {
+            const originalState = originalContainerStates.get(containerId);
+            if (originalState) {
+              try {
+                await containerService.update(containerId, {
+                  status: originalState.status,
+                  location: originalState.location,
+                  gateOutDate: originalState.gateOutDate,
+                  gateOutOperationId: originalState.gateOutOperationId,
+                  updatedBy: user?.name || 'System (Rollback)'
+                });
+                console.log(`✅ [GateOut.Rollback] Container ${containerId} restored`);
+              } catch (containerError) {
+                const errorMsg = `Failed to restore container ${containerId}`;
+                console.error(`❌ [GateOut.Rollback] ${errorMsg}:`, containerError);
+                rollbackErrors.push(errorMsg);
+              }
+            }
+          }
+        }
+
+        // 2. Restaurer l'opération Gate Out à son état original
+        if (operationUpdated && originalOperationState) {
+          console.log('🔄 [GateOut.Rollback] Restoring gate out operation...');
+          
+          try {
+            // Import supabase dynamically to avoid module resolution issues
+            const { supabase } = await import('../../services/api/supabaseClient');
+            
+            const { error: opRollbackError } = await supabase
+              .from('gate_out_operations')
+              .update({
+                processed_containers: originalOperationState.processed_containers,
+                remaining_containers: originalOperationState.remaining_containers,
+                processed_container_ids: originalOperationState.processed_container_ids,
+                status: originalOperationState.status,
+                completed_at: originalOperationState.completed_at
+              })
+              .eq('id', operation.id);
+
+            if (opRollbackError) throw opRollbackError;
+            console.log('✅ [GateOut.Rollback] Gate out operation restored');
+          } catch (opError) {
+            const errorMsg = 'Failed to restore gate out operation';
+            console.error(`❌ [GateOut.Rollback] ${errorMsg}:`, opError);
+            rollbackErrors.push(errorMsg);
+          }
+        }
+
+        // 3. Restaurer le booking à son état original
+        if (bookingUpdated && originalBookingState) {
+          console.log('🔄 [GateOut.Rollback] Restoring booking reference...');
+          
+          try {
+            await bookingReferenceService.update(operation.bookingReferenceId, {
+              remainingContainers: originalBookingState.remainingContainers,
+              status: originalBookingState.status,
+              completedAt: originalBookingState.completedAt
+            });
+            console.log('✅ [GateOut.Rollback] Booking reference restored');
+          } catch (bookingError) {
+            const errorMsg = 'Failed to restore booking reference';
+            console.error(`❌ [GateOut.Rollback] ${errorMsg}:`, bookingError);
+            rollbackErrors.push(errorMsg);
+          }
+        }
+
+        // Message de rollback
+        if (rollbackErrors.length > 0) {
+          console.error('⚠️ [GateOut.Rollback] Rollback completed with errors:', rollbackErrors);
+          setError(
+            `Error completing operation: ${error instanceof Error ? error.message : String(error)}. ` +
+            `Rollback attempted but encountered issues: ${rollbackErrors.join(', ')}. ` +
+            `Please verify data integrity.`
+          );
+        } else {
+          console.log('✅ [GateOut.Rollback] All modifications successfully cancelled');
+          setError(
+            `Error completing operation: ${error instanceof Error ? error.message : String(error)}. ` +
+            `All modifications have been cancelled.`
+          );
+        }
+      } catch (rollbackError) {
+        console.error('❌ [GateOut.Rollback] Critical rollback error:', rollbackError);
+        setError(
+          `Error completing operation: ${error instanceof Error ? error.message : String(error)}. ` +
+          `Critical error during rollback: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}. ` +
+          `Database may be in an inconsistent state. Please contact support.`
+        );
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -652,10 +800,7 @@ export const GateOut: React.FC = () => {
 
         {/* Unified Operations List - Mobile First */}
         <MobileGateOutOperationsTable
-          operations={filteredOperations}
           searchTerm={searchTerm}
-          selectedFilter={selectedFilter}
-          onOperationClick={handlePendingOperationClick}
         />
       </div>
 

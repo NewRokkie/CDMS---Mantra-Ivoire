@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Truck, CheckCircle, AlertTriangle, FileText, Calculator } from 'lucide-react';
 import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
 import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { GateOutModalProps, GateOutFormData } from './types';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { gateService } from '../../services/api';
@@ -15,7 +15,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   isProcessing
 }) => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 2;
 
@@ -318,19 +318,19 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">{t('nav.bookingReference')}:</span>
-                  <div className="font-medium">{selectedBooking?.bookingNumber || 'Not selected'}</div>
+                  <div className="font-medium">{selectedBooking?.bookingNumber || t('containers.notSelected')}</div>
                 </div>
                 <div>
                   <span className="text-gray-600">{t('gate.out.form.driver')}:</span>
-                  <div className="font-medium">{formData.driverName || 'Not specified'}</div>
+                  <div className="font-medium">{formData.driverName || t('containers.notSelected')}</div>
                 </div>
                 <div>
                   <span className="text-gray-600">{t('gate.out.form.vehicle')}:</span>
-                  <div className="font-medium">{formData.vehicleNumber || 'Not specified'}</div>
+                  <div className="font-medium">{formData.vehicleNumber || t('containers.notSelected')}</div>
                 </div>
                 <div className="md:col-span-2">
                   <span className="text-gray-600">{t('gate.out.form.company')}:</span>
-                  <div className="font-medium">{formData.transportCompany || 'Not specified'}</div>
+                  <div className="font-medium">{formData.transportCompany || t('containers.notSelected')}</div>
                 </div>
               </div>
             </div>

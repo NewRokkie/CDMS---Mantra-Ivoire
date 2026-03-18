@@ -467,6 +467,7 @@ export const useGlobalStore = create<GlobalStore>()(
           data.containerIds.forEach(id => {
             get().updateContainer(id, {
               status: 'out_depot',
+              location: null, // Clear location when container leaves depot
               gateOutDate: new Date(),
               updatedBy: data.operatorName
             });

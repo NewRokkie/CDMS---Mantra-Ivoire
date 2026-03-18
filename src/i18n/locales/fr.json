@@ -1,0 +1,1126 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "containers": "Conteneurs",
+    "gateIn": "Entrée Portail",
+    "gateOut": "Sortie Portail",
+    "bookingReference": "Référence de Réservation",
+    "releases": "Ordres de sortie",
+    "edi": "Gestion EDI",
+    "yard": "Gestion de Cour",
+    "reports": "Rapports",
+    "configurations": "Configurations",
+    "depotManagement": "Gestion des Dépôts",
+    "stackManagement": "Gestion des Piles",
+    "clientPools": "Pools Clients",
+    "clientMasterData": "Données Maîtres Clients",
+    "userManagement": "Gestion des Utilisateurs",
+    "moduleAccess": "Accès aux Modules",
+    "logout": "Se déconnecter"
+  },
+  "dashboard": {
+    "title": "Gestion de Dépôt de Conteneurs",
+    "welcome": "Bon retour",
+    "stats": {
+      "containers": "Total Conteneurs",
+      "in": "Conteneurs Entrés",
+      "out": "Conteneurs Sortis",
+      "pending": "Ordres en Attente",
+      "movements": "Mouvements du Jour",
+      "revenue": "Revenus Mensuels",
+      "occupancy": "Taux d'Occupation",
+      "damaged": "Conteneurs Endommagés",
+      "maintenance": "En Maintenance",
+      "cleaning": "En Nettoyage",
+      "vsLastMonth": "vs mois dernier"
+    },
+    "multiDepot": {
+      "global": "Performance Globale",
+      "current": "Dépôt Actuel",
+      "allDepots": "Tous les Dépôts"
+    },
+    "clientNotice": "Vous consultez les données de votre entreprise uniquement"
+  },
+  "containers": {
+    "title": "Gestion des Conteneurs",
+    "gate_in": "Entrée",
+    "gate_out": "Sortie",
+    "search": "Rechercher des conteneurs...",
+    "searchYour": "Rechercher vos conteneurs...",
+    "status": {
+      "inDepot": "Dans le Dépôt",
+      "outDepot": "Hors Dépôt",
+      "inService": "En Service",
+      "maintenance": "Maintenance",
+      "cleaning": "Nettoyage"
+    },
+    "location": {
+      "outDepot": "Hors dépôt",
+      "pending": "En attente"
+    },
+    "type": {
+      "dry": "Conteneur Sec",
+      "reefer": "Conteneur Frigorifique",
+      "tank": "Conteneur Citerne",
+      "flatRack": "Plate-forme",
+      "openTop": "Toit Ouvert"
+    },
+    "size": {
+      "20ft": "20 Pieds",
+      "40ft": "40 Pieds"
+    },
+    "viewDetails": "Voir Détails",
+    "editContainer": "Modifier Conteneur",
+    "auditLog": "Journal d'Audit",
+    "damage": {
+      "reports": "Rapports de Dommages",
+      "none": "Aucun rapport de dommage enregistré",
+      "add": "Ajouter Rapport de Dommage",
+      "describe": "Décrire les dommages..."
+    },
+    "export": {
+      "csv": "Exporter CSV",
+      "excel": "Exporter Excel",
+      "html": "Exporter HTML",
+      "button": "Exporter"
+    },
+    "list": {
+      "noContainers": "Aucun conteneur trouvé",
+      "noContainersClient": "Aucun conteneur trouvé pour votre entreprise. Contactez le dépôt si vous vous attendez à voir des conteneurs ici."
+    },
+    "table": {
+      "gateIn": "Entrée",
+      "gateOut": "Sortie",
+      "fullEmpty": "Plein / Vide",
+      "damagesReported": "dommage(s) signalé(s)",
+      "container": "Conteneur"
+    },
+    "filter": {
+      "from": "Du",
+      "to": "Au",
+      "filterByClient": "Filtrer par client...",
+      "allStatus": "Tous les statuts"
+    },
+    "stats": {
+      "yourContainers": "Vos Conteneurs",
+      "withDamage": "Endommagés"
+    },
+    "details": {
+      "title": "Détails du Conteneur",
+      "statusType": "Détails Statut & Type",
+      "yourCompany": "Votre Entreprise",
+      "days": "jours"
+    },
+    "edit": {
+      "title": "Modifier le Conteneur",
+      "steps": {
+        "basic": "Informations de Base",
+        "location": "Affectation d'Emplacement",
+        "client": "Affectation du Client",
+        "damage": "Évaluation des Dommages",
+        "review": "Réviser & Confirmer"
+      },
+      "validationErrors": "Erreurs de Validation :",
+      "validating": "Validation...",
+      "noPermission": "Vous n'avez pas la permission de modifier les conteneurs."
+    },
+    "delete": {
+      "title": "Supprimer le Conteneur",
+      "confirmMessage": "Cela marquera le conteneur comme supprimé.",
+      "success": "Conteneur supprimé avec succès !",
+      "blocked": "Impossible de supprimer ce conteneur :",
+      "actionRequired": "Action Requise :"
+    },
+    "update": {
+      "success": "Conteneur mis à jour avec succès !"
+    },
+    "notSelected": "Non sélectionné",
+    "containersSpecified": "conteneurs spécifiés"
+  },
+  "status": {
+    "full": "PLEIN",
+    "empty": "VIDE",
+    "inDepot": "Dans le Dépôt",
+    "outDepot": "Hors du Dépôt",
+    "gateIn": "Entrée",
+    "gateOut": "Sortie",
+    "pending": "En attente",
+    "inProcess": "En cours",
+    "completed": "Terminé",
+    "cancelled": "Annulé",
+    "maintenance": "Maintenance",
+    "cleaning": "Nettoyage",
+    "inService": "En service",
+    "inBuffer": "En zone tampon"
+  },
+  "bookingType": {
+    "import": "IMPORT",
+    "export": "EXPORT"
+  },
+  "transactionType": {
+    "positionnement": "Positionnement",
+    "transfertOut": "Transfert (OUT)",
+    "transfertIn": "Transfert (IN)",
+    "retourLivraison": "Retour Livraison"
+  },
+  "containerStatus": {
+    "full": "Plein",
+    "empty": "Vide",
+    "damaged": "Endommagé",
+    "underMaintenance": "En maintenance",
+    "inCleaning": "En nettoyage"
+  },
+  "gate": {
+    "in": {
+      "title": "Gestion des Entrées",
+      "new": "Nouvelle Entrée",
+      "pending": "Opérations en Attente",
+      "completed": "Opérations Terminées",
+      "subtitle": "Gestion des entrées de conteneurs",
+      "search": "Rechercher des opérations...",
+      "success": "Opération d'entrée terminée avec succès",
+      "summary": "Résumé de l'opération",
+      "stats": {
+        "today": "Entrées d'Aujourd'hui",
+        "pending": "Opérations en Attente",
+        "processed": "Conteneurs Traités",
+        "damaged": "Conteneurs Endommagés",
+        "alimentaire": "Conteneurs Alimentaires"
+      },
+      "form": {
+        "containerInfo": "Informations du Conteneur",
+        "transportInfo": "Informations de Transport",
+        "timeTracking": "Suivi du Temps",
+        "containerNumber": "Numéro de Conteneur",
+        "containerSize": "Taille du Conteneur",
+        "containerType": "Type de Conteneur",
+        "quantity": "Quantité",
+        "status": "Statut du Conteneur",
+        "damage": "Statut des Dommages",
+        "client": "Client",
+        "booking": "Référence de Réservation",
+        "driver": "Nom du Chauffeur",
+        "truck": "Numéro de Camion",
+        "transport": "Entreprise de Transport",
+        "arrivalDate": "Date d'Arrivée",
+        "arrivalTime": "Heure d'Arrivée",
+        "highCube": "Est-ce un High Cube ?",
+        "equipmentRef": "Référence Équipement",
+        "searchClient": "Rechercher un client par nom ou code...",
+        "arrival": "Heure d'Arrivée du Camion"
+      },
+      "validation": {
+        "required": "Ce champ est obligatoire",
+        "containerFormat": "Format de numéro de conteneur invalide",
+        "validFormat": "Format valide"
+      },
+      "pendingNotice": {
+        "title": "Opération en attente",
+        "desc": "Cette opération d'entrée sera créée avec le statut En attente. L'attribution de la pile et l'évaluation des dommages seront effectuées plus tard."
+      }
+    },
+    "out": {
+      "title": "Gestion des Sorties",
+      "new": "Nouvelle Sortie",
+      "pending": "Opérations en Attente",
+      "subtitle": "Gestion des sorties de conteneurs",
+      "summary": "Résumé de l'opération",
+      "stats": {
+        "today": "Sorties d'Aujourd'hui",
+        "pending": "Opérations en Attente",
+        "processed": "Conteneurs Traités",
+        "issues": "Problèmes Signalés",
+        "remaining": "Conteneurs Restants"
+      },
+      "form": {
+        "booking": "Sélection de Réservation",
+        "transport": "Informations de Transport",
+        "containers": "Numéros de Conteneurs",
+        "selectBooking": "Sélectionner Réservation",
+        "driver": "Nom du Chauffeur",
+        "vehicle": "Numéro de Véhicule",
+        "company": "Entreprise de Transport",
+        "vehicleNumberError": "Le camion {truck} a une opération en attente en cours. Veuillez terminer ou annuler l'opération existante avant de continuer.",
+        "searchBooking": "Rechercher et sélectionner une réservation...",
+        "selectedBooking": "Réservation sélectionnée",
+        "selectBookingMessage": "Veuillez sélectionner une réservation pour continuer.",
+        "yourCompany": "Votre Entreprise"
+      },
+      "completion": {
+        "submit": "Terminer la Sortie",
+        "containers": "Numéros de Conteneurs",
+        "confirm": "Confirmer le Numéro de Conteneur",
+        "gateOutTime": "Date et Heure de Sortie"
+      },
+      "truckRules": {
+        "title": "Règles de Capacité Camion",
+        "40ft": "Maximum 1 conteneur de 40 pieds par camion",
+        "20ft": "Maximum 2 conteneurs de 20 pieds par camion",
+        "mix": "Impossible de mélanger 20 pieds et 40 pieds",
+        "disabled40ft": "Désactivé (camion 40 pieds plein)"
+      },
+      "error": {
+        "containerNotFound": "Conteneur non trouvé dans la cour",
+        "invalidStatus": "Statut invalide : {status}"
+      },
+      "success": {
+        "validated": "Conteneur Validé"
+      }
+    }
+  },
+  "releases": {
+    "title": "Ordres de Sortie",
+    "booking": {
+      "title": "Gestion des Réservations"
+    },
+    "create": "Créer un Ordre",
+    "createBooking": "Créer une Réservation",
+    "pending": "En Attente de Validation",
+    "validated": "Validés",
+    "executed": "Exécutés",
+    "completed": "Terminés",
+    "cancelled": "Annulés",
+    "inProcess": "En Cours",
+    "subtitle": "Ordres de sortie et réservations de conteneurs",
+    "search": "Rechercher des réservations...",
+    "stats": {
+      "total": "Total Réservations",
+      "pending": "En Attente",
+      "validated": "Validées",
+      "completed": "Terminées"
+    },
+    "form": {
+      "bookingInfo": "Informations de Réservation",
+      "clientInfo": "Informations Client",
+      "quantities": "Quantités de Conteneurs",
+      "bookingNumber": "Numéro de Référence de Réservation",
+      "bookingType": "Type de Réservation",
+      "client": "Sélectionner Client",
+      "threshold": "Seuil de Quantité Maximum",
+      "containers20": "Conteneurs 20\"",
+      "containers40": "Conteneurs 40\"",
+      "notes": "Notes",
+      "subtitle": {
+        "edit": "Mettre à jour la référence de réservation",
+        "create": "Générer une nouvelle référence de réservation"
+      },
+      "bookingDesc": "Définir le type de réservation et le numéro de référence",
+      "refImmutable": "Le numéro de référence ne peut pas être modifié",
+      "refHelp": "Ceci sera utilisé comme identifiant de réservation dans toute l'application",
+      "clientDesc": "Sélectionnez le client pour cette réservation",
+      "qtyControl": "Contrôle de Quantité",
+      "qtyControlDesc": "Définir les limites pour l'allocation des conteneurs",
+      "thresholdHelp": "Nombre maximum de conteneurs autorisés avant de nécessiter une répartition détaillée par taille",
+      "quantitiesTitle": "Quantités de Conteneurs par Taille"
+    },
+    "clientNotice": {
+      "viewingCompany": "Vous consultez les réservations de <strong>{{company}}</strong> uniquement",
+      "inYard": "dans <strong>{{yard}}</strong>"
+    },
+    "breakdown": {
+      "required": "Répartition détaillée requise",
+      "summary": "Résumé des Conteneurs",
+      "help": "Le total dépasse le seuil. Une répartition détaillée sera requise pour le traitement."
+    }
+  },
+  "yard": {
+    "title": "Gestion de Cour",
+    "loading": "Chargement de la gestion de cour...",
+    "noYardSelected": "Aucune cour sélectionnée",
+    "selectYardMessage": "Veuillez sélectionner une cour pour continuer",
+    "search": "Recherche de Conteneurs",
+    "searchContainer": "Rechercher et Localiser",
+    "selectedContainer": "Conteneur Sélectionné",
+    "resetView": "Réinitialiser à la Vue Complète de la Cour",
+    "resetViewShort": "Réinitialiser la vue",
+    "occupancy": "Occupation",
+    "capacity": "Capacité",
+    "utilization": "Utilisation",
+    "sections": "Sections",
+    "stacks": "Total des Piles",
+    "stackCapacity": "Capacité Totale des Piles",
+    "containersVisible": "conteneurs visibles",
+    "selected": "sélectionné",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "showLegend": "Afficher la légende",
+    "hideLegend": "Masquer la légende",
+    "depotAssignment": {
+      "noUsersAvailable": "Aucun utilisateur disponible pour l'affectation"
+    },
+    "legend": {
+      "title": "Légende",
+      "tips": "Conseils :",
+      "tip1": "Cliquez sur les conteneurs pour sélectionner",
+      "tip2": "Clic droit + glisser pour déplacer",
+      "tip3": "Défiler pour zoomer",
+      "availableSlot": "Emplacement disponible",
+      "availableSlotDesc": "Position de conteneur vide",
+      "containerInDepot": "Conteneur au dépôt",
+      "containerInDepotDesc": "Conteneur stocké dans la cour",
+      "underMaintenance": "En maintenance",
+      "underMaintenanceDesc": "Conteneur en cours de réparation",
+      "beingCleaned": "En nettoyage",
+      "beingCleanedDesc": "Conteneur en cours de nettoyage",
+      "damagedContainer": "Conteneur endommagé",
+      "damagedContainerDesc": "Conteneur avec rapports de dommages",
+      "selectedContainer": "Conteneur sélectionné",
+      "selectedContainerDesc": "Conteneur actuellement sélectionné"
+    },
+    "stats": {
+      "title": "Statistiques de la cour",
+      "activeContainers": "Conteneurs actifs",
+      "maintenance": "En maintenance",
+      "cleaning": "En nettoyage",
+      "damaged": "Endommagé",
+      "totalStacks": "Total des Piles"
+    },
+    "info": {
+      "title": "Informations sur la cour",
+      "layout": "Disposition :",
+      "sections": "Sections :",
+      "totalCapacity": "Capacité totale :",
+      "currentOccupancy": "Occupation actuelle :"
+    }
+  },
+  "depot": {
+    "title": "Gestion des Dépôts",
+    "create": "Créer un Dépôt",
+    "edit": "Modifier le Dépôt",
+    "view": "Voir les Détails",
+    "assign": "Assigner des Utilisateurs",
+    "delete": "Supprimer le Dépôt",
+    "subtitle": "Gérer les dépôts de conteneurs et leurs configurations",
+    "search": "Rechercher des dépôts...",
+    "overview": "Aperçu des Dépôts",
+    "noDepots": "Aucun dépôt trouvé",
+    "noDepotsEmpty": "Aucun dépôt n'a encore été créé.",
+    "stats": {
+      "total": "Total des Dépôts",
+      "active": "Dépôts Actifs",
+      "capacity": "Capacité Totale",
+      "occupancy": "Occupation Totale"
+    },
+    "form": {
+      "basicInfo": "Informations de Base",
+      "contactInfo": "Informations de Contact",
+      "address": "Informations d'Adresse",
+      "name": "Nom du Dépôt",
+      "code": "Code du Dépôt",
+      "description": "Description",
+      "location": "Emplacement",
+      "capacity": "Capacité Totale",
+      "layout": "Type de Disposition",
+      "manager": "Nom du Gestionnaire",
+      "phone": "Téléphone",
+      "email": "Email",
+      "street": "Adresse de la Rue",
+      "city": "Ville",
+      "state": "État/Région",
+      "zipCode": "Code Postal",
+      "country": "Pays",
+      "timezone": "Fuseau Horaire",
+      "status": "Statut"
+    },
+    "layout": {
+      "yirima": "Grille Yirima",
+      "tantarelli": "Disposition Tantarelli"
+    },
+    "delete": {
+      "confirm": "Êtes-vous sûr de vouloir supprimer le dépôt \"{name}\" ? Cette action est irréversible.",
+      "success": "Dépôt \"{name}\" supprimé avec succès !",
+      "errorCurrent": "Impossible de supprimer le dépôt actuellement sélectionné. Veuillez d'abord passer à un autre dépôt."
+    }
+  },
+  "stack": {
+    "title": "Gestion des Piles",
+    "subtitle": "Configurer les affectations de taille de conteneur pour toutes les piles",
+    "configuration": "Configuration des Piles",
+    "configurationDesc": "Configurer les affectations de taille de conteneur pour chaque pile (les piles jumelées seront mises à jour ensemble)",
+    "create": "Créer une Pile",
+    "edit": "Modifier la Pile",
+    "delete": "Supprimer la Pile",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation...",
+    "rules": "Règles de Configuration",
+    "pairing": "Paires de Piles Valides pour Conteneurs 40ft",
+    "search": "Rechercher des piles ou sections...",
+    "size20": "20ft",
+    "size40": "40ft",
+    "special": "Spéciale",
+    "regular": "Régulière",
+    "assigned": "Client Assigné",
+    "unassigned": "Non Assignée",
+    "exclusive": "Exclusif",
+    "shared": "Partagé",
+    "saveChanges": "Sauvegarder les Modifications",
+    "resetChanges": "Réinitialiser",
+    "noStacks": "Aucune pile trouvée. Créez votre première pile pour commencer.",
+    "refreshed": "Configuration des piles actualisée avec succès !",
+    "advancedFilter": "Filtre Avancé",
+    "allStacks": "Toutes les Piles",
+    "allSections": "Toutes les Sections",
+    "loadingConfig": "Veuillez patienter pendant que nous chargeons la configuration de la cour.",
+    "rules": {
+      "special": "Piles Spéciales (01, 31, 101, 103) : Ne peuvent être configurées que pour des conteneurs de 20 pieds.",
+      "regular": "Piles Régulières : Peuvent être configurées pour des conteneurs de 20 ou 40 pieds.",
+      "pairing": "Attribution 40 pieds : Disponible uniquement pour les piles régulières qui ont une pile régulière adjacente pour former des paires valides.",
+      "updates": "Mises à jour Appariées : Lors du changement d'une pile régulière vers 40 pieds, sa paire adjacente sera automatiquement mise à jour pour correspondre."
+    },
+    "delete": {
+      "title": "Suppression logicielle de la pile",
+      "confirm": "Êtes-vous sûr de vouloir supprimer logiquement la pile S{number} ? Cela désactivera la pile et tous ses emplacements, mais préservera toutes les données pour une récupération potentielle. Vous pourrez la réactiver plus tard si nécessaire.",
+      "success": "Pile S{number} supprimée logiquement avec succès ! Vous pouvez la réactiver plus tard si nécessaire.",
+      "error": "Échec de la suppression logicielle de la pile"
+    },
+    "update": {
+      "success": "Pile mise à jour avec succès !"
+    },
+    "create": "Créer une Pile",
+    "createSuccess": "Pile créée avec succès !",
+    "sizeUpdate": {
+      "success": "Pile mise à jour en {size} avec succès !",
+      "successMulti": "Mise à jour réussie de {count} piles en {size} !",
+      "errorOccupied": "Impossible de changer la taille de la pile : les emplacements de pile virtuelle sont occupés. Veuillez d'abord déplacer tous les conteneurs des piles jumelées."
+    },
+    "assign": {
+      "success": "Pile assignée au client {client} avec succès !"
+    },
+    "unassign": {
+      "success": "Pile désassignée du pool client avec succès !"
+    },
+    "stats": {
+      "total": "Total des Piles",
+      "40ft": "Total des Piles 40ft",
+      "20ft": "Total des Piles 20ft",
+      "special": "Piles Spéciales",
+      "regular": "Piles Régulières",
+      "clientAssigned": "Assigné au Client",
+      "all": "Toutes les piles",
+      "logicalPairs": "Paires logiques",
+      "single": "Piles simples",
+      "buffer": "Zones tampons",
+      "standardOps": "Opérations standard",
+      "unassignedCount": "{count} non assignées"
+    },
+    "table": {
+      "stack": "Pile",
+      "section": "Section",
+      "containerSize": "Taille de Conteneur",
+      "assignedClient": "Client Assigné",
+      "capacity": "Capacité",
+      "actions": "Actions",
+      "manage": "Gérer",
+      "pair": "Paire",
+      "noPair": "Pas de paire",
+      "specialNo40": "Les piles spéciales ne peuvent pas être configurées pour 40ft",
+      "updatePair": "Mettra également à jour la Pile {number}"
+    },
+    "help": {
+      "title": "Aide à la Configuration des Piles",
+      "desc": "Afficher les règles et directives pour la gestion des piles de la cour."
+    },
+    "form": {
+      "information": "Informations de la Pile",
+      "number": "Numéro de Pile",
+      "section": "Section",
+      "sizeConfig": "Configuration de la Taille du Conteneur",
+      "typeConfig": "Configuration du Type de Pile",
+      "capacityConfig": "Configuration de la Capacité",
+      "dimensions": "Dimensions de la Pile",
+      "dimensionsDesc": "Configurer la disposition physique de votre pile",
+      "rows": "Rangées (Profondeur)",
+      "tiers": "Paliers Max (Hauteur)",
+      "customTiers": "Configuration Personnalisée des Paliers",
+      "preview": "Aperçu de la Pile",
+      "useSuggested": "Utiliser {number}",
+      "suggested": "Suggéré : {number}",
+      "differentFromSuggested": "Différent du suggéré",
+      "usingSuggested": "Utilise le suggéré",
+      "selectSection": "Sélectionner la section",
+      "noSections": "Aucune section disponible",
+      "sectionImmutable": "La section ne peut pas être modifiée lors de l'édition d'une pile existante",
+      "20ftDesc": "Taille Standard",
+      "40ftDesc": "Haute Capacité",
+      "specialWarning": "Les piles spéciales sont limitées aux conteneurs de 20 pieds uniquement",
+      "regularDesc": "Opérations Standard",
+      "specialDesc": "Opérations Limitées",
+      "rowsDesc": "Rangées de conteneurs de l'avant vers l'arrière",
+      "tiersDesc": "Maximum de conteneurs empilés verticalement",
+      "customTiersDesc": "Configurer différentes hauteurs de paliers maximales pour chaque rangée en fonction des conditions du sol ou des limitations de l'équipement",
+      "previewLayout": "Aperçu de la Disposition de la Pile",
+      "totalCapacity": "Capacité Totale de la Pile",
+      "capacityDesc": "Positions maximales de conteneurs disponibles",
+      "positions": "Positions de conteneurs",
+      "uniformLayout": "Disposition uniforme",
+      "customLayout": "Disposition personnalisée",
+      "calculation": "Calcul",
+      "specialNotice": "Cette pile sera limitée aux conteneurs de 20 pieds uniquement et ne pourra pas accueillir de conteneurs de 40 pieds.",
+      "40ftNotice": "Cette pile sera configurée pour des conteneurs 40 pieds de haute capacité et peut nécessiter un jumelage avec des piles adjacentes."
+    },
+    "validation": {
+      "numberRequired": "Le numéro de pile doit être supérieur à 0",
+      "sectionRequired": "La section est requise",
+      "rowsRange": "Les rangées doivent être comprises entre 1 et 10",
+      "tiersRange": "Les paliers max doivent être compris entre 1 et 8",
+      "specialNo40": "Les piles spéciales ne peuvent accueillir que des conteneurs de 20 pieds",
+      "duplicateNumber": "Ce numéro de stack existe déjà dans ce dépôt",
+      "rowChangeError": "Impossible de valider le changement de rangée. Veuillez réessayer."
+    }
+  },
+  "clientPools": {
+    "title": "Gestion des Pools Clients",
+    "create": "Créer un Pool Client",
+    "edit": "Modifier le Pool Client",
+    "subtitle": "Gérer les attributions de piles spécifiques aux clients et l'allocation de capacité",
+    "search": "Rechercher des pools clients...",
+    "overview": "Aperçu du Pool Client",
+    "noPools": "Aucun pool client trouvé",
+    "noPoolsEmpty": "Aucun pool client n'a encore été créé.",
+    "noStacks": "Aucune Pile Sélectionnée",
+    "noStacksHelp": "Cliquez sur le bouton ci-dessus pour sélectionner des piles pour ce pool client",
+    "stats": {
+      "total": "Total des Pools",
+      "active": "Clients Actifs",
+      "stacks": "Piles Assignées",
+      "utilization": "Utilisation Moyenne"
+    },
+    "form": {
+      "clientInfo": "Informations Client",
+      "stackAssignment": "Attribution des Piles",
+      "additionalInfo": "Informations Supplémentaires",
+      "selectClient": "Sélectionner un Client",
+      "contractStart": "Date de Début de Contrat",
+      "contractEnd": "Date de Fin de Contrat",
+      "notes": "Notes et Instructions Spéciales",
+      "capacity": "Capacité",
+      "selected": "Sélectionnées",
+      "stacks": "piles",
+      "containers": "conteneurs",
+      "subtitle": {
+        "edit": "Mettre à jour la configuration du pool client",
+        "create": "Assigner des piles dédiées à un client"
+      },
+      "selectClientPlaceholder": "Sélectionner un client...",
+      "selectStacks": "Sélectionner Piles",
+      "modifySelection": "Modifier la Sélection",
+      "noStacks": "Aucune Pile Sélectionnée",
+      "noStacksHelp": "Cliquez sur le bouton ci-dessus pour sélectionner des piles pour ce pool client",
+      "noAvailableStacks": "Aucune Pile Disponible",
+      "noAvailableStacksHelp": "Toutes les piles sont actuellement assignées à d'autres clients",
+      "progress": {
+        "client": "Client Sélectionné",
+        "stacks": "Piles Assignées",
+        "contract": "Date de Contrat Définie"
+      }
+    },
+    "priority": {
+      "high": "Élevée",
+      "medium": "Moyenne",
+      "low": "Faible"
+    },
+    "table": {
+      "stacks": "piles",
+      "viewStacks": "Voir détails des piles →"
+    },
+    "delete": {
+      "title": "Supprimer le Pool Client",
+      "confirm": "Êtes-vous sûr de vouloir supprimer le pool pour {client} ? Cette action est irréversible."
+    },
+    "utilization": {
+      "title": "Aperçu de l'Utilisation du Pool"
+    },
+    "stackSelection": {
+      "title": "Sélectionner des Piles pour le Pool Client",
+      "subtitle": "Choisissez des piles à assigner à {client} (Piles physiques uniquement - piles virtuelles assignées automatiquement)"
+    }
+  },
+  "clients": {
+    "title": "Données Maîtres Clients",
+    "create": "Créer un Client",
+    "add": "Ajouter un Client",
+    "edit": "Modifier le Client",
+    "view": "Voir les Détails",
+    "delete": "Supprimer le Client",
+    "search": "Rechercher des clients...",
+    "noClients": "Aucun client trouvé",
+    "noClientsEmpty": "Commencez par ajouter votre premier client.",
+    "stats": {
+      "total": "Total Clients",
+      "active": "Clients Actifs",
+      "creditLimit": "Limite de Crédit Totale",
+      "avgPayment": "Conditions de Paiement Moyennes"
+    },
+    "form": {
+      "basicInfo": "Informations de Base",
+      "address": "Adresse de l'Entreprise",
+      "contact": "Personne de Contact",
+      "billing": "Adresse de Facturation",
+      "financial": "Configuration Financière",
+      "name": "Nom de l'Entreprise",
+      "code": "Code Client",
+      "subtitle": {
+        "edit": "Modification du client {client}",
+        "create": "Création d'un nouveau client"
+      },
+      "step": {
+        "basic": "Informations de base",
+        "address": "Adresse & Contact",
+        "config": "Configuration"
+      },
+      "companyName": "Nom de l'Entreprise",
+      "mainEmail": "Email Principal",
+      "mainPhone": "Téléphone Principal",
+      "taxId": "Numéro d'Identification Fiscale",
+      "addressTitle": "Adresse de l'Entreprise",
+      "addressDesc": "Localisation et coordonnées de l'entreprise",
+      "street": "Adresse Complète",
+      "city": "Ville",
+      "district": "Commune/District",
+      "zipCode": "Code Postal",
+      "country": "Pays",
+      "contactTitle": "Personne de Contact",
+      "contactDesc": "Responsable principal pour les communications",
+      "contactName": "Nom Complet",
+      "contactPosition": "Poste/Fonction",
+      "contactEmail": "Email de Contact",
+      "contactPhone": "Téléphone de Contact",
+      "billingTitle": "Adresse de Facturation",
+      "billingDesc": "Adresse pour l'envoi des factures",
+      "sameAddress": "Même adresse que l'entreprise",
+      "financialTitle": "Configuration Financière",
+      "financialDesc": "Paramètres de facturation et conditions de paiement",
+      "creditLimit": "Limite de Crédit",
+      "paymentTerms": "Conditions de Paiement (jours)",
+      "freeDays": "Jours de Stockage Gratuits",
+      "dailyRate": "Tarif Journalier",
+      "currency": "Devise",
+      "previewTitle": "Aperçu de la Facturation",
+      "previewDesc": "Simulation des coûts de stockage",
+      "freeDaysLabel": "Jours Gratuits",
+      "rateLabel": "Tarif/Jour",
+      "termsLabel": "Jours de Paiement",
+      "calculationExample": "Exemple de calcul :",
+      "exampleTenDays": "Conteneur placé pendant 10 jours",
+      "exampleFreeDays": "Jours gratuits :",
+      "exampleBillable": "Jours facturables :",
+      "exampleTotal": "Montant total :",
+      "notesTitle": "Notes et Instructions Spéciales",
+      "notesDesc": "Informations complémentaires et instructions particulières",
+      "systemTitle": "Configuration Système",
+      "systemDesc": "Paramètres système et intégrations",
+      "activeLabel": "Client Actif",
+      "activeDesc": "Le client peut effectuer des opérations",
+      "autoEdiLabel": "Transmission EDI Automatique",
+      "autoEdiDesc": "Envoi automatique des messages CODECO",
+      "ediActive": "Transmission EDI activée :",
+      "notes": "Notes et Instructions Spéciales",
+      "active": "Client Actif"
+    },
+    "table": {
+      "contact": "Informations de Contact"
+    },
+    "delete": {
+      "title": "Supprimer le Client",
+      "confirm": "Êtes-vous sûr de vouloir supprimer {client} ? Cette action est irréversible."
+    },
+    "success": {
+      "update": "Client mis à jour avec succès !",
+      "create": "Client créé avec succès !",
+      "delete": "Client supprimé avec succès !"
+    },
+    "error": {
+      "save": "Erreur lors de l'enregistrement du client :"
+    }
+  },
+  "users": {
+    "title": "Gestion des Utilisateurs",
+    "add": "Ajouter un Utilisateur",
+    "edit": "Modifier l'Utilisateur",
+    "view": "Voir les Détails",
+    "delete": "Supprimer l'Utilisateur",
+    "search": "Rechercher des utilisateurs...",
+    "noUsers": "Aucun utilisateur trouvé",
+    "noUsersEmpty": "Commencez par ajouter votre premier utilisateur",
+    "subtitle": {
+      "managing": "Gestion des utilisateurs pour :"
+    },
+    "stats": {
+      "total": "Total des Utilisateurs",
+      "active": "Utilisateurs Actifs",
+      "admins": "Administrateurs",
+      "online": "En Ligne Aujourd'hui"
+    },
+    "form": {
+      "basicInfo": "Informations de base",
+      "role": "Rôle de l'utilisateur",
+      "yardAssignments": "Yard Assignments",
+      "name": "Nom complet",
+      "email": "Adresse e-mail",
+      "phone": "Numéro de téléphone",
+      "department": "Département",
+      "company": "Entreprise",
+      "password": "Mot de passe",
+      "active": "Utilisateur Actif",
+      "subtitle": {
+        "edit": "Mettre à jour les informations et les permissions de l'utilisateur",
+        "create": "Ajouter un nouvel utilisateur au système"
+      },
+      "status": "Statut de l'utilisateur",
+      "profileInfo": "Informations du profil",
+      "permissionsOverview": "Aperçu des permissions"
+    },
+    "role": {
+      "admin": "Administrateur",
+      "supervisor": "Superviseur",
+      "operator": "Opérateur",
+      "client": "Client",
+      "description": {
+        "admin": "Accès complet au système dans tous les modules",
+        "supervisor": "Supervision et gestion des opérations",
+        "operator": "Opérations quotidiennes et manutention des conteneurs",
+        "client": "Consulter les conteneurs et créer des ordres de sortie"
+      },
+      "adminDesc": "Accès complet au système sur tous les modules",
+      "supervisorDesc": "Supervision des opérations et gestion",
+      "operatorDesc": "Opérations quotidiennes et manipulation des conteneurs",
+      "clientDesc": "Voir les conteneurs et créer des ordres de libération"
+    },
+    "table": {
+      "user": "Utilisateur",
+      "role": "Rôle",
+      "department": "Département",
+      "lastLogin": "Dernière Connexion"
+    },
+    "activity": {
+      "recent": "Activité récente",
+      "history": "Historique de connexion"
+    },
+    "delete": {
+      "title": "Supprimer l'Utilisateur",
+      "confirm": "Êtes-vous sûr de vouloir supprimer {user} ? Cette action supprimera l'utilisateur du système tout en préservant l'intégrité des données."
+    },
+    "success": {
+      "update": "Utilisateur mis à jour avec succès",
+      "create": "Utilisateur créé avec succès",
+      "delete": "Utilisateur supprimé avec succès"
+    },
+    "error": {
+      "save": "Échec de l'enregistrement de l'utilisateur",
+      "delete": "Échec de la suppression de l'utilisateur"
+    },
+    "validation": {
+      "nameRequired": "Le nom complet est requis",
+      "nameMin": "Le nom doit comporter au moins 2 caractères",
+      "nameMax": "Le nom doit comporter moins de 100 caractères",
+      "emailRequired": "L'adresse e-mail est requise",
+      "emailInvalid": "Veuillez saisir une adresse e-mail valide",
+      "phoneInvalid": "Veuillez saisir un numéro de téléphone valide",
+      "passwordRequired": "Le mot de passe est requis pour les nouveaux utilisateurs",
+      "passwordMin": "Le mot de passe doit comporter au moins 6 caractères",
+      "passwordMax": "Le mot de passe doit comporter moins de 128 caractères"
+    }
+  },
+  "moduleAccess": {
+    "title": "Gestion des Accès aux Modules",
+    "bulkActions": "Actions en Lot",
+    "applyRoleBased": "Appliquer l'Accès Basé sur le Rôle",
+    "enableAll": "Activer Tout",
+    "disableAll": "Désactiver Tout",
+    "selectAll": "Sélectionner Tout",
+    "deselectAll": "Désélectionner Tout",
+    "stats": {
+      "totalUsers": "Total des Utilisateurs",
+      "modules": "Modules Disponibles",
+      "admins": "Utilisateurs Admin",
+      "selected": "Utilisateurs Sélectionnés"
+    },
+    "category": {
+      "core": "Principal",
+      "operations": "Opérations",
+      "management": "Gestion",
+      "admin": "Administration"
+    },
+    "roleRestricted": "Restreint par Rôle",
+    "protected": "Protégé",
+    "system": "Système"
+  },
+  "reports": {
+    "title": "Rapports et Analyses",
+    "billing": "Facturation et Jours Gratuits",
+    "analytics": "Analyses",
+    "operations": "Opérations",
+    "export": "Exporter le Rapport",
+    "dateRange": "Plage de Dates",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "currentDepot": "Dépôt Actuel",
+    "allDepots": "Tous les Dépôts",
+    "globalView": "Vue Globale",
+    "billing": {
+      "title": "Détails de Facturation des Conteneurs",
+      "freeDays": "Calcul des jours gratuits et informations de facturation",
+      "totalRevenue": "Revenus Totaux",
+      "activeContainers": "Conteneurs Actifs"
+    }
+  },
+  "edi": {
+    "title": "Gestion EDI",
+    "subtitle": "Gérer les transmissions EDI, les configurations de serveur et les paramètres client",
+    "configuration": "Configuration",
+    "tabs": {
+      "overview": "Aperçu",
+      "servers": "Serveurs FTP/SFTP",
+      "clients": "Paramètres EDI Client",
+      "validator": "Validateur EDI",
+      "history": "Historique des Transmissions"
+    },
+    "stats": {
+      "total": "Opérations Totales",
+      "success": "Taux de Succès EDI",
+      "clients": "Clients avec EDI",
+      "servers": "Serveurs Configurés",
+      "sent": "Total Envoyés",
+      "pending": "En Attente",
+      "failed": "Échoués",
+      "acknowledged": "Accusés de Réception"
+    },
+    "recentOperations": "Opérations EDI Récentes",
+    "servers": {
+      "title": "Configuration Serveur FTP/SFTP",
+      "configure": "Configurer les Serveurs",
+      "emptyAction": "Configurer votre premier serveur"
+    },
+    "clients": {
+      "title": "Paramètres EDI Client",
+      "empty": "Aucun client configuré pour l'EDI",
+      "emptyAction": "Configurer votre premier client"
+    },
+    "history": {
+      "title": "Historique des Transmissions",
+      "empty": "Aucun journal de transmission trouvé",
+      "table": {
+        "container": "Conteneur",
+        "operation": "Opération",
+        "status": "Statut",
+        "client": "Client",
+        "date": "Date de Transmission"
+      }
+    },
+    "error": {
+      "load": "Échec du chargement des données EDI",
+      "retry": "Échec de la nouvelle tentative",
+      "clientDelete": "Échec de la suppression de la configuration EDI client"
+    },
+    "success": {
+      "refresh": "Données actualisées avec succès",
+      "retry": "Nouvelle tentative de transmission initiée",
+      "clientDelete": "Configuration EDI client supprimée",
+      "clientSave": "Configuration EDI client enregistrée"
+    },
+    "delete": {
+      "confirm": "Êtes-vous sûr de vouloir supprimer la configuration EDI pour ce client ?"
+    },
+    "configModal": {
+      "title": "Configuration EDI",
+      "listTitle": "Configurations",
+      "emptyTitle": "Aucune Configuration Sélectionnée",
+      "emptyDesc": "Sélectionnez une configuration dans la liste pour voir les détails, ou créez-en une nouvelle.",
+      "defaultLabel": "Par défaut",
+      "form": {
+        "name": "Nom de la Configuration",
+        "type": "Type de Serveur",
+        "host": "Hôte",
+        "port": "Port",
+        "username": "Nom d'utilisateur",
+        "password": "Mot de passe",
+        "remotePath": "Chemin Distant",
+        "partnerCode": "Code Partenaire",
+        "senderCode": "Code Expéditeur",
+        "timeout": "Délai d'attente (ms)",
+        "retry": "Tentatives de Recommencement",
+        "filePattern": "Modèle de Nom de Fichier",
+        "assignedClients": "Clients Assignés",
+        "noClients": "Aucun client assigné",
+        "searchPlaceholder": "Rechercher ou ajouter un client...",
+        "addCustom": "Ajouter \"{client}\"",
+        "testMode": "Mode Test",
+        "testModeDesc": "En mode test, les transmissions sont simulées et aucun fichier réel n'est téléchargé.",
+        "isDefault": "Définir par défaut",
+        "testConnection": "Tester la Connexion",
+        "passwordPlaceholder": "Protégé",
+        "filePatternHint": "Jetons : {timestamp}, {container}, {operation}, {client}"
+      }
+    },
+    "clientModal": {
+      "editTitle": "Modifier la Configuration EDI Client",
+      "createTitle": "Ajouter une Configuration EDI Client",
+      "form": {
+        "enableEdi": "Activer l'EDI pour ce client",
+        "enableIn": "Activer l'EDI Entrée (Gate In)",
+        "enableOut": "Activer l'EDI Sortie (Gate Out)"
+      }
+    },
+    "checkAcknowledgments": "Vérifier les Accusés de Réception",
+    "processFile": "Traiter EDI à partir d'un Fichier",
+    "fileType": "Type de Fichier",
+    "operation": "Opération",
+    "selectFile": "Sélectionner un Fichier",
+    "processSend": "Traiter et Envoyer",
+    "transmissionHistory": "Historique des Transmissions",
+    "status": {
+      "pending": "En Attente",
+      "sent": "Envoyé",
+      "failed": "Échoué",
+      "acknowledged": "Accusé de Réception"
+    },
+    "retry": "Réessayer",
+    "view": "Voir"
+  },
+  "common": {
+    "status": "Statut",
+    "statusLabel": "Statut",
+    "actions": "Actions",
+    "date": "Date",
+    "time": "Heure",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "edit": "Modifier",
+    "view": "Voir",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer",
+    "loading": "Chargement...",
+    "processing": "Traitement...",
+    "saving": "Sauvegarde...",
+    "updating": "Mise à jour...",
+    "creating": "Création...",
+    "deleting": "Suppression...",
+    "success": "Succès",
+    "error": "Erreur",
+    "warning": "Avertissement",
+    "info": "Information",
+    "required": "Obligatoire",
+    "optional": "Optionnel",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "dark": "Sombre",
+    "light": "Clair",
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "yes": "Oui",
+    "no": "Non",
+    "all": "Tout",
+    "none": "Aucun",
+    "total": "Total",
+    "available": "Disponible",
+    "capacity": "Capacité",
+    "utilization": "Utilisation",
+    "location": "Emplacement",
+    "client": "Client",
+    "container": "Conteneur",
+    "containers": "Conteneurs",
+    "type": "Type",
+    "size": "Taille",
+    "quantity": "Quantité",
+    "notes": "Notes",
+    "description": "Description",
+    "name": "Nom",
+    "code": "Code",
+    "email": "Email",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "city": "Ville",
+    "country": "Pays",
+    "department": "Département",
+    "company": "Entreprise",
+    "role": "Rôle",
+    "permission": "Permission",
+    "access": "Accès",
+    "denied": "Accès Refusé",
+    "restricted": "Accès Restreint",
+    "unauthorized": "Vous n'avez pas la permission d'accéder à ce module",
+    "contactAdmin": "Contactez votre administrateur pour demander l'accès",
+    "noData": "Aucune donnée trouvée",
+    "noResults": "Aucun résultat trouvé",
+    "noContainers": "Aucun conteneur trouvé",
+    "noContainersCompany": "Aucun conteneur trouvé pour votre entreprise. Contactez le dépôt si vous vous attendez à voir des conteneurs ici.",
+    "noStacks": "Aucune pile trouvée",
+    "noStacksSelected": "Aucune pile sélectionnée",
+    "noPendingOperations": "Aucune opération en attente",
+    "noBookingsReady": "Aucune réservation en attente/encours n'est prête pour le gate out",
+    "onlyShowingPending": "Affichage uniquement des réservations en attente/encours prêtes pour le gate out",
+    "yourCompany": "Votre Entreprise",
+    "notSelected": "Non sélectionné",
+    "pending": "En attente",
+    "assessed": "Évalué",
+    "noDataFound": "Aucune donnée trouvée",
+    "noBookingsFound": "Aucune réservation trouvée",
+    "noOperationsFound": "Aucune opération trouvée",
+    "noClientPoolsFound": "Aucun pool client trouvé",
+    "noStacksFound": "Aucune pile trouvée",
+    "noStacksAvailable": "Aucune pile disponible",
+    "activeOperator": "Opérateur actif",
+    "noOperations": "Aucune opération",
+    "tryAdjustingSearch": "Essayez d'ajuster vos critères de recherche",
+    "tryAdjustingSearchFilters": "Essayez d'ajuster vos critères de recherche ou filtres",
+    "tryAdjustingFilters": "Essayez d'ajuster vos filtres",
+    "noMatchingCriteria": "Aucun conteneur ne correspond aux critères sélectionnés",
+    "noOperationsMatchSearch": "Aucune opération ne correspond à votre recherche ou filtres",
+    "noStackPositionsMatch": "Aucune position de pile ne correspond à vos critères",
+    "pleaseCreateStacks": "Veuillez d'abord créer des piles dans la gestion des piles",
+    "getStarted": "Commencer",
+    "addFirstUser": "Ajouter le premier utilisateur",
+    "noUsersAvailable": "Aucun utilisateur disponible pour l'affectation",
+    "stacksAssignedToOtherPools": "Toutes les piles sont actuellement attribuées à d'autres pools",
+    "tryAdjusting": "Essayez d'ajuster vos critères de recherche",
+    "selectDate": "Sélectionner une date",
+    "selectTime": "Sélectionner une heure",
+    "currentTime": "Heure actuelle",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois",
+    "lastMonth": "Le mois dernier",
+    "thisYear": "Cette année",
+    "damaged": "Endommagé",
+    "undamaged": "Bon état",
+    "priority": "Priorité",
+    "urgent": "Urgent",
+    "normal": "Normal",
+    "low": "Faible",
+    "appSubtitle": "Système de Gestion de Dépôt (SGD)",
+    "loggedInAs": "Connecté en tant que :",
+    "install": "Installer",
+    "newNotifications": "Nouveaux",
+    "quickActions": "Actions Rapides",
+    "appFooter": "Gestion de Dépôt de Conteneurs v1.0",
+    "copyright": "© 2025 DepotManager",
+    "createdBy": "Créé par",
+    "createdDate": "Date de Création",
+    "updatedDate": "Date de Modification",
+    "standard": "Standard",
+    "highCapacity": "Haute Capacité",
+    "summary": "Résumé",
+    "fixErrors": "Veuillez corriger les erreurs suivantes :",
+    "pleaseReview": "Veuillez vérifier :",
+    "submissionFailed": "Échec de la soumission",
+    "time": {
+      "never": "Jamais",
+      "justNow": "À l'instant",
+      "hoursAgo": "h",
+      "daysAgo": "j"
+    }
+  }
+}

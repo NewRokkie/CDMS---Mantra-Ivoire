@@ -36,16 +36,6 @@ export interface YardSection {
   name: string;
   yardId: string;
   stacks: YardStack[];
-  position: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  dimensions: {
-    width: number;
-    length: number;
-  };
-  color?: string;
 }
 
 export interface RowTierConfig {

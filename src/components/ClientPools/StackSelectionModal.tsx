@@ -3,6 +3,7 @@ import { X, Search, Check, Grid3X3, Package, Loader, AlertTriangle } from 'lucid
 import { stackService } from '../../services/api';
 import { handleError } from '../../services/errorHandling';
 import { StackCapacityCalculator } from '../../utils/stackCapacityCalculator';
+import { t } from 'i18next';
 
 interface Stack {
   id: string;
@@ -164,12 +165,23 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     }));
 
   // Calculate total capacity using effective capacity logic
-  const selectedStacks = Array.from(selectedStackIds).map(stackId => stacks.find(s => s.id === stackId)).filter(Boolean);
+  const selectedStacks = Array.from(selectedStackIds)
+    .map(stackId => stacks.find(s => s.id === stackId))
+    .filter((stack): stack is Stack => stack !== undefined);
   const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(selectedStacks.map(stack => ({
-    ...stack,
+    id: stack.id,
+    stackNumber: stack.stackNumber,
     capacity: stack.maxCapacity,
     containerSize: stack.containerSize,
-    isVirtual: stack.isVirtual
+    isVirtual: stack.isVirtual,
+    isBufferZone: false, // Client pools don't use buffer zones
+    sectionId: stack.sectionId,
+    rows: stack.rows,
+    maxTiers: stack.maxTiers,
+    currentOccupancy: stack.currentOccupancy,
+    position: { x: 0, y: 0, z: 0 }, // Default position - not used in capacity calculation
+    dimensions: { width: 0, length: 0 }, // Default dimensions - not used in capacity calculation
+    containerPositions: [] // Default empty array - not used in capacity calculation
   })));
 
   if (!isOpen) return null;
@@ -274,11 +286,12 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
           ) : filteredStacks.length === 0 ? (
             <div className="text-center py-12">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Stacks Available</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.noStacksAvailable')}</h3>
               <p className="text-gray-600">
                 {searchTerm || filterSize !== 'all'
-                  ? 'Try adjusting your filters'
-                  : 'All stacks are currently assigned to other pools'}
+                  ? t('common.tryAdjustingFilters')
+                  : t('clientPools.stacksAssignedToOtherPools')
+                }
               </p>
             </div>
           ) : (

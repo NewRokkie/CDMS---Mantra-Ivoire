@@ -5,7 +5,8 @@ import { supabase } from '../../services/api/supabaseClient';
 import { useYard } from '../../hooks/useYard';
 import { handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
-import { useSuccessNotification, useErrorNotification, useInfoNotification } from '../Common/Notifications/NotificationSystem';
+import { useSuccessNotification, useErrorNotification } from '../Common/Notifications/NotificationSystem';
+import { t } from 'i18next';
 
 interface SimpleOperationsTabProps {
   viewMode?: 'current' | 'global';
@@ -43,7 +44,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
 }) => {
   const { currentYard: hookCurrentYard } = useYard();
   const activeYard = currentYard || hookCurrentYard;
-  
+
   const [data, setData] = useState<OperationsData>({
     gateStats: null,
     damageReport: null,
@@ -59,7 +60,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
     try {
       // Get all users who are operators, admins, or supervisors
       const users = await userService.getAll();
-      const operators = users.filter(user => 
+      const operators = users.filter(user =>
         ['operator', 'admin', 'supervisor'].includes(user.role)
       );
 
@@ -72,7 +73,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
         .from('gate_in_operations')
         .select('operator_id, operator_name, created_at, completed_at')
         .not('operator_id', 'is', null);
-      
+
       let gateOutQuery = supabase
         .from('gate_out_operations')
         .select('operator_id, operator_name, created_at, completed_at')
@@ -137,23 +138,23 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
       for (const operator of operators) {
         const metrics = operatorMetrics.get(operator.id);
         const operations = metrics?.operations || 0;
-        const avgProcessingTime = metrics && metrics.completedOps > 0 
-          ? metrics.totalProcessingTime / metrics.completedOps 
+        const avgProcessingTime = metrics && metrics.completedOps > 0
+          ? metrics.totalProcessingTime / metrics.completedOps
           : 0;
-        
+
         // Calculate error rate (simplified - could be enhanced with actual error tracking)
         const errorRate = operations > 0 ? Math.max(0.5, Math.random() * 3) : 0;
-        
+
         // Calculate efficiency based on processing time and operations
-        const efficiency = operations > 0 
+        const efficiency = operations > 0
           ? Math.max(60, Math.min(100, 100 - (errorRate * 5) - Math.max(0, (avgProcessingTime - 15) * 2)))
           : 0;
-        
-        const performance = efficiency >= 95 ? 'Excellent' : 
-                          efficiency >= 85 ? 'Good' : 
-                          efficiency >= 70 ? 'Average' : 'Needs Improvement';
 
-        const lastActive = metrics?.lastActivity 
+        const performance = efficiency >= 95 ? 'Excellent' :
+          efficiency >= 85 ? 'Good' :
+            efficiency >= 70 ? 'Average' : 'Needs Improvement';
+
+        const lastActive = metrics?.lastActivity
           ? getTimeAgo(metrics.lastActivity)
           : 'No recent activity';
 
@@ -161,8 +162,8 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
           operatorId: operator.id,
           operatorName: operator.name,
           role: operator.role === 'admin' ? 'Administrator' :
-                operator.role === 'supervisor' ? 'Supervisor' :
-                'Gate Operator',
+            operator.role === 'supervisor' ? 'Supervisor' :
+              'Gate Operator',
           operations,
           avgProcessingTime,
           errorRate,
@@ -210,14 +211,13 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
   // Notification hooks
   const showSuccess = useSuccessNotification();
   const showError = useErrorNotification();
-  const showInfo = useInfoNotification();
 
   const loadOperationsData = async () => {
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
-      
+
       const yardId = viewMode === 'global' && selectedDepot ? selectedDepot : activeYard?.id;
-      
+
       const [gateStats, damageReport, yardUtilization, operatorPerformance] = await Promise.all([
         reportService.getGateStats(yardId),
         reportService.getDamageAssessmentReport(yardId),
@@ -417,7 +417,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
           URL.revokeObjectURL(pdfUrl);
           break;
       }
-      
+
       logger.info('Operations data exported successfully', 'SimpleOperationsTab', {
         format,
         filename: baseFilename
@@ -514,7 +514,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                 </select>
               )}
             </div>
-            
+
             {/* Manual refresh */}
             <button
               onClick={loadOperationsData}
@@ -672,7 +672,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                 {damageReport?.summary?.totalDamaged || 0}
               </div>
             </div>
-            
+
             {damageReport?.summary?.byStage && (
               <div className="space-y-2">
                 <div className="text-sm font-medium text-gray-700">Assessment Stages:</div>
@@ -782,7 +782,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                       {(count as number).toLocaleString()}
                     </div>
                     <div className={`text-sm text-${statusConfig.color}-600`}>
-                      {yardUtilization.occupiedPositions > 0 
+                      {yardUtilization.occupiedPositions > 0
                         ? (((count as number) / yardUtilization.occupiedPositions) * 100).toFixed(1)
                         : '0'}%
                     </div>
@@ -808,7 +808,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
           </div>
           <Activity className="h-5 w-5 text-gray-400" />
         </div>
-        
+
         {/* Simulated Daily Performance Chart */}
         <div className="space-y-6">
           <div className="grid grid-cols-7 gap-2 h-48">
@@ -816,12 +816,12 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
               const day = new Date();
               day.setDate(day.getDate() - (6 - i));
               const dayName = day.toLocaleDateString('en', { weekday: 'short' });
-              
+
               // Simulate daily operations data based on real totals
               const dailyOps = Math.floor((gateStats?.totalGateIns || 100) / 30) + Math.floor(Math.random() * 20);
               const maxOps = Math.floor((gateStats?.totalGateIns || 100) / 20);
               const height = (dailyOps / maxOps) * 100;
-              
+
               return (
                 <div key={i} className="flex flex-col items-center space-y-2">
                   <div className="text-xs text-gray-600 font-medium">{dailyOps}</div>
@@ -836,7 +836,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
               );
             })}
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg text-center">
               <div className="text-sm text-blue-700 font-medium">Peak Day</div>
@@ -869,45 +869,45 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
           </div>
           <Timer className="h-5 w-5 text-gray-400" />
         </div>
-        
+
         <div className="space-y-6">
           {/* Processing Time Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { 
-                label: 'Gate In Avg', 
-                actual: gateStats?.avgProcessingTime || 12.5, 
-                target: 15, 
+              {
+                label: 'Gate In Avg',
+                actual: gateStats?.avgProcessingTime || 12.5,
+                target: 15,
                 unit: 'min',
                 color: 'green'
               },
-              { 
-                label: 'Gate Out Avg', 
-                actual: (gateStats?.avgProcessingTime || 12.5) * 0.8, 
-                target: 12, 
+              {
+                label: 'Gate Out Avg',
+                actual: (gateStats?.avgProcessingTime || 12.5) * 0.8,
+                target: 12,
                 unit: 'min',
                 color: 'blue'
               },
-              { 
-                label: 'Damage Inspection', 
-                actual: damageReport?.summary?.avgAssessmentTime || 2.5, 
-                target: 4, 
+              {
+                label: 'Damage Inspection',
+                actual: damageReport?.summary?.avgAssessmentTime || 2.5,
+                target: 4,
                 unit: 'hrs',
                 color: 'orange'
               },
-              { 
-                label: 'EDI Transmission', 
-                actual: gateStats?.ediTransmissionRate || 95.2, 
-                target: 98, 
+              {
+                label: 'EDI Transmission',
+                actual: gateStats?.ediTransmissionRate || 95.2,
+                target: 98,
                 unit: '%',
                 color: 'purple'
               }
             ].map((metric, index) => {
-              const performance = metric.unit === '%' 
-                ? metric.actual / metric.target 
+              const performance = metric.unit === '%'
+                ? metric.actual / metric.target
                 : metric.target / metric.actual;
               const isGood = performance >= 0.9;
-              
+
               return (
                 <div key={index} className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm font-medium text-gray-700 mb-2">{metric.label}</div>
@@ -921,9 +921,8 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full transition-all duration-500 ${
-                        isGood ? 'bg-green-500' : 'bg-red-500'
-                      }`}
+                      className={`h-2 rounded-full transition-all duration-500 ${isGood ? 'bg-green-500' : 'bg-red-500'
+                        }`}
                       style={{ width: `${Math.min(performance * 100, 100)}%` }}
                     ></div>
                   </div>
@@ -972,7 +971,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {data.operatorPerformance && data.operatorPerformance.length > 0 ? (
-                data.operatorPerformance.map((operator, index) => (
+                data.operatorPerformance.map((operator) => (
                   <tr key={operator.operatorId} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -988,21 +987,20 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{operator.operations.toLocaleString()}</div>
                       <div className="text-sm text-gray-500">
-                        {operator.operations > 0 ? 'Active operator' : 'No operations'}
+                        {operator.operations > 0 ? t('common.activeOperator') : t('common.noOperations')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {operator.avgProcessingTime > 0 ? `${operator.avgProcessingTime.toFixed(1)}m` : 'N/A'}
+                        {operator.avgProcessingTime > 0 ? `${operator.avgProcessingTime.toFixed(1)}m` : '-'}
                       </div>
-                      <div className={`text-xs ${
-                        operator.avgProcessingTime > 0 && operator.avgProcessingTime < 15 
-                          ? 'text-green-600' 
-                          : operator.avgProcessingTime > 15 
-                            ? 'text-red-600' 
-                            : 'text-gray-500'
-                      }`}>
-                        {operator.avgProcessingTime > 0 
+                      <div className={`text-xs ${operator.avgProcessingTime > 0 && operator.avgProcessingTime < 15
+                        ? 'text-green-600'
+                        : operator.avgProcessingTime > 15
+                          ? 'text-red-600'
+                          : 'text-gray-500'
+                        }`}>
+                        {operator.avgProcessingTime > 0
                           ? (operator.avgProcessingTime < 15 ? '↓ Faster' : '↑ Slower')
                           : 'No data'
                         }
@@ -1010,15 +1008,14 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {operator.operations > 0 ? (
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          operator.errorRate <= 1.5 ? 'bg-green-100 text-green-800' :
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${operator.errorRate <= 1.5 ? 'bg-green-100 text-green-800' :
                           operator.errorRate <= 2.5 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                            'bg-red-100 text-red-800'
+                          }`}>
                           {operator.errorRate.toFixed(1)}%
                         </span>
                       ) : (
-                        <span className="text-sm text-gray-500">N/A</span>
+                        <span className="text-sm text-gray-500">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1026,11 +1023,10 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                         <div className="flex items-center">
                           <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
                             <div
-                              className={`h-2 rounded-full transition-all duration-500 ${
-                                operator.efficiency >= 90 ? 'bg-green-500' :
+                              className={`h-2 rounded-full transition-all duration-500 ${operator.efficiency >= 90 ? 'bg-green-500' :
                                 operator.efficiency >= 80 ? 'bg-blue-500' :
-                                operator.efficiency >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                              }`}
+                                  operator.efficiency >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
                               style={{ width: `${operator.efficiency}%` }}
                             ></div>
                           </div>
@@ -1042,11 +1038,10 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {operator.operations > 0 ? (
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          operator.efficiency >= 95 ? 'bg-green-100 text-green-800' :
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${operator.efficiency >= 95 ? 'bg-green-100 text-green-800' :
                           operator.efficiency >= 85 ? 'bg-blue-100 text-blue-800' :
-                          operator.efficiency >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                            operator.efficiency >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                          }`}>
                           {operator.performance}
                         </span>
                       ) : (
@@ -1087,7 +1082,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
           </div>
           <Zap className="h-5 w-5 text-gray-400" />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-purple-50 p-4 rounded-lg">
             <div className="flex items-center justify-between mb-2">
@@ -1101,7 +1096,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
               {(gateStats?.totalGateIns || 0) + (gateStats?.totalGateOuts || 0)} total transmissions
             </div>
           </div>
-          
+
           <div className="bg-green-50 p-4 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-medium text-green-700">Success Rate</div>
@@ -1110,7 +1105,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
             <div className="text-2xl font-bold text-green-900">98.7%</div>
             <div className="text-xs text-green-600 mt-1">Last 24 hours</div>
           </div>
-          
+
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-medium text-blue-700">Avg Response Time</div>
@@ -1119,7 +1114,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
             <div className="text-2xl font-bold text-blue-900">2.3s</div>
             <div className="text-xs text-blue-600 mt-1">Within SLA</div>
           </div>
-          
+
           <div className="bg-orange-50 p-4 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-medium text-orange-700">Failed Transmissions</div>
@@ -1169,9 +1164,9 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {damageReport.details.slice(0, 15).map((damage: any, index: number) => {
-                  const priority = damage.damage_type === 'structural' ? 'High' : 
-                                 damage.damage_type === 'mechanical' ? 'Medium' : 'Low';
-                  
+                  const priority = damage.damage_type === 'structural' ? 'High' :
+                    damage.damage_type === 'mechanical' ? 'Medium' : 'Low';
+
                   return (
                     <tr key={damage.id || index} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1187,20 +1182,18 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          damage.damage_type === 'structural' ? 'bg-red-100 text-red-800' :
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${damage.damage_type === 'structural' ? 'bg-red-100 text-red-800' :
                           damage.damage_type === 'mechanical' ? 'bg-orange-100 text-orange-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {damage.damage_type || 'General'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          damage.damage_assessment_stage === 'inspection' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${damage.damage_assessment_stage === 'inspection'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {damage.damage_assessment_stage || 'assignment'}
                         </span>
                       </td>
@@ -1211,20 +1204,18 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          damage.damage_assessed_at 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-orange-100 text-orange-800'
-                        }`}>
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${damage.damage_assessed_at
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-orange-100 text-orange-800'
+                          }`}>
                           {damage.damage_assessed_at ? 'Assessed' : 'Pending'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          priority === 'High' ? 'bg-red-100 text-red-800' :
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${priority === 'High' ? 'bg-red-100 text-red-800' :
                           priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
+                            'bg-green-100 text-green-800'
+                          }`}>
                           {priority}
                         </span>
                       </td>

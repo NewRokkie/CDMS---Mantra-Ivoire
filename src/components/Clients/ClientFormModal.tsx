@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Building, Mail, Phone, MapPin, Calendar, DollarSign, Clock, User, FileText, Calculator } from 'lucide-react';
 import { Client } from '../../types';
-import { useLanguage } from '../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 import { LoadingOverlay } from '../Common/Modal/components/LoadingOverlay';
 
@@ -18,8 +18,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
   selectedClient,
   onSubmit
 }) => {
-  useLanguage();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);

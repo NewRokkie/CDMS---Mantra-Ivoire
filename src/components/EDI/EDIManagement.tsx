@@ -14,7 +14,9 @@ import {
   Activity,
   XCircle,
   Search,
-  Plus
+  Plus,
+  Eye,
+  BarChart2
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useYard } from '../../hooks/useYard';
@@ -24,10 +26,13 @@ import { EDIConfigurationModal } from './EDIConfigurationModal';
 import { EDIFileProcessor } from './EDIFileProcessor';
 import { EDIClientModal } from './EDIClientModal';
 import { EDIValidator } from './EDIValidator';
+import { EDITransmissionDetailsModal } from './EDITransmissionDetailsModal';
+import { EDIRealtimeMonitor } from './EDIRealtimeMonitor';
 import { ediManagementService, type EDITransmissionLog } from '../../services/edi/ediManagement';
 import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 import { ediRealDataService } from '../../services/edi/ediRealDataService';
 import { ediConfigurationDatabaseService } from '../../services/edi/ediConfigurationDatabase';
+import { ediExportService, type LogFilters } from '../../services/edi/ediExportService';
 import { type EDIServerConfig } from '../../services/edi/ediConfiguration';
 
 const EDIManagement: React.FC = () => {
@@ -47,6 +52,18 @@ const EDIManagement: React.FC = () => {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [deletingClientCode, setDeletingClientCode] = useState<string | null>(null);
   const [togglingClientCode, setTogglingClientCode] = useState<string | null>(null);
+  // Bulk retry state
+  const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set());
+  const [isBulkRetrying, setIsBulkRetrying] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  // Details modal state
+  const [detailsLog, setDetailsLog] = useState<EDITransmissionLog | null>(null);
+  // Chart data
+  const [dailyVolume, setDailyVolume] = useState<Array<{ date: string; gateIn: number; gateOut: number; total: number }>>([]);
+  const [statusDist, setStatusDist] = useState<{ success: number; failed: number; pending: number; retrying: number } | null>(null);
+  // History filters & export
+  const [historyFilters, setHistoryFilters] = useState<LogFilters>({});
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const { user } = useAuth();
   const { currentYard } = useYard();
@@ -67,12 +84,14 @@ const EDIManagement: React.FC = () => {
     setIsLoadingClients(true);
     try {
       // Load real data from services
-      const [stats, mappings, configs, logs, clients] = await Promise.all([
+      const [stats, mappings, configs, logs, clients, volume, dist] = await Promise.all([
         ediRealDataService.getRealEDIStatistics(),
         ediRealDataService.getClientServerMappings(),
         ediConfigurationDatabaseService.getConfigurations(),
-        ediTransmissionService.getTransmissionHistory(), // Use database service
-        ediRealDataService.getAvailableClients()
+        ediTransmissionService.getTransmissionHistory(),
+        ediRealDataService.getAvailableClients(),
+        ediTransmissionService.getDailyVolume(7),
+        ediTransmissionService.getStatusDistribution()
       ]);
 
       setRealStats(stats);
@@ -80,6 +99,9 @@ const EDIManagement: React.FC = () => {
       setServerConfigs(configs);
       setTransmissionLogs(logs);
       setAvailableClients(clients);
+      setDailyVolume(volume);
+      setStatusDist(dist);
+      setSelectedLogIds(new Set()); // reset selection on refresh
     } catch (error) {
       console.error('Failed to load EDI data:', error);
       toast.error('Failed to load EDI data');
@@ -109,6 +131,49 @@ const EDIManagement: React.FC = () => {
       toast.error('Retry failed');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleBulkRetry = async () => {
+    const ids = Array.from(selectedLogIds);
+    if (ids.length === 0) return;
+
+    setIsBulkRetrying(true);
+    setBulkProgress({ done: 0, total: ids.length });
+
+    const results = { success: 0, failed: 0 };
+    for (const logId of ids) {
+      const result = await ediTransmissionService.retryTransmission(logId);
+      if (result.success) results.success++;
+      else results.failed++;
+      setBulkProgress(prev => prev ? { ...prev, done: prev.done + 1 } : null);
+    }
+
+    setIsBulkRetrying(false);
+    setBulkProgress(null);
+    setSelectedLogIds(new Set());
+    await loadRealData();
+    toast.success(`Bulk retry done — Success: ${results.success}, Failed: ${results.failed}`);
+  };
+
+  const toggleLogSelection = (logId: string) => {
+    setSelectedLogIds(prev => {
+      const next = new Set(prev);
+      if (next.has(logId)) next.delete(logId);
+      else next.add(logId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllFailed = () => {
+    const failedIds = recentOperationsDeduplicated
+      .filter(l => l.status === 'failed')
+      .map(l => l.id);
+    const allSelected = failedIds.every(id => selectedLogIds.has(id));
+    if (allSelected) {
+      setSelectedLogIds(new Set());
+    } else {
+      setSelectedLogIds(new Set(failedIds));
     }
   };
 
@@ -218,6 +283,7 @@ const EDIManagement: React.FC = () => {
           </div>
         )}
         <div className="flex space-x-3">
+          <EDIRealtimeMonitor onViewDetails={(log) => setDetailsLog(log)} />
           <button
             onClick={() => setShowConfiguration(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -334,19 +400,129 @@ const EDIManagement: React.FC = () => {
             }} 
           />
 
+          {/* Charts: Daily Volume + Status Distribution */}
+          {dailyVolume.length > 0 && statusDist && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Daily Volume Bar Chart */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart2 className="h-4 w-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-900">EDI Volume — Last 7 Days</h4>
+                </div>
+                <div className="flex items-end gap-1 h-28">
+                  {dailyVolume.map(({ date, gateIn, gateOut }) => {
+                    const maxVal = Math.max(...dailyVolume.map(d => d.total), 1);
+                    const totalH = Math.round(((gateIn + gateOut) / maxVal) * 100);
+                    const inH = Math.round((gateIn / maxVal) * 100);
+                    const outH = Math.round((gateOut / maxVal) * 100);
+                    return (
+                      <div key={date} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full flex flex-col justify-end gap-0.5" style={{ height: '96px' }}>
+                          <div
+                            className="w-full bg-blue-400 rounded-t-sm transition-all"
+                            style={{ height: `${inH}%` }}
+                            title={`Gate IN: ${gateIn}`}
+                          />
+                          <div
+                            className="w-full bg-purple-400 rounded-t-sm transition-all"
+                            style={{ height: `${outH}%` }}
+                            title={`Gate OUT: ${gateOut}`}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-400 rotate-45 origin-left mt-1">
+                          {date.slice(5)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" /> Gate IN</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-purple-400 inline-block" /> Gate OUT</span>
+                </div>
+              </div>
+
+              {/* Status Distribution */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="h-4 w-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-900">Status Distribution</h4>
+                </div>
+                <div className="space-y-2">
+                  {([
+                    { key: 'success', label: 'Success', color: 'bg-green-500' },
+                    { key: 'failed', label: 'Failed', color: 'bg-red-500' },
+                    { key: 'pending', label: 'Pending', color: 'bg-yellow-400' },
+                    { key: 'retrying', label: 'Retrying', color: 'bg-blue-400' },
+                  ] as const).map(({ key, label, color }) => {
+                    const count = statusDist[key];
+                    const total = Object.values(statusDist).reduce((a, b) => a + b, 0);
+                    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                    return (
+                      <div key={key}>
+                        <div className="flex justify-between text-xs text-gray-600 mb-0.5">
+                          <span>{label}</span>
+                          <span>{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2">
+                          <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Recent EDI Operations: one row per container + operation with actions */}
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Recent EDI Operations</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                One row per container and operation. Retry, view errors, or copy details.
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Recent EDI Operations</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    One row per container and operation. Retry, view errors, or copy details.
+                  </p>
+                </div>
+                {/* Bulk retry controls */}
+                {recentOperationsDeduplicated.some(l => l.status === 'failed') && (
+                  <div className="flex items-center gap-2">
+                    {bulkProgress && (
+                      <span className="text-sm text-gray-500">
+                        Retrying {bulkProgress.done}/{bulkProgress.total}...
+                      </span>
+                    )}
+                    <button
+                      onClick={toggleSelectAllFailed}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      {recentOperationsDeduplicated.filter(l => l.status === 'failed').every(l => selectedLogIds.has(l.id))
+                        ? 'Deselect all'
+                        : 'Select all failed'}
+                    </button>
+                    {selectedLogIds.size > 0 && (
+                      <button
+                        onClick={handleBulkRetry}
+                        disabled={isBulkRetrying}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isBulkRetrying
+                          ? <><RefreshCw className="h-3 w-3 animate-spin" /> Retrying...</>
+                          : <><RotateCcw className="h-3 w-3" /> Retry Selected ({selectedLogIds.size})</>
+                        }
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="overflow-x-auto">
               {recentOperationsDeduplicated.length > 0 ? (
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-4 py-3 w-8" />
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Container</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -358,7 +534,17 @@ const EDIManagement: React.FC = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {recentOperationsDeduplicated.map((log) => (
-                      <tr key={log.id} className="hover:bg-gray-50">
+                      <tr key={log.id} className={`hover:bg-gray-50 ${selectedLogIds.has(log.id) ? 'bg-blue-50' : ''}`}>
+                        <td className="px-4 py-4">
+                          {log.status === 'failed' && (
+                            <input
+                              type="checkbox"
+                              checked={selectedLogIds.has(log.id)}
+                              onChange={() => toggleLogSelection(log.id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="font-medium text-gray-900">{log.containerNumber}</div>
                           <div className="text-sm text-gray-500">{log.fileName}</div>
@@ -401,30 +587,17 @@ const EDIManagement: React.FC = () => {
                                 onClick={() => handleRetryTransmission(log.id)}
                                 className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
                                 title="Retry transmission"
-                                disabled={isLoading}
+                                disabled={isLoading || isBulkRetrying}
                               >
                                 <RotateCcw className="h-4 w-4" />
                               </button>
                             )}
-                            {log.errorMessage && (
-                              <button
-                                onClick={() => { toast.error(log.errorMessage || 'Unknown error', 10000); }}
-                                className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                                title="View error details"
-                              >
-                                <AlertCircle className="h-4 w-4" />
-                              </button>
-                            )}
                             <button
-                              onClick={() => {
-                                const details = `EDI Transmission Details\n========================\nContainer: ${log.containerNumber}\nOperation: ${log.operation}\nStatus: ${log.status}\nPartner: ${log.partnerCode}\nFile: ${log.fileName}\nSize: ${log.fileSize} bytes\nAttempts: ${log.attempts}\nLast Attempt: ${log.lastAttempt.toLocaleString()}\nCreated: ${log.createdAt.toLocaleString()}${log.errorMessage ? `\nError: ${log.errorMessage}` : ''}${log.acknowledgmentReceived ? `\nAcknowledged: ${log.acknowledgmentReceived.toLocaleString()}` : ''}`.trim();
-                                navigator.clipboard.writeText(details);
-                                toast.success('Details copied to clipboard');
-                              }}
-                              className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50 transition-colors"
-                              title="Copy details to clipboard"
+                              onClick={() => setDetailsLog(log)}
+                              className="text-gray-500 hover:text-gray-800 p-1 rounded hover:bg-gray-100 transition-colors"
+                              title="View transmission details"
                             >
-                              <FileText className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </button>
                           </div>
                         </td>
@@ -646,7 +819,7 @@ const EDIManagement: React.FC = () => {
 
       {activeTab === 'history' && (
         <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Transmission History</h3>
@@ -654,29 +827,104 @@ const EDIManagement: React.FC = () => {
                   All EDI transmission attempts (including every retry). Display only — use Overview for actions.
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  const csvData = ediManagementService.exportTransmissionLogs();
-                  const blob = new Blob([csvData], { type: 'text/csv' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `edi_transmission_logs_${new Date().toISOString().split('T')[0]}.csv`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                  toast.success('Transmission logs exported');
-                }}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              {/* Export dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(prev => !prev)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Export</span>
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <button
+                      onClick={async () => {
+                        setShowExportMenu(false);
+                        await ediExportService.exportLogsToCSV(historyFilters);
+                        toast.success('Logs exported as CSV');
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                    >
+                      Export as CSV
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setShowExportMenu(false);
+                        await ediExportService.exportLogsToExcel(historyFilters);
+                        toast.success('Logs exported as Excel');
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg"
+                    >
+                      Export as Excel
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Filters row */}
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                value={historyFilters.status || ''}
+                onChange={e => setHistoryFilters(f => ({ ...f, status: (e.target.value || undefined) as any }))}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <Download className="h-4 w-4" />
-                <span>Export</span>
-              </button>
+                <option value="">All statuses</option>
+                <option value="success">Success</option>
+                <option value="failed">Failed</option>
+                <option value="pending">Pending</option>
+                <option value="retrying">Retrying</option>
+              </select>
+              <select
+                value={historyFilters.operation || ''}
+                onChange={e => setHistoryFilters(f => ({ ...f, operation: (e.target.value || undefined) as any }))}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All operations</option>
+                <option value="GATE_IN">Gate IN</option>
+                <option value="GATE_OUT">Gate OUT</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Client code..."
+                value={historyFilters.clientCode || ''}
+                onChange={e => setHistoryFilters(f => ({ ...f, clientCode: e.target.value || undefined }))}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent w-36"
+              />
+              <input
+                type="date"
+                value={historyFilters.dateFrom ? historyFilters.dateFrom.toISOString().slice(0, 10) : ''}
+                onChange={e => setHistoryFilters(f => ({ ...f, dateFrom: e.target.value ? new Date(e.target.value) : undefined }))}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <span className="text-xs text-gray-400">→</span>
+              <input
+                type="date"
+                value={historyFilters.dateTo ? historyFilters.dateTo.toISOString().slice(0, 10) : ''}
+                onChange={e => setHistoryFilters(f => ({ ...f, dateTo: e.target.value ? new Date(e.target.value) : undefined }))}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {(historyFilters.status || historyFilters.operation || historyFilters.clientCode || historyFilters.dateFrom || historyFilters.dateTo) && (
+                <button
+                  onClick={() => setHistoryFilters({})}
+                  className="text-xs text-gray-400 hover:text-gray-600 underline"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           </div>
           <div className="overflow-x-auto">
-            {transmissionLogs.length > 0 ? (
+            {(() => {
+              const filtered = transmissionLogs.filter(log => {
+                if (historyFilters.status && log.status !== historyFilters.status) return false;
+                if (historyFilters.operation && log.operation !== historyFilters.operation) return false;
+                if (historyFilters.clientCode && !log.partnerCode?.toLowerCase().includes(historyFilters.clientCode.toLowerCase())) return false;
+                if (historyFilters.dateFrom && log.createdAt < historyFilters.dateFrom) return false;
+                if (historyFilters.dateTo && log.createdAt > historyFilters.dateTo) return false;
+                return true;
+              });
+              return filtered.length > 0 ? (
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -689,7 +937,7 @@ const EDIManagement: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {transmissionLogs.map((log) => (
+                  {filtered.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-medium text-gray-900">{log.containerNumber}</div>
@@ -735,7 +983,8 @@ const EDIManagement: React.FC = () => {
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600">No transmission logs found</p>
               </div>
-            )}
+            )
+            })()}
           </div>
         </div>
       )}
@@ -754,7 +1003,17 @@ const EDIManagement: React.FC = () => {
     clientSearchTerm,
     togglingClientCode,
     deletingClientCode,
+    selectedLogIds,
+    isBulkRetrying,
+    bulkProgress,
+    dailyVolume,
+    statusDist,
+    historyFilters,
+    showExportMenu,
     handleRetryTransmission,
+    handleBulkRetry,
+    toggleLogSelection,
+    toggleSelectAllFailed,
     handleValidationComplete,
     toast
   ]);
@@ -802,6 +1061,12 @@ const EDIManagement: React.FC = () => {
         availableClients={availableClients}
         serverConfigs={serverConfigs}
         configuredClients={clientMappings.map(m => m.clientCode)}
+      />
+
+      {/* Transmission Details Modal */}
+      <EDITransmissionDetailsModal
+        log={detailsLog}
+        onClose={() => setDetailsLog(null)}
       />
     </>
   );

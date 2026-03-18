@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Search, X, FileText, Package, User, Truck, Calendar, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Search, X, FileText, Package, User, Truck, Calendar } from 'lucide-react';
 import { PendingGateOut } from '../types';
-import { getStatusBadgeConfig, formatContainerNumberForDisplay } from '../utils';
+import { getStatusBadgeConfig } from '../utils';
+import { useTranslation } from 'react-i18next';
 import { GateOutCompletionModal } from './GateOutCompletionModal';
 
 interface PendingOperationsViewProps {
@@ -21,6 +22,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
   onComplete,
   isProcessing
 }) => {
+  const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useState<'all' | 'IMPORT' | 'EXPORT'>('all');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
@@ -315,12 +317,12 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-gray-600 text-sm px-4">
-                {searchTerm ? "Try adjusting your search criteria." : "No pending gate out operations."}
+                {searchTerm ? t('common.tryAdjusting') : t('common.noPendingOperations')}
               </p>
             </div>
           )}
         </div>
-
+      
         {/* Desktop Table Layout */}
         <div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
@@ -332,6 +334,9 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Booking Number
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Type
@@ -371,6 +376,9 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {operation.date?.toLocaleDateString() || '-'}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
+                      {operation.bookingNumber || '-'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {operation.bookingType && (
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -406,7 +414,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                             {operation.processedContainers}/{operation.totalContainers}
                           </span>
                           <span className="text-xs text-gray-500">
-                            {Math.round((operation.processedContainers / operation.totalContainers) * 100)}%
+                            {Math.round((operation.processedContainers / (operation.totalContainers || 1)) * 100)}%
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -418,17 +426,32 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
                                 ? 'bg-blue-500'
                                 : 'bg-gray-300'
                             }`}
-                            style={{ width: `${(operation.processedContainers / operation.totalContainers) * 100}%` }}
+                            style={{ width: `${(operation.processedContainers / (operation.totalContainers || 1)) * 100}%` }}
                           ></div>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {operation.remainingContainers} remaining
                         </div>
+                        {/* Container numbers */}
+                        {operation.containerNumbers && operation.containerNumbers.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {operation.containerNumbers.slice(0, 3).map((num: string, idx: number) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 text-gray-700">
+                                {num}
+                              </span>
+                            ))}
+                            {operation.containerNumbers.length > 3 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 text-gray-500">
+                                +{operation.containerNumbers.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeConfig(operation.status).color}`}>
-                        {getStatusBadgeConfig(operation.status).label}
+                        {t(getStatusBadgeConfig(operation.status).labelKey || 'status.pending')}
                       </span>
                     </td>
                   </tr>
@@ -442,7 +465,7 @@ export const PendingOperationsView: React.FC<PendingOperationsViewProps> = ({
               <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No operations found</h3>
               <p className="text-gray-600">
-                {searchTerm ? "Try adjusting your search criteria." : "No pending gate out operations."}
+                {searchTerm ? t('common.tryAdjusting') : t('common.noPendingOperations')}
               </p>
             </div>
           )}

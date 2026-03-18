@@ -26,10 +26,10 @@ import { handleError } from '../../../services/errorHandling';
 import { useToast } from '../../../hooks/useToast';
 import { useConfirm } from '../../../hooks/useConfirm';
 import { StackCapacityCalculator } from '../../../utils/stackCapacityCalculator';
-import { useLanguage } from '../../../hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 export const DepotManagement: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [depots, setDepots] = useState<Yard[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

@@ -7,7 +7,8 @@ import { syncManager } from '../services/sync/SyncManager';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { handleError } from '../services/errorHandling';
 import { logger } from '../utils/logger';
-import { AuthContext, AuthContextType, SyncStatus } from '../contexts/AuthContext';
+import { AuthContext, SyncStatus } from '../contexts/AuthContext';
+export type { SyncStatus };
 
 
 
@@ -80,7 +81,12 @@ export const useAuthProvider = () => {
         return false;
       }
 
-      return true;
+      if (data) {
+        logger.info('Database connection test successful', 'useAuth.testDatabaseConnection');
+        return true;
+      }
+
+      return false;
     } catch (error: any) {
       if (error.name === 'AbortError') {
         logger.error('Database connection timeout', 'useAuth.testDatabaseConnection');
@@ -214,6 +220,7 @@ export const useAuthProvider = () => {
               last_login: new Date().toISOString()
             }).catch(err => {
               // Silently handle - not critical
+              console.error(err);
             });
           }
         } else {
@@ -278,7 +285,7 @@ export const useAuthProvider = () => {
       }, 30000); // 30 seconds
 
       // Set up sync error callback
-      const handleSyncError = (error: any) => {
+      const handleSyncError = () => {
         if (mounted) {
           const metrics = syncManager.getSyncMetrics();
           const newStatus: SyncStatus = {
@@ -371,6 +378,7 @@ export const useAuthProvider = () => {
         last_login: new Date().toISOString()
       }).catch(err => {
         // Silently handle - not critical
+        console.error(err);
       });
     } catch (error: any) {
       handleError(error, 'useAuth.login');

@@ -1,5 +1,7 @@
 import { eventBus } from './eventBus';
 import { logger } from '../utils/logger';
+import { ediDatabaseService } from './edi/ediDatabaseService';
+import { sftpIntegrationService } from './edi/sftpIntegrationService';
 
 /**
  * Initialize all event listeners for automatic inter-module linking
@@ -29,11 +31,17 @@ export function initializeEventListeners() {
       }
 
       // 3. Request EDI transmission if client has auto_edi enabled
-      await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
-        entityId: operation.id,
-        entityType: 'gate_in',
-        messageType: 'CODECO'
-      });
+      const ediEnabled = await ediDatabaseService.isClientEdiEnabled(operation.clientCode);
+      if (ediEnabled) {
+        logger.debug(`Client ${operation.clientCode} has EDI enabled, requesting transmission`, 'EventListeners');
+        await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
+          entityId: operation.id,
+          entityType: 'gate_in',
+          messageType: 'CODECO'
+        });
+      } else {
+        logger.debug(`Client ${operation.clientCode} has EDI disabled, skipping transmission`, 'EventListeners');
+      }
 
       // 4. Dashboard stats auto-update (via DB queries)
       logger.debug('Dashboard will reflect new container on next refresh', 'EventListeners');
@@ -101,12 +109,97 @@ export function initializeEventListeners() {
       // 2. Release order already decremented
       logger.debug(`Booking reference updated: ${bookingReference.remainingContainers} remaining`, 'EventListeners');
 
-      // 3. Request EDI transmission
-      await eventBus.emit('EDI_TRANSMISSION_REQUESTED', {
-        entityId: operation.id,
-        entityType: 'gate_out',
-        messageType: 'CODECO'
-      });
+      // 3. EDI transmission if client has EDI enabled
+      const ediEnabled = await ediDatabaseService.isClientEdiEnabled(operation.clientCode);
+      if (ediEnabled) {
+        logger.info(`Client ${operation.clientCode} has EDI enabled, starting SFTP transmission`, 'EventListeners');
+
+        // Capture values to avoid race conditions in fire-and-forget
+        const capturedOperationId = operation.id;
+        const capturedClientCode = operation.clientCode;
+        const capturedClientName = operation.clientName;
+        const capturedYardId = operation.yardId;
+        const capturedBookingNumber = operation.bookingNumber;
+        const capturedTransportCompany = operation.transportCompany || '';
+        const capturedTruckNumber = operation.truckNumber || '';
+        const capturedOperatorName = operation.operatorName || operation.createdBy || 'System';
+        const capturedCreatedBy = operation.createdBy || 'system';
+        const capturedCompletedAt = operation.completedAt;
+        const capturedContainers = containers.map(c => ({ ...c })); // Clone containers array
+
+        // Fire-and-forget: don't block the gate out workflow
+        (async () => {
+          const timeoutId = setTimeout(() => {
+            logger.warn('EDI transmission timeout for operation', 'EventListeners', {
+              operationId: capturedOperationId
+            });
+          }, 30000); // 30 second timeout
+
+          try {
+            const now = new Date();
+            const gateOutDate = capturedCompletedAt || now;
+            
+            // Track successful vs failed transmissions
+            const successfulContainers = [];
+            const failedContainers = [];
+            const notConfiguredContainers = [];
+
+            // Transmit one EDI per container
+            for (const container of capturedContainers) {
+              const result = await sftpIntegrationService.processGateOutWithSFTP({
+                containerNumbers: [container.number],
+                containerSize: container.size || '20ft',
+                containerType: container.type || 'dry',
+                clientCode: capturedClientCode,
+                clientName: capturedClientName,
+                transportCompany: capturedTransportCompany,
+                truckNumber: capturedTruckNumber,
+                gateOutDate: gateOutDate.toISOString().split('T')[0],
+                gateOutTime: gateOutDate.toTimeString().slice(0, 5),
+                yardId: capturedYardId,
+                operatorName: capturedOperatorName,
+                operatorId: capturedCreatedBy,
+                bookingNumber: capturedBookingNumber,
+              });
+
+              if (result.transmitted) {
+                logger.info(`EDI transmitted for container ${container.number}`, 'EventListeners', {
+                  remotePath: result.remotePath
+                });
+                successfulContainers.push(container.number);
+              } else if (result.success === false) {
+                logger.error(`EDI transmission failed for container ${container.number}`, 'EventListeners', {
+                  error: result.error
+                });
+                failedContainers.push(container.number);
+              } else {
+                logger.debug(`EDI not configured for client ${capturedClientCode}`, 'EventListeners');
+                notConfiguredContainers.push(container.number);
+              }
+            }
+
+            // Update edi_transmitted flag with detailed status
+            const hasAnySuccess = successfulContainers.length > 0;
+            await ediDatabaseService.updateGateOutEdiStatus(capturedOperationId, hasAnySuccess, new Date());
+            
+            logger.info(`EDI status updated for operation ${capturedOperationId}`, 'EventListeners', {
+              successful: successfulContainers.length,
+              failed: failedContainers.length,
+              notConfigured: notConfiguredContainers.length,
+              total: capturedContainers.length
+            });
+          } catch (ediError) {
+            logger.error('EDI transmission error for GATE_OUT', 'EventListeners', {
+              operationId: capturedOperationId,
+              error: ediError
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        })();
+      } else {
+        logger.debug(`Client ${operation.clientCode} has EDI disabled, skipping transmission`, 'EventListeners');
+      }
 
     } catch (error) {
       logger.error('Error handling GATE_OUT_COMPLETED', 'EventListeners', error);
