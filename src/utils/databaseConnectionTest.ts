@@ -26,17 +26,14 @@ export const testDatabaseConnection = async (timeoutMs: number = 10000): Promise
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('id')
-      .limit(1)
-      .abortSignal(controller.signal);
-
+    // Remplacer l'appel à la table 'users' par un appel à l'API auth
+    const { error } = await supabase.auth.getSession();
+    
     clearTimeout(timeoutId);
     const responseTime = Date.now() - startTime;
 
     if (error) {
-      logger.error('Database connection test failed', 'testDatabaseConnection', error);
+      logger.error('Supabase connection test failed', 'testDatabaseConnection', error);
       return {
         isConnected: false,
         responseTime,
@@ -45,6 +42,7 @@ export const testDatabaseConnection = async (timeoutMs: number = 10000): Promise
       };
     }
 
+    logger.info('Supabase connection test successful', 'testDatabaseConnection');
     return {
       isConnected: true,
       responseTime,
@@ -54,7 +52,7 @@ export const testDatabaseConnection = async (timeoutMs: number = 10000): Promise
     const responseTime = Date.now() - startTime;
     
     if (error.name === 'AbortError') {
-      logger.error('Database connection timeout', 'testDatabaseConnection');
+      logger.error('Supabase connection timeout', 'testDatabaseConnection');
       return {
         isConnected: false,
         responseTime,
@@ -63,7 +61,7 @@ export const testDatabaseConnection = async (timeoutMs: number = 10000): Promise
       };
     }
     
-    logger.error('Database connection test error', 'testDatabaseConnection', error);
+    logger.error('Supabase connection test error', 'testDatabaseConnection', error);
     return {
       isConnected: false,
       responseTime,

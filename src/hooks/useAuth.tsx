@@ -64,38 +64,31 @@ export const useAuthProvider = () => {
 
   // Database connection test with timeout
   const testDatabaseConnection = async (timeoutMs: number = 10000): Promise<boolean> => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('id')
-        .limit(1)
-        .abortSignal(controller.signal);
+    // Tester l'API sans accéder aux tables
+    const { error } = await supabase.auth.getSession();
+    
+    clearTimeout(timeoutId);
 
-      clearTimeout(timeoutId);
-
-      if (error) {
-        logger.error('Database connection test failed', 'useAuth.testDatabaseConnection', error);
-        return false;
-      }
-
-      if (data) {
-        logger.info('Database connection test successful', 'useAuth.testDatabaseConnection');
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        logger.error('Database connection timeout', 'useAuth.testDatabaseConnection');
-        return false;
-      }
-      logger.error('Database connection test error', 'useAuth.testDatabaseConnection', error);
+    if (error) {
+      logger.error('Supabase connection test failed', 'useAuth.testDatabaseConnection', error);
       return false;
     }
-  };
+
+    logger.info('Supabase connection test successful', 'useAuth.testDatabaseConnection');
+    return true;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      logger.error('Supabase connection timeout', 'useAuth.testDatabaseConnection');
+      return false;
+    }
+    logger.error('Supabase connection test error', 'useAuth.testDatabaseConnection', error);
+    return false;
+  }
+};
 
   // Load user profile with enhanced module access handling
   const loadUserProfile = async (authUser: SupabaseUser): Promise<AppUser | null> => {

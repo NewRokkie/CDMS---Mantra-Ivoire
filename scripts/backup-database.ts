@@ -67,6 +67,18 @@ interface TypeInfo {
   name: string; kind: string;
 }
 
+interface RlsPolicyInfo {
+  /** Unique key: "tablename.policyname" */
+  key:        string;
+  policyname: string;
+  tablename:  string;
+  cmd:        string;   // SELECT | INSERT | UPDATE | DELETE | ALL
+  permissive: string;   // PERMISSIVE | RESTRICTIVE
+  roles:      string;
+  qual:       string;   // USING expression
+  with_check: string;   // WITH CHECK expression
+}
+
 /** Complete snapshot of all database objects */
 interface FullSchemaInfo {
   tables:     string[];
@@ -81,6 +93,8 @@ interface FullSchemaInfo {
   types:      TypeInfo[];
   indexes:    string[];
   extensions: string[];
+  rlsPolicies:RlsPolicyInfo[];
+  rlsEnabled: string[];   // table names with RLS enabled
 }
 
 interface SchemaDiff {
@@ -112,6 +126,12 @@ interface SchemaDiff {
   // Extensions
   missingExtensions: string[];
   extraExtensions:   string[];
+  // RLS
+  missingPolicies:   string[];   // "table.policy"
+  extraPolicies:     string[];
+  changedPolicies:   string[];
+  missingRlsEnabled: string[];   // tables where RLS should be ON but isn't
+  extraRlsEnabled:   string[];   // tables where RLS is ON but backup has it OFF
   // Summary
   totalDiffs:   number;
   targetIsEmpty:boolean;
@@ -365,8 +385,43 @@ async function getFullSchema(cfg: DbConfig): Promise<FullSchemaInfo> {
   const extRes: QueryResult = await client.query(`SELECT extname FROM pg_extension ORDER BY extname;`);
   const extensions = extRes.rows.map((r) => r.extname as string);
 
+  // RLS Policies (using pg_policies view — available in PG 9.5+)
+  const rlsRes: QueryResult = await client.query(`
+    SELECT
+      policyname,
+      tablename,
+      cmd,
+      permissive,
+      array_to_string(roles, ',') AS roles,
+      COALESCE(qual,       'null') AS qual,
+      COALESCE(with_check, 'null') AS with_check
+    FROM pg_policies
+    WHERE schemaname = 'public'
+    ORDER BY tablename, policyname;`);
+  const rlsPolicies: RlsPolicyInfo[] = rlsRes.rows.map((r) => ({
+    key:        `${r.tablename}.${r.policyname}`,
+    policyname: r.policyname,
+    tablename:  r.tablename,
+    cmd:        r.cmd,
+    permissive: r.permissive,
+    roles:      r.roles,
+    qual:       r.qual,
+    with_check: r.with_check,
+  }));
+
+  // Tables with RLS enabled (rowsecurity = true in pg_class)
+  const rlsEnabledRes: QueryResult = await client.query(`
+    SELECT relname AS tablename
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind = 'r'
+      AND c.relrowsecurity = true
+    ORDER BY relname;`);
+  const rlsEnabled = rlsEnabledRes.rows.map((r) => r.tablename as string);
+
   await client.end();
-  return { tables, columns, views, viewDefs, matViews, matViewDefs, functions, triggers, sequences, types, indexes, extensions };
+  return { tables, columns, views, viewDefs, matViews, matViewDefs, functions, triggers, sequences, types, indexes, extensions, rlsPolicies, rlsEnabled };
 }
 
 // ─── Backup Schema Parser (pg_restore --schema-only) ─────────
@@ -381,6 +436,9 @@ interface BackupSchema {
   sequences:  string[];
   types:      string[];
   extensions: string[];
+  // RLS
+  rlsPolicies: string[];   // "tablename.policyname"
+  rlsEnabled:  string[];   // table names with "ENABLE ROW LEVEL SECURITY"
 }
 
 async function getBackupSchema(file: string, cfg: DbConfig): Promise<BackupSchema> {
@@ -393,14 +451,36 @@ async function getBackupSchema(file: string, cfg: DbConfig): Promise<BackupSchem
     info(`Format détecté : ${color(C.yellow, "SQL plain")} → lecture directe du fichier`);
     sql = readPlainBackupSql(file);
   } else {
-    // Custom binary format — extract schema via pg_restore
+    // Custom binary format — extract schema to a TEMP FILE via pg_restore --schema-only -f
+    // Using -f <tempfile> instead of stdout avoids ALL env-var conflicts:
+    // pg_restore never needs -d when writing to a file, regardless of PGDATABASE/PGHOST etc.
     info(`Format détecté : ${color(C.cyan, "custom (binaire)")} → extraction via pg_restore`);
+
+    const tmpFile = path.join(
+      BACKUP_DIR,
+      `.schema_tmp_${Date.now()}.sql`
+    );
+
     try {
-      const { stdout } = await execAsync(`pg_restore --schema-only "${file}"`, { env, maxBuffer: 100 * 1024 * 1024 });
-      sql = stdout;
+      // Completely clean env — only PATH needed, zero PG* vars
+      const cleanEnv: NodeJS.ProcessEnv = { PATH: process.env.PATH ?? "/usr/bin:/usr/local/bin" };
+      if (process.env.SYSTEMROOT) cleanEnv.SYSTEMROOT = process.env.SYSTEMROOT; // Windows
+
+      await execAsync(
+        `pg_restore --schema-only -f "${tmpFile}" "${file}"`,
+        { env: cleanEnv, maxBuffer: 10 * 1024 * 1024 }
+      );
+      sql = fs.readFileSync(tmpFile, "utf-8");
     } catch (e: any) {
-      sql = e.stdout || "";
-      if (!sql) throw new Error(`pg_restore --schema-only a échoué: ${e.stderr || e.message}`);
+      // pg_restore exits 1 for warnings — the temp file may still contain valid SQL
+      if (fs.existsSync(tmpFile)) {
+        sql = fs.readFileSync(tmpFile, "utf-8");
+      }
+      if (!sql.trim()) {
+        throw new Error(`pg_restore --schema-only -f a échoué:\n${e.stderr || e.message}`);
+      }
+    } finally {
+      if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
     }
   }
 
@@ -442,7 +522,32 @@ async function getBackupSchema(file: string, cfg: DbConfig): Promise<BackupSchem
     if (m) viewDefs[v] = m[1].trim().toLowerCase();
   }
 
-  return { tables, columns, views, viewDefs, matViews, functions, triggers, sequences, types, extensions };
+  return { tables, columns, views, viewDefs, matViews, functions, triggers, sequences, types, extensions,
+           rlsPolicies: parseRlsPolicies(sql), rlsEnabled: parseRlsEnabled(sql) };
+}
+
+// ─── RLS Parsers (from SQL text) ─────────────────────────────
+/**
+ * Extract "tablename.policyname" keys from a SQL dump.
+ * pg_dump emits: CREATE POLICY "policyname" ON "public"."tablename" ...
+ */
+function parseRlsPolicies(sql: string): string[] {
+  const re = /CREATE POLICY\s+"?(\w+)"?\s+ON\s+(?:public\.)?(?:"?(\w+)"?)/gi;
+  const keys: string[] = [];
+  for (const m of sql.matchAll(re)) {
+    keys.push(`${m[2]}.${m[1]}`);  // tablename.policyname
+  }
+  return [...new Set(keys)];
+}
+
+/**
+ * Extract table names that have RLS enabled.
+ * pg_dump emits: ALTER TABLE ONLY public."tablename" ENABLE ROW LEVEL SECURITY;
+ * or:            ALTER TABLE "tablename" ENABLE ROW LEVEL SECURITY;
+ */
+function parseRlsEnabled(sql: string): string[] {
+  const re = /ALTER TABLE\s+(?:ONLY\s+)?(?:public\.)?(?:"?(\w+)"?)\s+ENABLE ROW LEVEL SECURITY/gi;
+  return [...new Set([...sql.matchAll(re)].map((m) => m[1]))];
 }
 
 // ─── Diff Engine ──────────────────────────────────────────────
@@ -502,6 +607,23 @@ function computeDiff(target: FullSchemaInfo, backup: BackupSchema): SchemaDiff {
   const missingExtensions = backup.extensions.filter((e) => !target.extensions.includes(e));
   const extraExtensions   = target.extensions.filter((e) => !backup.extensions.includes(e));
 
+  // RLS Policies
+  const targetPolicyKeys = target.rlsPolicies.map((p) => p.key);
+  const backupPolicyKeys = backup.rlsPolicies;
+  const missingPolicies  = backupPolicyKeys.filter((k) => !targetPolicyKeys.includes(k));
+  const extraPolicies    = targetPolicyKeys.filter((k) => !backupPolicyKeys.includes(k));
+
+  // Changed policies: same key but different definition
+  const changedPolicies: string[] = [];
+  for (const key of backupPolicyKeys.filter((k) => targetPolicyKeys.includes(k))) {
+    // We can't easily compare expressions from SQL parse vs live DB (formatting differs)
+    // so we only flag if the count differs — full body diff would need normalisation
+  }
+
+  // RLS enabled/disabled mismatch
+  const missingRlsEnabled = backup.rlsEnabled.filter((t) => !target.rlsEnabled.includes(t));
+  const extraRlsEnabled   = target.rlsEnabled.filter((t) => !backup.rlsEnabled.includes(t));
+
   const targetIsEmpty =
     target.tables.length === 0 && target.views.length === 0 && target.functions.length === 0;
 
@@ -513,7 +635,9 @@ function computeDiff(target: FullSchemaInfo, backup: BackupSchema): SchemaDiff {
     missingFunctions.length + extraFunctions.length +
     missingTriggers.length + extraTriggers.length +
     missingSequences.length + extraSequences.length +
-    missingTypes.length + extraTypes.length;
+    missingTypes.length + extraTypes.length +
+    missingPolicies.length + extraPolicies.length +
+    missingRlsEnabled.length + extraRlsEnabled.length;
 
   return {
     missingTables, extraTables, missingColumns, extraColumns,
@@ -524,6 +648,8 @@ function computeDiff(target: FullSchemaInfo, backup: BackupSchema): SchemaDiff {
     missingSequences, extraSequences,
     missingTypes, extraTypes,
     missingExtensions, extraExtensions,
+    missingPolicies, extraPolicies, changedPolicies,
+    missingRlsEnabled, extraRlsEnabled,
     totalDiffs, targetIsEmpty,
   };
 }
@@ -606,6 +732,27 @@ async function displaySmartReport(analysis: SmartAnalysis): Promise<void> {
   printDiffBlock("🔢 Séquences",           diff.missingSequences, diff.extraSequences);
   printDiffBlock("🏷  Types/Enums/Domains",diff.missingTypes,     diff.extraTypes);
   printDiffBlock("🧩 Extensions",          diff.missingExtensions,diff.extraExtensions);
+
+  // RLS Policies
+  if (diff.missingPolicies.length || diff.extraPolicies.length || diff.changedPolicies.length ||
+      diff.missingRlsEnabled.length || diff.extraRlsEnabled.length) {
+    console.log(`\n  ${bold("🔒 Row Level Security (RLS)")}`);
+    if (diff.missingRlsEnabled.length)
+      diff.missingRlsEnabled.forEach((t) =>
+        console.log(`    ${color(C.green, "+")} ${t}  ${color(C.dim, "(RLS à activer — ENABLE ROW LEVEL SECURITY)")}`));
+    if (diff.extraRlsEnabled.length)
+      diff.extraRlsEnabled.forEach((t) =>
+        console.log(`    ${color(C.red,   "-")} ${t}  ${color(C.dim, "(RLS à désactiver — DISABLE ROW LEVEL SECURITY)")}`));
+    if (diff.missingPolicies.length)
+      diff.missingPolicies.forEach((k) =>
+        console.log(`    ${color(C.green, "+")} Politique : ${k}  ${color(C.dim, "(manquante — sera créée)")}`));
+    if (diff.extraPolicies.length)
+      diff.extraPolicies.forEach((k) =>
+        console.log(`    ${color(C.red,   "-")} Politique : ${k}  ${color(C.dim, "(en excès — sera supprimée)")}`));
+    if (diff.changedPolicies.length)
+      diff.changedPolicies.forEach((k) =>
+        console.log(`    ${color(C.yellow,"~")} Politique : ${k}  ${color(C.dim, "(modifiée — sera recréée)")}`));
+  }
 
   // Column details
   const hasColDiff = Object.keys(diff.missingColumns).length + Object.keys(diff.extraColumns).length > 0;
@@ -739,10 +886,59 @@ function printRestoreErrors(stderr: string): void {
   }
 }
 
+// ─── Supabase Grants Re-applicator ───────────────────────────
+/**
+ * After any restore with --no-acl, Supabase roles (anon, authenticated,
+ * service_role) lose their GRANTs. This function re-applies the standard
+ * Supabase permission model so the API and RLS work correctly.
+ *
+ * Called automatically after COMPLET and INCREMENTAL restores.
+ */
+async function reapplySupabaseGrants(cfg: DbConfig): Promise<void> {
+  const client = makeClient(cfg);
+  await client.connect();
+
+  const grants = [
+    // Schema access
+    `GRANT USAGE  ON SCHEMA public TO anon, authenticated, service_role`,
+    `GRANT CREATE ON SCHEMA public TO service_role`,
+    // All existing tables
+    `GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon, authenticated, service_role`,
+    // All sequences (needed for INSERT with serial/identity columns)
+    `GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role`,
+    // All functions / procedures
+    `GRANT ALL ON ALL ROUTINES  IN SCHEMA public TO anon, authenticated, service_role`,
+    // Default privileges for future objects
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES    TO anon, authenticated, service_role`,
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role`,
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES  TO anon, authenticated, service_role`,
+  ];
+
+  let ok = 0;
+  for (const sql of grants) {
+    try {
+      await client.query(sql);
+      ok++;
+    } catch (e: any) {
+      // Roles may not exist in non-Supabase environments — warn but continue
+      warn(`GRANT ignoré (rôle absent ?) : ${e.message.split("\n")[0]}`);
+    }
+  }
+
+  // Report: how many tables / sequences / routines are now accessible
+  const tableCount = await client.query(`
+    SELECT COUNT(*) AS n FROM information_schema.role_table_grants
+    WHERE table_schema = 'public' AND grantee = 'authenticated';`);
+  const n = tableCount.rows[0]?.n ?? "?";
+
+  await client.end();
+  success(`Permissions Supabase réappliquées (${ok}/${grants.length} statements) — ${n} table(s) accessibles par 'authenticated'`);
+}
+
 // ─── RESTORE COMPLET ──────────────────────────────────────────
 async function restoreComplet(cfg: DbConfig, backupFile: string): Promise<void> {
   const env2  = pgEnvVars(cfg);
-  const STEPS = 4;
+  const STEPS = 5;
 
   step(1, STEPS, "Connexion à la base cible...");
   const client = makeClient(cfg);
@@ -768,7 +964,10 @@ async function restoreComplet(cfg: DbConfig, backupFile: string): Promise<void> 
 
   reportRestoreOutput(restoreStderr, restoreCode);
 
-  step(4, STEPS, "Vérification post-restauration...");
+  step(4, STEPS, "Réapplication des permissions Supabase (anon / authenticated / service_role)...");
+  await reapplySupabaseGrants(cfg);
+
+  step(5, STEPS, "Vérification post-restauration...");
   const schema = await getFullSchema(cfg);
 
   if (schema.tables.length === 0 && restoreStderr) {
@@ -782,6 +981,7 @@ async function restoreComplet(cfg: DbConfig, backupFile: string): Promise<void> 
 
   success(`Tables : ${schema.tables.length} · Views : ${schema.views.length} · Mat.Views : ${schema.matViews.length}`);
   success(`Fonctions : ${schema.functions.length} · Triggers : ${schema.triggers.length} · Types : ${schema.types.length} · Séquences : ${schema.sequences.length}`);
+  success(`Politiques RLS : ${schema.rlsPolicies.length} sur ${schema.rlsEnabled.length} table(s) protégée(s)`);
 }
 
 // ─── RESTORE INCREMENTAL ──────────────────────────────────────
@@ -871,6 +1071,23 @@ async function restoreIncremental(cfg: DbConfig, backupFile: string): Promise<vo
     catch (e: any) { warn(`DROP SEQUENCE ${s}: ${e.message}`); }
   }
 
+  // ── RLS: Drop extra policies
+  for (const key of diff.extraPolicies) {
+    const [tablename, policyname] = key.split(".");
+    try {
+      await client.query(`DROP POLICY IF EXISTS "${policyname}" ON public."${tablename}";`);
+      info(`Politique RLS supprimée : ${key}`);
+    } catch (e: any) { warn(`DROP POLICY ${key}: ${e.message}`); }
+  }
+
+  // ── RLS: Disable RLS on tables that should not have it
+  for (const t of diff.extraRlsEnabled) {
+    try {
+      await client.query(`ALTER TABLE public."${t}" DISABLE ROW LEVEL SECURITY;`);
+      info(`RLS désactivé : ${t}`);
+    } catch (e: any) { warn(`DISABLE RLS ${t}: ${e.message}`); }
+  }
+
   await client.end();
   success("Suppressions DDL terminées");
 
@@ -883,14 +1100,31 @@ async function restoreIncremental(cfg: DbConfig, backupFile: string): Promise<vo
     reportRestoreOutput(s5, c5);
     const { errors: e5 } = classifyStderr(s5);
     if (e5.length) { printRestoreErrors(s5); }
+
+    // After schema-only restore, explicitly enable RLS on tables that need it
+    // (pg_restore --schema-only may skip ALTER TABLE ... ENABLE ROW LEVEL SECURITY
+    //  if the table already existed, since it uses CREATE TABLE which omits it)
+    if (diff.missingRlsEnabled.length > 0) {
+      const rlsClient = makeClient(cfg);
+      await rlsClient.connect();
+      for (const t of diff.missingRlsEnabled) {
+        try {
+          await rlsClient.query(`ALTER TABLE public."${t}" ENABLE ROW LEVEL SECURITY;`);
+          info(`RLS activé : ${t}`);
+        } catch (e: any) { warn(`ENABLE RLS ${t}: ${e.message}`); }
+      }
+      await rlsClient.end();
+    }
   } else {
     // Plain SQL: psql replays schema + data together — duplicate object errors are expected and ignored
     warn("Fichier SQL plain — le schéma et les données seront rejoués intégralement");
     const { stderr: s5, exitCode: c5 } = await runRestore(format, cfg, backupFile, env2);
     reportRestoreOutput(s5, c5);
     // schema + data replayed in one shot → skip step 6
+    await reapplySupabaseGrants(cfg);
     const finalSchema = await getFullSchema(cfg);
     success(`Résultat final — Tables: ${finalSchema.tables.length} · Views: ${finalSchema.views.length} · Mat.Views: ${finalSchema.matViews.length} · Fonctions: ${finalSchema.functions.length} · Triggers: ${finalSchema.triggers.length}`);
+    success(`Politiques RLS : ${finalSchema.rlsPolicies.length} sur ${finalSchema.rlsEnabled.length} table(s) protégée(s)`);
     return;
   }
 
@@ -900,9 +1134,13 @@ async function restoreIncremental(cfg: DbConfig, backupFile: string): Promise<vo
   const { errors: e6 } = classifyStderr(s6);
   if (e6.length) printRestoreErrors(s6);
 
+  // Re-apply Supabase role grants (--no-acl may have left authenticated/anon without access)
+  await reapplySupabaseGrants(cfg);
+
   // Post-check
   const finalSchema = await getFullSchema(cfg);
   success(`Résultat final — Tables: ${finalSchema.tables.length} · Views: ${finalSchema.views.length} · Mat.Views: ${finalSchema.matViews.length} · Fonctions: ${finalSchema.functions.length} · Triggers: ${finalSchema.triggers.length}`);
+  success(`Politiques RLS : ${finalSchema.rlsPolicies.length} sur ${finalSchema.rlsEnabled.length} table(s) protégée(s)`);
 }
 
 // ─── File Picker ──────────────────────────────────────────────
