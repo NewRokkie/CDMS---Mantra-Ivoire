@@ -5,7 +5,7 @@
     "gateIn": "Gate In",
     "gateOut": "Gate Out",
     "bookingReference": "Booking Reference",
-    "releases": "Release Orders",
+    "bookings": "Bookings",
     "edi": "EDI Management",
     "yard": "Yard Management",
     "reports": "Reports",
@@ -25,7 +25,7 @@
       "containers": "Total Containers",
       "in": "Containers In",
       "out": "Containers Out",
-      "pending": "Pending Release Orders",
+      "pending": "Pending Bookings",
       "movements": "Today's Movements",
       "revenue": "Monthly Revenue",
       "occupancy": "Occupancy Rate",
@@ -207,7 +207,8 @@
         "highCube": "Is High Cube ?",
         "equipmentRef": "Equipment Reference",
         "searchClient": "Search client by name or code...",
-        "arrival": "Truck Arrival Time"
+        "arrival": "Truck Arrival Time",
+        "notes": "Notes"
       },
       "validation": {
         "required": "This field is required",
@@ -269,8 +270,8 @@
       }
     }
   },
-  "releases": {
-    "title": "Release Orders",
+  "bookings": {
+    "title": "Bookings",
     "booking": {
       "title": "Booking Management"
     },
@@ -774,12 +775,12 @@
         "admin": "Full system access across all modules",
         "supervisor": "Operations oversight and management",
         "operator": "Daily operations and container handling",
-        "client": "View containers and create release orders"
+        "client": "View containers and create bookings"
       },
       "adminDesc": "Full system access across all modules",
       "supervisorDesc": "Operations oversight and management",
       "operatorDesc": "Daily operations and container handling",
-      "clientDesc": "View containers and create release orders"
+      "clientDesc": "View containers and create bookings"
     },
     "table": {
       "user": "User",

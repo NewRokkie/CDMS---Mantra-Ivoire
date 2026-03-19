@@ -255,7 +255,7 @@ export interface Container {
   clientId?: string; // Add client ID for direct relations
   clientCode?: string; // Add client code for filtering
   transporter?: string; // Transport company from gate-in (e.g. "PROPRE MOYEN")
-  releaseOrderId?: string;
+  bookingId?: string;
   gateOutOperationId?: string; // Links to gate_out_operations table
   classification?: 'divers' | 'alimentaire'; // Container classification
   transactionType?: 'Retour Livraison' | 'Transfert (IN)'; // Transaction type for Gate In
@@ -438,7 +438,7 @@ export interface DashboardStats {
   totalContainers: number;
   containersIn: number;
   containersOut: number;
-  pendingReleaseOrders: number;
+  pendingBookings: number;
   todayMovements: number;
   revenue: number;
   occupancyRate: number;

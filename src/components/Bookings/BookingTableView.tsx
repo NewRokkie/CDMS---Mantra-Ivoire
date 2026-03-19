@@ -19,7 +19,7 @@ import { TableSkeleton } from '../Common/TableSkeleton';
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 
-interface ReleaseOrderTableViewProps {
+interface BookingTableViewProps {
   orders: BookingReference[];
   loading?: boolean;
 }
@@ -32,7 +32,7 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-export const ReleaseOrderTableView: React.FC<ReleaseOrderTableViewProps> = ({ orders, loading = false }) => {
+export const BookingTableView: React.FC<BookingTableViewProps> = ({ orders, loading = false }) => {
   const { canViewAllData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

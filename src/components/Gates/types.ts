@@ -66,7 +66,7 @@ export interface GateInFormData {
 }
 
 export interface GateOutFormData {
-  selectedReleaseOrderId: string;
+  selectedBookingId: string;
   driverName: string;
   vehicleNumber: string;
   transportCompany: string;

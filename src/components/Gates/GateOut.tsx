@@ -51,7 +51,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
   const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
   const [gateOutOperations, setGateOutOperations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,12 +79,12 @@ export const GateOut: React.FC<GateOutProps> = () => {
         ]);
 
         // Ensure we have arrays before setting state
-        setReleaseOrders(Array.isArray(ordersData) ? ordersData : []);
+        setBookings(Array.isArray(ordersData) ? ordersData : []);
         setContainers(Array.isArray(containersData) ? containersData : []);
         setGateOutOperations(Array.isArray(operationsData) ? operationsData : []);
       } catch (error) {
         handleError(error, 'GateOut.loadData');
-        setReleaseOrders([]);
+        setBookings([]);
         setContainers([]);
         setGateOutOperations([]);
       } finally {
@@ -114,7 +114,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
       async () => {
         try {
           const orders = await bookingReferenceService.getAll();
-          setReleaseOrders(Array.isArray(orders) ? orders : []);
+          setBookings(Array.isArray(orders) ? orders : []);
         } catch (error) {
           console.error('Error fetching booking references:', error);
           handleError(error, 'GateOut.realtimeUpdate');
@@ -198,7 +198,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
           }
 
           // Find the associated booking to get transaction type
-          const associatedBooking = releaseOrders.find(booking => 
+          const associatedBooking = bookings.find(booking => 
             booking.id === op.bookingReferenceId || booking.bookingNumber === op.bookingNumber
           );
 
@@ -416,7 +416,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
         const { gateOutCodecoService } = await import('../../services/edi/gateOutCodecoService');
 
         // Find the booking reference using bookingReferenceId
-        const booking = releaseOrders.find(order => 
+        const booking = bookings.find(order => 
           order.id === (operation as any).bookingReferenceId || 
           order.bookingNumber === operation.bookingNumber
         );
@@ -461,7 +461,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
           logger.warn('Booking not found for EDI transmission', 'GateOut', {
             bookingReferenceId: (operation as any).bookingReferenceId,
             bookingNumber: operation.bookingNumber,
-            availableBookings: releaseOrders.length
+            availableBookings: bookings.length
           });
         }
       } catch (ediError) {
@@ -771,7 +771,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
                   }`}
                 >
-                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('releases.inProcess') : t(`common.status.${filter}`)}
+                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('bookings.inProcess') : t(`common.status.${filter}`)}
                 </button>
               ))}
             </div>
@@ -784,7 +784,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
               >
                 <option value="all">{t('common.all')}</option>
                 <option value="pending">{t('common.status.pending')}</option>
-                <option value="in_process">{t('releases.inProcess')}</option>
+                <option value="in_process">{t('bookings.inProcess')}</option>
                 <option value="completed">{t('common.status.completed')}</option>
               </select>
               {searchTerm && (
@@ -815,7 +815,7 @@ export const GateOut: React.FC<GateOutProps> = () => {
         <GateOutModal
           showModal={showForm}
           setShowModal={setShowForm}
-          availableBookings={releaseOrders}
+          availableBookings={bookings}
           onSubmit={handleCreateGateOut}
           isProcessing={isProcessing}
         />

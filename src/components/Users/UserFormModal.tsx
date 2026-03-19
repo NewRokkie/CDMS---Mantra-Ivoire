@@ -235,7 +235,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       case 'admin': return 'Full system access across all modules';
       case 'supervisor': return 'Operations oversight and management';
       case 'operator': return 'Daily operations and container handling';
-      case 'client': return 'View containers and create release orders';
+      case 'client': return 'View containers and create bookings';
       default: return '';
     }
   };

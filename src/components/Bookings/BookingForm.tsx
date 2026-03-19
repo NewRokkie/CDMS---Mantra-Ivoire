@@ -31,7 +31,7 @@ interface BookingReferenceFormProps {
   isEditMode?: boolean;
 }
 
-export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
+export const BookingForm: React.FC<BookingReferenceFormProps> = ({
   isOpen,
   onClose,
   onSubmit,
@@ -229,19 +229,19 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     <MultiStepModal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? t('releases.edit') : t('releases.createBooking')}
-      subtitle={isEditMode ? t('releases.subtitle.edit') : t('releases.subtitle.create')}
+      title={isEditMode ? t('bookings.edit') : t('bookings.createBooking')}
+      subtitle={isEditMode ? t('bookings.subtitle.edit') : t('bookings.subtitle.create')}
       icon={FileText}
       currentStep={currentStep}
       totalSteps={2}
-      stepLabels={[t('releases.form.bookingInfo'), t('releases.form.quantities')]}
+      stepLabels={[t('bookings.form.bookingInfo'), t('bookings.form.quantities')]}
       onNextStep={currentStep === 2 ? handleSubmit : handleNextStep}
       onPrevStep={handlePrevStep}
       isStepValid={validateStep(currentStep)}
       showProgressBar={true}
       size="md"
     >
-      <ReleaseOrderFormContent
+      <BookingFormContent
         currentStep={currentStep}
         formData={formData}
         isEditMode={isEditMode}
@@ -257,7 +257,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
 };
 
 // Form content component
-interface ReleaseOrderFormContentProps {
+interface BookingFormContentProps {
   currentStep: number;
   formData: BookingReferenceFormData;
   isEditMode: boolean;
@@ -269,7 +269,7 @@ interface ReleaseOrderFormContentProps {
   handleTransactionTypeChange: (transactionType: 'Positionnement' | 'Transfert (OUT)') => void;
 }
 
-const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
+const BookingFormContent: React.FC<BookingFormContentProps> = ({
   currentStep,
   formData,
   isEditMode,
@@ -308,8 +308,8 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-blue-900 dark:text-blue-100">{t('releases.form.bookingInfo')}</h4>
-                <p className="text-xs text-blue-700 dark:text-blue-300">{t('releases.form.bookingDesc')}</p>
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100">{t('bookings.form.bookingInfo')}</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300">{t('bookings.form.bookingDesc')}</p>
               </div>
             </div>
 
@@ -317,7 +317,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               {/* Booking Type */}
               <div>
                 <label className="block text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                  {t('releases.form.bookingType')} *
+                  {t('bookings.form.bookingType')} *
                 </label>
                 <div className="flex items-center space-x-4">
                   <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex-1">
@@ -358,7 +358,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               {/* Booking Reference Number */}
               <div>
                 <label className="block text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                  {t('releases.form.bookingNumber')} *
+                  {t('bookings.form.bookingNumber')} *
                 </label>
                 <input
                   type="text"
@@ -370,7 +370,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   placeholder="e.g., ABJEXXXXXXXX"
                 />
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
-                  {isEditMode ? t('releases.form.refImmutable') : t('releases.form.refHelp')}
+                  {isEditMode ? t('bookings.form.refImmutable') : t('bookings.form.refHelp')}
                 </p>
               </div>
             </div>
@@ -383,14 +383,14 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <User className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-green-900 dark:text-green-100">{t('releases.form.clientInfo')}</h4>
-                <p className="text-xs text-green-700 dark:text-green-300">{t('releases.form.clientDesc')}</p>
+                <h4 className="font-semibold text-green-900 dark:text-green-100">{t('bookings.form.clientInfo')}</h4>
+                <p className="text-xs text-green-700 dark:text-green-300">{t('bookings.form.clientDesc')}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-green-900 dark:text-green-100 mb-3">
-                {t('releases.form.client')} *
+                {t('bookings.form.client')} *
               </label>
               <ClientSearchField
                 clients={clients}
@@ -423,14 +423,14 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <Calculator className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-purple-900 dark:text-purple-100">{t('releases.form.qtyControl')}</h4>
-                <p className="text-xs text-purple-700 dark:text-purple-300">{t('releases.form.qtyControlDesc')}</p>
+                <h4 className="font-semibold text-purple-900 dark:text-purple-100">{t('bookings.form.qtyControl')}</h4>
+                <p className="text-xs text-purple-700 dark:text-purple-300">{t('bookings.form.qtyControlDesc')}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-purple-900 dark:text-purple-100 mb-3">
-                {t('releases.form.threshold')} *
+                {t('bookings.form.threshold')} *
               </label>
               <div className="flex items-center justify-center space-x-4">
                 <button
@@ -472,7 +472,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 </button>
               </div>
               <p className="text-xs text-purple-700 dark:text-purple-300 mt-3 text-center">
-                {t('releases.form.thresholdHelp')}
+                {t('bookings.form.thresholdHelp')}
               </p>
             </div>
           </div>
@@ -484,7 +484,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-orange-900 dark:text-orange-100">{t('releases.form.quantitiesTitle')}</h4>
+                <h4 className="font-semibold text-orange-900 dark:text-orange-100">{t('bookings.form.quantitiesTitle')}</h4>
                 <p className="text-xs text-orange-700 dark:text-orange-300">
                   {t('common.total')}: <span className="font-bold">{formData.totalContainers}</span> {t('common.container')}{formData.totalContainers !== 1 ? 's' : ''}
                 </p>
@@ -497,7 +497,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <span className="font-semibold text-gray-900 dark:text-white">{t('releases.form.containers20')}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{t('bookings.form.containers20')}</span>
                   </div>
                   <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{t('common.standard')}</span>
                 </div>
@@ -541,7 +541,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    <span className="font-semibold text-gray-900 dark:text-white">{t('releases.form.containers40')}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{t('bookings.form.containers40')}</span>
                   </div>
                   <span className="text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{t('common.highCapacity')}</span>
                 </div>
@@ -595,9 +595,9 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   <div className="flex items-start p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mr-3 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-orange-900 dark:text-orange-300">{t('releases.breakdown.required')}</p>
+                      <p className="text-sm font-semibold text-orange-900 dark:text-orange-300">{t('bookings.breakdown.required')}</p>
                       <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                        {t('releases.breakdown.help')}
+                        {t('bookings.breakdown.help')}
                       </p>
                     </div>
                   </div>
@@ -627,4 +627,3 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
     </div>
   );
 };
-

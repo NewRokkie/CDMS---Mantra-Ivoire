@@ -5,7 +5,7 @@
     "gateIn": "Entrée Portail",
     "gateOut": "Sortie Portail",
     "bookingReference": "Référence de Réservation",
-    "releases": "Ordres de sortie",
+    "bookings": "Réservations",
     "edi": "Gestion EDI",
     "yard": "Gestion de Cour",
     "reports": "Rapports",
@@ -207,7 +207,8 @@
         "highCube": "Est-ce un High Cube ?",
         "equipmentRef": "Référence Équipement",
         "searchClient": "Rechercher un client par nom ou code...",
-        "arrival": "Heure d'Arrivée du Camion"
+        "arrival": "Heure d'Arrivée du Camion",
+        "notes": "Notes"
       },
       "validation": {
         "required": "Ce champ est obligatoire",
@@ -268,7 +269,7 @@
       }
     }
   },
-  "releases": {
+  "bookings": {
     "title": "Ordres de Sortie",
     "booking": {
       "title": "Gestion des Réservations"

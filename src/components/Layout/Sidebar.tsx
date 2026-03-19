@@ -97,10 +97,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     // 2. Gate In - First operational step
     { id: 'gate-in', icon: LogIn, label: t('nav.gateIn'), moduleKey: 'gateIn' as const },
 
-    // 3. Release Orders - Must be created before Gate Out
-    { id: 'releases', icon: FileText, label: t('nav.bookingReference'), moduleKey: 'releases' as const },
+    // 3. Bookings - Must be created before Gate Out
+    { id: 'bookings', icon: FileText, label: t('nav.bookings'), moduleKey: 'bookings' as const },
 
-    // 4. Gate Out - Depends on Release Orders
+    // 4. Gate Out - Depends on Bookings
     { id: 'gate-out', icon: LogOutIcon, label: t('nav.gateOut'), moduleKey: 'gateOut' as const },
 
     // 5. Containers - Overview after operations

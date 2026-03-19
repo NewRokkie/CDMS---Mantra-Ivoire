@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, CheckCircle, AlertTriangle, FileText, Calculator } from 'lucide-react';
-import { ReleaseOrderSearchField } from './ReleaseOrderSearchField';
+import { BookingSearchField } from './BookingSearchField';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { GateOutModalProps, GateOutFormData } from './types';
@@ -20,7 +20,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   const totalSteps = 2;
 
   const [formData, setFormData] = useState<GateOutFormData>({
-    selectedReleaseOrderId: '',
+    selectedBookingId: '',
     driverName: '',
     vehicleNumber: '',
     transportCompany: '',
@@ -34,7 +34,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     if (!showModal) {
       setCurrentStep(1);
       setFormData({
-        selectedReleaseOrderId: '',
+        selectedBookingId: '',
         driverName: '',
         vehicleNumber: '',
         transportCompany: '',
@@ -45,7 +45,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   }, [showModal]);
 
   const selectedBooking = (availableBookings || []).find(
-    order => order.id === formData.selectedReleaseOrderId
+    order => order.id === formData.selectedBookingId
   );
 
   const handleInputChange = (field: keyof GateOutFormData, value: any) => {
@@ -62,12 +62,12 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
 
 
 
-  const handleReleaseOrderChange = (releaseOrderId: string) => {
-    // Handle reset case (empty releaseOrderId)
-    if (!releaseOrderId) {
+  const handleBookingChange = (bookingId: string) => {
+    // Handle reset case (empty bookingId)
+    if (!bookingId) {
       setFormData(prev => ({
         ...prev,
-        selectedReleaseOrderId: '',
+        selectedBookingId: '',
         driverName: '',
         vehicleNumber: '',
         transportCompany: ''
@@ -77,11 +77,11 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
     }
 
     // Handle selection case
-    const order = (availableBookings || []).find(o => o.id === releaseOrderId);
+    const order = (availableBookings || []).find(o => o.id === bookingId);
     if (order) {
       setFormData(prev => ({
         ...prev,
-        selectedReleaseOrderId: releaseOrderId,
+        selectedBookingId: bookingId,
         driverName: '',
         vehicleNumber: '',
         transportCompany: ''
@@ -93,7 +93,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return formData.selectedReleaseOrderId !== '';
+        return formData.selectedBookingId !== '';
       case 2:
         return formData.driverName !== '' && formData.vehicleNumber !== '' &&
                formData.transportCompany !== '' && !vehicleNumberError;
@@ -166,10 +166,10 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
               </h4>
 
               <div className="space-y-4">
-                <ReleaseOrderSearchField
+                <BookingSearchField
                   bookings={availableBookings}
-                  selectedOrderId={formData.selectedReleaseOrderId}
-                  onOrderSelect={handleReleaseOrderChange}
+                  selectedOrderId={formData.selectedBookingId}
+                  onOrderSelect={handleBookingChange}
                   placeholder={t('gate.out.form.searchBooking')}
                   required
                   canViewAllData={user?.role !== 'client'}
@@ -221,7 +221,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
                       </div>
                       {selectedBooking.containerQuantities && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">{t('releases.breakdown.summary')}:</span>
+                          <span className="text-gray-600">{t('bookings.breakdown.summary')}:</span>
                           <span className="font-medium">
                             {selectedBooking.containerQuantities.size20ft > 0 && `${selectedBooking.containerQuantities.size20ft}×20" `}
                             {selectedBooking.containerQuantities.size40ft > 0 && `${selectedBooking.containerQuantities.size40ft}×40"`}
@@ -234,7 +234,7 @@ export const GateOutModal: React.FC<GateOutModalProps> = ({
               </div>
             </div>
 
-            {!formData.selectedReleaseOrderId && (
+            {!formData.selectedBookingId && (
               <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
                 <p className="text-sm text-yellow-800">

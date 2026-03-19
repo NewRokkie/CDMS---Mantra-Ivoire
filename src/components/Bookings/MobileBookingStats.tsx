@@ -3,7 +3,7 @@ import { List, AlertTriangle, CheckCircle, Package, RefreshCcw } from 'lucide-re
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { useTheme } from '../../hooks/useTheme';
 
-interface ReleaseOrderStats {
+interface BookingStats {
   total: number;
   pending: number;
   inProcess: number;
@@ -12,12 +12,12 @@ interface ReleaseOrderStats {
   readyContainers: number;
 }
 
-interface MobileReleaseOrderStatsProps {
-  stats: ReleaseOrderStats;
+interface MobileBookingStatsProps {
+  stats: BookingStats;
   loading?: boolean;
 }
 
-export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = ({ stats, loading = false }) => {
+export const MobileBookingStats: React.FC<MobileBookingStatsProps> = ({ stats, loading = false }) => {
   const { theme } = useTheme();
 
   if (loading) {

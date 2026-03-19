@@ -44,10 +44,10 @@ const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
     requiredRole: ['admin', 'supervisor', 'operator'],
     isSystemModule: false
   },
-  releases: {
-    id: 'releases',
-    name: 'Release Orders',
-    description: 'Manage container release orders',
+  bookings: {
+    id: 'bookings',
+    name: 'Bookings',
+    description: 'Manage container bookings',
     category: 'operations',
     isSystemModule: false
   },
@@ -332,7 +332,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
     try {
       // Get complete module access for each user to ensure all modules are saved
       const allModules: (keyof ModuleAccess)[] = [
-        'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+        'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
         'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
         'timeTracking', 'analytics', 'clientPools', 'stackManagement',
         'auditLogs', 'billingReports', 'operationsReports'
@@ -429,7 +429,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
           );
           bulkSelectedUserIds.forEach(userId => {
             const allModules: (keyof ModuleAccess)[] = [
-              'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+              'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
               'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
               'timeTracking', 'analytics', 'clientPools', 'stackManagement',
               'auditLogs', 'billingReports', 'operationsReports'
@@ -460,7 +460,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
           );
           bulkSelectedUserIds.forEach(userId => {
             const allModules: (keyof ModuleAccess)[] = [
-              'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+              'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
               'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
               'timeTracking', 'analytics', 'clientPools', 'stackManagement',
               'auditLogs', 'billingReports', 'operationsReports'
@@ -573,7 +573,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
 
   const calculateAccessPercentage = (user: User): number => {
     const allModules: (keyof ModuleAccess)[] = [
-      'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+      'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
       'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
       'timeTracking', 'analytics', 'clientPools', 'stackManagement',
       'auditLogs', 'billingReports', 'operationsReports'
@@ -882,7 +882,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
                             <span className="text-xs text-gray-500">Module Access</span>
                             <span className="text-xs font-medium text-gray-700 font-numeric">
                               {[
-                                'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+                                'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
                                 'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
                                 'timeTracking', 'analytics', 'clientPools', 'stackManagement',
                                 'auditLogs', 'billingReports', 'operationsReports'

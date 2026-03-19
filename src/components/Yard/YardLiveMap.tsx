@@ -1469,7 +1469,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 )}
               </div>
 
-              {(selectedContainer.ediTransmitted != null || selectedContainer.releaseOrderId) && (
+              {(selectedContainer.ediTransmitted != null || selectedContainer.bookingId) && (
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
                   {selectedContainer.ediTransmitted != null && (
                     <div className="flex items-center justify-between">
@@ -1477,10 +1477,10 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                       <span className="font-bold text-gray-900">{selectedContainer.ediTransmitted ? 'Oui' : 'Non'}</span>
                     </div>
                   )}
-                  {selectedContainer.releaseOrderId && (
+                  {selectedContainer.bookingId && (
                     <div>
-                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Ordre de livraison</span>
-                      <p className="font-mono text-sm font-bold text-gray-900 mt-1">{selectedContainer.releaseOrderId}</p>
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Booking</span>
+                      <p className="font-mono text-sm font-bold text-gray-900 mt-1">{selectedContainer.bookingId}</p>
                     </div>
                   )}
                 </div>
