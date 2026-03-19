@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import { DataDisplayModalProps, NotificationState } from './types';
+import React from 'react';
+import { DataDisplayModalProps } from './types';
 import { StandardModal } from './StandardModal';
 import { ModalFooter } from './components/ModalFooter';
-import { NotificationArea } from './components/NotificationArea';
+import { useToast } from '../../../hooks/useToast';
 
 export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
   isOpen,
@@ -19,43 +19,19 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
   preventBackdropClose = false,
   className = ''
 }) => {
-  const [notification, setNotification] = useState<NotificationState>({
-    type: 'info',
-    message: '',
-    show: false,
-    autoHide: true,
-    duration: 1500
-  });
-
-  const showNotification = useCallback((
-    type: NotificationState['type'],
-    message: string,
-    options?: { autoHide?: boolean; duration?: number }
-  ) => {
-    setNotification({
-      type,
-      message,
-      show: true,
-      autoHide: options?.autoHide ?? (type === 'success'),
-      duration: options?.duration ?? 1500
-    });
-  }, []);
-
-  const hideNotification = useCallback(() => {
-    setNotification(prev => ({ ...prev, show: false }));
-  }, []);
+  const { success, error } = useToast();
 
   const handleActionClick = async (action: any) => {
     if (action.loading) return;
 
     try {
       await action.onClick();
-      if (action.variant === 'danger') {
-        showNotification('success', 'Action completed successfully');
+      if (action.variant !== 'danger') {
+        success('Action completed successfully');
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      showNotification('error', `Action failed: ${errorMessage}`, { autoHide: false });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      error(`Action failed: ${errorMessage}`);
     }
   };
 
@@ -64,7 +40,7 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
 
     return (
       <div key={id} className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200">
-        <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center text-sm sm:text-base">
+        <h4 className="h4 text-gray-900 mb-3 sm:mb-4 flex items-center">
           {SectionIcon && <SectionIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />}
           <span className="truncate">{title}</span>
         </h4>
@@ -73,10 +49,10 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {Object.entries(sectionData).map(([key, value]) => (
               <div key={key} className="space-y-1">
-                <dt className="text-xs sm:text-sm font-medium text-gray-600 capitalize">
+                <dt className="label text-gray-600 capitalize">
                   {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                 </dt>
-                <dd className="text-sm sm:text-sm text-gray-900 break-words">
+                <dd className="body-sm text-gray-900 break-words">
                   {value as string || '-'}
                 </dd>
               </div>
@@ -88,10 +64,10 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
           <div className="space-y-2 sm:space-y-3">
             {Object.entries(sectionData).map(([key, value]) => (
               <div key={key} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-100 last:border-b-0 space-y-1 sm:space-y-0">
-                <dt className="text-xs sm:text-sm font-medium text-gray-600 capitalize">
+                <dt className="label text-gray-600 capitalize">
                   {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                 </dt>
-                <dd className="text-sm text-gray-900 font-medium break-words">
+                <dd className="body-sm text-gray-900 font-medium break-words">
                   {value as string || '-'}
                 </dd>
               </div>
@@ -105,10 +81,10 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
               <tbody className="divide-y divide-gray-200">
                 {Object.entries(sectionData).map(([key, value]) => (
                   <tr key={key}>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-600 capitalize">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 label text-gray-600 capitalize">
                       {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                     </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 break-words">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 body-sm text-gray-900 break-words">
                       {value as string || '-'}
                     </td>
                   </tr>
@@ -134,34 +110,13 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
       className={className}
       hideDefaultFooter={true}
     >
-      {/* Notification Area */}
-      <NotificationArea
-        notification={notification}
-        onDismiss={hideNotification}
-      />
-
       {/* Data Content */}
       <div className="space-y-6">
         {/* Render predefined sections */}
         {sections.map(renderDataSection)}
 
         {/* Render custom children */}
-        {typeof children === 'function' 
-          ? children({ showNotification, hideNotification })
-          : React.Children.map(children, (child) => {
-              if (React.isValidElement(child)) {
-                // Only pass props to custom components, not DOM elements
-                if (typeof child.type === 'function') {
-                  return React.cloneElement(child, {
-                    data,
-                    showNotification,
-                    hideNotification
-                  } as any);
-                }
-              }
-              return child;
-            })
-        }
+        {children}
       </div>
 
       {/* Actions Footer */}

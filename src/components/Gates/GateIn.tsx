@@ -13,6 +13,12 @@ import { supabase } from '../../services/api/supabaseClient';
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { TableSkeleton } from '../Common/TableSkeleton';
+
+/**
+ * Props for the GateIn component
+ * Container for gate-in operations and container intake
+ */
+interface GateInProps {}
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
@@ -34,7 +40,7 @@ const extractStackNumber = (location: string): string | null => {
   return match ? match[1] : null;
 };
 
-export const GateIn: React.FC = () => {
+export const GateIn: React.FC<GateInProps> = () => {
   const { user, hasModuleAccess } = useAuth();
   const { t } = useTranslation();
   const { theme } = useTheme();

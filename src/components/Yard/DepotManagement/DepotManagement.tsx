@@ -18,6 +18,12 @@ import { Yard } from '../../../types';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
 import { yardsService } from '../../../services/api/yardsService';
+
+/**
+ * Props for the DepotManagement component
+ * Container for managing depot/yard master data and configuration
+ */
+interface DepotManagementProps {}
 import { DepotFormModal } from './DepotFormModal';
 import { DepotDetailModal } from './DepotDetailModal';
 import { DepotAssignmentModal } from './DepotAssignmentModal';
@@ -28,7 +34,7 @@ import { useConfirm } from '../../../hooks/useConfirm';
 import { StackCapacityCalculator } from '../../../utils/stackCapacityCalculator';
 import { useTranslation } from 'react-i18next';
 
-export const DepotManagement: React.FC = () => {
+export const DepotManagement: React.FC<DepotManagementProps> = () => {
   const { t } = useTranslation();
   const [depots, setDepots] = useState<Yard[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -383,7 +389,7 @@ export const DepotManagement: React.FC = () => {
                     {t('depot.form.layout')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('common.status')}
+                    {t('common.statusLabel')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {t('common.actions')}

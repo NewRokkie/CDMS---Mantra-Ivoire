@@ -13,9 +13,15 @@ import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { handleError } from '../../services/errorHandling';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
+
+/**
+ * Props for the ClientPoolManagement component
+ * Container component for managing client pools
+ */
+interface ClientPoolManagementProps {}
 import { t } from 'i18next';
 
-export const ClientPoolManagement: React.FC = () => {
+export const ClientPoolManagement: React.FC<ClientPoolManagementProps> = () => {
   const [clientPools, setClientPools] = useState<ClientPool[]>([]);
   const [stats, setStats] = useState<ClientPoolStats | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

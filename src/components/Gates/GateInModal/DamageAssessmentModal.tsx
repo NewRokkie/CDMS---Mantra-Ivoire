@@ -76,6 +76,7 @@ export const DamageAssessmentModal: React.FC<DamageAssessmentModalProps> = ({
       cancelLabel="Cancel"
       validationErrors={getValidationErrors()}
       size="md"
+      isNested={true}
     >
       <div className="space-y-6">
         {/* Damage Status Question */}

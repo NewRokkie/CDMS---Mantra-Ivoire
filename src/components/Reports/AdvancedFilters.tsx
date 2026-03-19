@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Filter, X, Save, RotateCcw, Search, Check, ChevronDown } from 'lucide-react';
 import { format, subDays, startOfMonth } from 'date-fns';
 import { StandardModal } from '../Common/Modal/StandardModal';
-import { useSuccessNotification, useInfoNotification } from '../Common/Notifications/NotificationSystem';
+import { useToast } from '../../hooks/useToast';
 
 export interface FilterOptions {
   dateRange: {
@@ -196,9 +196,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   const [localFilters, setLocalFilters] = useState<FilterOptions>(filters);
   const [savedFilters, setSavedFilters] = useState<Array<{ name: string; filters: FilterOptions }>>([]);
 
-  // Notification hooks
-  const showSuccess = useSuccessNotification();
-  const showInfo = useInfoNotification();
+  const toast = useToast();
 
   useEffect(() => {
     setLocalFilters(filters);
@@ -269,13 +267,13 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
       const newSavedFilters = [...savedFilters, { name: name.trim(), filters: localFilters }];
       setSavedFilters(newSavedFilters);
       localStorage.setItem('reports-saved-filters', JSON.stringify(newSavedFilters));
-      showSuccess('Filtres sauvegardés', `Configuration "${name.trim()}" enregistrée avec succès`);
+      toast.success(`Filtres sauvegardés. Configuration "${name.trim()}" enregistrée avec succès`);
     }
   };
 
   const handleLoadSavedFilter = (savedFilter: { name: string; filters: FilterOptions }) => {
     setLocalFilters(savedFilter.filters);
-    showInfo('Filtres chargés', `Configuration "${savedFilter.name}" appliquée`);
+    toast.info(`Filtres chargés. Configuration "${savedFilter.name}" appliquée`);
   };
 
   const handleDeleteSavedFilter = (index: number) => {
@@ -283,7 +281,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
     const newSavedFilters = savedFilters.filter((_, i) => i !== index);
     setSavedFilters(newSavedFilters);
     localStorage.setItem('reports-saved-filters', JSON.stringify(newSavedFilters));
-    showInfo('Filtre supprimé', `Configuration "${filterName}" supprimée`);
+    toast.info(`Filtre supprimé. Configuration "${filterName}" supprimée`);
   };
 
   return (

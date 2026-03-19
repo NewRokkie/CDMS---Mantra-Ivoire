@@ -1,14 +1,14 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { ChevronRight, Check } from 'lucide-react';
-import { MultiStepModalProps, NotificationState } from './types';
+import { MultiStepModalProps } from './types';
 
 import { ModalHeader } from './components/ModalHeader';
 import { ModalBody } from './components/ModalBody';
 import { ModalFooter } from './components/ModalFooter';
 import { ProgressBar } from './components/ProgressBar';
-import { NotificationArea } from './components/NotificationArea';
 import { useFocusManagement } from './hooks/useFocusManagement';
 import { useAriaAnnouncements } from './hooks/useAriaAnnouncements';
+import { useToast } from '../../../hooks/useToast';
 
 export const MultiStepModal: React.FC<MultiStepModalProps> = ({
   isOpen,
@@ -28,13 +28,7 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
   preventBackdropClose = false,
   className = ''
 }) => {
-  const [notification, setNotification] = useState<NotificationState>({
-    type: 'info',
-    message: '',
-    show: false,
-    autoHide: true,
-    duration: 1500
-  });
+  const { error } = useToast();
 
   const { modalRef } = useFocusManagement({
     isOpen,
@@ -44,32 +38,13 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
   });
   const { announce } = useAriaAnnouncements({ isOpen });
 
-  const showNotification = useCallback((
-    type: NotificationState['type'],
-    message: string,
-    options?: { autoHide?: boolean; duration?: number }
-  ) => {
-    setNotification({
-      type,
-      message,
-      show: true,
-      autoHide: options?.autoHide ?? (type === 'success'),
-      duration: options?.duration ?? 1500
-    });
-  }, []);
-
-  const hideNotification = useCallback(() => {
-    setNotification(prev => ({ ...prev, show: false }));
-  }, []);
-
   const handleNextStep = () => {
     if (!isStepValid) {
-      showNotification('error', 'Please complete all required fields before proceeding.', { autoHide: false });
+      error('Please complete all required fields before proceeding.');
       announce('Please complete all required fields before proceeding.', 'assertive');
       return;
     }
 
-    hideNotification();
     if (onNextStep) {
       onNextStep();
       const nextStepNumber = Math.min(currentStep + 1, totalSteps);
@@ -79,7 +54,6 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
   };
 
   const handlePrevStep = () => {
-    hideNotification();
     if (onPrevStep) {
       onPrevStep();
       const prevStepNumber = Math.max(currentStep - 1, 1);
@@ -155,19 +129,9 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
 
         {/* Modal Body */}
         <ModalBody scrollable={true}>
-          <NotificationArea
-            notification={notification}
-            onDismiss={hideNotification}
-          />
-
           {/* Animation de transition par étape */}
           <div key={currentStep} className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            {typeof children === 'function'
-              ? children({
-                  showNotification,
-                  hideNotification
-                })
-              : children}
+            {children}
           </div>
         </ModalBody>
 

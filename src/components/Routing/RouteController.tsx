@@ -25,13 +25,18 @@ const ContainerList = lazy(() => import('../Containers/ContainerList').then(modu
 
 
 /**
+ * Props for the RouteController component
+ */
+interface RouteControllerProps {}
+
+/**
  * RouteController handles all module-level routing with:
  * - Permission-based access control
  * - Lazy loading for performance
  * - Module URL synchronization
  * - Fallback handling for unauthorized access
  */
-export const RouteController: React.FC = () => {
+export const RouteController: React.FC<RouteControllerProps> = () => {
   const { activeModule } = useModuleRouting();
 
   // Centralized fallback for all lazy loaded components

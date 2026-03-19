@@ -1,5 +1,6 @@
 @import url('https://fonts.cdnfonts.com/css/gilroy-bold?styles=20876,20878,20880');
-@import url('https://fonts.cdnfonts.com/css/helvetica-neue-55');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -34,7 +35,137 @@
     animation: slideIn 0.4s ease-out forwards;
   }
 
-  /* Font family utilities */
+  /* ========== TYPOGRAPHY HIERARCHY ========== */
+  
+  /* Headings - Marianina Wide FY */
+  h1,
+  .h1 {
+    font-family: 'Marianina Wide FY', Arial, sans-serif;
+    font-size: 36px;
+    line-height: 44px;
+    font-weight: 700;
+  }
+
+  h2,
+  .h2 {
+    font-family: 'Marianina Wide FY', Arial, sans-serif;
+    font-size: 28px;
+    line-height: 36px;
+    font-weight: 700;
+  }
+
+  h3,
+  .h3 {
+    font-family: 'Gilroy-Medium', sans-serif;
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 500;
+  }
+
+  h4,
+  .h4 {
+    font-family: 'Gilroy-Medium', sans-serif;
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 500;
+  }
+
+  /* Body text - Gilroy Regular */
+  .body-lg {
+    font-size: 16px;
+    line-height: 24px;
+    font-family: 'Gilroy-Regular', sans-serif;
+  }
+
+  .body,
+  p {
+    font-size: 14px;
+    line-height: 20px;
+    font-family: 'Gilroy-Regular', sans-serif;
+  }
+
+  .body-sm {
+    font-size: 13px;
+    line-height: 18px;
+    font-family: 'Gilroy-Regular', sans-serif;
+  }
+
+  /* UI Elements */
+  .label {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    font-family: 'Gilroy-Medium', sans-serif;
+  }
+
+  .button-text,
+  button {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    font-family: 'Gilroy-Medium', sans-serif;
+  }
+
+  .badge {
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+    font-family: 'Gilroy-Medium', sans-serif;
+  }
+
+  .helper,
+  .text-helper {
+    font-size: 12px;
+    line-height: 16px;
+    font-family: 'Gilroy-Regular', sans-serif;
+  }
+
+  /* Numeric data - JetBrains Mono */
+  .font-numeric,
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-value,
+  .stat {
+    font-size: 24px;
+    line-height: 28px;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .numeric-text {
+    font-size: 14px;
+    line-height: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Apply numeric font to common numeric elements */
+  input[type="number"],
+  .numeric-input,
+  .price,
+  .quantity,
+  .weight,
+  .measurement,
+  .counter,
+  .timer,
+  .date-display,
+  .time-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Tables with numeric data */
+  table td.numeric,
+  table th.numeric {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========== FONT FAMILY UTILITIES ========== */
   .font-gilroy-light {
     font-family: 'Gilroy-Light', sans-serif;
   }
@@ -55,37 +186,95 @@
     font-family: 'Gilroy-Heavy', sans-serif;
   }
 
-  .font-helvetica {
-    font-family: 'Helvetica Neue', sans-serif;
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
   }
 
-  /* Numeric content - use Helvetica Neue */
-  .font-numeric {
-    font-family: 'Helvetica Neue', sans-serif;
-    font-variant-numeric: tabular-nums;
+  /* ========== SIDEBAR TYPOGRAPHY - MONTserrat ========== */
+  
+  /* Sidebar Header - Main Title */
+  .sidebar-brand-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
-  /* Apply numeric font to common numeric elements */
-  input[type="number"],
-  .numeric-input,
-  .price,
-  .quantity,
-  .weight,
-  .measurement,
-  .stat-value,
-  .counter,
-  .timer,
-  .date-display,
-  .time-display {
-    font-family: 'Helvetica Neue', sans-serif;
-    font-variant-numeric: tabular-nums;
+  /* Sidebar Subtitle */
+  .sidebar-brand-subtitle {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
   }
 
-  /* Tables with numeric data */
-  table td.numeric,
-  table th.numeric {
-    font-family: 'Helvetica Neue', sans-serif;
-    font-variant-numeric: tabular-nums;
+  /* Sidebar Navigation Items */
+  .sidebar-nav-item {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  /* Sidebar Configuration Section Label */
+  .sidebar-config-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ========== HEADER TYPOGRAPHY - MONTserrat ========== */
+  
+  /* Header Main Title */
+  .header-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Header Subtitle */
+  .header-subtitle {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  /* Header Button Text */
+  .header-button {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  /* Header User Name */
+  .header-user-name {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Header User Role */
+  .header-user-role {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    letter-spacing: 0;
   }
 
   .label {

@@ -1,3 +1,8 @@
+/**
+ * User resource representing a system user with authentication and module access
+ * @see ModuleAccess for permission structure
+ * @see User.role for available user roles: 'client', 'admin', 'operator', 'supervisor'
+ */
 export interface User {
   id: string;
   name: string;
@@ -22,6 +27,10 @@ export interface User {
   deletedBy?: string;
 }
 
+/**
+ * Module permission matrix defining which users/roles can access which features
+ * Boolean flags control visibility and interaction with each yard management module
+ */
 export interface ModuleAccess {
   dashboard: boolean;
   containers: boolean;
@@ -44,6 +53,11 @@ export interface ModuleAccess {
   operationsReports: boolean;
 }
 
+/**
+ * System permission descriptor for role-based access control
+ * Used to define module availability and required user roles
+ * Categories: core (essential features), operations (daily tasks), management (admin functions), admin (system config)
+ */
 export interface ModulePermission {
   id: string;
   name: string;
@@ -53,6 +67,11 @@ export interface ModulePermission {
   isSystemModule: boolean;
 }
 
+/**
+ * Client (third-party company) master record with contact and billing information
+ * Clients use the system to manage their containers, release orders, and billing
+ * Billing rates are applied per day after free storage period expires
+ */
 export interface Client {
   id: string;
   name: string;
@@ -94,6 +113,11 @@ export interface Client {
   notes?: string;
 }
 
+/**
+ * Yard (depot/facility) resource representing a physical storage location
+ * Contains sections with stacks, capacity management, and layout configuration
+ * Layout can be 'tantarelli' (traditional) or 'yirima' (alternative arrangement)
+ */
 export interface Yard {
   id: string;
   name: string;
@@ -201,6 +225,14 @@ export interface YardPosition {
   placedAt?: Date;
 }
 
+/**
+ * Maritime container resource tracking through yard operations lifecycle
+ * Status flow: gate_in → in_depot → gate_out → out_depot
+ * Tracks location in yard, client ownership, damage, customs, and EDI transmission state
+ * @see Container.status for valid status values
+ * @see Container.ediGateInTransmitted for EDI gate-in synchronization
+ * @see Container.ediGateOutTransmitted for EDI gate-out synchronization
+ */
 export interface Container {
   id: string;
   number: string;
@@ -257,7 +289,11 @@ export interface Container {
   deletedBy?: string; // User ID who deleted the container
 }
 
-export interface BookinReferenceContainer {
+/**
+ * Represents a container linked to a booking reference
+ * Tracks container status and release information within a booking
+ */
+export interface BookingReferenceContainer {
   id: string;
   containerId: string;
   containerNumber: string;
@@ -275,6 +311,13 @@ export interface ContainerQuantityBySize {
   size40ft: number;
 }
 
+/**
+ * Booking reference (release order) for container release from yard
+ * Groups one or more containers for coordinated release to customer
+ * Tracks booking quantity thresholds, status, and completion timestamps
+ * Used by clients to manage container releases and by operations for billing
+ * @see Container.bookingReference for container-to-booking association
+ */
 export interface BookingReference {
   containers: any;
   remainingContainers: number;

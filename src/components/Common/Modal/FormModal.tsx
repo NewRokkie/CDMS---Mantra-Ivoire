@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { Save, Loader } from 'lucide-react';
-import { FormModalProps, NotificationState } from './types';
+import { FormModalProps } from './types';
 import { StandardModal } from './StandardModal';
 import { ModalFooter } from './components/ModalFooter';
-import { NotificationArea } from './components/NotificationArea';
+import { useToast } from '../../../hooks/useToast';
 
 export const FormModal: React.FC<FormModalProps> = ({
   isOpen,
@@ -18,85 +18,35 @@ export const FormModal: React.FC<FormModalProps> = ({
   cancelLabel = 'Cancel',
   isSubmitting = false,
   validationErrors = [],
-  autoSave = false,
-  onAutoSave,
   showCloseButton = true,
   preventBackdropClose = false,
-  className = ''
+  className = '',
+  isNested = false
 }) => {
-  const [notification, setNotification] = useState<NotificationState>({
-    type: 'info',
-    message: '',
-    show: false,
-    autoHide: true,
-    duration: 1500
-  });
-  const [autoSaving, setAutoSaving] = useState(false);
-
-  const showNotification = useCallback((
-    type: NotificationState['type'],
-    message: string,
-    options?: { autoHide?: boolean; duration?: number }
-  ) => {
-    setNotification({
-      type,
-      message,
-      show: true,
-      autoHide: options?.autoHide ?? (type === 'success'),
-      duration: options?.duration ?? 1500
-    });
-  }, []);
-
-  const hideNotification = useCallback(() => {
-    setNotification(prev => ({ ...prev, show: false }));
-  }, []);
+  const { success, error } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Clear previous notifications
-    hideNotification();
 
-    // Show validation errors if any
     if (validationErrors.length > 0) {
-      showNotification('error', `Please fix the following errors: ${validationErrors.join(', ')}`, { autoHide: false });
+      error(`Please fix the following errors: ${validationErrors.join(', ')}`);
       return;
     }
 
     try {
       await onSubmit({});
-      showNotification('success', 'Form submitted successfully!');
+      success('Form submitted successfully!');
       
-      // Close modal after successful submission
       setTimeout(() => {
         if (isOpen) {
           onClose();
         }
       }, 1500);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      showNotification('error', `Submission failed: ${errorMessage}`, { autoHide: false });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      error(`Submission failed: ${errorMessage}`);
     }
   };
-
-  const triggerAutoSave = useCallback(() => {
-    if (autoSave && onAutoSave) {
-      setAutoSaving(true);
-      onAutoSave();
-      setTimeout(() => setAutoSaving(false), 1000);
-    }
-  }, [autoSave, onAutoSave]);
-
-  const headerContent = (
-    <>
-      {autoSaving && (
-        <div className="flex items-center space-x-2 text-green-600">
-          <Loader className="h-4 w-4 animate-spin" />
-          <span className="text-xs">Auto-saving...</span>
-        </div>
-      )}
-    </>
-  );
 
   return (
     <StandardModal
@@ -110,32 +60,11 @@ export const FormModal: React.FC<FormModalProps> = ({
       preventBackdropClose={preventBackdropClose}
       className={className}
       hideDefaultFooter={true}
+      isNested={isNested}
     >
-      {/* Notification Area */}
-      <NotificationArea
-        notification={notification}
-        onDismiss={hideNotification}
-      />
-
       {/* Form Content */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Pass functions to children only if they are React components, not DOM elements */}
-        {React.Children.map(children, (child) => {
-          if (React.isValidElement(child)) {
-            // Only pass props to custom React components, not DOM elements
-            const isCustomComponent = typeof child.type === 'function' || 
-                                    (typeof child.type === 'object' && child.type !== null);
-            
-            if (isCustomComponent) {
-              return React.cloneElement(child, { 
-                triggerAutoSave,
-                showNotification,
-                hideNotification
-              } as any);
-            }
-          }
-          return child;
-        })}
+        {children}
 
         {/* Form Footer */}
         <ModalFooter justify="between">

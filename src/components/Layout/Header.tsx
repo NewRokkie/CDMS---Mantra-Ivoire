@@ -56,10 +56,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               </svg>
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base lg:text-xl font-gilroy-bold text-gray-900 dark:text-white truncate">
+              <h1 className="header-title text-gray-900 dark:text-white truncate">
                 Container Depot
               </h1>
-              <p className="hidden sm:block text-xs lg:text-sm font-gilroy text-gray-600 dark:text-gray-400 truncate">
+              <p className="hidden sm:block header-subtitle text-gray-600 dark:text-gray-400 truncate">
                 {user?.role ? t(`users.role.${user.role}`) : ''}
               </p>
             </div>
@@ -74,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md animate-bounce-subtle"
               >
                 <Download className="h-4 w-4" />
-                <span className="hidden md:inline font-gilroy-medium text-sm">{t('common.install')} {getModuleInstallName()}</span>
+                <span className="header-button">{t('common.install')} {getModuleInstallName()}</span>
               </button>
             )}
 
@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 ) : (
                   <Moon className="h-4 w-4" />
                 )}
-                <span className="font-gilroy-medium text-sm">{theme === 'dark' ? t('common.light') : t('common.dark')}</span>
+                <span className="header-button">{theme === 'dark' ? t('common.light') : t('common.dark')}</span>
               </button>
 
               {/* Language Switcher */}
@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <Globe className="h-4 w-4" />
-                <span className="font-gilroy-medium">{i18n.language.toUpperCase()}</span>
+                <span className="header-button">{i18n.language.toUpperCase()}</span>
               </button>
 
               {/* Notifications */}
@@ -130,8 +130,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                     })()}
                   </div>
                   <div className="text-sm">
-                    <p className="font-gilroy-medium text-gray-900 dark:text-white">{user?.name}</p>
-                    <p className="text-xs font-gilroy text-gray-600 dark:text-gray-400 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
+                    <p className="header-user-name text-gray-900 dark:text-white">{user?.name}</p>
+                    <p className="header-user-role text-gray-600 dark:text-gray-400 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
 
@@ -188,15 +188,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                     <User className="h-7 w-7 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-lg font-gilroy-bold text-gray-900 dark:text-white">{user?.name}</p>
-                    <p className="text-sm text-blue-800 dark:text-blue-300 capitalize font-gilroy-medium">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
+                    <p className="header-user-name text-gray-900 dark:text-white">{user?.name}</p>
+                    <p className="header-user-role text-blue-800 dark:text-blue-300 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
               </div>
 
               {/* Quick Actions Grid */}
               <div className="space-y-2">
-                <label className="text-xs font-gilroy-bold text-gray-500 uppercase tracking-wide px-1">
+                <label className="sidebar-config-label text-gray-500 px-1">
                   {t('common.quickActions')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -216,7 +216,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       )}
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-600 dark:text-gray-300 font-gilroy-medium">{theme === 'dark' ? t('common.light') : t('common.dark')}</p>
+                      <p className="header-subtitle text-gray-600 dark:text-gray-300">{theme === 'dark' ? t('common.light') : t('common.dark')}</p>
                     </div>
                   </button>
 
@@ -232,7 +232,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       <Globe className="h-6 w-6 text-gray-700 dark:text-gray-300" />
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-600 dark:text-gray-300 font-gilroy-medium">{i18n.language.toUpperCase()}</p>
+                      <p className="header-subtitle text-gray-600 dark:text-gray-300">{i18n.language.toUpperCase()}</p>
                     </div>
                   </button>
                 </div>
@@ -251,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       </span>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-600 dark:text-gray-300 font-gilroy-medium"><span className="font-numeric">3</span> {t('common.newNotifications')}</p>
+                      <p className="header-subtitle text-gray-600 dark:text-gray-300"><span className="font-numeric">3</span> {t('common.newNotifications')}</p>
                     </div>
                   </button>
                 </div>
@@ -263,15 +263,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                   handleLogout();
                   setIsMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95 font-gilroy-bold"
+                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95 font-bold"
               >
                 <LogOut className="h-5 w-5" />
-                <span>{t('nav.logout')}</span>
+                <span className="header-button">{t('nav.logout')}</span>
               </button>
 
               {/* App Info */}
               <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs font-gilroy text-gray-500 dark:text-gray-400 text-center">
+                <p className="header-subtitle text-gray-500 dark:text-gray-400 text-center">
                   {t('common.appFooter')}
                 </p>
               </div>

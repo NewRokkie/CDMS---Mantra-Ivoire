@@ -274,7 +274,6 @@
     "booking": {
       "title": "Booking Management"
     },
-    "create": "Create Release Order",
     "createBooking": "Create Booking",
     "pending": "Pending Validation",
     "validated": "Validated",
@@ -390,7 +389,6 @@
     "edit": "Edit Depot",
     "view": "View Details",
     "assign": "Assign Users",
-    "delete": "Delete Depot",
     "subtitle": "Manage container depots and their configurations",
     "search": "Search depots...",
     "overview": "Depot Overview",
@@ -438,12 +436,9 @@
     "subtitle": "Configure container size assignments for all stacks",
     "configuration": "Stack Configuration",
     "configurationDesc": "Configure container size assignments for each stack (paired stacks will be updated together)",
-    "create": "Create Stack",
     "edit": "Edit Stack",
-    "delete": "Delete Stack",
     "refresh": "Refresh",
     "refreshing": "Refreshing...",
-    "rules": "Configuration Rules",
     "pairing": "Valid Stack Pairs for 40ft Containers",
     "search": "Search stacks or sections...",
     "size20": "20ft",
@@ -642,7 +637,6 @@
     "add": "Add Client",
     "edit": "Edit Client",
     "view": "View Details",
-    "delete": "Delete Client",
     "search": "Search clients...",
     "noClients": "No clients found",
     "noClientsEmpty": "Get started by adding your first client.",
@@ -739,7 +733,6 @@
     "add": "Add User",
     "edit": "Edit User",
     "view": "View Details",
-    "delete": "Delete User",
     "search": "Search users...",
     "noUsers": "No users found",
     "noUsersEmpty": "Get started by adding your first user",
@@ -849,7 +842,7 @@
   },
   "reports": {
     "title": "Reports & Analytics",
-    "billing": "Billing & Free Days",
+    "billingTitle": "Billing & Free Days",
     "analytics": "Analytics",
     "operations": "Operations",
     "export": "Export Report",
@@ -980,7 +973,6 @@
     "view": "View"
   },
   "common": {
-    "status": "Status",
     "statusLabel": "Status",
     "actions": "Actions",
     "date": "Date",
@@ -1016,7 +1008,9 @@
     "light": "Light",
     "status": {
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "completed": "Completed"
     },
     "enabled": "Enabled",
     "disabled": "Disabled",

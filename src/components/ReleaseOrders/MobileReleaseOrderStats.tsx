@@ -87,7 +87,7 @@ export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = (
                   <Icon className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                  <p className="stat font-mono text-gray-900 dark:text-white"><span className="font-numeric">{stat.value}</span></p>
                   <p className={`text-xs font-medium ${stat.textColor} leading-tight`}>
                     {stat.label}
                   </p>
@@ -112,7 +112,7 @@ export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = (
                   <Icon className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                  <p className="stat font-mono text-gray-900 dark:text-white"><span className="font-numeric">{stat.value}</span></p>
                   <p className={`text-xs font-medium ${stat.textColor}`}>
                     {stat.label}
                   </p>
@@ -138,7 +138,7 @@ export const MobileReleaseOrderStats: React.FC<MobileReleaseOrderStatsProps> = (
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                  <p className="stat font-mono text-gray-900 dark:text-white"><span className="font-numeric">{stat.value}</span></p>
                 </div>
               </div>
             </div>

@@ -341,7 +341,7 @@ const EDIValidatorComponent: React.FC<EDIValidatorProps> = ({ onValidationComple
                             ? 'font-medium text-slate-900'
                             : 'text-slate-700'
                         }`}>
-                          <span className="font-bold">{segment.tag}</span> {segment.description} ({segment.elements.length} elements)
+                          <span className="font-bold">{segment.tag}</span> {segment.description} (<span className="font-numeric">{segment.elements.length}</span> elements)
                         </span>
                       </div>
                     ))}

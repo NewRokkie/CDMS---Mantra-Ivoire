@@ -30,7 +30,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
             )}
             
             <div className="min-w-0">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight tracking-tight truncate">
+              <h3 className="h4 text-gray-900 dark:text-white truncate">
                 {title}
               </h3>
               {subtitle && (

@@ -68,8 +68,8 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
               <Building className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">{client.name}</h2>
-              <p className="text-sm text-gray-500">Client Code: {client.code}</p>
+              <h2 className="h4 text-gray-900 dark:text-white">{client.name}</h2>
+              <p className="body-sm text-gray-500 dark:text-gray-400">Client Code: {client.code}</p>
             </div>
           </div>
           <button
@@ -86,37 +86,37 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
             {/* Basic Information */}
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+                <h3 className="h4 text-gray-900 dark:text-white mb-4">Basic Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                   <div className="flex items-center space-x-3">
                     <Building className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{client.name}</p>
-                      <p className="text-sm text-gray-500">Company Name</p>
+                      <p className="label text-gray-900 dark:text-white">{client.name}</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Company Name</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <FileText className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{client.code}</p>
-                      <p className="text-sm text-gray-500">Client Code</p>
+                      <p className="label text-gray-900 dark:text-white">{client.code}</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Client Code</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{client.email}</p>
-                      <p className="text-sm text-gray-500">Primary Email</p>
+                      <p className="label text-gray-900 dark:text-white">{client.email}</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Primary Email</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{client.phone}</p>
-                      <p className="text-sm text-gray-500">Primary Phone</p>
+                      <p className="label text-gray-900 dark:text-white">{client.phone}</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Primary Phone</p>
                     </div>
                   </div>
 
@@ -124,8 +124,8 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <FileText className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{client.taxId}</p>
-                        <p className="text-sm text-gray-500">Tax ID</p>
+                        <p className="label text-gray-900 dark:text-white">{client.taxId}</p>
+                        <p className="body-sm text-gray-500 dark:text-gray-400">Tax ID</p>
                       </div>
                     </div>
                   )}
@@ -139,7 +139,7 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
 
               {/* Contact Person */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Person</h3>
+                <h3 className="h4 text-gray-900 dark:text-white mb-4">Contact Person</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <ContactDisplay
                     contactPerson={client.contactPerson}
@@ -155,41 +155,41 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
             <div className="space-y-6">
               {/* Billing Information */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Billing Information</h3>
+                <h3 className="h4 text-gray-900 dark:text-white mb-4">Billing Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                   <div className="flex items-center space-x-3">
                     <CreditCard className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="label text-gray-900 dark:text-white">
                         {formatCurrency(client.creditLimit, client.currency)}
                       </p>
-                      <p className="text-sm text-gray-500">Credit Limit</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Credit Limit</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{client.paymentTerms} days</p>
-                      <p className="text-sm text-gray-500">Payment Terms</p>
+                      <p className="label text-gray-900 dark:text-white">{client.paymentTerms} days</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Payment Terms</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{client.freeDaysAllowed} days</p>
-                      <p className="text-sm text-gray-500">Free Storage Days</p>
+                      <p className="label text-gray-900 dark:text-white">{client.freeDaysAllowed} days</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Free Storage Days</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <CreditCard className="h-4 w-4 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="label text-gray-900 dark:text-white">
                         {formatCurrency(client.dailyStorageRate, client.currency)}/day
                       </p>
-                      <p className="text-sm text-gray-500">Daily Storage Rate</p>
+                      <p className="body-sm text-gray-500 dark:text-gray-400">Daily Storage Rate</p>
                     </div>
                   </div>
                 </div>
@@ -198,7 +198,7 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
               {/* Billing Address (if different) */}
               {client.billingAddress && (
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Billing Address</h3>
+                  <h3 className="h4 text-gray-900 dark:text-white mb-4">Billing Address</h3>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <AddressDisplay
                       address={client.billingAddress}
@@ -210,7 +210,7 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
 
               {/* System Information */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">System Information</h3>
+                <h3 className="h4 text-gray-900 dark:text-white mb-4">System Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Status</span>
@@ -270,7 +270,7 @@ export const ClientViewModal: React.FC<ClientViewModalProps> = ({
           {/* Notes */}
           {client.notes && (
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Notes</h3>
+              <h3 className="h4 text-gray-900 dark:text-white mb-3">Notes</h3>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{client.notes}</p>
               </div>

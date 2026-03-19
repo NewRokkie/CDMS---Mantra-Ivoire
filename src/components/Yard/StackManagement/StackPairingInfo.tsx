@@ -87,24 +87,24 @@ export const StackPairingInfo: React.FC<StackPairingInfoProps> = ({ stacks }) =>
       <div className="p-4 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-            <div className="text-2xl font-bold text-blue-900">{twentyFootCount}</div>
+            <div className="stat text-blue-900 font-mono"><span className="font-numeric">{twentyFootCount}</span></div>
             <div className="text-sm text-blue-700">20ft Stacks</div>
           </div>
           <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
-            <div className="text-2xl font-bold text-orange-900">{fortyFootCount}</div>
+            <div className="stat text-orange-900 font-mono"><span className="font-numeric">{fortyFootCount}</span></div>
             <div className="text-sm text-orange-700">40ft Stacks</div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-            <div className="text-2xl font-bold text-green-900">{activeCount}</div>
+            <div className="stat text-green-900 font-mono"><span className="font-numeric">{activeCount}</span></div>
             <div className="text-sm text-green-700">Active</div>
           </div>
           <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
             <div className="flex items-center space-x-1">
               <Shield className="h-4 w-4 text-purple-700" />
-              <div className="text-2xl font-bold text-purple-900">{specialStackCount}</div>
+              <div className="stat text-purple-900 font-mono"><span className="font-numeric">{specialStackCount}</span></div>
             </div>
             <div className="text-sm text-purple-700">Special</div>
           </div>

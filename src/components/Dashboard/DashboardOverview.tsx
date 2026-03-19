@@ -14,7 +14,6 @@ import {
 } from 'recharts';
 import {
   Building,
-  AlertTriangle,
   Package,
   CheckCircle,
   XCircle,
@@ -22,8 +21,6 @@ import {
   Calendar,
   User,
   X,
-  Filter,
-  Globe,
   Layers,
   RefreshCw,
   DownloadCloud,
@@ -47,6 +44,12 @@ interface FilteredData {
   description: string;
 }
 
+/**
+ * Props for the DashboardOverview component
+ * Main dashboard container for yard operations overview
+ */
+interface DashboardOverviewProps {}
+
 /* ---------- small UI helpers ---------- */
 const Spinner: React.FC<{ className?: string }> = ({ className = '' }) => (
   <div className={`animate-spin rounded-full border-2 border-t-transparent border-slate-400 ${className}`} />
@@ -63,7 +66,7 @@ const SkeletonRow: React.FC = () => (
   </div>
 );
 
-export const DashboardOverview: React.FC = () => {
+export const DashboardOverview: React.FC<DashboardOverviewProps> = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { user, canViewAllData, getClientFilter } = useAuth();
@@ -689,8 +692,8 @@ export const DashboardOverview: React.FC = () => {
             <div className="absolute top-0 right-0 w-16 h-16 bg-slate-50 dark:bg-gray-700 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Total Clients</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{Object.keys(stats.customerStats).length}</h3>
+                <p className="badge text-slate-500 dark:text-gray-400 uppercase">Total Clients</p>
+                <h3 className="stat text-slate-900 dark:text-white mt-1">{Object.keys(stats.customerStats).length}</h3>
                 <div className="flex items-center mt-1 text-xs text-slate-400 dark:text-gray-500 font-medium">
                   Active
                 </div>
@@ -704,8 +707,8 @@ export const DashboardOverview: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">In Depot</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.inYardContainers.length}</h3>
+                <p className="badge text-slate-500 dark:text-gray-400 uppercase">In Depot</p>
+                <h3 className="stat text-slate-900 dark:text-white mt-1">{stats.inYardContainers.length}</h3>
                 <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-1.5 mt-2">
                   <div className="bg-[var(--olam-teal)] h-1.5 rounded-full" style={{ width: `${Math.min((stats.inYardContainers.length / (filteredContainers.length || 1)) * 100, 100)}%` }}></div>
                 </div>
@@ -720,8 +723,8 @@ export const DashboardOverview: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Total Units</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{filteredContainers.length}</h3>
+                <p className="badge text-slate-500 dark:text-gray-400 uppercase">Total Units</p>
+                <h3 className="stat text-slate-900 dark:text-white mt-1">{filteredContainers.length}</h3>
                 <div className="flex gap-1 mt-2">
                   <div className="h-1 w-1 rounded-full bg-slate-300 dark:bg-gray-600"></div>
                   <div className="h-1 w-8 rounded-full bg-[var(--olam-orange)]"></div>
@@ -738,9 +741,9 @@ export const DashboardOverview: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Condition</p>
+                <p className="badge text-slate-500 dark:text-gray-400 uppercase">Condition</p>
                 <div className="flex items-baseline gap-1 mt-1">
-                  <h3 className="text-2xl font-bold text-[var(--olam-green)]">{stats.damagedStats.undamaged}</h3>
+                  <h3 className="stat text-[var(--olam-green)]">{stats.damagedStats.undamaged}</h3>
                   <span className="text-sm text-slate-400 dark:text-gray-500">/</span>
                   <h3 className="text-lg font-semibold text-[var(--olam-orange)]">{stats.damagedStats.damaged}</h3>
                 </div>
@@ -755,9 +758,9 @@ export const DashboardOverview: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Class</p>
+                <p className="badge text-slate-500 dark:text-gray-400 uppercase">Class</p>
                 <div className="flex items-baseline gap-1 mt-1">
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{Math.round(stats.classificationStats.divers / (stats.totalContainers || 1) * 100)}%</h3>
+                  <h3 className="stat text-slate-900 dark:text-white">{Math.round(stats.classificationStats.divers / (stats.totalContainers || 1) * 100)}%</h3>
                   <span className="text-xs text-slate-500 dark:text-gray-400 font-medium">Divers</span>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1">{Math.round(stats.classificationStats.alimentaire / (stats.totalContainers || 1) * 100)}% Alimentaire</p>
@@ -797,10 +800,7 @@ export const DashboardOverview: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm p-5 flex flex-col">
-            <h4 className="text-sm font-bold text-slate-700 dark:text-gray-200 uppercase tracking-wide mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--olam-teal)]"></span>
-              Container Type
-            </h4>
+            <h4 className="badge text-slate-700 dark:text-gray-200">Container Type</h4>
             <div className="flex-1 flex flex-col items-center justify-center relative min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                  <PieChart>
@@ -814,7 +814,7 @@ export const DashboardOverview: React.FC = () => {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
                 <span className="text-xs text-slate-400 dark:text-gray-400 font-medium">Total</span>
-                <span className="text-2xl font-bold text-slate-800 dark:text-white">{filteredContainers.length}</span>
+                <span className="stat text-slate-800 dark:text-white">{filteredContainers.length}</span>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
@@ -828,10 +828,7 @@ export const DashboardOverview: React.FC = () => {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm p-5 flex flex-col">
-            <h4 className="text-sm font-bold text-slate-700 dark:text-gray-200 uppercase tracking-wide mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--olam-orange)]"></span>
-              Condition Status
-            </h4>
+            <h4 className="badge text-slate-700 dark:text-gray-200">Condition Status</h4>
             <div className="flex-1 flex flex-col items-center justify-center relative min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="90%" barSize={12} data={statusRadialData} startAngle={90} endAngle={-270}>
@@ -844,7 +841,7 @@ export const DashboardOverview: React.FC = () => {
                 </RadialBarChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none text-center pt-2">
-                 <span className="text-3xl font-bold text-[var(--olam-green)]">{Math.round((stats.damagedStats.undamaged / (stats.totalContainers || 1)) * 100)}%</span>
+                 <span className="stat text-[var(--olam-green)]">{Math.round((stats.damagedStats.undamaged / (stats.totalContainers || 1)) * 100)}%</span>
                  <span className="text-xs text-slate-400">Good Condition</span>
               </div>
             </div>
@@ -856,10 +853,7 @@ export const DashboardOverview: React.FC = () => {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm p-5 flex flex-col">
-            <h4 className="text-sm font-bold text-slate-700 dark:text-gray-200 uppercase tracking-wide mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-              Classification
-            </h4>
+            <h4 className="badge text-slate-700 dark:text-gray-200">Classification</h4>
             <div className="flex-1 flex flex-col items-center justify-center min-h-[200px]">
               <ResponsiveContainer width="100%" height={160}>
                  <PieChart>

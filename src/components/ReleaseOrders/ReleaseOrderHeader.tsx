@@ -19,10 +19,10 @@ export const ReleaseOrderHeader: React.FC<ReleaseOrderHeaderProps> = ({ onCreate
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="h2 text-gray-900 dark:text-white">
           {t('releases.booking.title')}
           {currentYard && (
-            <span className="text-lg text-blue-600 font-medium ml-2">
+            <span className="h4 text-blue-600 dark:text-blue-400 ml-2">
               • {currentYard.name}
             </span>
           )}

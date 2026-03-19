@@ -15,9 +15,13 @@ import { handleError } from '../../services/errorHandling';
 import { exportToExcel, formatDateForExport } from '../../utils/excelExport';
 import { userService } from '../../services/api';
 
-// REMOVED: Mock data now managed by global store
+/**
+ * Props for the ReleaseOrderList component
+ * Container for managing booking references and release orders
+ */
+interface ReleaseOrderListProps {}
 
-export const ReleaseOrderList: React.FC = () => {
+export const ReleaseOrderList: React.FC<ReleaseOrderListProps> = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [releaseOrders, setReleaseOrders] = useState<any[]>([]);

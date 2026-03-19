@@ -281,7 +281,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                   <Building className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-semibold tracking-tight text-gray-900">Informations de Base</h4>
+                  <h4 className="h4 text-gray-900 dark:text-white">Informations de Base</h4>
                   <p className="text-sm text-gray-600">Informations principales de l'entreprise cliente</p>
                 </div>
               </div>
@@ -391,7 +391,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <MapPin className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold tracking-tight text-gray-900">Adresse de l'Entreprise</h4>
+                    <h4 className="h4 text-gray-900 dark:text-white">Adresse de l'Entreprise</h4>
                     <p className="text-sm text-gray-600">Localisation et coordonnées de l'entreprise</p>
                   </div>
                 </div>
@@ -480,7 +480,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <User className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold tracking-tight text-gray-900">Personne de Contact</h4>
+                    <h4 className="h4 text-gray-900 dark:text-white">Personne de Contact</h4>
                     <p className="text-sm text-gray-600">Responsable principal pour les communications</p>
                   </div>
                 </div>
@@ -564,7 +564,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       <FileText className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xl font-semibold tracking-tight text-gray-900">Adresse de Facturation</h4>
+                      <h4 className="h4 text-gray-900 dark:text-white">Adresse de Facturation</h4>
                       <p className="text-sm text-gray-600">Adresse pour l'envoi des factures</p>
                     </div>
                   </div>
@@ -635,7 +635,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <DollarSign className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold tracking-tight text-gray-900">Configuration Financière</h4>
+                    <h4 className="h4 text-gray-900 dark:text-white">Configuration Financière</h4>
                     <p className="text-sm text-gray-600">Paramètres de facturation et conditions de paiement</p>
                   </div>
                 </div>
@@ -755,7 +755,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <Calculator className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold tracking-tight text-gray-900">Aperçu de la Facturation</h4>
+                    <h4 className="h4 text-gray-900 dark:text-white">Aperçu de la Facturation</h4>
                     <p className="text-sm text-gray-600">Simulation des coûts de stockage</p>
                   </div>
                 </div>
@@ -763,15 +763,15 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{formData.freeDaysAllowed}</div>
+                    <div className="stat text-green-600 dark:text-green-400">{formData.freeDaysAllowed}</div>
                       <div className="text-green-700">Jours Gratuits</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{formatCurrency(formData.dailyStorageRate)}</div>
+                      <div className="stat text-blue-600 dark:text-blue-400">{formatCurrency(formData.dailyStorageRate)}</div>
                       <div className="text-blue-700">FCFA/Jour</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">{formData.paymentTerms}</div>
+                      <div className="stat text-purple-600 dark:text-purple-400">{formData.paymentTerms}</div>
                       <div className="text-purple-700">Jours de Paiement</div>
                     </div>
                   </div>
@@ -795,7 +795,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <FileText className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold tracking-tight text-gray-900">Notes et Instructions Spéciales</h4>
+                    <h4 className="h4 text-gray-900 dark:text-white">Notes et Instructions Spéciales</h4>
                     <p className="text-sm text-gray-600">Informations complémentaires et instructions particulières</p>
                   </div>
                 </div>
@@ -816,7 +816,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     <FileText className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold tracking-tight text-gray-900">Configuration Système</h4>
+                    <h4 className="h4 text-gray-900 dark:text-white">Configuration Système</h4>
                     <p className="text-sm text-gray-600">Paramètres système et intégrations</p>
                   </div>
                 </div>
@@ -831,7 +831,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       onChange={(e) => handleInputChange('isActive', e.target.checked)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="isActive" className="text-sm font-medium text-gray-900">
+                    <label htmlFor="isActive" className="label text-gray-900 dark:text-white">
                       Client Actif
                     </label>
                     <span className="text-xs text-gray-500">Le client peut effectuer des opérations</span>
@@ -846,7 +846,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                       onChange={(e) => handleInputChange('autoEDI', e.target.checked)}
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="autoEDI" className="text-sm font-medium text-gray-900">
+                    <label htmlFor="autoEDI" className="label text-gray-900 dark:text-white">
                       Transmission EDI Automatique
                     </label>
                     <span className="text-xs text-gray-500">Envoi automatique des messages CODECO</span>

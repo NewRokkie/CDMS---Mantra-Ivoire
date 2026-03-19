@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { StandardModalProps, NotificationState } from './types';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { StandardModalProps } from './types';
 import { ModalHeader } from './components/ModalHeader';
 import { ModalBody } from './components/ModalBody';
 import { ModalFooter } from './components/ModalFooter';
-import { NotificationArea } from './components/NotificationArea';
 import { useFocusManagement } from './hooks/useFocusManagement';
 import { useAriaAnnouncements } from './hooks/useAriaAnnouncements';
+import { useToast } from '../../../hooks/useToast';
 
 export const StandardModal: React.FC<StandardModalProps> = ({
   isOpen,
@@ -30,15 +31,10 @@ export const StandardModal: React.FC<StandardModalProps> = ({
   customFooter,
   hideDefaultFooter = false,
   isFormValid = true,
-  validationSummary
+  validationSummary,
+  isNested = false
 }) => {
-  const [notification, setNotification] = useState<NotificationState>({
-    type: 'info',
-    message: '',
-    show: false,
-    autoHide: true,
-    duration: 3000
-  });
+  const { error } = useToast();
 
   const { modalRef } = useFocusManagement({
     isOpen,
@@ -48,31 +44,13 @@ export const StandardModal: React.FC<StandardModalProps> = ({
   });
   const { announce } = useAriaAnnouncements({ isOpen });
 
-  const showNotification = useCallback((
-    type: NotificationState['type'],
-    message: string,
-    options?: { autoHide?: boolean; duration?: number }
-  ) => {
-    setNotification({
-      type,
-      message,
-      show: true,
-      autoHide: options?.autoHide ?? (type === 'success'),
-      duration: options?.duration ?? 3000
-    });
-  }, []);
-
-  const hideNotification = useCallback(() => {
-    setNotification(prev => ({ ...prev, show: false }));
-  }, []);
-
   const handleSubmit = async () => {
     if (onSubmit && !isSubmitting && isFormValid) {
       try {
         await onSubmit();
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
-        showNotification('error', errorMessage, { autoHide: false });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+        error(errorMessage);
         announce(errorMessage, 'assertive');
       }
     }
@@ -88,11 +66,13 @@ export const StandardModal: React.FC<StandardModalProps> = ({
     '2xl': 'max-w-6xl'
   }[size] || 'max-w-lg';
 
-  return (
+  const zIndexClass = isNested ? 'z-[60]' : 'z-50';
+
+  const modalContent = (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden"
+      className={`fixed inset-0 ${zIndexClass} flex items-center justify-center p-2 sm:p-4 overflow-hidden`}
     >
       {/* Overlay avec flou et fondu */}
       <div 
@@ -126,16 +106,8 @@ export const StandardModal: React.FC<StandardModalProps> = ({
         />
 
         <ModalBody scrollable={true} className="relative min-h-0 flex-1">
-          <NotificationArea
-            notification={notification}
-            onDismiss={hideNotification}
-          />
-
           <div className="animate-in fade-in slide-in-from-left-2 duration-500 delay-150 fill-mode-both">
-            {typeof children === 'function'
-              ? children({ showNotification, hideNotification })
-              : children
-            }
+            {children}
           </div>
         </ModalBody>
 
@@ -193,4 +165,10 @@ export const StandardModal: React.FC<StandardModalProps> = ({
       </div>
     </div>
   );
+
+  if (isNested) {
+    return ReactDOM.createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 };

@@ -41,12 +41,12 @@ export const EDITransmissionDetailsModal: React.FC<EDITransmissionDetailsModalPr
       </span>
     )},
     { label: 'File Name', value: <span className="font-mono text-xs">{log.fileName}</span>, icon: <FileText className="h-4 w-4" /> },
-    { label: 'File Size', value: log.fileSize ? `${log.fileSize.toLocaleString()} bytes` : '—' },
+    { label: 'File Size', value: log.fileSize ? <span className="font-numeric">{log.fileSize.toLocaleString()}</span> + ' bytes' : '—' },
     { label: 'Partner Code', value: log.partnerCode || '—', icon: <Server className="h-4 w-4" /> },
     { label: 'Uploaded to SFTP', value: log.uploadedToSftp ? 'Yes' : 'No' },
-    { label: 'Attempts', value: log.attempts },
+    { label: 'Attempts', value: <span className="font-numeric">{log.attempts}</span> },
     { label: 'Last Attempt', value: log.lastAttempt.toLocaleString(), icon: <Calendar className="h-4 w-4" /> },
-    { label: 'Created At', value: log.createdAt.toLocaleString(), icon: <Calendar className="h-4 w-4" /> },
+    { label: 'Created At', value: <span className="date-display">{log.createdAt.toLocaleString()}</span>, icon: <Calendar className="h-4 w-4" /> },
     ...(log.acknowledgmentReceived ? [{ label: 'Acknowledged At', value: log.acknowledgmentReceived.toLocaleString() }] : []),
   ];
 

@@ -229,7 +229,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     <MultiStepModal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? t('releases.edit') : t('releases.create')}
+      title={isEditMode ? t('releases.edit') : t('releases.createBooking')}
       subtitle={isEditMode ? t('releases.subtitle.edit') : t('releases.subtitle.create')}
       icon={FileText}
       currentStep={currentStep}
@@ -432,20 +432,46 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               <label className="block text-sm font-semibold text-purple-900 dark:text-purple-100 mb-3">
                 {t('releases.form.threshold')} *
               </label>
-              <div className="flex items-center space-x-3">
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="100"
-                  value={formData.maxQuantityThreshold}
-                  onChange={(e) => handleInputChange('maxQuantityThreshold', parseInt(e.target.value) || 1)}
-                  className="flex-1 px-4 py-3 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm dark:bg-gray-600 dark:text-white"
-                  placeholder="10"
-                />
-                <span className="text-sm font-medium text-purple-900 dark:text-purple-100">{t('common.containers')}</span>
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('maxQuantityThreshold', Math.max(1, formData.maxQuantityThreshold - 1))}
+                  disabled={formData.maxQuantityThreshold <= 1}
+                  className="w-10 h-10 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Decrease threshold"
+                >
+                  <Minus className="h-5 w-5" />
+                </button>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    required
+                    min="1"
+                    max="100"
+                    value={formData.maxQuantityThreshold}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      handleInputChange('maxQuantityThreshold', Math.max(0, Math.min(100, val)));
+                    }}
+                    className="w-16 text-center px-2 py-2 border-2 border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-bold text-xl text-purple-900 dark:text-white bg-white dark:bg-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">{t('common.containers')}</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('maxQuantityThreshold', Math.min(100, formData.maxQuantityThreshold + 1))}
+                  disabled={formData.maxQuantityThreshold >= 100}
+                  className="w-10 h-10 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Increase threshold"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
               </div>
-              <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
+              <p className="text-xs text-purple-700 dark:text-purple-300 mt-3 text-center">
                 {t('releases.form.thresholdHelp')}
               </p>
             </div>
@@ -476,34 +502,36 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{t('common.standard')}</span>
                 </div>
 
-                <div className="flex items-center justify-between space-x-3">
+                <div className="flex items-center justify-center space-x-4">
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft - 1)}
                     disabled={formData.containerQuantities.size20ft <= 0}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Decrease 20ft containers"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </button>
 
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min="0"
                     max="50"
                     value={formData.containerQuantities.size20ft}
-                    onChange={(e) => handleQuantityChange('size20ft', parseInt(e.target.value) || 0)}
-                    className="flex-1 text-center px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => handleQuantityChange('size20ft', Math.max(0, Math.min(50, parseInt(e.target.value) || 0)))}
+                    className="w-16 text-center px-2 py-2 border-2 border-blue-300 dark:border-blue-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-xl text-blue-900 dark:text-white bg-white dark:bg-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
 
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft + 1)}
                     disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Increase 20ft containers"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -518,34 +546,36 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   <span className="text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{t('common.highCapacity')}</span>
                 </div>
 
-                <div className="flex items-center justify-between space-x-3">
+                <div className="flex items-center justify-center space-x-4">
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft - 1)}
                     disabled={formData.containerQuantities.size40ft <= 0}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Decrease 40ft containers"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </button>
 
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min="0"
                     max="50"
                     value={formData.containerQuantities.size40ft}
-                    onChange={(e) => handleQuantityChange('size40ft', parseInt(e.target.value) || 0)}
-                    className="flex-1 text-center px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => handleQuantityChange('size40ft', Math.max(0, Math.min(50, parseInt(e.target.value) || 0)))}
+                    className="w-16 text-center px-2 py-2 border-2 border-green-300 dark:border-green-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-bold text-xl text-green-900 dark:text-white bg-white dark:bg-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
 
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft + 1)}
                     disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Increase 40ft containers"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </button>
                 </div>
               </div>

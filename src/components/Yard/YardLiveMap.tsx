@@ -880,7 +880,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-4">
               <div>
-                <h1 className="text-lg font-bold text-gray-900 flex items-center">
+                <h1 className="h4 text-gray-900 dark:text-white flex items-center">
                   <MapPin className="h-4 w-4 mr-2 text-blue-600" />
                   {yard.name} - Live Map
                 </h1>
@@ -904,7 +904,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[10px] text-blue-600 font-medium uppercase">Total</div>
-                  <div className="text-lg font-bold text-blue-900">{stats.total}</div>
+                  <div className="stat text-blue-900 dark:text-blue-300">{stats.total}</div>
                 </div>
                 <Package className="h-5 w-5 text-blue-600 opacity-50" />
               </div>
@@ -914,7 +914,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[10px] text-green-600 font-medium uppercase">In Depot</div>
-                  <div className="text-lg font-bold text-green-900">{stats.inDepot}</div>
+                  <div className="stat text-green-900 dark:text-green-300">{stats.inDepot}</div>
                 </div>
                 <TrendingUp className="h-5 w-5 text-green-600 opacity-50" />
               </div>
@@ -924,7 +924,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[10px] text-orange-600 font-medium uppercase">Free Space</div>
-                  <div className="text-lg font-bold text-orange-900">{stats.freeSpace}</div>
+                  <div className="stat text-orange-900 dark:text-orange-300">{stats.freeSpace}</div>
                 </div>
                 <MapPin className="h-5 w-5 text-orange-600 opacity-50" />
               </div>
@@ -934,7 +934,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[10px] text-purple-600 font-medium uppercase">FULL</div>
-                  <div className="text-lg font-bold text-purple-900">{stats.fullContainers}</div>
+                  <div className="stat text-purple-900 dark:text-purple-300">{stats.fullContainers}</div>
                 </div>
                 <Package className="h-5 w-5 text-purple-600 opacity-50" />
               </div>
@@ -944,7 +944,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[10px] text-gray-600 font-medium uppercase">Empty</div>
-                  <div className="text-lg font-bold text-gray-900">{stats.emptyContainers}</div>
+                  <div className="stat text-gray-900 dark:text-gray-300">{stats.emptyContainers}</div>
                 </div>
                 <Package className="h-5 w-5 text-gray-600 opacity-50" />
               </div>
@@ -1217,7 +1217,7 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                     <Package className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Container Details</h3>
+                    <h3 className="h4 text-white">Container Details</h3>
                     <p className="text-blue-100 text-sm font-mono">{selectedContainer.number}</p>
                   </div>
                 </div>
@@ -1235,63 +1235,63 @@ export const YardLiveMap: React.FC<YardLiveMapProps> = ({ yard, containers: prop
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FileText className="h-4 w-4 text-blue-600" />
-                    <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Type / Design</label>
+                    <label className="badge text-blue-900 dark:text-blue-200 uppercase">Type / Design</label>
                   </div>
-                  <p className="text-lg font-bold text-blue-900 capitalize">{selectedContainer.type.replace(/_/g, ' ')}</p>
+                  <p className="stat text-blue-900 dark:text-blue-200 capitalize">{selectedContainer.type.replace(/_/g, ' ')}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <Package className="h-4 w-4 text-purple-600" />
-                    <label className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Size</label>
+                    <label className="badge text-purple-900 dark:text-purple-200 uppercase">Size</label>
                   </div>
-                  <p className="text-lg font-bold text-purple-900">{selectedContainer.size}{selectedContainer.isHighCube ? ' High Cube' : ''}</p>
+                  <p className="stat text-purple-900 dark:text-purple-200">{selectedContainer.size}{selectedContainer.isHighCube ? ' High Cube' : ''}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <Truck className="h-4 w-4 text-green-600" />
-                    <label className="text-xs font-semibold text-green-900 uppercase tracking-wide">Client</label>
+                    <label className="badge text-green-900 dark:text-green-200 uppercase">Client</label>
                   </div>
-                  <p className="text-lg font-bold text-green-900">{selectedContainer.clientName}</p>
+                  <p className="stat text-green-900 dark:text-green-200">{selectedContainer.clientName}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <Truck className="h-4 w-4 text-orange-600" />
-                    <label className="text-xs font-semibold text-orange-900 uppercase tracking-wide">Transporteur</label>
+                    <label className="badge text-orange-900 dark:text-orange-200 uppercase">Transporteur</label>
                   </div>
-                  <p className="text-lg font-bold text-orange-900">{selectedContainer.transporter ?? '—'}</p>
+                  <p className="stat text-orange-900 dark:text-orange-200">{selectedContainer.transporter ?? '—'}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-xl border border-cyan-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <MapPin className="h-4 w-4 text-cyan-600" />
-                    <label className="text-xs font-semibold text-cyan-900 uppercase tracking-wide">Emplacement</label>
+                    <label className="badge text-cyan-900 dark:text-cyan-200 uppercase">Emplacement</label>
                   </div>
-                  <p className="text-lg font-bold text-cyan-900 font-mono">{getVirtualLocation(selectedContainer, getStackConfiguration)}</p>
+                  <p className="stat text-cyan-900 dark:text-cyan-200 font-mono">{getVirtualLocation(selectedContainer, getStackConfiguration)}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-xl border border-amber-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <Package className="h-4 w-4 text-amber-600" />
-                    <label className="text-xs font-semibold text-amber-900 uppercase tracking-wide">High Cube</label>
+                    <label className="badge text-amber-900 dark:text-amber-200 uppercase">High Cube</label>
                   </div>
-                  <p className="text-lg font-bold text-amber-900">{selectedContainer.isHighCube ? 'Oui' : 'Non'}</p>
+                  <p className="stat text-amber-900 dark:text-amber-200">{selectedContainer.isHighCube ? 'Oui' : 'Non'}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FileText className="h-4 w-4 text-slate-600" />
-                    <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Plein / Vide</label>
+                    <label className="badge text-slate-900 dark:text-slate-200 uppercase">Plein / Vide</label>
                   </div>
-                  <p className="text-lg font-bold text-slate-900">{selectedContainer.fullEmpty ?? '—'}</p>
+                  <p className="stat text-slate-900 dark:text-slate-200">{selectedContainer.fullEmpty ?? '—'}</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FileText className="h-4 w-4 text-slate-600" />
-                    <label className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Classification</label>
+                    <label className="badge text-slate-900 dark:text-slate-200 uppercase">Classification</label>
                   </div>
                   <p className="text-lg font-bold text-slate-900 capitalize">{selectedContainer.classification ?? '—'}</p>
                 </div>

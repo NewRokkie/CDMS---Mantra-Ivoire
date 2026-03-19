@@ -13,6 +13,12 @@ import { PendingGateOut } from './types';
 import { handleError } from '../../services/errorHandling';
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
+
+/**
+ * Props for the GateOut component
+ * Container for gate-out operations and container release
+ */
+interface GateOutProps {}
 import { TableSkeleton } from '../Common/TableSkeleton';
 import { exportToExcel, formatDateShortForExport, formatTimeForExport, formatDateForExport, formatDurationForExport } from '../../utils/excelExport';
 import { useToast } from '../../hooks/useToast';
@@ -33,7 +39,7 @@ interface GateOutFormData {
   notes?: string;
 }
 
-export const GateOut: React.FC = () => {
+export const GateOut: React.FC<GateOutProps> = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
@@ -592,7 +598,7 @@ export const GateOut: React.FC = () => {
   if (!canPerformGateOut) return (
     <div className="text-center py-12">
       <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.restricted')}</h3>
+      <h3 className="h4 text-gray-900 dark:text-white mb-2">{t('common.restricted')}</h3>
       <p className="text-gray-600">{t('common.unauthorized')}</p>
     </div>
   );
@@ -684,8 +690,8 @@ export const GateOut: React.FC = () => {
                 <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-blue-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{todaysGateOuts}</p>
-                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.today')}</p>
+                <p className="stat text-gray-900 dark:text-white">{todaysGateOuts}</p>
+                <p className="badge text-blue-700 lg:text-gray-500">{t('gate.out.stats.today')}</p>
               </div>
             </div>
           </div>
@@ -697,8 +703,8 @@ export const GateOut: React.FC = () => {
                 <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-yellow-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.pending')}</p>
+                <p className="stat text-gray-900 dark:text-white">{pendingOperations.length}</p>
+                <p className="badge text-orange-700 lg:text-gray-500">{t('gate.out.stats.pending')}</p>
               </div>
             </div>
           </div>
@@ -710,8 +716,8 @@ export const GateOut: React.FC = () => {
                 <Package className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{containersProcessed}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.processed')}</p>
+                <p className="stat text-gray-900 dark:text-white">{containersProcessed}</p>
+                <p className="badge text-green-700 lg:text-gray-500">{t('gate.out.stats.processed')}</p>
               </div>
             </div>
           </div>
@@ -723,8 +729,8 @@ export const GateOut: React.FC = () => {
                 <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-red-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{issuesReported}</p>
-                <p className="text-xs font-medium text-red-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.issues')}</p>
+                <p className="stat text-gray-900 dark:text-white">{issuesReported}</p>
+                <p className="badge text-red-700 lg:text-gray-500">{t('gate.out.stats.issues')}</p>
               </div>
             </div>
           </div>
