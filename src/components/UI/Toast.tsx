@@ -4,10 +4,10 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
+import {
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
   Info,
   X,
   Sparkles
@@ -42,8 +42,8 @@ export const Toast: React.FC<ToastProps> = ({
   const [isExiting, setIsExiting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(100);
-  const [startTime] = useState(Date.now());
-  const [remainingTime, setRemainingTime] = useState(duration);
+  const accumulatedTimeRef = React.useRef(0);
+  const lastTickRef = React.useRef<number>(Date.now());
 
   // Handle close with animation
   const handleClose = useCallback(() => {
@@ -59,19 +59,23 @@ export const Toast: React.FC<ToastProps> = ({
 
     const interval = setInterval(() => {
       if (!isPaused) {
-        const elapsed = Date.now() - startTime;
-        const newRemaining = Math.max(0, duration - elapsed);
-        setRemainingTime(newRemaining);
-        setProgress((newRemaining / duration) * 100);
+        const now = Date.now();
+        const delta = now - lastTickRef.current;
+        accumulatedTimeRef.current += delta;
 
-        if (newRemaining <= 0) {
+        const newProgress = Math.max(0, 100 - (accumulatedTimeRef.current / duration) * 100);
+        setProgress(newProgress);
+
+        if (accumulatedTimeRef.current >= duration) {
+          clearInterval(interval);
           handleClose();
         }
       }
+      lastTickRef.current = Date.now();
     }, 16); // ~60fps
 
     return () => clearInterval(interval);
-  }, [duration, isPaused, startTime, handleClose]);
+  }, [duration, isPaused, handleClose]);
 
   // Get styles based on type
   const getStyles = (): ToastStyles => {
@@ -128,8 +132,8 @@ export const Toast: React.FC<ToastProps> = ({
         ${styles.shadow}
         shadow-lg
         transition-all duration-300 ease-out
-        ${isExiting 
-          ? 'opacity-0 translate-x-full scale-95' 
+        ${isExiting
+          ? 'opacity-0 translate-x-full scale-95'
           : 'opacity-100 translate-x-0 scale-100 animate-in slide-in-from-right-full'
         }
         hover:scale-[1.02] hover:shadow-xl
@@ -140,7 +144,7 @@ export const Toast: React.FC<ToastProps> = ({
     >
       {/* Background gradient effect */}
       <div className={`absolute inset-0 bg-gradient-to-br ${styles.gradient} opacity-50`} />
-      
+
       {/* Subtle sparkle effect for success */}
       {type === 'success' && (
         <div className="absolute top-2 right-2 opacity-30">
@@ -189,8 +193,12 @@ export const Toast: React.FC<ToastProps> = ({
       {duration > 0 && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-200/50 dark:bg-slate-700/50">
           <div
-            className={`h-full ${styles.progressColor} transition-all duration-100 ease-linear`}
-            style={{ width: `${progress}%` }}
+            className={`h-full ${styles.progressColor}`}
+            style={{
+              width: `${progress}%`,
+              transition: 'none',
+              willChange: 'width'
+            }}
           />
         </div>
       )}
@@ -205,11 +213,6 @@ export const useAnimatedToast = () => {
   const addToast = (type: ToastType, message: string) => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts(prev => [...prev, { id, type, message }]);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-      removeToast(id);
-    }, 5000);
   };
 
   const removeToast = (id: string) => {

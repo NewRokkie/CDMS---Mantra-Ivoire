@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Search, Clock, AlertTriangle, Truck, Container as ContainerIcon, X, Download } from 'lucide-react';
+import { Plus, Clock, AlertTriangle, Warehouse, AlertCircle, Droplets, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useYard } from '../../hooks/useYard';
@@ -18,10 +18,11 @@ import { TableSkeleton } from '../Common/TableSkeleton';
  * Props for the GateIn component
  * Container for gate-in operations and container intake
  */
-interface GateInProps {}
+interface GateInProps { }
 import { GateInModal } from './GateInModal';
 import { PendingOperationsView } from './GateIn/PendingOperationsView';
 import { MobileOperationsTable } from './GateIn/MobileOperationsTable';
+import { GateInStats } from './GateIn/GateInStats';
 import { GateInFormData } from './types';
 import { isValidContainerTypeAndSize } from './GateInModal/ContainerTypeSelect';
 
@@ -30,7 +31,6 @@ import { GateInError, handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
 import { exportToExcel, formatDateForExport, formatDurationForExport } from '../../utils/excelExport';
 import { useToast } from '../../hooks/useToast';
-import { BufferZoneStats } from './BufferZoneStats';
 import { BufferZoneManagement } from './BufferZoneManagement';
 
 // Helper function to extract stack number from location (e.g., "S04R1H1" -> "S04")
@@ -61,27 +61,34 @@ export const GateIn: React.FC<GateInProps> = () => {
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBufferZoneManagement, setShowBufferZoneManagement] = useState(false);
+  const [bufferZoneEntries, setBufferZoneEntries] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [clientsData, operationsData, containersData] = await Promise.all([
+      const [clientsData, operationsData, containersData, bufferData] = await Promise.all([
         clientService.getAll().catch(err => { handleError(err, 'GateIn.loadClients'); return []; }),
         gateService.getGateInOperations({ yardId: currentYard?.id }).catch(err => {
           handleError(err, 'GateIn.loadOperations');
           return [];
         }),
-        containerService.getAll().catch(err => { handleError(err, 'GateIn.loadContainers'); return []; })
+        containerService.getAll().catch(err => { handleError(err, 'GateIn.loadContainers'); return []; }),
+        bufferZoneService.getActiveBufferZoneEntries(currentYard?.id || '').catch(err => {
+          handleError(err, 'GateIn.loadBufferZone');
+          return [];
+        })
       ]);
 
       setClients(clientsData || []);
       setGateInOperations(operationsData || []);
       setContainers(containersData || []);
+      setBufferZoneEntries(bufferData || []);
     } catch (error) {
       handleError(error, 'GateIn.loadData');
       setClients([]);
       setGateInOperations([]);
       setContainers([]);
+      setBufferZoneEntries([]);
     } finally {
       setLoading(false);
     }
@@ -113,9 +120,19 @@ export const GateIn: React.FC<GateInProps> = () => {
       }
     });
 
+    const unsubscribeBuffer = realtimeService.subscribeToBufferZones(
+      currentYard.id,
+      () => {
+        if (document.visibilityState === 'visible') {
+          loadData();
+        }
+      }
+    );
+
     return () => {
       try { unsubscribeGateIn(); } catch { /* ignore */ }
       try { unsubscribeContainers(); } catch { /* ignore */ }
+      try { unsubscribeBuffer(); } catch { /* ignore */ }
     };
   }, [currentYard?.id, loadData]);
 
@@ -184,7 +201,15 @@ export const GateIn: React.FC<GateInProps> = () => {
     return opDate.getTime() === today.getTime();
   });
 
-  const alimentaireContainersCount = allOperations.filter(op => op.classification === 'alimentaire').length;
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayGateIns = allOperations.filter(op => {
+    const opDate = new Date(op.createdAt || op.date);
+    opDate.setHours(0, 0, 0, 0);
+    return opDate.getTime() === yesterday.getTime();
+  });
+
+  const damagedContainersCount = allOperations.filter(op => op.hasDamage || op.isDamaged).length || 0;
 
   const handleHighCubeChange = useCallback((isHighCube: boolean) => {
     setFormData(prev => {
@@ -1196,25 +1221,16 @@ export const GateIn: React.FC<GateInProps> = () => {
 
   // Show skeletons while initial data is loading
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:bg-transparent">
-      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="px-4 lg:px-6 py-4 lg:py-6">
-          <div className="flex items-center justify-between mb-4 lg:mb-6">
-            <div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 lg:bg-transparent p-8">
+      <div className="space-y-8">
+        <div className="flex justify-end gap-3">
+          <div className="w-32 h-10 bg-gray-200 animate-pulse rounded-lg" />
+          <div className="w-32 h-10 bg-gray-200 animate-pulse rounded-lg" />
         </div>
-      </div>
-
-      <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <CardSkeleton count={4} />
         </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden p-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 w-full h-96">
           <TableSkeleton />
         </div>
       </div>
@@ -1223,219 +1239,158 @@ export const GateIn: React.FC<GateInProps> = () => {
 
   // Main Overview
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:bg-transparent">
-      {/* Unified Mobile-First Header */}
-      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="px-4 lg:px-6 py-4 lg:py-6">
-          {/* Title Section */}
-          <div className="flex items-center justify-between mb-4 lg:mb-6">
-            <div>
-            </div>
-          </div>
-
-          {/* Action Buttons - Mobile First */}
-          <div className="grid grid-cols-2 gap-3 lg:flex lg:justify-end lg:space-x-3">
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl lg:rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
-            >
-              <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">Gate In</span>
-            </button>
-
-            <button
-              onClick={() => setActiveView('pending')}
-              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
-            >
-              <Clock className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">{t('gate.in.pending')} ({pendingOperations.length})</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Unified Responsive Statistics */}
-      <div className="px-4 py-4 lg:px-6 lg:py-6 space-y-4">
-        {/* Mobile: 2x2 Grid | Tablet+: 5x1 Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
-          {/* Today's Gate Ins */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
-            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 dark:bg-green-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-green-600" />
-              </div>
-              <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{todayGateIns.length}</p>
-                <p className="text-xs font-medium text-green-700 dark:text-green-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.today')}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Pending Operations */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
-            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-orange-500 lg:bg-yellow-100 dark:bg-orange-500 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-yellow-600" />
-              </div>
-              <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 dark:text-orange-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.pending')}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Containers Processed */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
-            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-blue-500 lg:bg-blue-100 dark:bg-blue-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <ContainerIcon className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-blue-600" />
-              </div>
-              <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{completedOperations.length}</p>
-                <p className="text-xs font-medium text-blue-700 dark:text-blue-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">{t('gate.in.stats.processed')}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Alimentaire Containers */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-100 dark:border-gray-700 lg:border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 lg:hover:scale-100 active:scale-95">
-            <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left space-y-2 lg:space-y-0">
-              <div className="p-3 lg:p-2 bg-green-500 lg:bg-green-100 dark:bg-green-600 rounded-xl lg:rounded-lg shadow-lg lg:shadow-none">
-                <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white dark:text-white lg:text-green-600" />
-              </div>
-              <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{alimentaireContainersCount}</p>
-                <p className="text-xs font-medium text-green-700 dark:text-green-400 lg:text-gray-500 dark:hover:text-gray-400 leading-tight">Alimentaire Containers</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Buffer Zone Stats */}
-          <div onClick={() => setShowBufferZoneManagement(true)} className="cursor-pointer">
-            <BufferZoneStats />
-          </div>
+    <div className="flex flex-col min-w-0 overflow-hidden w-full font-['Inter']">
+      <div className="p-8 space-y-8 overflow-y-auto">
+        {/* Action Bar Section */}
+        <div className="flex justify-end items-center gap-3">
+          <button
+            onClick={() => setActiveView('pending')}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-[2rem] font-semibold text-sm transition-colors shadow-sm font-inter antialiased"
+          >
+            <Clock className="h-5 w-5" />
+            {t('gate.in.pending')} ({pendingOperations.length})
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-600/90 text-white px-5 py-2.5 rounded-[2rem] font-semibold text-sm transition-all shadow-md active:scale-95 font-inter antialiased"
+          >
+            <Plus className="h-5 w-5" />
+            Gate In
+          </button>
         </div>
 
-        {/* Unified Search and Filter */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl lg:rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="lg:flex lg:justify-between lg:items-center p-4 lg:p-4">
-            {/* Search Bar */}
-            <div className="relative mb-4 lg:mb-0 lg:flex-1 lg:max-w-md">
-              <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5 lg:h-4 lg:w-4" />
-              <input
-                type="text"
-                placeholder="Search operations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 dark:border-gray-600 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 lg:bg-white dark:lg:bg-gray-800 focus:bg-white dark:focus:bg-gray-700 transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-4 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
-                >
-                  <X className="h-5 w-5 lg:h-4 lg:w-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Filter Chips (Mobile) / Dropdown (Desktop) */}
-            <div className="lg:hidden flex items-center justify-center space-x-2 overflow-x-auto py-2 scrollbar-none -mx-4 px-4">
-              {['all', 'pending', 'completed', 'alimentaire', 'divers'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setSelectedFilter(filter)}
-                  className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${selectedFilter === filter
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white transform scale-105'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95'
-                    }`}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            <div className="hidden lg:flex items-center space-x-3">
-              <select
-                value={selectedFilter}
-                onChange={(e) => setSelectedFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-sm dark:text-white"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="alimentaire">Alimentaire</option>
-                <option value="divers">Divers</option>
-              </select>
-              {searchTerm && (
-                <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg font-medium">
-                  {filteredOperations.length} result{filteredOperations.length !== 1 ? 's' : ''}
-                </span>
-              )}
-              <button
-                onClick={handleExportGateIn}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                title="Export to Excel"
-              >
-                <Download className="h-4 w-4" />
-                <span>Export</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Unified Operations List - Mobile First */}
-        <MobileOperationsTable
-          operations={filteredOperations}
-          searchTerm={searchTerm}
-          selectedFilter={selectedFilter}
-          onClearSearch={() => setSearchTerm('')}
-          onClearFilter={() => setSelectedFilter('all')}
+        {/* Stats Cards Bento Grid */}
+        <GateInStats
+          todayGateIns={todayGateIns.length}
+          yesterdayGateIns={yesterdayGateIns.length}
+          pendingOperations={pendingOperations.length}
+          containersProcessed={completedOperations.length}
+          damagedContainers={damagedContainersCount}
         />
-      </div>
 
-      {/* Gate In Form Modal */}
-      {showForm && (
-        <GateInModal
-          showForm={showForm}
-          setShowForm={setShowForm}
-          formData={formData}
-          currentStep={currentStep}
-          setCurrentStep={setCurrentStep}
-          isProcessing={isProcessing}
-          autoSaving={autoSaving}
-          validateStep={validateStep}
-          isCurrentStepValid={isCurrentStepValid}
-          handleSubmit={handleSubmit}
-          handleNextStep={handleNextStep}
-          handlePrevStep={handlePrevStep}
-          handleInputChange={handleInputChange}
-          handleContainerSizeChange={handleContainerSizeChange}
-          handleHighCubeChange={handleHighCubeChange}
-          handleQuantityChange={handleQuantityChange}
-          handleStatusChange={handleStatusChange}
-          handleClientChange={handleClientChange}
-          handleTransactionTypeChange={handleTransactionTypeChange}
+        {/* Main Operational Area */}
+        <div className="flex flex-col gap-8 w-full">
+          {/* Buffer Zone Management */}
+          <div className="w-full">
+            <div className="bg-white rounded-2xl shadow-[0_10px_30px_-5px_rgba(25,28,30,0.04)] flex flex-col border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+              <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <Warehouse className="text-orange-600 h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900 tracking-tight dark:text-white">Zone Tampon</h4>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={`text-white text-[10px] font-black px-2 py-1 rounded-lg ${bufferZoneEntries.length > 0 ? 'bg-orange-600' : 'bg-emerald-600'}`}>{bufferZoneEntries.length} ACTIFS</span>
+                  <button onClick={() => setShowBufferZoneManagement(true)} className="hidden sm:inline-block px-5 py-2 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-sm shadow-lg hover:opacity-90 transition-opacity active:scale-[0.98] whitespace-nowrap">
+                    GÉRER LA ZONE TAMPON
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                {bufferZoneEntries.slice(0, 3).map((entry: any, index: number) => {
+                  const colors = [
+                    { bg: 'bg-orange-500', icon: AlertCircle, text: entry.damageType || 'Documentation' },
+                    { bg: 'bg-red-500', icon: Droplets, text: 'En attente réparation' },
+                    { bg: 'bg-blue-600', icon: ShieldCheck, text: 'En attente inspection' }
+                  ];
+                  const colorConfig = colors[index % colors.length];
 
-          clients={clients}
-          submissionError={submissionError}
-          validationErrors={validationErrors}
-          validationWarnings={validationWarnings}
-        />
-      )}
+                  return (
+                    <div key={entry.id} className="group p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600" onClick={() => setShowBufferZoneManagement(true)}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-black tracking-widest text-gray-900 dark:text-white">{entry.containerNumber}</span>
+                        <span className="text-[10px] font-bold text-blue-600 flex items-center gap-1">
+                          <Warehouse className="h-3 w-3" />
+                          In Buffer
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600 mb-3 dark:text-gray-300">
+                        <colorConfig.icon className={`h-4 w-4 ${colorConfig.bg.replace('bg-', 'text-')}`} />
+                        <span className="capitalize">{entry.damageType || 'Maintenance'}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden dark:bg-gray-600">
+                        <div className={`${colorConfig.bg} h-full w-[100%] rounded-full opacity-60`}></div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {bufferZoneEntries.length === 0 && (
+                  <div className="text-center py-8 text-gray-400 text-sm md:col-span-3 flex flex-col items-center justify-center gap-2">
+                    <ShieldCheck className="h-8 w-8 opacity-20" />
+                    <p>Aucun conteneur en zone tampon.</p>
+                  </div>
+                )}
+              </div>
+              <div className="p-6 pt-0 sm:hidden">
+                <button onClick={() => setShowBufferZoneManagement(true)} className="w-full py-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-sm shadow-lg hover:opacity-90 transition-opacity active:scale-[0.98]">
+                  GÉRER LA ZONE TAMPON
+                </button>
+              </div>
+            </div>
+          </div>
 
-      {/* Buffer Zone Management Modal */}
-      <BufferZoneManagement
-        isOpen={showBufferZoneManagement}
-        onClose={() => setShowBufferZoneManagement(false)}
-      />
-
-      {/* Processing Spinner Overlay */}
-      {isProcessing && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
-          <LoadingSpinner />
+          {/* Operations Table */}
+          <div className="w-full">
+            <MobileOperationsTable
+              operations={filteredOperations}
+              searchTerm={searchTerm}
+              selectedFilter={selectedFilter}
+              onClearSearch={() => setSearchTerm('')}
+              onClearFilter={() => setSelectedFilter('all')}
+              onSearchChange={setSearchTerm}
+              onFilterChange={setSelectedFilter}
+              onExport={handleExportGateIn}
+              totalOperations={allOperations.length}
+            />
+          </div>
         </div>
-      )}
+
+        {/* Gate In Form Modal */}
+        {showForm && (
+          <GateInModal
+            showForm={showForm}
+            setShowForm={setShowForm}
+            formData={formData}
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+            isProcessing={isProcessing}
+            autoSaving={autoSaving}
+            validateStep={validateStep}
+            isCurrentStepValid={isCurrentStepValid}
+            handleSubmit={handleSubmit}
+            handleNextStep={handleNextStep}
+            handlePrevStep={handlePrevStep}
+            handleInputChange={handleInputChange}
+            handleContainerSizeChange={handleContainerSizeChange}
+            handleHighCubeChange={handleHighCubeChange}
+            handleQuantityChange={handleQuantityChange}
+            handleStatusChange={handleStatusChange}
+            handleClientChange={handleClientChange}
+            handleTransactionTypeChange={handleTransactionTypeChange}
+            clients={clients}
+            submissionError={submissionError}
+            validationErrors={validationErrors}
+            validationWarnings={validationWarnings}
+          />
+        )}
+
+        {/* Buffer Zone Management Modal */}
+        <BufferZoneManagement
+          isOpen={showBufferZoneManagement}
+          onClose={() => setShowBufferZoneManagement(false)}
+        />
+
+        {/* Processing Spinner Overlay */}
+        {isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
+            <LoadingSpinner />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+

@@ -4,7 +4,7 @@ import { ModalFooterProps } from '../types';
 export const ModalFooter: React.FC<ModalFooterProps> = ({
   children,
   className = '',
-  justify = 'end' // "end" est souvent plus standard pour les actions principales
+  justify = 'end'
 }) => {
   const justifyClasses = {
     start: 'justify-start',
@@ -16,14 +16,14 @@ export const ModalFooter: React.FC<ModalFooterProps> = ({
   return (
     <div className={`
       relative shrink-0
-      px-4 sm:px-8 py-4 
+      px-6 sm:px-8 py-4 
       border-t border-gray-100 dark:border-gray-800 
-      bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm
-      rounded-b-2xl 
+      bg-gray-50/80 dark:bg-gray-800/20 backdrop-blur-md
+      rounded-b-3xl 
       flex items-center gap-3
       ${justifyClasses[justify]} 
       ${className}
-      /* Animation d'entrée coordonnée */
+      /* Entry animation */
       animate-in fade-in slide-in-from-top-1 duration-500
     `}>
       {children}

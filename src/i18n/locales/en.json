@@ -188,8 +188,8 @@
         "alimentaire": "Alimentaire Containers"
       },
       "form": {
-        "containerInfo": "Container Information",
-        "transportInfo": "Transport Information",
+        "containerInfo": "Container Details",
+        "transportInfo": "Transport Info",
         "timeTracking": "Time Tracking",
         "containerNumber": "Container Number",
         "containerSize": "Container Size",

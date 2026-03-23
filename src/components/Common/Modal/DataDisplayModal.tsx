@@ -1,7 +1,6 @@
 import React from 'react';
 import { DataDisplayModalProps } from './types';
 import { StandardModal } from './StandardModal';
-import { ModalFooter } from './components/ModalFooter';
 import { useToast } from '../../../hooks/useToast';
 
 export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
@@ -11,7 +10,6 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
   subtitle,
   icon,
   children,
-  data,
   actions = [],
   sections = [],
   size = 'lg',
@@ -44,7 +42,7 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
           {SectionIcon && <SectionIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />}
           <span className="truncate">{title}</span>
         </h4>
-        
+
         {layout === 'grid' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {Object.entries(sectionData).map(([key, value]) => (
@@ -108,7 +106,53 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
       showCloseButton={showCloseButton}
       preventBackdropClose={preventBackdropClose}
       className={className}
-      hideDefaultFooter={true}
+      customFooter={actions.length > 0 ? (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto ml-auto">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors font-inter antialiased order-last sm:order-first"
+          >
+            Fermer
+          </button>
+          {actions.map((action, index) => {
+            const variantClasses = {
+              primary: 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/20',
+              secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700',
+              danger: 'bg-red-600 text-white hover:bg-red-500 shadow-red-500/20',
+              success: 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20'
+            }[action.variant || 'primary'];
+
+            const IconComponent = action.icon;
+
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleActionClick(action)}
+                disabled={action.disabled || action.loading}
+                className={`
+                  relative px-7 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2 font-inter antialiased
+                  ${variantClasses}
+                  ${(action.disabled || action.loading) ? 'opacity-50 grayscale cursor-not-allowed' : ''}
+                `}
+              >
+                {action.loading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <span>Chargement...</span>
+                  </>
+                ) : (
+                  <>
+                    {IconComponent && <IconComponent className="h-4 w-4" />}
+                    <span>{action.label}</span>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : undefined}
     >
       {/* Data Content */}
       <div className="space-y-6">
@@ -118,53 +162,6 @@ export const DataDisplayModal: React.FC<DataDisplayModalProps> = ({
         {/* Render custom children */}
         {children}
       </div>
-
-      {/* Actions Footer */}
-      {actions.length > 0 && (
-        <ModalFooter justify="end">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary mobile-button order-last sm:order-first"
-            >
-              Close
-            </button>
-            {actions.map((action, index) => {
-              const buttonClass = {
-                primary: 'btn-primary',
-                secondary: 'btn-secondary',
-                danger: 'btn-danger',
-                success: 'btn-success'
-              }[action.variant || 'primary'];
-
-              const IconComponent = action.icon;
-
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => handleActionClick(action)}
-                  disabled={action.disabled || action.loading}
-                  className={`${buttonClass} mobile-button disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2`}
-                >
-                  {action.loading ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      <span>Loading...</span>
-                    </>
-                  ) : (
-                    <>
-                      {IconComponent && <IconComponent className="h-4 w-4" />}
-                      <span>{action.label}</span>
-                    </>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </ModalFooter>
-      )}
     </StandardModal>
   );
 };
