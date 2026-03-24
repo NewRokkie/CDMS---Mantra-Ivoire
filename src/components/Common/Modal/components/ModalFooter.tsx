@@ -20,7 +20,7 @@ export const ModalFooter: React.FC<ModalFooterProps> = ({
       border-t border-gray-100 dark:border-gray-800 
       bg-gray-50/80 dark:bg-gray-800/20 backdrop-blur-md
       rounded-b-3xl 
-      flex items-center gap-3
+      flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3
       ${justifyClasses[justify]} 
       ${className}
       /* Entry animation */

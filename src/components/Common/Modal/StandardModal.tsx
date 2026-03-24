@@ -121,10 +121,10 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 ml-auto">
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-3 sm:ml-auto sm:flex-initial">
                   <button
                     onClick={onClose}
-                    className="px-5 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors font-inter antialiased"
+                    className="min-h-10 shrink-0 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors font-inter antialiased whitespace-nowrap"
                   >
                     {cancelLabel}
                   </button>
@@ -136,23 +136,24 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                       disabled={isSubmitting || !isFormValid}
                       className={`
                         relative group
-                        px-7 py-2.5 rounded-xl
-                        bg-blue-600 text-white text-sm font-bold
+                        min-h-10 shrink-0 px-3 sm:px-7 py-2.5 rounded-xl
+                        bg-blue-600 text-white text-xs sm:text-sm font-bold
                         shadow-lg shadow-blue-500/20
                         transition-all active:scale-95
                         disabled:opacity-50 disabled:grayscale disabled:scale-100
-                        flex items-center justify-center gap-2
+                        inline-flex items-center justify-center gap-2
                         font-inter antialiased
+                        max-w-[55%] sm:max-w-none
                       `}
                     >
                       {isSubmitting ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>Traitement...</span>
+                          <div className="w-4 h-4 shrink-0 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span className="truncate sm:max-w-none">Traitement...</span>
                         </>
                       ) : (
                         <>
-                          <span>{submitLabel}</span>
+                          <span className="truncate sm:max-w-none">{submitLabel}</span>
                           <div className="absolute inset-0 rounded-xl bg-blue-400 blur-lg opacity-0 group-hover:opacity-20 transition-opacity" />
                         </>
                       )}

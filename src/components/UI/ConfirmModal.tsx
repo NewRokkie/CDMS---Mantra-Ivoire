@@ -64,16 +64,18 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <p className="text-gray-600">{message}</p>
         </div>
         
-        <div className="flex justify-end space-x-2">
+        <div className="flex w-full gap-2">
           <Button
             variant="outline"
             onClick={onCancel}
+            className="min-h-10 flex-1 px-3 text-xs sm:text-sm sm:px-4"
           >
             {cancelText}
           </Button>
           <Button
             variant={getConfirmButtonVariant()}
             onClick={onConfirm}
+            className="min-h-10 flex-1 px-3 text-xs sm:text-sm sm:px-4"
           >
             {confirmText}
           </Button>

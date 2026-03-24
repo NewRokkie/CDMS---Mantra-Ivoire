@@ -353,6 +353,7 @@ export const GateIn: React.FC<GateInProps> = () => {
   }, []);
 
   const resetForm = useCallback(() => {
+    setCurrentStep(1);
     setFormData({
       containerSize: '20ft',
       containerType: 'dry',
@@ -386,6 +387,17 @@ export const GateIn: React.FC<GateInProps> = () => {
     setValidationErrors([]);
     setValidationWarnings([]);
   }, []);
+
+  const closeGateInModal = useCallback(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+    setAutoSaving(false);
+    setIsProcessing(false);
+    resetForm();
+    setShowForm(false);
+  }, [resetForm]);
 
   const handleSubmit = useCallback(async () => {
 
@@ -555,10 +567,7 @@ export const GateIn: React.FC<GateInProps> = () => {
 
       toast.success(successMessage);
 
-      // Reset form and close modal
-      resetForm();
-      setCurrentStep(1);
-      setShowForm(false);
+      closeGateInModal();
 
       // Refresh data
       await loadData();
@@ -578,7 +587,7 @@ export const GateIn: React.FC<GateInProps> = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [canPerformGateIn, validateYardOperation, containers, hasModuleAccess, formData, user, currentYard, resetForm, loadData, toast]);
+  }, [canPerformGateIn, validateYardOperation, containers, hasModuleAccess, formData, user, currentYard, closeGateInModal, loadData, toast]);
 
 
   const handleLocationValidation = async (operation: any, locationData: any) => {
@@ -1241,21 +1250,30 @@ export const GateIn: React.FC<GateInProps> = () => {
   return (
     <div className="flex flex-col min-w-0 overflow-hidden w-full font-['Inter']">
       <div className="p-8 space-y-8 overflow-y-auto">
-        {/* Action Bar Section */}
-        <div className="flex justify-end items-center gap-3">
+        {/* Page Title */}
+        <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Gate In</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Container entry management</p>
+        </div>
+
+        {/* Action Bar: grid on narrow viewports so both actions stay one row with room; lg+ compact end-aligned row */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full min-w-0 lg:flex lg:w-auto lg:justify-end lg:ml-auto shrink-0">
           <button
+            type="button"
             onClick={() => setActiveView('pending')}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-[2rem] font-semibold text-sm transition-colors shadow-sm font-inter antialiased"
+            className="flex min-w-0 items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap bg-amber-500 hover:bg-amber-600 text-white px-3 py-2.5 sm:px-4 rounded-[2rem] font-semibold text-xs sm:text-sm transition-colors shadow-sm font-gilroy antialiased"
           >
-            <Clock className="h-5 w-5" />
-            {t('gate.in.pending')} ({pendingOperations.length})
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span className="lg:hidden">{t('gate.in.pendingShort')} ({pendingOperations.length})</span>
+            <span className="hidden lg:inline">{t('gate.in.pending')} ({pendingOperations.length})</span>
           </button>
           <button
+            type="button"
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-600/90 text-white px-5 py-2.5 rounded-[2rem] font-semibold text-sm transition-all shadow-md active:scale-95 font-inter antialiased"
+            className="flex min-w-0 items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap bg-blue-600 hover:bg-blue-600/90 text-white px-3 py-2.5 sm:px-4 rounded-[2rem] font-semibold text-xs sm:text-sm transition-all shadow-md active:scale-95 font-gilroy-bold antialiased"
           >
-            <Plus className="h-5 w-5" />
-            Gate In
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            {t('gate.in.actionGateIn')}
           </button>
         </div>
 
@@ -1352,10 +1370,9 @@ export const GateIn: React.FC<GateInProps> = () => {
         {showForm && (
           <GateInModal
             showForm={showForm}
-            setShowForm={setShowForm}
+            onCloseForm={closeGateInModal}
             formData={formData}
             currentStep={currentStep}
-            setCurrentStep={setCurrentStep}
             isProcessing={isProcessing}
             autoSaving={autoSaving}
             validateStep={validateStep}

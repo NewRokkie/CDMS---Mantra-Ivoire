@@ -659,21 +659,24 @@ export const GateOut: React.FC<GateOutProps> = () => {
           </div>
 
           {/* Action Buttons - Mobile First */}
-          <div className="grid grid-cols-2 gap-3 lg:flex lg:justify-end lg:space-x-3">
+          <div className="grid grid-cols-2 gap-3 min-w-0 lg:flex lg:justify-end lg:space-x-3">
             <button
+              type="button"
               onClick={() => setShowForm(true)}
-              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl lg:rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
+              className="flex min-w-0 items-center justify-center gap-2 whitespace-nowrap px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl lg:rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold text-xs sm:text-sm lg:text-base"
             >
-              <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">Gate Out</span>
+              <Plus className="h-5 w-5 lg:h-4 lg:w-4 shrink-0" />
+              Gate Out
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveView('pending')}
-              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
+              className="flex min-w-0 items-center justify-center gap-2 whitespace-nowrap px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold text-xs sm:text-sm lg:text-base"
             >
-              <Clock className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">{t('gate.out.pending')} ({pendingOperations.length})</span>
+              <Clock className="h-5 w-5 lg:h-4 lg:w-4 shrink-0" />
+              <span className="lg:hidden">{t('gate.out.pendingShort')} ({pendingOperations.length})</span>
+              <span className="hidden lg:inline">{t('gate.out.pending')} ({pendingOperations.length})</span>
             </button>
           </div>
         </div>

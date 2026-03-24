@@ -26,10 +26,11 @@ const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
   return (
     <div
       className="
-        fixed top-4 right-4 z-[9999]
+        fixed top-4 right-auto left-1/2 -translate-x-1/2 z-[9999]
         flex flex-col gap-3
-        max-w-[420px] w-full
+        w-[420px] max-w-[calc(100vw-2rem)]
         p-4
+        lg:left-auto lg:right-4 lg:translate-x-0
       "
       style={{ pointerEvents: 'none' }}
     >

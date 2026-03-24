@@ -17,7 +17,7 @@ import { MultiStepModal } from '../Common/Modal/MultiStepModal';
 
 export const GateInModal: React.FC<GateInModalProps> = ({
   showForm,
-  setShowForm,
+  onCloseForm,
   formData,
   currentStep,
   isProcessing,
@@ -57,7 +57,7 @@ export const GateInModal: React.FC<GateInModalProps> = ({
   return (
     <MultiStepModal
       isOpen={showForm}
-      onClose={() => setShowForm(false)}
+      onClose={onCloseForm}
       title={t('gate.in.new')}
       subtitle="Process container entry into the depot"
       icon={Package}

@@ -967,15 +967,18 @@
   }
 }
 
+/* Opacity + scale only: do not combine translate(-50%,-50%) here when the
+   panel is centered via flex (e.g. portaled DatePicker) — that caused a
+   flash at the top-left before the animation settled. */
 @keyframes fadeScaleIn {
   from {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.95);
+    transform: scale(0.95);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
   }
 }
 

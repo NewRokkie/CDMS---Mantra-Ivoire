@@ -129,21 +129,24 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
           </div>
         </ModalBody>
 
-        <ModalFooter justify="between">
+        <ModalFooter justify="between" className="gap-2">
           <button
             type="button"
             onClick={handlePrevStep}
             disabled={isFirstStep}
-            className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all disabled:opacity-0 disabled:pointer-events-none active:scale-95 flex items-center gap-1.5 font-inter antialiased"
+            aria-label="Étape précédente"
+            className="shrink-0 min-h-10 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all disabled:opacity-0 disabled:pointer-events-none active:scale-95 inline-flex items-center gap-1 font-inter antialiased"
           >
-            <ChevronLeft className="h-4 w-4" />
-            Précédent
+            <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="whitespace-nowrap sm:hidden">Retour</span>
+            <span className="whitespace-nowrap hidden sm:inline">Précédent</span>
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-3 sm:flex-initial">
             <button
+              type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors font-inter antialiased"
+              className="min-h-10 shrink-0 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors font-inter antialiased whitespace-nowrap"
             >
               Annuler
             </button>
@@ -152,20 +155,27 @@ export const MultiStepModal: React.FC<MultiStepModalProps> = ({
               type="button"
               onClick={handleNextStep}
               className={`
-                relative group px-8 py-2.5 text-white text-sm font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg font-inter antialiased
+                relative group min-h-10 shrink-0 px-3 sm:px-8 py-2.5 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 inline-flex items-center justify-center gap-1.5 shadow-lg font-inter antialiased whitespace-nowrap
                 ${!isStepValid ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed grayscale' :
                   isLastStep ? 'bg-emerald-500 shadow-emerald-500/25 hover:bg-emerald-600' : 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-500'
                 }
               `}
             >
-              <span className="relative z-10">{isLastStep ? 'Confirmer Gate In' : 'Suivant'}</span>
-              <div className="relative z-10 transition-transform group-hover:translate-x-0.5">
+              {isLastStep ? (
+                <>
+                  <span className="relative z-10 sm:hidden">Confirmer</span>
+                  <span className="relative z-10 hidden sm:inline">Confirmer Gate In</span>
+                </>
+              ) : (
+                <span className="relative z-10">Suivant</span>
+              )}
+              <span className="relative z-10 transition-transform group-hover:translate-x-0.5" aria-hidden>
                 {isLastStep ? (
                   <Check className="h-4 w-4" />
                 ) : (
                   <ChevronRight className="h-4 w-4" />
                 )}
-              </div>
+              </span>
               {isStepValid && (
                 <div className={`absolute inset-0 rounded-xl blur-lg opacity-0 group-hover:opacity-20 transition-opacity ${isLastStep ? 'bg-emerald-400' : 'bg-blue-400'}`} />
               )}

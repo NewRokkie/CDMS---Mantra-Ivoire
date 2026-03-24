@@ -77,10 +77,10 @@ export interface GateOutFormData {
 
 export interface GateInModalProps {
   showForm: boolean;
-  setShowForm: (show: boolean) => void;
+  /** Full reset + close (Annuler, X, backdrop) — must not leave wizard on step 2/3 for next open */
+  onCloseForm: () => void;
   formData: GateInFormData;
   currentStep: number;
-  setCurrentStep: (step: number) => void;
   isProcessing: boolean;
   autoSaving: boolean;
   validateStep: (step: number) => boolean;
