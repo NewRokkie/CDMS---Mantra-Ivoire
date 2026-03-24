@@ -137,6 +137,7 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
       icon={History}
       size="2xl"
       hideDefaultFooter={true}
+      isNested={true}
       customFooter={
         <div className="flex items-center justify-end p-6 border-t border-gray-200 bg-gray-50">
           <button

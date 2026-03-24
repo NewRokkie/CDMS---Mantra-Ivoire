@@ -31,7 +31,7 @@ interface BookingReferenceFormProps {
   isEditMode?: boolean;
 }
 
-export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
+export const BookingForm: React.FC<BookingReferenceFormProps> = ({
   isOpen,
   onClose,
   onSubmit,
@@ -229,19 +229,19 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
     <MultiStepModal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? t('releases.edit') : t('releases.create')}
-      subtitle={isEditMode ? t('releases.subtitle.edit') : t('releases.subtitle.create')}
+      title={isEditMode ? t('bookings.edit') : t('bookings.createBooking')}
+      subtitle={isEditMode ? t('bookings.subtitle.edit') : t('bookings.subtitle.create')}
       icon={FileText}
       currentStep={currentStep}
       totalSteps={2}
-      stepLabels={[t('releases.form.bookingInfo'), t('releases.form.quantities')]}
+      stepLabels={[t('bookings.form.bookingInfo'), t('bookings.form.quantities')]}
       onNextStep={currentStep === 2 ? handleSubmit : handleNextStep}
       onPrevStep={handlePrevStep}
       isStepValid={validateStep(currentStep)}
       showProgressBar={true}
       size="md"
     >
-      <ReleaseOrderFormContent
+      <BookingFormContent
         currentStep={currentStep}
         formData={formData}
         isEditMode={isEditMode}
@@ -257,7 +257,7 @@ export const ReleaseOrderForm: React.FC<BookingReferenceFormProps> = ({
 };
 
 // Form content component
-interface ReleaseOrderFormContentProps {
+interface BookingFormContentProps {
   currentStep: number;
   formData: BookingReferenceFormData;
   isEditMode: boolean;
@@ -269,7 +269,7 @@ interface ReleaseOrderFormContentProps {
   handleTransactionTypeChange: (transactionType: 'Positionnement' | 'Transfert (OUT)') => void;
 }
 
-const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
+const BookingFormContent: React.FC<BookingFormContentProps> = ({
   currentStep,
   formData,
   isEditMode,
@@ -308,8 +308,8 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-blue-900 dark:text-blue-100">{t('releases.form.bookingInfo')}</h4>
-                <p className="text-xs text-blue-700 dark:text-blue-300">{t('releases.form.bookingDesc')}</p>
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100">{t('bookings.form.bookingInfo')}</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300">{t('bookings.form.bookingDesc')}</p>
               </div>
             </div>
 
@@ -317,7 +317,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               {/* Booking Type */}
               <div>
                 <label className="block text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                  {t('releases.form.bookingType')} *
+                  {t('bookings.form.bookingType')} *
                 </label>
                 <div className="flex items-center space-x-4">
                   <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex-1">
@@ -358,7 +358,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
               {/* Booking Reference Number */}
               <div>
                 <label className="block text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                  {t('releases.form.bookingNumber')} *
+                  {t('bookings.form.bookingNumber')} *
                 </label>
                 <input
                   type="text"
@@ -370,7 +370,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   placeholder="e.g., ABJEXXXXXXXX"
                 />
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
-                  {isEditMode ? t('releases.form.refImmutable') : t('releases.form.refHelp')}
+                  {isEditMode ? t('bookings.form.refImmutable') : t('bookings.form.refHelp')}
                 </p>
               </div>
             </div>
@@ -383,14 +383,14 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <User className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-green-900 dark:text-green-100">{t('releases.form.clientInfo')}</h4>
-                <p className="text-xs text-green-700 dark:text-green-300">{t('releases.form.clientDesc')}</p>
+                <h4 className="font-semibold text-green-900 dark:text-green-100">{t('bookings.form.clientInfo')}</h4>
+                <p className="text-xs text-green-700 dark:text-green-300">{t('bookings.form.clientDesc')}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-green-900 dark:text-green-100 mb-3">
-                {t('releases.form.client')} *
+                {t('bookings.form.client')} *
               </label>
               <ClientSearchField
                 clients={clients}
@@ -423,30 +423,56 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <Calculator className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-purple-900 dark:text-purple-100">{t('releases.form.qtyControl')}</h4>
-                <p className="text-xs text-purple-700 dark:text-purple-300">{t('releases.form.qtyControlDesc')}</p>
+                <h4 className="font-semibold text-purple-900 dark:text-purple-100">{t('bookings.form.qtyControl')}</h4>
+                <p className="text-xs text-purple-700 dark:text-purple-300">{t('bookings.form.qtyControlDesc')}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-purple-900 dark:text-purple-100 mb-3">
-                {t('releases.form.threshold')} *
+                {t('bookings.form.threshold')} *
               </label>
-              <div className="flex items-center space-x-3">
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="100"
-                  value={formData.maxQuantityThreshold}
-                  onChange={(e) => handleInputChange('maxQuantityThreshold', parseInt(e.target.value) || 1)}
-                  className="flex-1 px-4 py-3 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm dark:bg-gray-600 dark:text-white"
-                  placeholder="10"
-                />
-                <span className="text-sm font-medium text-purple-900 dark:text-purple-100">{t('common.containers')}</span>
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('maxQuantityThreshold', Math.max(1, formData.maxQuantityThreshold - 1))}
+                  disabled={formData.maxQuantityThreshold <= 1}
+                  className="w-10 h-10 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Decrease threshold"
+                >
+                  <Minus className="h-5 w-5" />
+                </button>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    required
+                    min="1"
+                    max="100"
+                    value={formData.maxQuantityThreshold}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      handleInputChange('maxQuantityThreshold', Math.max(0, Math.min(100, val)));
+                    }}
+                    className="w-16 text-center px-2 py-2 border-2 border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-bold text-xl text-purple-900 dark:text-white bg-white dark:bg-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">{t('common.containers')}</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('maxQuantityThreshold', Math.min(100, formData.maxQuantityThreshold + 1))}
+                  disabled={formData.maxQuantityThreshold >= 100}
+                  className="w-10 h-10 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Increase threshold"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
               </div>
-              <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
-                {t('releases.form.thresholdHelp')}
+              <p className="text-xs text-purple-700 dark:text-purple-300 mt-3 text-center">
+                {t('bookings.form.thresholdHelp')}
               </p>
             </div>
           </div>
@@ -458,7 +484,7 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-orange-900 dark:text-orange-100">{t('releases.form.quantitiesTitle')}</h4>
+                <h4 className="font-semibold text-orange-900 dark:text-orange-100">{t('bookings.form.quantitiesTitle')}</h4>
                 <p className="text-xs text-orange-700 dark:text-orange-300">
                   {t('common.total')}: <span className="font-bold">{formData.totalContainers}</span> {t('common.container')}{formData.totalContainers !== 1 ? 's' : ''}
                 </p>
@@ -471,39 +497,41 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <span className="font-semibold text-gray-900 dark:text-white">{t('releases.form.containers20')}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{t('bookings.form.containers20')}</span>
                   </div>
                   <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">{t('common.standard')}</span>
                 </div>
 
-                <div className="flex items-center justify-between space-x-3">
+                <div className="flex items-center justify-center space-x-4">
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft - 1)}
                     disabled={formData.containerQuantities.size20ft <= 0}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Decrease 20ft containers"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </button>
 
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min="0"
                     max="50"
                     value={formData.containerQuantities.size20ft}
-                    onChange={(e) => handleQuantityChange('size20ft', parseInt(e.target.value) || 0)}
-                    className="flex-1 text-center px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-bold text-lg dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => handleQuantityChange('size20ft', Math.max(0, Math.min(50, parseInt(e.target.value) || 0)))}
+                    className="w-16 text-center px-2 py-2 border-2 border-blue-300 dark:border-blue-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-xl text-blue-900 dark:text-white bg-white dark:bg-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
 
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size20ft', formData.containerQuantities.size20ft + 1)}
                     disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Increase 20ft containers"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -513,39 +541,41 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    <span className="font-semibold text-gray-900 dark:text-white">{t('releases.form.containers40')}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{t('bookings.form.containers40')}</span>
                   </div>
                   <span className="text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{t('common.highCapacity')}</span>
                 </div>
 
-                <div className="flex items-center justify-between space-x-3">
+                <div className="flex items-center justify-center space-x-4">
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft - 1)}
                     disabled={formData.containerQuantities.size40ft <= 0}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Decrease 40ft containers"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </button>
 
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min="0"
                     max="50"
                     value={formData.containerQuantities.size40ft}
-                    onChange={(e) => handleQuantityChange('size40ft', parseInt(e.target.value) || 0)}
-                    className="flex-1 text-center px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-bold text-lg dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => handleQuantityChange('size40ft', Math.max(0, Math.min(50, parseInt(e.target.value) || 0)))}
+                    className="w-16 text-center px-2 py-2 border-2 border-green-300 dark:border-green-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-bold text-xl text-green-900 dark:text-white bg-white dark:bg-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
 
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('size40ft', formData.containerQuantities.size40ft + 1)}
                     disabled={formData.totalContainers >= formData.maxQuantityThreshold}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/50 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Increase 40ft containers"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -565,9 +595,9 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
                   <div className="flex items-start p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mr-3 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-orange-900 dark:text-orange-300">{t('releases.breakdown.required')}</p>
+                      <p className="text-sm font-semibold text-orange-900 dark:text-orange-300">{t('bookings.breakdown.required')}</p>
                       <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                        {t('releases.breakdown.help')}
+                        {t('bookings.breakdown.help')}
                       </p>
                     </div>
                   </div>
@@ -597,4 +627,3 @@ const ReleaseOrderFormContent: React.FC<ReleaseOrderFormContentProps> = ({
     </div>
   );
 };
-

@@ -66,7 +66,7 @@ export interface GateInFormData {
 }
 
 export interface GateOutFormData {
-  selectedReleaseOrderId: string;
+  selectedBookingId: string;
   driverName: string;
   vehicleNumber: string;
   transportCompany: string;
@@ -77,10 +77,10 @@ export interface GateOutFormData {
 
 export interface GateInModalProps {
   showForm: boolean;
-  setShowForm: (show: boolean) => void;
+  /** Full reset + close (Annuler, X, backdrop) — must not leave wizard on step 2/3 for next open */
+  onCloseForm: () => void;
   formData: GateInFormData;
   currentStep: number;
-  setCurrentStep: (step: number) => void;
   isProcessing: boolean;
   autoSaving: boolean;
   validateStep: (step: number) => boolean;
@@ -182,6 +182,10 @@ export interface GateOutOperation {
   updatedAt?: Date;
   
   notes?: string;
+  
+  // EDI transmission status
+  ediTransmitted?: boolean;
+  ediTransmissionDate?: Date;
 }
 
 // Phase 2: Gate Out Container (conteneurs individuels sortis - créé lors du traitement)

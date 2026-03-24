@@ -18,10 +18,16 @@ import { handleError } from '../../../services/errorHandling';
 import { StackCreationSuccess } from './StackCreationSuccess';
 import { StackTableSkeleton } from './StackTableSkeleton';
 import { LoadingSpinner } from '../../Common';
+
+/**
+ * Props for the StackManagement component
+ * Container for managing yard stacks and storage configurations
+ */
+interface StackManagementProps {}
 import { useToast } from '../../../hooks/useToast';
 import { useConfirm } from '../../../hooks/useConfirm';
 
-export const StackManagement: React.FC = () => {
+export const StackManagement: React.FC<StackManagementProps> = () => {
   const { t } = useTranslation();
   const [stacks, setStacks] = useState<YardStack[]>([]);
   const [loading, setLoading] = useState(true);

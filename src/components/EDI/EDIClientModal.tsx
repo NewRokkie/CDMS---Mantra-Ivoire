@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Save,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
@@ -33,7 +34,9 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
     enableGateOut: true,
     serverId: '',
     priority: 'normal' as 'high' | 'normal' | 'low',
-    notes: ''
+    notes: '',
+    notifyOnFailure: true,
+    notifyOnSuccess: false,
   });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const toast = useToast();
@@ -49,7 +52,9 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
           enableGateOut: true,
           serverId: editingClient.serverConfig?.id || '',
           priority: 'normal',
-          notes: ''
+          notes: '',
+          notifyOnFailure: editingClient.notifyOnFailure ?? true,
+          notifyOnSuccess: editingClient.notifyOnSuccess ?? false,
         });
       } else {
         setFormData({
@@ -60,7 +65,9 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
           enableGateOut: true,
           serverId: serverConfigs.find(s => s.isDefault)?.id || serverConfigs[0]?.id || '',
           priority: 'normal',
-          notes: ''
+          notes: '',
+          notifyOnFailure: true,
+          notifyOnSuccess: false,
         });
       }
       setValidationErrors([]);
@@ -282,6 +289,37 @@ export const EDIClientModal: React.FC<EDIClientModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* Notification Settings */}
+          {formData.ediEnabled && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+                <Bell className="h-4 w-4 text-gray-400" />
+                Notification Settings
+              </h4>
+              <div className="ml-1 space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.notifyOnFailure}
+                    onChange={(e) => setFormData({ ...formData, notifyOnFailure: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Notify on EDI failure</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.notifyOnSuccess}
+                    onChange={(e) => setFormData({ ...formData, notifyOnSuccess: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Notify on EDI success</span>
+                </label>
+                <p className="text-xs text-gray-400 mt-1">Notifications appear in the EDI Management overview.</p>
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div>

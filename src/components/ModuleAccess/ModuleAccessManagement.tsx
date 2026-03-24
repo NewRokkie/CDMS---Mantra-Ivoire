@@ -1,10 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Shield, Users, Settings, Save, RotateCcw, Search, Filter, CheckCircle, XCircle, Plus, CreditCard as Edit, Trash2, UserPlus, Sparkles, Zap, Lock, Unlock, Eye, EyeOff, Star, Award, Crown, Gem, User as UserIcon } from 'lucide-react';
+import { Shield, Users, Settings, Search, CheckCircle, Plus, Sparkles, Zap, Lock, Eye, Star, Award, Crown, Gem, User as UserIcon } from 'lucide-react';
 import type { ModuleAccess, ModulePermission, User } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { userService, moduleAccessService } from '../../services/api';
 import { handleError } from '../../services/errorHandling';
 import { useToast } from '../../hooks/useToast';
+
+/**
+ * Props for the ModuleAccessManagement component
+ * Container for managing user module permissions and access control
+ */
+interface ModuleAccessManagementProps {}
 
 // Enhanced module configuration with beautiful icons and colors
 const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
@@ -38,10 +44,10 @@ const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
     requiredRole: ['admin', 'supervisor', 'operator'],
     isSystemModule: false
   },
-  releases: {
-    id: 'releases',
-    name: 'Release Orders',
-    description: 'Manage container release orders',
+  bookings: {
+    id: 'bookings',
+    name: 'Bookings',
+    description: 'Manage container bookings',
     category: 'operations',
     isSystemModule: false
   },
@@ -158,7 +164,7 @@ const moduleConfig: Record<keyof ModuleAccess, ModulePermission> = {
   }
 };
 
-export const ModuleAccessManagement: React.FC = () => {
+export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string>(''); // Single selection (radio behavior)
@@ -326,7 +332,7 @@ export const ModuleAccessManagement: React.FC = () => {
     try {
       // Get complete module access for each user to ensure all modules are saved
       const allModules: (keyof ModuleAccess)[] = [
-        'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+        'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
         'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
         'timeTracking', 'analytics', 'clientPools', 'stackManagement',
         'auditLogs', 'billingReports', 'operationsReports'
@@ -423,7 +429,7 @@ export const ModuleAccessManagement: React.FC = () => {
           );
           bulkSelectedUserIds.forEach(userId => {
             const allModules: (keyof ModuleAccess)[] = [
-              'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+              'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
               'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
               'timeTracking', 'analytics', 'clientPools', 'stackManagement',
               'auditLogs', 'billingReports', 'operationsReports'
@@ -454,7 +460,7 @@ export const ModuleAccessManagement: React.FC = () => {
           );
           bulkSelectedUserIds.forEach(userId => {
             const allModules: (keyof ModuleAccess)[] = [
-              'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+              'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
               'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
               'timeTracking', 'analytics', 'clientPools', 'stackManagement',
               'auditLogs', 'billingReports', 'operationsReports'
@@ -496,7 +502,7 @@ export const ModuleAccessManagement: React.FC = () => {
       containers: false,
       gateIn: false,
       gateOut: false,
-      releases: false,
+      bookings: false,
       edi: false,
       yard: false,
       clients: false,
@@ -526,7 +532,7 @@ export const ModuleAccessManagement: React.FC = () => {
           containers: true,
           gateIn: true,
           gateOut: true,
-          releases: true,
+          bookings: true,
           edi: true,
           yard: true,
           clients: true,
@@ -547,7 +553,7 @@ export const ModuleAccessManagement: React.FC = () => {
           containers: true,
           gateIn: true,
           gateOut: true,
-          releases: true,
+          bookings: true,
           yard: true,
           auditLogs: true
         };
@@ -556,7 +562,7 @@ export const ModuleAccessManagement: React.FC = () => {
         return {
           ...baseAccess,
           containers: true,
-          releases: true,
+          bookings: true,
           yard: true
         };
 
@@ -567,7 +573,7 @@ export const ModuleAccessManagement: React.FC = () => {
 
   const calculateAccessPercentage = (user: User): number => {
     const allModules: (keyof ModuleAccess)[] = [
-      'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+      'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
       'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
       'timeTracking', 'analytics', 'clientPools', 'stackManagement',
       'auditLogs', 'billingReports', 'operationsReports'
@@ -585,7 +591,7 @@ export const ModuleAccessManagement: React.FC = () => {
       containers: <Shield className="h-5 w-5" />,
       gateIn: <Plus className="h-5 w-5" />,
       gateOut: <Zap className="h-5 w-5" />,
-      releases: <Eye className="h-5 w-5" />,
+      bookings: <Eye className="h-5 w-5" />,
       edi: <Settings className="h-5 w-5" />,
       yard: <Users className="h-5 w-5" />,
       clients: <UserIcon className="h-5 w-5" />,
@@ -643,7 +649,7 @@ export const ModuleAccessManagement: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">Total Users</p>
-              <p className="text-lg lg:text-xl font-semibold text-gray-900">{stats.totalUsers}</p>
+              <p className="stat font-mono"><span className="font-numeric">{stats.totalUsers}</span></p>
             </div>
           </div>
         </div>
@@ -655,7 +661,7 @@ export const ModuleAccessManagement: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">Available Modules</p>
-              <p className="text-lg lg:text-xl font-semibold text-gray-900">{stats.totalModules}</p>
+              <p className="stat font-mono"><span className="font-numeric">{stats.totalModules}</span></p>
             </div>
           </div>
         </div>
@@ -667,7 +673,7 @@ export const ModuleAccessManagement: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">Admin Users</p>
-              <p className="text-lg lg:text-xl font-semibold text-gray-900">{stats.adminUsers}</p>
+              <p className="stat font-mono"><span className="font-numeric">{stats.adminUsers}</span></p>
             </div>
           </div>
         </div>
@@ -679,7 +685,7 @@ export const ModuleAccessManagement: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">Selected Users</p>
-              <p className="text-lg lg:text-xl font-semibold text-gray-900">{stats.selectedUsers}</p>
+              <p className="stat font-mono"><span className="font-numeric">{stats.selectedUsers}</span></p>
             </div>
           </div>
         </div>
@@ -761,7 +767,7 @@ export const ModuleAccessManagement: React.FC = () => {
                 className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Settings className="h-4 w-4" />
-                <span>Bulk Actions ({bulkSelectedUserIds.length})</span>
+                <span>Bulk Actions (<span className="font-numeric">{bulkSelectedUserIds.length}</span>)</span>
               </button>
             )}
           </div>
@@ -780,7 +786,7 @@ export const ModuleAccessManagement: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <h3 className="text-base lg:text-lg font-semibold text-gray-900">Users</h3>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                      {filteredUsers.length}
+                      <span className="font-numeric">{filteredUsers.length}</span>
                     </span>
                   </div>
 
@@ -874,13 +880,13 @@ export const ModuleAccessManagement: React.FC = () => {
                         <div className="mt-3">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-500">Module Access</span>
-                            <span className="text-xs font-medium text-gray-700">
+                            <span className="text-xs font-medium text-gray-700 font-numeric">
                               {[
-                                'dashboard', 'containers', 'gateIn', 'gateOut', 'releases', 'edi', 'yard',
+                                'dashboard', 'containers', 'gateIn', 'gateOut', 'bookings', 'edi', 'yard',
                                 'clients', 'users', 'moduleAccess', 'reports', 'depotManagement',
                                 'timeTracking', 'analytics', 'clientPools', 'stackManagement',
                                 'auditLogs', 'billingReports', 'operationsReports'
-                              ].filter(key => user.moduleAccess[key as keyof ModuleAccess] === true).length}/19
+                              ].filter(key => user.moduleAccess[key as keyof ModuleAccess] === true).length}/<span className="font-numeric">19</span>
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-1.5 lg:h-2">
@@ -920,7 +926,7 @@ export const ModuleAccessManagement: React.FC = () => {
                   <h3 className="text-base lg:text-lg font-semibold text-gray-900">Module Access Configuration</h3>
                   <p className="text-xs lg:text-sm text-gray-600">
                     {(selectionMode === 'single' ? selectedUserId : bulkSelectedUserIds.length > 0)
-                      ? `Configuring access for ${selectionMode === 'single' ? '1' : bulkSelectedUserIds.length} selected user${(selectionMode === 'single' ? 1 : bulkSelectedUserIds.length) !== 1 ? 's' : ''}`
+                      ? `Configuring access for ${selectionMode === 'single' ? '1' : <span className="font-numeric">{bulkSelectedUserIds.length}</span>} selected user${(selectionMode === 'single' ? 1 : bulkSelectedUserIds.length) !== 1 ? 's' : ''}`
                       : 'Select users to configure their module access'
                     }
                   </p>
@@ -976,8 +982,10 @@ export const ModuleAccessManagement: React.FC = () => {
                           }`}>
                             {selectionMode === 'single'
                               ? 'Configuring module access for 1 user'
-                              : `Configuring module access for ${bulkSelectedUserIds.length} users`
+                              : `Configuring module access for `
                             }
+                            {selectionMode !== 'single' && <span className="font-numeric">{bulkSelectedUserIds.length}</span>}
+                            {selectionMode !== 'single' && ` users`}
                           </p>
                         </div>
                       </div>
@@ -1054,8 +1062,8 @@ export const ModuleAccessManagement: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center justify-between text-xs">
-                                  <span className="text-gray-500">
-                                    {enabledCount}/{selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''}
+                                  <span className="text-gray-500 font-numeric">
+                                    <span className="font-numeric">{enabledCount}</span>/<span className="font-numeric">{selectedUsers.length}</span> user{selectedUsers.length !== 1 ? 's' : ''}
                                   </span>
                                   <div className="flex items-center space-x-1">
                                     {module.isSystemModule && (

@@ -7,7 +7,7 @@ import { safeToLocaleDateString } from '../../utils/dateHelpers';
 import { TableSkeleton } from '../Common/TableSkeleton';
 import { t } from 'i18next';
 
-interface MobileReleaseOrderTableProps {
+interface MobileBookingTableProps {
   orders: BookingReference[];
   searchTerm: string;
   selectedFilter: string;
@@ -16,7 +16,7 @@ interface MobileReleaseOrderTableProps {
   loading?: boolean;
 }
 
-export const MobileReleaseOrderTable: React.FC<MobileReleaseOrderTableProps> = ({
+export const MobileBookingTable: React.FC<MobileBookingTableProps> = ({
   orders,
   searchTerm,
   selectedFilter,

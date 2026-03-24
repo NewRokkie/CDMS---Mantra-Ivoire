@@ -3,7 +3,7 @@ import { Search, ChevronDown, Check, FileText, X, Calendar, Package, User, Alert
 import { BookingReference } from '../../types';
 import { t } from 'i18next';
 
-interface ReleaseOrderSearchFieldProps {
+interface BookingSearchFieldProps {
   bookings: BookingReference[];
   selectedOrderId: string;
   onOrderSelect: (orderId: string) => void;
@@ -13,7 +13,7 @@ interface ReleaseOrderSearchFieldProps {
   canViewAllData?: boolean;
 }
 
-export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = ({
+export const BookingSearchField: React.FC<BookingSearchFieldProps> = ({
   bookings = [],
   selectedOrderId,
   onOrderSelect,
@@ -33,7 +33,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
   const selectedOrder = bookings.find(order => order.id === selectedOrderId);
 
   // Filter and validate release orders
-  const getValidReleaseOrders = () => {
+  const getValidBookings = () => {
     return bookings.filter(order => {
       // Show bookings that are pending or in_process (ready for gate out)
       const isValidStatus = order.status === 'pending' || order.status === 'in_process';
@@ -46,7 +46,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
     });
   };
 
-  const validOrders = getValidReleaseOrders();
+  const validOrders = getValidBookings();
 
   // Filter orders based on search term
   const filteredOrders = validOrders.filter(order =>
@@ -324,7 +324,7 @@ export const ReleaseOrderSearchField: React.FC<ReleaseOrderSearchFieldProps> = (
                 </div>
               </div>
 
-              {/* Release Orders List */}
+              {/* Bookings List */}
               <div className="max-h-64 overflow-y-auto scrollbar-thin">
                 {filteredOrders.map((order, index) => {
                   const processedContainers = order.totalContainers - (order.remainingContainers ?? 0);

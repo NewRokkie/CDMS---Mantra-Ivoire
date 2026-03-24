@@ -10,7 +10,7 @@ import { EDIFileProvider } from '../../contexts/EDIFileContext';
 const DashboardOverview = lazy(() => import('../Dashboard/DashboardOverview').then(module => ({ default: module.DashboardOverview })));
 const GateIn = lazy(() => import('../Gates/GateIn').then(module => ({ default: module.GateIn })));
 const GateOut = lazy(() => import('../Gates/GateOut').then(module => ({ default: module.GateOut })));
-const ReleaseOrderList = lazy(() => import('../ReleaseOrders/ReleaseOrderList').then(module => ({ default: module.ReleaseOrderList })));
+const BookingList = lazy(() => import('../Bookings/BookingList').then(module => ({ default: module.BookingList })));
 const EDIManagement = lazy(() => import('../EDI/EDIManagement').then(module => ({ default: module.default })));
 const YardManagement = lazy(() => import('../Yard/YardManagement').then(module => ({ default: module.YardManagement })));
 const ClientMasterData = lazy(() => import('../Clients/ClientMasterData').then(module => ({ default: module.ClientMasterData })));
@@ -25,13 +25,18 @@ const ContainerList = lazy(() => import('../Containers/ContainerList').then(modu
 
 
 /**
+ * Props for the RouteController component
+ */
+interface RouteControllerProps {}
+
+/**
  * RouteController handles all module-level routing with:
  * - Permission-based access control
  * - Lazy loading for performance
  * - Module URL synchronization
  * - Fallback handling for unauthorized access
  */
-export const RouteController: React.FC = () => {
+export const RouteController: React.FC<RouteControllerProps> = () => {
   const { activeModule } = useModuleRouting();
 
   // Centralized fallback for all lazy loaded components
@@ -78,8 +83,8 @@ export const RouteController: React.FC = () => {
         <Route
           path="/booking"
           element={
-            <ProtectedRoute moduleKey="releases">
-              <ReleaseOrderList />
+            <ProtectedRoute moduleKey="bookings">
+              <BookingList />
             </ProtectedRoute>
           }
         />

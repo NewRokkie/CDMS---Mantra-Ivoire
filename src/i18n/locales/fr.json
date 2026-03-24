@@ -5,7 +5,7 @@
     "gateIn": "Entrée Portail",
     "gateOut": "Sortie Portail",
     "bookingReference": "Référence de Réservation",
-    "releases": "Ordres de sortie",
+    "bookings": "Réservations",
     "edi": "Gestion EDI",
     "yard": "Gestion de Cour",
     "reports": "Rapports",
@@ -174,6 +174,8 @@
     "in": {
       "title": "Gestion des Entrées",
       "new": "Nouvelle Entrée",
+      "actionGateIn": "Entrée",
+      "pendingShort": "En attente",
       "pending": "Opérations en Attente",
       "completed": "Opérations Terminées",
       "subtitle": "Gestion des entrées de conteneurs",
@@ -188,8 +190,8 @@
         "alimentaire": "Conteneurs Alimentaires"
       },
       "form": {
-        "containerInfo": "Informations du Conteneur",
-        "transportInfo": "Informations de Transport",
+        "containerInfo": "Infos Conteneur",
+        "transportInfo": "Infos Transporteur",
         "timeTracking": "Suivi du Temps",
         "containerNumber": "Numéro de Conteneur",
         "containerSize": "Taille du Conteneur",
@@ -207,7 +209,8 @@
         "highCube": "Est-ce un High Cube ?",
         "equipmentRef": "Référence Équipement",
         "searchClient": "Rechercher un client par nom ou code...",
-        "arrival": "Heure d'Arrivée du Camion"
+        "arrival": "Heure d'Arrivée du Camion",
+        "notes": "Notes"
       },
       "validation": {
         "required": "Ce champ est obligatoire",
@@ -222,6 +225,7 @@
     "out": {
       "title": "Gestion des Sorties",
       "new": "Nouvelle Sortie",
+      "pendingShort": "En attente",
       "pending": "Opérations en Attente",
       "subtitle": "Gestion des sorties de conteneurs",
       "summary": "Résumé de l'opération",
@@ -268,12 +272,11 @@
       }
     }
   },
-  "releases": {
+  "bookings": {
     "title": "Ordres de Sortie",
     "booking": {
       "title": "Gestion des Réservations"
     },
-    "create": "Créer un Ordre",
     "createBooking": "Créer une Réservation",
     "pending": "En Attente de Validation",
     "validated": "Validés",
@@ -389,7 +392,6 @@
     "edit": "Modifier le Dépôt",
     "view": "Voir les Détails",
     "assign": "Assigner des Utilisateurs",
-    "delete": "Supprimer le Dépôt",
     "subtitle": "Gérer les dépôts de conteneurs et leurs configurations",
     "search": "Rechercher des dépôts...",
     "overview": "Aperçu des Dépôts",
@@ -433,16 +435,13 @@
     }
   },
   "stack": {
-    "title": "Gestion des Piles",
-    "subtitle": "Configurer les affectations de taille de conteneur pour toutes les piles",
-    "configuration": "Configuration des Piles",
+    "title": "Gestion des Stacks",
+    "subtitle": "Configurer les affectations de taille de conteneur pour tous les stacks",
+    "configuration": "Configuration des Stacks",
     "configurationDesc": "Configurer les affectations de taille de conteneur pour chaque pile (les piles jumelées seront mises à jour ensemble)",
-    "create": "Créer une Pile",
-    "edit": "Modifier la Pile",
-    "delete": "Supprimer la Pile",
+    "edit": "Modifier le Stack",
     "refresh": "Actualiser",
     "refreshing": "Actualisation...",
-    "rules": "Règles de Configuration",
     "pairing": "Paires de Piles Valides pour Conteneurs 40ft",
     "search": "Rechercher des piles ou sections...",
     "size20": "20ft",
@@ -458,13 +457,13 @@
     "noStacks": "Aucune pile trouvée. Créez votre première pile pour commencer.",
     "refreshed": "Configuration des piles actualisée avec succès !",
     "advancedFilter": "Filtre Avancé",
-    "allStacks": "Toutes les Piles",
+    "allStacks": "Tous les Stacks",
     "allSections": "Toutes les Sections",
     "loadingConfig": "Veuillez patienter pendant que nous chargeons la configuration de la cour.",
     "rules": {
-      "special": "Piles Spéciales (01, 31, 101, 103) : Ne peuvent être configurées que pour des conteneurs de 20 pieds.",
-      "regular": "Piles Régulières : Peuvent être configurées pour des conteneurs de 20 ou 40 pieds.",
-      "pairing": "Attribution 40 pieds : Disponible uniquement pour les piles régulières qui ont une pile régulière adjacente pour former des paires valides.",
+      "special": "Stakes Spéciales (01, 31, 101, 103) : Ne peuvent être configurées que pour des conteneurs de 20 pieds.",
+      "regular": "Stakes Régulières : Peuvent être configurées pour des conteneurs de 20 ou 40 pieds.",
+      "pairing": "Attribution 40 pieds : Disponible uniquement pour les stacks régulières qui ont un stack régulier adjacente pour former des paires valides.",
       "updates": "Mises à jour Appariées : Lors du changement d'une pile régulière vers 40 pieds, sa paire adjacente sera automatiquement mise à jour pour correspondre."
     },
     "delete": {
@@ -476,35 +475,35 @@
     "update": {
       "success": "Pile mise à jour avec succès !"
     },
-    "create": "Créer une Pile",
-    "createSuccess": "Pile créée avec succès !",
+    "create": "Créer un Stack",
+    "createSuccess": "Stack créé avec succès !",
     "sizeUpdate": {
-      "success": "Pile mise à jour en {size} avec succès !",
-      "successMulti": "Mise à jour réussie de {count} piles en {size} !",
-      "errorOccupied": "Impossible de changer la taille de la pile : les emplacements de pile virtuelle sont occupés. Veuillez d'abord déplacer tous les conteneurs des piles jumelées."
+      "success": "Stack mise à jour en {size} avec succès !",
+      "successMulti": "Mise à jour réussie de {count} stacks en {size} !",
+      "errorOccupied": "Impossible de changer la taille du stack : les emplacements de stack virtuel sont occupés. Veuillez d'abord déplacer tous les conteneurs des stacks jumelés."
     },
     "assign": {
-      "success": "Pile assignée au client {client} avec succès !"
+      "success": "Stack assignée au client {client} avec succès !"
     },
     "unassign": {
-      "success": "Pile désassignée du pool client avec succès !"
+      "success": "Stack désassignée du pool client avec succès !"
     },
     "stats": {
-      "total": "Total des Piles",
-      "40ft": "Total des Piles 40ft",
-      "20ft": "Total des Piles 20ft",
-      "special": "Piles Spéciales",
-      "regular": "Piles Régulières",
+      "total": "Total des Stacks",
+      "40ft": "Total des Stacks 40ft",
+      "20ft": "Total des Stacks 20ft",
+      "special": "Stakes Spéciales",
+      "regular": "Stakes Régulières",
       "clientAssigned": "Assigné au Client",
-      "all": "Toutes les piles",
+      "all": "Tous les stacks",
       "logicalPairs": "Paires logiques",
-      "single": "Piles simples",
+      "single": "Stakes simples",
       "buffer": "Zones tampons",
       "standardOps": "Opérations standard",
       "unassignedCount": "{count} non assignées"
     },
     "table": {
-      "stack": "Pile",
+      "stack": "Stack",
       "section": "Section",
       "containerSize": "Taille de Conteneur",
       "assignedClient": "Client Assigné",
@@ -513,22 +512,22 @@
       "manage": "Gérer",
       "pair": "Paire",
       "noPair": "Pas de paire",
-      "specialNo40": "Les piles spéciales ne peuvent pas être configurées pour 40ft",
-      "updatePair": "Mettra également à jour la Pile {number}"
+      "specialNo40": "Les stacks spéciaux ne peuvent pas être configurées pour 40ft",
+      "updatePair": "Mettra également à jour le Stack {number}"
     },
     "help": {
-      "title": "Aide à la Configuration des Piles",
-      "desc": "Afficher les règles et directives pour la gestion des piles de la cour."
+      "title": "Aide à la Configuration des Stacks",
+      "desc": "Afficher les règles et directives pour la gestion des stacks de la cour."
     },
     "form": {
-      "information": "Informations de la Pile",
-      "number": "Numéro de Pile",
+      "information": "Informations du Stack",
+      "number": "Numéro du Stack",
       "section": "Section",
       "sizeConfig": "Configuration de la Taille du Conteneur",
-      "typeConfig": "Configuration du Type de Pile",
+      "typeConfig": "Configuration du Type de Stack",
       "capacityConfig": "Configuration de la Capacité",
-      "dimensions": "Dimensions de la Pile",
-      "dimensionsDesc": "Configurer la disposition physique de votre pile",
+      "dimensions": "Dimensions du Stack",
+      "dimensionsDesc": "Configurer la disposition physique de votre stack",
       "rows": "Rangées (Profondeur)",
       "tiers": "Paliers Max (Hauteur)",
       "customTiers": "Configuration Personnalisée des Paliers",
@@ -548,8 +547,8 @@
       "rowsDesc": "Rangées de conteneurs de l'avant vers l'arrière",
       "tiersDesc": "Maximum de conteneurs empilés verticalement",
       "customTiersDesc": "Configurer différentes hauteurs de paliers maximales pour chaque rangée en fonction des conditions du sol ou des limitations de l'équipement",
-      "previewLayout": "Aperçu de la Disposition de la Pile",
-      "totalCapacity": "Capacité Totale de la Pile",
+      "previewLayout": "Aperçu de la Disposition du Stack",
+      "totalCapacity": "Capacité Totale du Stack",
       "capacityDesc": "Positions maximales de conteneurs disponibles",
       "positions": "Positions de conteneurs",
       "uniformLayout": "Disposition uniforme",
@@ -641,7 +640,6 @@
     "add": "Ajouter un Client",
     "edit": "Modifier le Client",
     "view": "Voir les Détails",
-    "delete": "Supprimer le Client",
     "search": "Rechercher des clients...",
     "noClients": "Aucun client trouvé",
     "noClientsEmpty": "Commencez par ajouter votre premier client.",
@@ -738,7 +736,6 @@
     "add": "Ajouter un Utilisateur",
     "edit": "Modifier l'Utilisateur",
     "view": "Voir les Détails",
-    "delete": "Supprimer l'Utilisateur",
     "search": "Rechercher des utilisateurs...",
     "noUsers": "Aucun utilisateur trouvé",
     "noUsersEmpty": "Commencez par ajouter votre premier utilisateur",
@@ -847,7 +844,7 @@
   },
   "reports": {
     "title": "Rapports et Analyses",
-    "billing": "Facturation et Jours Gratuits",
+    "billingLabel": "Facturation et Jours Gratuits",
     "analytics": "Analyses",
     "operations": "Opérations",
     "export": "Exporter le Rapport",
@@ -978,7 +975,6 @@
     "view": "Voir"
   },
   "common": {
-    "status": "Statut",
     "statusLabel": "Statut",
     "actions": "Actions",
     "date": "Date",
@@ -1014,7 +1010,9 @@
     "light": "Clair",
     "status": {
       "active": "Actif",
-      "inactive": "Inactif"
+      "inactive": "Inactif",
+      "pending": "En Attente",
+      "completed": "Terminé"
     },
     "enabled": "Activé",
     "disabled": "Désactivé",
@@ -1103,7 +1101,8 @@
     "appSubtitle": "Système de Gestion de Dépôt (SGD)",
     "loggedInAs": "Connecté en tant que :",
     "install": "Installer",
-    "newNotifications": "Nouveaux",
+    "newNotifications": "Nouvelles Notifications",
+    "notifications" : "Notifications",
     "quickActions": "Actions Rapides",
     "appFooter": "Gestion de Dépôt de Conteneurs v1.0",
     "copyright": "© 2025 DepotManager",
@@ -1115,12 +1114,6 @@
     "summary": "Résumé",
     "fixErrors": "Veuillez corriger les erreurs suivantes :",
     "pleaseReview": "Veuillez vérifier :",
-    "submissionFailed": "Échec de la soumission",
-    "time": {
-      "never": "Jamais",
-      "justNow": "À l'instant",
-      "hoursAgo": "h",
-      "daysAgo": "j"
-    }
+    "submissionFailed": "Échec de la soumission"
   }
 }

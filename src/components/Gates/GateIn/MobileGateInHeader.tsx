@@ -51,22 +51,24 @@ export const MobileGateInHeader: React.FC<MobileGateInHeaderProps> = ({
             </button>
           </div>
 
-          {/* Mobile Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          {/* Mobile Action Buttons — grid + nowrap so labels don’t break mid-word on narrow widths */}
+          <div className="grid grid-cols-2 gap-3 w-full min-w-0">
             <button
+              type="button"
               onClick={onShowForm}
-              className="flex-1 flex items-center justify-center space-x-2 px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+              className="flex min-w-0 items-center justify-center gap-2 whitespace-nowrap px-4 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
             >
-              <Plus className="h-5 w-5" />
-              <span className="font-semibold">New Gate In</span>
+              <Plus className="h-5 w-5 shrink-0" />
+              <span className="font-semibold text-sm">New Gate In</span>
             </button>
-            
+
             <button
+              type="button"
               onClick={onShowPending}
-              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-6 py-4 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+              className="flex min-w-0 items-center justify-center gap-2 whitespace-nowrap px-4 py-4 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
             >
-              <Clock className="h-5 w-5" />
-              <span className="font-semibold">Pending ({pendingCount})</span>
+              <Clock className="h-5 w-5 shrink-0" />
+              <span className="font-semibold text-sm">Pending ({pendingCount})</span>
             </button>
           </div>
         </div>

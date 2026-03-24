@@ -110,8 +110,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     };
   };
 
-  // showNotification is now handled by FormModal
-
   // Initialize form data when editing
   useEffect(() => {
     if (selectedUser) {
@@ -237,7 +235,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       case 'admin': return 'Full system access across all modules';
       case 'supervisor': return 'Operations oversight and management';
       case 'operator': return 'Daily operations and container handling';
-      case 'client': return 'View containers and create release orders';
+      case 'client': return 'View containers and create bookings';
       default: return '';
     }
   };
@@ -260,7 +258,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           // Auto-save logic can be implemented here if needed
         }}
       >
-        {/* Pass triggerAutoSave and showNotification as props to form sections */}
         <UserFormContent
           formData={formData}
           validation={validation}

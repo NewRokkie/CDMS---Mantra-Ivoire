@@ -54,8 +54,8 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, tr
     <div className={`${classes.bg} dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <p className="label text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+          <p className="stat text-gray-900 dark:text-white">{value}</p>
           {trend && (
             <div className="flex items-center mt-2">
               <span className={`text-sm font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>

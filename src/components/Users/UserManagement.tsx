@@ -8,11 +8,17 @@ import { UserFormModal } from './UserFormModal';
 import { UserDetailsModal } from './UserDetailsModal';
 import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { ConfirmationDialog } from '../Common/ConfirmationDialog';
-import { NotificationProvider, useNotifications } from '../Common/NotificationSystem';
+import { useToast } from '../../hooks/useToast';
 import { ErrorBoundary } from '../Common/ErrorBoundary';
 import { UserManagementErrorFallback } from '../Common/DatabaseErrorFallback';
 import { useUserManagementRetry } from '../../hooks/useRetry';
 import { toDate } from '../../utils/dateHelpers';
+
+/**
+ * Props for the UserManagement component
+ * Container for managing system users and their permissions
+ */
+interface UserManagementProps {}
 import { handleError } from '../../services/errorHandling';
 import { t } from 'i18next';
 
@@ -23,7 +29,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
     containers: false,
     gateIn: false,
     gateOut: false,
-    releases: false,
+    bookings: false,
     edi: false,
     yard: false,
     clients: false,
@@ -47,7 +53,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         containers: true,
         gateIn: true,
         gateOut: true,
-        releases: true,
+        bookings: true,
         edi: true,
         yard: true,
         clients: true,
@@ -69,7 +75,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         containers: true,
         gateIn: true,
         gateOut: true,
-        releases: true,
+        bookings: true,
         edi: true,
         yard: true,
         reports: true,
@@ -88,7 +94,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         containers: true,
         gateIn: true,
         gateOut: true,
-        releases: true,
+        bookings: true,
         yard: true,
         auditLogs: true
       };
@@ -96,7 +102,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
       return {
         ...baseAccess,
         containers: true,
-        releases: true,
+        bookings: true,
         yard: true
       };
     default:
@@ -108,7 +114,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
 const UserManagementContent: React.FC = () => {
   const { user: currentUser } = useAuth();
   const { currentYard } = useYard();
-  const { showSuccess, showError } = useNotifications();
+  const toast = useToast();
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +150,7 @@ const UserManagementContent: React.FC = () => {
       handleError(error, 'UserManagement.loadUsers');
       const errorInstance = error instanceof Error ? error : new Error('An unexpected error occurred while loading users');
       setLoadError(errorInstance);
-      showError('Failed to load users', errorInstance.message);
+      toast.error(`Failed to load users: ${errorInstance.message}`);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -189,10 +195,10 @@ const UserManagementContent: React.FC = () => {
       setOperationLoading(id);
       await deleteUserWithRetry(id, currentUser?.id || 'system');
       setUsers(prev => prev.filter(u => u.id !== id));
-      showSuccess('User deleted successfully', 'The user has been safely removed from the system.');
+      toast.success('User deleted successfully. The user has been safely removed from the system.');
     } catch (error) {
       handleError(error, 'UserManagement.deleteUser');
-      showError('Failed to delete user', error instanceof Error ? error.message : 'An unexpected error occurred');
+      toast.error(`Failed to delete user: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`);
     } finally {
       setOperationLoading(null);
     }
@@ -227,7 +233,7 @@ const UserManagementContent: React.FC = () => {
           moduleAccess: getModuleAccessForRole(userData.role),
           updatedBy: currentUser?.id
         });
-        showSuccess('User updated successfully', 'The user information has been updated.');
+        toast.success('User updated successfully. The user information has been updated.');
       } else {
         // Create new user
         const newUser: any = {
@@ -245,13 +251,13 @@ const UserManagementContent: React.FC = () => {
           password: userData.password // Include password for auth user creation
         };
         await addUser(newUser);
-        showSuccess('User created successfully', 'The new user has been added to the system.');
+        toast.success('User created successfully. The new user has been added to the system.');
       }
       setShowForm(false);
       setSelectedUser(null);
     } catch (error) {
       handleError(error, 'UserManagement.handleSubmit');
-      showError('Failed to save user', error instanceof Error ? error.message : 'An unexpected error occurred');
+      toast.error(`Failed to save user: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`);
     } finally {
       setOperationLoading(null);
     }
@@ -294,14 +300,13 @@ const UserManagementContent: React.FC = () => {
           isActive: !user.isActive,
           updatedBy: currentUser?.id
         });
-        showSuccess(
-          `User ${!user.isActive ? 'activated' : 'deactivated'} successfully`,
-          `${user.name} has been ${!user.isActive ? 'activated' : 'deactivated'}.`
+        toast.success(
+          `User ${!user.isActive ? 'activated' : 'deactivated'} successfully. ${user.name} has been ${!user.isActive ? 'activated' : 'deactivated'}.`
         );
       }
     } catch (error) {
       handleError(error, 'UserManagement.handleToggleStatus');
-      showError('Failed to update user status', error instanceof Error ? error.message : 'An unexpected error occurred');
+      toast.error(`Failed to update user status: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`);
     } finally {
       setOperationLoading(null);
     }
@@ -387,7 +392,7 @@ const UserManagementContent: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Total Users</p>
-              <p className="text-lg font-semibold text-gray-900">{users.length}</p>
+              <p className="stat font-mono"><span className="font-numeric">{users.length}</span></p>
             </div>
           </div>
         </div>
@@ -399,8 +404,8 @@ const UserManagementContent: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Active Users</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {users.filter(u => u.isActive).length}
+              <p className="stat font-mono">
+                <span className="font-numeric">{users.filter(u => u.isActive).length}</span>
               </p>
             </div>
           </div>
@@ -413,8 +418,8 @@ const UserManagementContent: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Administrators</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {users.filter(u => u.role === 'admin').length}
+              <p className="stat font-mono">
+                <span className="font-numeric">{users.filter(u => u.role === 'admin').length}</span>
               </p>
             </div>
           </div>
@@ -427,13 +432,13 @@ const UserManagementContent: React.FC = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Online Today</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {users.filter(u => {
+              <p className="stat font-mono">
+                <span className="font-numeric">{users.filter(u => {
                   const today = new Date();
                   const loginDate = toDate(u.lastLogin);
                   if (!loginDate) return false;
                   return loginDate.toDateString() === today.toDateString();
-                }).length}
+                }).length}</span>
               </p>
             </div>
           </div>
@@ -723,12 +728,10 @@ const UserManagementContent: React.FC = () => {
   );
 };
 
-export const UserManagement: React.FC = () => {
+export const UserManagement: React.FC<UserManagementProps> = () => {
   return (
     <ErrorBoundary>
-      <NotificationProvider>
-        <UserManagementContent />
-      </NotificationProvider>
+      <UserManagementContent />
     </ErrorBoundary>
   );
 };

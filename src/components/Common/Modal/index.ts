@@ -42,7 +42,6 @@ export type {
   FormModalProps,
   MultiStepModalProps,
   DataDisplayModalProps,
-  NotificationState,
   LoadingStateProps,
   SkeletonProps,
   ModalConfig,

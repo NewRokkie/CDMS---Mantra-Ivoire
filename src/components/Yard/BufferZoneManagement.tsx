@@ -4,6 +4,12 @@ import { handleError } from '../../services/errorHandling';
 import { containerService } from '../../services/api';
 import { bufferZoneService } from '../../services/api';
 
+/**
+ * Props for the BufferZoneManagement component
+ * Container for managing buffer zone operations and damaged containers
+ */
+interface BufferZoneManagementProps {}
+
 interface BufferZoneContainer {
   id: string;
   containerNumber: string;
@@ -29,7 +35,7 @@ interface BufferZoneStats {
   utilizationRate: number;
 }
 
-export const BufferZoneManagement: React.FC = () => {
+export const BufferZoneManagement: React.FC<BufferZoneManagementProps> = () => {
   const [containers, setContainers] = useState<BufferZoneContainer[]>([]);
   const [stats, setStats] = useState<BufferZoneStats>({
     totalBufferStacks: 0,
@@ -124,7 +130,7 @@ export const BufferZoneManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Stacks Tampon</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalBufferStacks}</p>
+              <p className="stat text-gray-900"><span className="font-numeric">{stats.totalBufferStacks}</span></p>
             </div>
             <div className="p-3 bg-orange-100 rounded-lg">
               <Package className="w-6 h-6 text-orange-600" />
@@ -136,7 +142,7 @@ export const BufferZoneManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Capacité Totale</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalCapacity}</p>
+              <p className="stat text-gray-900"><span className="font-numeric">{stats.totalCapacity}</span></p>
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
               <Package className="w-6 h-6 text-blue-600" />
@@ -148,7 +154,7 @@ export const BufferZoneManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">En Zone Tampon</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.currentOccupancy}</p>
+              <p className="stat text-orange-600"><span className="font-numeric">{stats.currentOccupancy}</span></p>
             </div>
             <div className="p-3 bg-orange-100 rounded-lg">
               <AlertTriangle className="w-6 h-6 text-orange-600" />
@@ -161,7 +167,7 @@ export const BufferZoneManagement: React.FC = () => {
                 style={{ width: `${stats.utilizationRate}%` }}
               ></div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">{stats.utilizationRate.toFixed(1)}% utilisé</p>
+            <p className="numeric-text text-gray-500 mt-1"><span className="text-xs">{stats.utilizationRate.toFixed(1)}% utilisé</span></p>
           </div>
         </div>
 
@@ -169,7 +175,7 @@ export const BufferZoneManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Places Disponibles</p>
-              <p className="text-2xl font-bold text-green-600">{stats.availableSpaces}</p>
+              <p className="stat text-green-600"><span className="font-numeric">{stats.availableSpaces}</span></p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
               <Package className="w-6 h-6 text-green-600" />
@@ -182,7 +188,7 @@ export const BufferZoneManagement: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-bold text-gray-900">
-            Conteneurs en Zone Tampon ({containers.length})
+            Conteneurs en Zone Tampon (<span className="font-numeric">{containers.length}</span>)
           </h3>
         </div>
 
@@ -265,9 +271,10 @@ export const BufferZoneManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className={container.daysInBuffer > 3 ? 'text-orange-600 font-medium' : ''}>
-                          {container.daysInBuffer} days
+                        <span className={`font-numeric ${container.daysInBuffer > 3 ? 'text-orange-600 font-medium' : ''}`}>
+                          {container.daysInBuffer}
                         </span>
+                        <span className="ml-1">days</span>
                       </div>
                     </td>
                   </tr>

@@ -2,11 +2,17 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 /**
+ * Props for the PWAManifestManager component
+ * Manages PWA manifest configuration based on current route
+ */
+interface PWAManifestManagerProps {}
+
+/**
  * PWAManifestManager dynamically updates the manifest link in the document head
  * based on the current route. This allows users to install specific modules
  * as standalone PWA applications with their own names and start URLs.
  */
-export const PWAManifestManager: React.FC = () => {
+export const PWAManifestManager: React.FC<PWAManifestManagerProps> = () => {
     const location = useLocation();
 
     useEffect(() => {

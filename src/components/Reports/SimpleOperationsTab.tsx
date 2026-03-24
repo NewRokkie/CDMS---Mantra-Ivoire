@@ -5,7 +5,7 @@ import { supabase } from '../../services/api/supabaseClient';
 import { useYard } from '../../hooks/useYard';
 import { handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
-import { useSuccessNotification, useErrorNotification } from '../Common/Notifications/NotificationSystem';
+import { useToast } from '../../hooks/useToast';
 import { t } from 'i18next';
 
 interface SimpleOperationsTabProps {
@@ -208,9 +208,7 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
     return saved ? parseInt(saved) : 30000; // 30 seconds default
   });
 
-  // Notification hooks
-  const showSuccess = useSuccessNotification();
-  const showError = useErrorNotification();
+  const toast = useToast();
 
   const loadOperationsData = async () => {
     try {
@@ -423,17 +421,10 @@ export const SimpleOperationsTab: React.FC<SimpleOperationsTabProps> = ({
         filename: baseFilename
       });
 
-      // Show success notification
-      showSuccess(
-        'Export réussi',
-        `Le rapport opérations a été exporté en format ${format.toUpperCase()}`
-      );
+      toast.success(`Export réussi. Le rapport opérations a été exporté en format ${format.toUpperCase()}`);
     } catch (error) {
       handleError(error, 'SimpleOperationsTab.handleExport');
-      showError(
-        'Erreur d\'export',
-        'Une erreur est survenue lors de l\'export du rapport. Veuillez réessayer.'
-      );
+      toast.error('Erreur d\'export. Une erreur est survenue lors de l\'export du rapport. Veuillez réessayer.');
     }
   };
 

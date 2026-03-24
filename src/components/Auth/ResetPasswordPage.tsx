@@ -8,7 +8,13 @@ const IMAGE_PATHS = {
   LOGO_MANTRA: '/assets/logo_mantra.png'
 } as const;
 
-export const ResetPasswordPage: React.FC = () => {
+/**
+ * Props for the ResetPasswordPage component
+ * Currently stateless - uses authentication hooks for password reset flow
+ */
+interface ResetPasswordPageProps {}
+
+export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = () => {
   const navigate = useNavigate();
   const { updatePassword } = useAuth();
   const [newPassword, setNewPassword] = useState('');

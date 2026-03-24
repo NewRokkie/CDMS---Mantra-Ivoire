@@ -2,13 +2,13 @@ import React from 'react';
 import { Plus, Menu, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-interface MobileReleaseOrderHeaderProps {
+interface MobileBookingHeaderProps {
   onCreateOrder: () => void;
   isMobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
 }
 
-export const MobileReleaseOrderHeader: React.FC<MobileReleaseOrderHeaderProps> = ({
+export const MobileBookingHeader: React.FC<MobileBookingHeaderProps> = ({
   onCreateOrder,
   isMobileMenuOpen,
   onToggleMobileMenu

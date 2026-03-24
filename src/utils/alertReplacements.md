@@ -1,76 +1,121 @@
 # Alert Replacement Guide
 
-This document tracks the replacement of all `alert()` and `confirm()` calls with toast notifications and confirmation modals.
+This document tracks the standardized notification system used throughout the application.
 
-## Completed Files
-- ✅ src/components/Yard/DepotManagement/DepotManagement.tsx
-- ✅ src/components/Yard/StackManagement/StackManagement.tsx
+## Unified Toast System
 
-## Remaining Files
-- src/components/Containers/ContainerList.tsx
-- src/components/ReleaseOrders/BookingDetailsModal.tsx
-- src/components/ModuleAccess/ModuleAccessManagement.tsx
-- src/components/Layout/YardSelector.tsx
-- src/components/Layout/ProtectedApp.tsx
-- src/components/EDI/EDIManagement.tsx
-- src/components/Gates/GateIn.tsx
-- src/components/ClientPools/ClientPoolManagement.tsx
+The application uses a single, unified toast notification system based on Zustand.
 
-## Usage Pattern
+### Location
+- **Hook**: `src/hooks/useToast.tsx`
+- **Components**: `src/components/UI/Toast.tsx`, `src/components/UI/ToastContainer.tsx`
+- **Global Container**: Already mounted in `App.tsx`
 
-### For Success/Info Messages:
+### Usage
+
 ```typescript
-// Old
-alert('Operation successful!');
+import { useToast } from '../../hooks/useToast';
 
-// New
-toast.success('Operation successful!');
+const MyComponent = () => {
+  const toast = useToast();
+
+  // Success notification
+  toast.success('Operation completed successfully!');
+
+  // Error notification (auto 5s duration)
+  toast.error('An error occurred while processing');
+
+  // Info notification
+  toast.info('Please review the changes');
+
+  // Warning notification
+  toast.warning('This action cannot be undone');
+
+  return <div>...</div>;
+};
 ```
 
-### For Error Messages:
+### API Reference
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `toast.success(message, duration?)` | `message: string`, `duration?: number` (default: 4000ms) | Success notification |
+| `toast.error(message, duration?)` | `message: string`, `duration?: number` (default: 5000ms) | Error notification |
+| `toast.info(message, duration?)` | `message: string`, `duration?: number` (default: 4000ms) | Info notification |
+| `toast.warning(message, duration?)` | `message: string`, `duration?: number` (default: 4500ms) | Warning notification |
+
+### Migration from Old Systems
+
+If you encounter code using the old notification systems, migrate as follows:
+
+**From NotificationSystem (Context-based):**
 ```typescript
-// Old
-alert('Error: Something went wrong');
+// OLD - Do not use
+import { useNotifications } from '../Common/NotificationSystem';
+const { showSuccess, showError } = useNotifications();
+showSuccess('Title', 'Message');
+showError('Title', 'Message');
 
-// New
-toast.error('Error: Something went wrong');
-```
-
-### For Warnings:
-```typescript
-// Old
-alert('Warning: Please check this');
-
-// New
-toast.warning('Warning: Please check this');
-```
-
-### For Confirmations:
-```typescript
-// Old
-if (confirm('Are you sure?')) {
-  // do something
-}
-
-// New
-confirm({
-  title: 'Confirm Action',
-  message: 'Are you sure you want to proceed?',
-  confirmText: 'Yes',
-  cancelText: 'No',
-  variant: 'danger', // or 'warning' or 'info'
-  onConfirm: async () => {
-    // do something
-  }
-});
-```
-
-## Required Imports
-```typescript
-import { useToast } from '../../../hooks/useToast';
-import { useConfirm } from '../../../hooks/useConfirm';
-
-// In component:
+// NEW - Use this
+import { useToast } from '../../hooks/useToast';
 const toast = useToast();
-const { confirm } = useConfirm();
+toast.success('Title. Message');
+toast.error('Title. Message');
+```
+
+**From NotificationSystem v2 (Reports folder):**
+```typescript
+// OLD - Do not use
+import { useSuccessNotification, useErrorNotification } from '../Common/Notifications/NotificationSystem';
+const showSuccess = useSuccessNotification();
+showSuccess('Title', 'Message');
+
+// NEW - Use this
+import { useToast } from '../../hooks/useToast';
+const toast = useToast();
+toast.success('Title. Message');
+```
+
+## Removed Systems (No longer available)
+
+The following notification systems have been removed and consolidated into useToast:
+
+- ✅ ~~`src/components/Common/NotificationSystem.tsx`~~ (DELETED)
+- ✅ ~~`src/components/Common/Notifications/NotificationSystem.tsx`~~ (DELETED)
+
+## Confirmation Dialogs
+
+For confirmation dialogs, use the `useConfirm` hook:
+
+```typescript
+import { useConfirm } from '../../hooks/useConfirm';
+
+const MyComponent = () => {
+  const { confirm } = useConfirm();
+
+  const handleDelete = () => {
+    confirm({
+      title: 'Confirm Deletion',
+      message: 'Are you sure you want to delete this item?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger', // 'danger' | 'warning' | 'info'
+      onConfirm: async () => {
+        await deleteItem();
+      }
+    });
+  };
+};
+```
+
+## Inline Alerts
+
+For inline alerts within forms or content areas, use the Alert component:
+
+```typescript
+import { Alert, AlertDescription } from '../UI/alert';
+
+<Alert variant="destructive">
+  <AlertDescription>This is an error message</AlertDescription>
+</Alert>
 ```

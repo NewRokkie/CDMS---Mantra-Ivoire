@@ -371,6 +371,110 @@ class EDITransmissionServiceImpl {
   }
 
   /**
+   * Retry a batch of failed transmissions
+   */
+  async retryFailedBatch(logIds: string[]): Promise<{
+    success: string[];
+    failed: { id: string; error: string }[];
+  }> {
+    const results: { success: string[]; failed: { id: string; error: string }[] } = {
+      success: [],
+      failed: []
+    };
+
+    for (const logId of logIds) {
+      const result = await this.retryTransmission(logId);
+      if (result.success) {
+        results.success.push(logId);
+      } else {
+        results.failed.push({ id: logId, error: result.error || 'Unknown error' });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get daily EDI volume for the last N days
+   */
+  async getDailyVolume(days: number = 7): Promise<Array<{
+    date: string;
+    gateIn: number;
+    gateOut: number;
+    total: number;
+  }>> {
+    try {
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+
+      const { data, error } = await supabase
+        .from('edi_transmission_logs')
+        .select('created_at, operation')
+        .gte('created_at', since.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Build a map of date → counts
+      const map = new Map<string, { gateIn: number; gateOut: number }>();
+
+      // Pre-fill all days so gaps show as 0
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        map.set(key, { gateIn: 0, gateOut: 0 });
+      }
+
+      for (const row of data || []) {
+        const key = row.created_at.slice(0, 10);
+        const entry = map.get(key) || { gateIn: 0, gateOut: 0 };
+        if (row.operation === 'GATE_IN') entry.gateIn++;
+        else entry.gateOut++;
+        map.set(key, entry);
+      }
+
+      return Array.from(map.entries()).map(([date, counts]) => ({
+        date,
+        gateIn: counts.gateIn,
+        gateOut: counts.gateOut,
+        total: counts.gateIn + counts.gateOut
+      }));
+    } catch (error) {
+      console.error('Error fetching daily volume:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get status distribution for all transmissions
+   */
+  async getStatusDistribution(): Promise<{
+    success: number;
+    failed: number;
+    pending: number;
+    retrying: number;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('edi_transmission_logs')
+        .select('status');
+
+      if (error) throw error;
+
+      return {
+        success: data?.filter(r => r.status === 'success').length || 0,
+        failed: data?.filter(r => r.status === 'failed').length || 0,
+        pending: data?.filter(r => r.status === 'pending').length || 0,
+        retrying: data?.filter(r => r.status === 'retrying').length || 0,
+      };
+    } catch (error) {
+      console.error('Error fetching status distribution:', error);
+      return { success: 0, failed: 0, pending: 0, retrying: 0 };
+    }
+  }
+
+  /**
    * Get EDI statistics
    */
   async getStatistics(): Promise<{

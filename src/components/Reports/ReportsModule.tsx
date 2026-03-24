@@ -6,7 +6,6 @@ import {
   Package,
   Building,
   AlertTriangle,
-  CheckCircle,
   FileText,
   Globe
 } from 'lucide-react';
@@ -18,10 +17,15 @@ import { SimpleAnalyticsTab as AnalyticsTab } from './SimpleAnalyticsTab';
 import { SimpleOperationsTab as OperationsTab } from './SimpleOperationsTab';
 import { ScheduledReports } from './ScheduledReports';
 import { ReportsStatsWidget } from './ReportsStatsWidget';
+
+/**
+ * Props for the ReportsModule component
+ * Container for reports analytics and operations reporting
+ */
+interface ReportsModuleProps {}
 import { ReportsHelpGuide, useReportsHelp } from './ReportsHelpGuide';
 import { handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
-import { NotificationProvider } from '../Common/Notifications/NotificationSystem';
 
 // Constants
 const REPORT_TABS = [
@@ -80,11 +84,10 @@ const DefaultErrorFallback: React.FC<{ error: Error; resetError: () => void }> =
   </div>
 );
 
-export const ReportsModule: React.FC = () => {
+export const ReportsModule: React.FC<ReportsModuleProps> = () => {
   const [activeTab, setActiveTab] = useState<'analytics' | 'operations'>('analytics');
   const [viewMode, setViewMode] = useState<'current' | 'global'>('current');
   const [selectedDepot, setSelectedDepot] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showScheduledReports, setShowScheduledReports] = useState(false);
   const { isHelpVisible, showHelp, hideHelp } = useReportsHelp();
@@ -373,10 +376,8 @@ export const ReportsModule: React.FC = () => {
   };
 
   return (
-    <NotificationProvider>
-      <ReportsErrorBoundary>
-        <DesktopContent />
-      </ReportsErrorBoundary>
-    </NotificationProvider>
+    <ReportsErrorBoundary>
+      <DesktopContent />
+    </ReportsErrorBoundary>
   );
 };

@@ -165,12 +165,23 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
     }));
 
   // Calculate total capacity using effective capacity logic
-  const selectedStacks = Array.from(selectedStackIds).map(stackId => stacks.find(s => s.id === stackId)).filter(Boolean);
+  const selectedStacks = Array.from(selectedStackIds)
+    .map(stackId => stacks.find(s => s.id === stackId))
+    .filter((stack): stack is Stack => stack !== undefined);
   const totalCapacity = StackCapacityCalculator.calculateTotalEffectiveCapacity(selectedStacks.map(stack => ({
-    ...stack,
+    id: stack.id,
+    stackNumber: stack.stackNumber,
     capacity: stack.maxCapacity,
     containerSize: stack.containerSize,
-    isVirtual: stack.isVirtual
+    isVirtual: stack.isVirtual,
+    isBufferZone: false, // Client pools don't use buffer zones
+    sectionId: stack.sectionId,
+    rows: stack.rows,
+    maxTiers: stack.maxTiers,
+    currentOccupancy: stack.currentOccupancy,
+    position: { x: 0, y: 0, z: 0 }, // Default position - not used in capacity calculation
+    dimensions: { width: 0, length: 0 }, // Default dimensions - not used in capacity calculation
+    containerPositions: [] // Default empty array - not used in capacity calculation
   })));
 
   if (!isOpen) return null;
@@ -249,13 +260,13 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-[#A0C800]"></div>
                 <span className="text-gray-700">
-                  <span className="font-semibold">{selectedStackIds.size}</span> stacks selected
+                  <span className="font-numeric font-semibold">{selectedStackIds.size}</span> stacks selected
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <Package className="h-4 w-4 text-gray-500" />
                 <span className="text-gray-700">
-                  Total capacity: <span className="font-semibold">{totalCapacity}</span> containers
+                  Total capacity: <span className="font-numeric font-semibold">{totalCapacity}</span> containers
                 </span>
               </div>
             </div>

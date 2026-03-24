@@ -5,22 +5,26 @@ import { useTranslation } from 'react-i18next';
 import { useYard } from '../../hooks/useYard';
 import { useTheme } from '../../hooks/useTheme';
 import { bookingReferenceService } from '../../services/api';
-import { ReleaseOrderForm } from './ReleaseOrderForm';
+import { BookingForm } from './BookingForm';
 import { BookingDetailsModal } from './BookingDetailsModal';
-import { MobileReleaseOrderStats } from './MobileReleaseOrderStats';
-import { MobileReleaseOrderTable } from './MobileReleaseOrderTable';
+import { MobileBookingStats } from './MobileBookingStats';
+import { MobileBookingTable } from './MobileBookingTable';
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { Search, X, FileText, Download } from 'lucide-react';
 import { handleError } from '../../services/errorHandling';
 import { exportToExcel, formatDateForExport } from '../../utils/excelExport';
 import { userService } from '../../services/api';
 
-// REMOVED: Mock data now managed by global store
+/**
+ * Props for the BookingList component
+ * Container for managing booking references and bookings
+ */
+interface BookingListProps {}
 
-export const ReleaseOrderList: React.FC = () => {
+export const BookingList: React.FC<BookingListProps> = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -28,13 +32,13 @@ export const ReleaseOrderList: React.FC = () => {
       setIsLoading(true);
       try {
         const ordersData = await bookingReferenceService.getAll().catch(err => {
-          handleError(err, 'ReleaseOrderList.loadData');
+          handleError(err, 'BookingList.loadData');
           return [];
         });
-        setReleaseOrders(ordersData || []);
+        setBookings(ordersData || []);
       } catch (error) {
-        handleError(error, 'ReleaseOrderList.loadData');
-        setReleaseOrders([]);
+        handleError(error, 'BookingList.loadData');
+        setBookings([]);
       } finally {
         setIsLoading(false);
       }
@@ -54,9 +58,9 @@ export const ReleaseOrderList: React.FC = () => {
   const { user, getClientFilter } = useAuth();
   const { currentYard } = useYard();
 
-  // Filter release orders based on user permissions and search/status filters
+  // Filter bookings based on user permissions and search/status filters
   const getFilteredOrders = () => {
-    let orders = releaseOrders;
+    let orders = bookings;
 
     // Apply client filter for client users
     const clientFilter = getClientFilter();
@@ -193,8 +197,8 @@ export const ReleaseOrderList: React.FC = () => {
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{t('releases.booking.title')}</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 hidden lg:block">{t('releases.subtitle')}</p>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{t('bookings.booking.title')}</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 hidden lg:block">{t('bookings.subtitle')}</p>
             </div>
           </div>
 
@@ -205,7 +209,7 @@ export const ReleaseOrderList: React.FC = () => {
               className="w-full lg:w-auto flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl lg:rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
             >
               <FileText className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">{t('releases.createBooking')}</span>
+              <span className="text-sm lg:text-base">{t('bookings.createBooking')}</span>
             </button>
           </div>
         </div>
@@ -218,7 +222,7 @@ export const ReleaseOrderList: React.FC = () => {
             <CardSkeleton count={4} />
           </div>
         ) : (
-          <MobileReleaseOrderStats stats={stats} />
+          <MobileBookingStats stats={stats} />
         )}
 
         {/* Unified Search and Filter */}
@@ -229,7 +233,7 @@ export const ReleaseOrderList: React.FC = () => {
               <Search className="absolute left-4 lg:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5 lg:h-4 lg:w-4" />
               <input
                 type="text"
-                placeholder={t('releases.search')}
+                placeholder={t('bookings.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 lg:pl-10 pr-12 lg:pr-4 py-4 lg:py-2 text-base lg:text-sm border border-gray-300 dark:border-gray-600 rounded-xl lg:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 dark:text-white lg:bg-white lg:dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-700 transition-colors"
@@ -255,7 +259,7 @@ export const ReleaseOrderList: React.FC = () => {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95'
                     }`}
                 >
-                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('releases.inProcess') : t(`common.status.${filter}`)}
+                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('bookings.inProcess') : t(`common.status.${filter}`)}
                 </button>
               ))}
             </div>
@@ -268,7 +272,7 @@ export const ReleaseOrderList: React.FC = () => {
               >
                 <option value="all">{t('common.all')}</option>
                 <option value="pending">{t('common.status.pending')}</option>
-                <option value="in_process">{t('releases.inProcess')}</option>
+                <option value="in_process">{t('bookings.inProcess')}</option>
                 <option value="completed">{t('common.status.completed')}</option>
               </select>
               {searchTerm && (
@@ -289,7 +293,7 @@ export const ReleaseOrderList: React.FC = () => {
         </div>
 
         {/* Unified Bookings List - Mobile First */}
-        <MobileReleaseOrderTable
+        <MobileBookingTable
           orders={filteredOrders}
           searchTerm={searchTerm}
           selectedFilter={selectedFilter}
@@ -301,7 +305,7 @@ export const ReleaseOrderList: React.FC = () => {
 
       {/* Release Order Form Modal */}
       {showForm && (
-        <ReleaseOrderForm
+        <BookingForm
           isOpen={showForm}
           isEditMode={isEditMode}
           initialData={isEditMode && selectedOrder ? {
@@ -335,7 +339,7 @@ export const ReleaseOrderList: React.FC = () => {
                 };
 
                 const updated = await bookingReferenceService.update(selectedOrder.id, updateData);
-                setReleaseOrders(prev =>
+                setBookings(prev =>
                   prev.map(order => order.id === updated.id ? updated : order)
                 );
               } else {
@@ -346,13 +350,13 @@ export const ReleaseOrderList: React.FC = () => {
                   remainingContainers: data.totalContainers,
                   createdBy: user?.id || ''
                 });
-                setReleaseOrders(prev => [...prev, newBooking]);
+                setBookings(prev => [...prev, newBooking]);
               }
               setShowForm(false);
               setSelectedOrder(null);
               setIsEditMode(false);
             } catch (error) {
-              handleError(error, 'ReleaseOrderList.onSubmit');
+              handleError(error, 'BookingList.onSubmit');
             }
           }}
 
@@ -373,7 +377,7 @@ export const ReleaseOrderList: React.FC = () => {
         }}
         onUpdate={(updatedBooking) => {
           // Update the booking in the list
-          setReleaseOrders(prev =>
+          setBookings(prev =>
             prev.map(order =>
               order.id === updatedBooking.id ? updatedBooking : order
             )

@@ -43,9 +43,9 @@ export const DepotDetailModal: React.FC<Props> = ({
       description: depot.description || '-',
       layout: depot.layout,
       status: depot.isActive ? 'Active' : 'Inactive',
-      totalCapacity: effectiveCapacity?.toLocaleString() || '0',
-      currentOccupancy: depot.currentOccupancy?.toLocaleString() || '0',
-      occupancyRate: `${occupancyRate.toFixed(1)}%`
+      totalCapacity: `<span class='font-numeric'>${effectiveCapacity?.toLocaleString() || '0'}</span>`,
+      currentOccupancy: `<span class='font-numeric'>${depot.currentOccupancy?.toLocaleString() || '0'}</span>`,
+      occupancyRate: `<span class='numeric-text'>${occupancyRate.toFixed(1)}%</span>`
     },
     layout: 'grid'
   };
@@ -72,12 +72,12 @@ export const DepotDetailModal: React.FC<Props> = ({
     title: 'Yard Structure',
     icon: Settings,
     data: {
-      totalSections: depot.sections?.length?.toString() || '0',
-      totalStacks: depot.sections?.reduce((total, section) => total + (section.stacks?.length || 0), 0)?.toString() || '0',
+      totalSections: `<span class='font-numeric'>${depot.sections?.length?.toString() || '0'}</span>`,
+      totalStacks: `<span class='font-numeric'>${depot.sections?.reduce((total, section) => total + (section.stacks?.length || 0), 0)?.toString() || '0'}</span>`,
       layout: depot.layout || '-',
       location: depot.location || '-',
       timezone: depot.timezone || '-',
-      capacity: effectiveCapacity?.toString() || '0'
+      capacity: `<span class='font-numeric'>${effectiveCapacity?.toString() || '0'}</span>`
     },
     layout: 'grid'
   };
@@ -180,14 +180,14 @@ export const DepotDetailModal: React.FC<Props> = ({
             </div>
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <div className="text-3xl font-bold text-blue-600 animate-count">
-                  {effectiveCapacity?.toLocaleString() || '0'}
+                <div className="text-3xl font-bold text-blue-600 animate-count font-mono">
+                  <span className="font-numeric">{effectiveCapacity?.toLocaleString() || '0'}</span>
                 </div>
                 <div className="text-xs text-gray-600 mt-1">Total Capacity</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-green-600 animate-count">
-                  {depot.currentOccupancy?.toLocaleString() || '0'}
+                <div className="text-3xl font-bold text-green-600 animate-count font-mono">
+                  <span className="font-numeric">{depot.currentOccupancy?.toLocaleString() || '0'}</span>
                 </div>
                 <div className="text-xs text-gray-600 mt-1">Current Occupancy</div>
               </div>

@@ -7,6 +7,7 @@ import { DatePicker } from '../../Common/DatePicker';
 import { TimePicker } from '../../Common/TimePicker';
 import { useAuth } from '../../../hooks/useAuth';
 import { useYard } from '../../../hooks/useYard';
+import { useToast } from '../../../hooks/useToast';
 import { DamageAssessment } from '../types';
 import { bufferZoneService } from '../../../services/bufferZoneService';
 
@@ -69,7 +70,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
   const [selectedBufferStackId, setSelectedBufferStackId] = useState<string>('');
   const [loadingBufferStacks, setLoadingBufferStacks] = useState(false);
 
-  const [notificationFn, setNotificationFn] = useState<((type: 'success' | 'error' | 'warning' | 'info', message: string, options?: { autoHide?: boolean; duration?: number }) => void) | null>(null);
+  const { success, error: toastError, info, warning } = useToast();
 
   const { user } = useAuth();
   const { currentYard } = useYard();
@@ -116,8 +117,8 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
         currentOccupancy: s.currentOccupancy,
       }));
       setBufferStacks(mapped);
-      if (mapped.length === 0 && notificationFn) {
-        notificationFn('warning', 'Aucun stack tampon configuré dans Stack Management. Veuillez en créer un avant de continuer.', { autoHide: false });
+      if (mapped.length === 0) {
+        warning('Aucun stack tampon configuré dans Stack Management. Veuillez en créer un avant de continuer.');
       }
     } catch (e) {
       setError('Impossible de charger les stacks tampons.');
@@ -141,7 +142,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
     if (!assessmentCompleted || !damageAssessment) {
       const errorMsg = 'L\'évaluation des dommages doit être complétée avant de finaliser l\'opération.';
       setError(errorMsg);
-      notificationFn?.('error', errorMsg, { autoHide: false });
+      toastError(errorMsg);
       return;
     }
 
@@ -150,13 +151,13 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
       if (!selectedBufferStackId) {
         const errorMsg = 'Veuillez sélectionner un stack tampon pour ce conteneur endommagé.';
         setError(errorMsg);
-        notificationFn?.('error', errorMsg, { autoHide: false });
+        toastError(errorMsg);
         return;
       }
       if (bufferStacks.length === 0) {
         const errorMsg = 'Aucun stack tampon disponible. Veuillez en créer un dans Stack Management.';
         setError(errorMsg);
-        notificationFn?.('error', errorMsg, { autoHide: false });
+        toastError(errorMsg);
         return;
       }
     } else {
@@ -164,7 +165,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
       if (!selectedStackId || !selectedStackLocation) {
         const errorMsg = 'Veuillez sélectionner un emplacement pour le conteneur.';
         setError(errorMsg);
-        notificationFn?.('error', errorMsg, { autoHide: false });
+        toastError(errorMsg);
         return;
       }
     }
@@ -188,7 +189,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
       finalStackId = chosenBufferStack.id;
       finalLocation = `BUF-S${String(chosenBufferStack.stackNumber).padStart(4, '0')}`;
 
-      notificationFn?.('info', `Assignation en zone tampon: ${chosenBufferStack.sectionName} (EDI transmis à la finalisation)`, { autoHide: false });
+      info(`Assignation en zone tampon: ${chosenBufferStack.sectionName} (EDI transmis à la finalisation)`);
     }
 
     const locationData = {
@@ -206,11 +207,11 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
       const successMsg = damageAssessment.hasDamage
         ? `Conteneur assigné en zone tampon: ${finalLocation} (EDI GATE IN transmis)`
         : `Conteneur assigné: ${finalLocation} (EDI GATE IN transmis)`;
-      notificationFn?.('success', successMsg);
+      success(successMsg);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Échec de l\'opération';
       setError(errorMsg);
-      notificationFn?.('error', errorMsg, { autoHide: false });
+      toastError(errorMsg);
     }
   };
 
@@ -234,7 +235,11 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
     const message = assessment.hasDamage
       ? `⚠️ Dommages détectés (${assessment.damageType}). Sélectionnez un stack tampon.`
       : '✅ Aucun dommage. Sélectionnez un emplacement physique.';
-    notificationFn?.(assessment.hasDamage ? 'warning' : 'success', message);
+    if (assessment.hasDamage) {
+      warning(message);
+    } else {
+      success(message);
+    }
   };
 
   const handleDamageAssessmentCancel = () => {
@@ -296,7 +301,7 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
         isOpen={isOpen}
         onClose={onClose}
         title="Location & Validation"
-        subtitle={`Assigner un emplacement - opération ${operation.id}`}
+        subtitle={`Assigner un emplacement - ${operation.containerNumber}`}
         icon={MapPin}
         size="lg"
         maxHeight="95vh"
@@ -304,17 +309,9 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
         customFooter={<CustomFooter />}
         preventBackdropClose={isProcessing}
       >
-        {({ showNotification: modalNotificationFn }) => {
-          useEffect(() => {
-            if (modalNotificationFn && !notificationFn) {
-              setNotificationFn(() => modalNotificationFn);
-            }
-          }, [modalNotificationFn, notificationFn]);
+        <div className="space-y-6">
 
-          return (
-            <div className="space-y-6">
-
-              {/* Operation Summary */}
+          {/* Operation Summary */}
               <div className="bg-gray-50 rounded-lg p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <Package className="h-5 w-5 text-gray-600" />
@@ -590,8 +587,6 @@ export const LocationValidationModal: React.FC<LocationValidationModalProps> = (
               )}
 
             </div>
-          );
-        }}
       </StandardModal>
 
       {/* Damage Assessment Modal */}

@@ -66,7 +66,7 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({
     title: 'Audit Log Summary',
     icon: FileText,
     data: {
-      totalEntries: sortedLogs.length.toString(),
+      totalEntries: `<span class='font-numeric'>${sortedLogs.length}</span>`,
       containerNumber: containerNumber,
       dateRange: sortedLogs.length > 0
         ? `${new Date(sortedLogs[sortedLogs.length - 1].timestamp).toLocaleDateString()} - ${new Date(sortedLogs[0].timestamp).toLocaleDateString()}`
