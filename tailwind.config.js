@@ -29,20 +29,23 @@ export default {
       fontFamily: {
         // Gilroy comme police par défaut pour tout le texte général
         sans: ['"Gilroy-Regular"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
-        
+
         // Variantes Gilroy pour titres, labels, navigation, boutons
         'gilroy-light': ['"Gilroy-Light"', 'sans-serif'],
         'gilroy': ['"Gilroy-Regular"', 'sans-serif'],
         'gilroy-medium': ['"Gilroy-Medium"', 'sans-serif'],
         'gilroy-bold': ['"Gilroy-Bold"', 'sans-serif'],
         'gilroy-heavy': ['"Gilroy-Heavy"', 'sans-serif'],
-        
+
         // JetBrains Mono pour chiffres, données numériques, tableaux
         'numeric': ['"JetBrains Mono"', 'monospace'],
         'mono': ['"JetBrains Mono"', 'monospace'],
-        
+
         // Marianina Wide pour les grands titres (Tracking 0 pour Web UI)
         'heading': ['"Marianina Wide FY"', 'Arial', 'sans-serif'],
+
+        // Inter pour les badges et chips
+        'inter': ['"Inter"', 'sans-serif'],
       },
       fontSize: {
         // Typographie - Hiérarchie des titres
@@ -50,18 +53,18 @@ export default {
         'h2': ['28px', { lineHeight: '36px', fontWeight: '700', fontFamily: '"Marianina Wide FY"' }],
         'h3': ['22px', { lineHeight: '28px', fontWeight: '500', fontFamily: '"Gilroy-Medium"' }],
         'h4': ['18px', { lineHeight: '24px', fontWeight: '500', fontFamily: '"Gilroy-Medium"' }],
-        
+
         // Corps de texte
         'body-lg': ['16px', { lineHeight: '24px' }],
         'body': ['14px', { lineHeight: '20px' }],
         'body-sm': ['13px', { lineHeight: '18px' }],
-        
+
         // Éléments UI
         'label': ['13px', { lineHeight: '18px', fontWeight: '500' }],
         'button': ['14px', { lineHeight: '20px', fontWeight: '500' }],
         'badge': ['11px', { lineHeight: '16px', fontWeight: '500' }],
         'helper': ['12px', { lineHeight: '16px' }],
-        
+
         // Données numériques (JetBrains Mono)
         'stat': ['24px', { lineHeight: '28px', fontWeight: '500', fontFamily: '"JetBrains Mono"', fontVariantNumeric: 'tabular-nums' }],
         'numeric': ['14px', { lineHeight: '20px', fontFamily: '"JetBrains Mono"', fontVariantNumeric: 'tabular-nums' }],

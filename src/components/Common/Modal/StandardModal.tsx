@@ -75,7 +75,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
       className={`fixed inset-0 ${zIndexClass} flex items-center justify-center p-2 sm:p-4 overflow-hidden`}
     >
       {/* Overlay avec flou et fondu */}
-      <div 
+      <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-300"
         onClick={preventBackdropClose ? undefined : onClose}
       />
@@ -88,7 +88,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
           relative w-full ${sizeClasses}
           flex flex-col
           bg-white dark:bg-gray-900
-          rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]
+          rounded-3xl shadow-[0_32px_64px_-15px_rgba(0,0,0,0.3)]
           overflow-hidden
           animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-400
           ${className}
@@ -116,7 +116,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
             {customFooter || (
               <>
                 {validationSummary && (
-                  <div className="flex-1 text-sm text-red-500 animate-in fade-in">
+                  <div className="flex-1 text-sm text-red-500 animate-in fade-in font-inter antialiased">
                     {validationSummary}
                   </div>
                 )}
@@ -124,7 +124,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                 <div className="flex items-center gap-3 ml-auto">
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors"
+                    className="px-5 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors font-inter antialiased"
                   >
                     {cancelLabel}
                   </button>
@@ -136,12 +136,13 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                       disabled={isSubmitting || !isFormValid}
                       className={`
                         relative group
-                        px-6 py-2 rounded-xl
+                        px-7 py-2.5 rounded-xl
                         bg-blue-600 text-white text-sm font-bold
-                        shadow-md shadow-blue-500/20
+                        shadow-lg shadow-blue-500/20
                         transition-all active:scale-95
                         disabled:opacity-50 disabled:grayscale disabled:scale-100
                         flex items-center justify-center gap-2
+                        font-inter antialiased
                       `}
                     >
                       {isSubmitting ? (
@@ -166,7 +167,9 @@ export const StandardModal: React.FC<StandardModalProps> = ({
     </div>
   );
 
-  if (isNested) {
+  // Toujours rendre le modal avec un Portal pour éviter les soucis de stacking context (z-index)
+  // avec le Header ou la Sidebar
+  if (typeof document !== 'undefined') {
     return ReactDOM.createPortal(modalContent, document.body);
   }
 
