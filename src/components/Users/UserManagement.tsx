@@ -29,7 +29,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
     containers: false,
     gateIn: false,
     gateOut: false,
-    releases: false,
+    bookings: false,
     edi: false,
     yard: false,
     clients: false,
@@ -53,7 +53,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         containers: true,
         gateIn: true,
         gateOut: true,
-        releases: true,
+        bookings: true,
         edi: true,
         yard: true,
         clients: true,
@@ -75,7 +75,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         containers: true,
         gateIn: true,
         gateOut: true,
-        releases: true,
+        bookings: true,
         edi: true,
         yard: true,
         reports: true,
@@ -94,7 +94,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
         containers: true,
         gateIn: true,
         gateOut: true,
-        releases: true,
+        bookings: true,
         yard: true,
         auditLogs: true
       };
@@ -102,7 +102,7 @@ const getModuleAccessForRole = (role: User['role']): ModuleAccess => {
       return {
         ...baseAccess,
         containers: true,
-        releases: true,
+        bookings: true,
         yard: true
       };
     default:

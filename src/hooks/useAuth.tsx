@@ -135,7 +135,7 @@ export const useAuthProvider = () => {
           containers: false,
           gateIn: false,
           gateOut: false,
-          releases: false,
+          bookings: false,
           edi: false,
           yard: false,
           clients: false,

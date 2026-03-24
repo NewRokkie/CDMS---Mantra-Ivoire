@@ -103,7 +103,7 @@ const ALL_MODULES: (keyof ModuleAccess)[] = [
   'containers',
   'gateIn',
   'gateOut',
-  'releases',
+  'bookings',
   'edi',
   'yard',
   'clients',
@@ -471,20 +471,20 @@ class ModuleAccessService {
       return { isValid: false, errors };
     }
 
-    // Check for required module fields
-    for (const moduleKey of ALL_MODULES) {
-      if (!(moduleKey in permissions)) {
-        errors.push(`Missing required module: ${moduleKey}`);
-      } else if (typeof permissions[moduleKey] !== 'boolean') {
-        errors.push(`Module ${moduleKey} must be a boolean value, got ${typeof permissions[moduleKey]}`);
+    // Filter out legacy/unknown keys before validation
+    const filteredPermissions: any = {};
+    for (const key of ALL_MODULES) {
+      if (key in permissions) {
+        filteredPermissions[key] = permissions[key];
       }
     }
 
-    // Check for unexpected fields
-    const validKeys = new Set(ALL_MODULES);
-    for (const key in permissions) {
-      if (!validKeys.has(key as keyof ModuleAccess)) {
-        errors.push(`Unexpected field: ${key}`);
+    // Check for required module fields in filtered permissions
+    for (const moduleKey of ALL_MODULES) {
+      if (!(moduleKey in filteredPermissions)) {
+        errors.push(`Missing required module: ${moduleKey}`);
+      } else if (typeof filteredPermissions[moduleKey] !== 'boolean') {
+        errors.push(`Module ${moduleKey} must be a boolean value, got ${typeof filteredPermissions[moduleKey]}`);
       }
     }
 

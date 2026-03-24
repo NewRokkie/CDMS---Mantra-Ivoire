@@ -502,7 +502,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
       containers: false,
       gateIn: false,
       gateOut: false,
-      releases: false,
+      bookings: false,
       edi: false,
       yard: false,
       clients: false,
@@ -532,7 +532,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
           containers: true,
           gateIn: true,
           gateOut: true,
-          releases: true,
+          bookings: true,
           edi: true,
           yard: true,
           clients: true,
@@ -553,7 +553,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
           containers: true,
           gateIn: true,
           gateOut: true,
-          releases: true,
+          bookings: true,
           yard: true,
           auditLogs: true
         };
@@ -562,7 +562,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
         return {
           ...baseAccess,
           containers: true,
-          releases: true,
+          bookings: true,
           yard: true
         };
 
@@ -591,7 +591,7 @@ export const ModuleAccessManagement: React.FC<ModuleAccessManagementProps> = () 
       containers: <Shield className="h-5 w-5" />,
       gateIn: <Plus className="h-5 w-5" />,
       gateOut: <Zap className="h-5 w-5" />,
-      releases: <Eye className="h-5 w-5" />,
+      bookings: <Eye className="h-5 w-5" />,
       edi: <Settings className="h-5 w-5" />,
       yard: <Users className="h-5 w-5" />,
       clients: <UserIcon className="h-5 w-5" />,

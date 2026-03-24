@@ -36,7 +36,7 @@ export interface ModuleAccess {
   containers: boolean;
   gateIn: boolean;
   gateOut: boolean;
-  releases: boolean;
+  bookings: boolean;
   edi: boolean;
   yard: boolean;
   clients: boolean;
@@ -312,7 +312,7 @@ export interface ContainerQuantityBySize {
 }
 
 /**
- * Booking reference (release order) for container release from yard
+ * Booking reference for container release from yard
  * Groups one or more containers for coordinated release to customer
  * Tracks booking quantity thresholds, status, and completion timestamps
  * Used by clients to manage container releases and by operations for billing

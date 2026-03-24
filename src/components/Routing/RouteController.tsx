@@ -83,7 +83,7 @@ export const RouteController: React.FC<RouteControllerProps> = () => {
         <Route
           path="/booking"
           element={
-            <ProtectedRoute moduleKey="releases">
+            <ProtectedRoute moduleKey="bookings">
               <BookingList />
             </ProtectedRoute>
           }
