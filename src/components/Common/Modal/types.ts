@@ -7,7 +7,7 @@ export interface StandardModalProps {
   title: string;
   subtitle?: string;
   icon?: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode | ((props: { showNotification: (type: 'success' | 'error' | 'warning' | 'info', message: string, options?: { autoHide?: boolean; duration?: number }) => void; hideNotification: () => void }) => React.ReactNode);
+  children?: React.ReactNode;
   onSubmit?: () => Promise<void>;
   submitLabel?: string;
   cancelLabel?: string;
@@ -36,6 +36,8 @@ export interface StandardModalProps {
   trapFocus?: boolean;
   restoreFocus?: boolean;
   announceStateChanges?: boolean;
+  // Nested modal support
+  isNested?: boolean;
 }
 
 export interface MultiStepModalProps extends StandardModalProps {
@@ -48,7 +50,7 @@ export interface MultiStepModalProps extends StandardModalProps {
   showProgressBar?: boolean;
 }
 
-export interface FormModalProps extends StandardModalProps {
+export interface FormModalProps extends Omit<StandardModalProps, 'onSubmit'> {
   onSubmit: (data: any) => Promise<void>;
   submitLabel?: string;
   cancelLabel?: string;
@@ -62,20 +64,6 @@ export interface DataDisplayModalProps extends StandardModalProps {
   data?: any;
   actions?: ModalAction[];
   sections?: DataSection[];
-}
-
-// Notification system
-export interface NotificationState {
-  type: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-  show: boolean;
-  autoHide?: boolean;
-  duration?: number;
-}
-
-export interface NotificationProps {
-  notification: NotificationState;
-  onDismiss: () => void;
 }
 
 // Loading states

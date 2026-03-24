@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
 
   return (
     <>
-      <header className={`bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 py-3 lg:py-4 relative z-50 ${(isSidebarOpen || isMobileMenuOpen) ? 'lg:block hidden' : 'block'
+      <header className={`bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 py-3 lg:py-4 relative z-30 ${(isSidebarOpen || isMobileMenuOpen) ? 'lg:block hidden' : 'block'
         }`}>
         <div className="flex items-center justify-between">
           {/* Left Section - Logo (Clickable) & Title */}
@@ -56,10 +56,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               </svg>
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base lg:text-xl font-gilroy-bold text-gray-900 dark:text-white truncate">
+              <h1 className="header-title text-gray-900 dark:text-white truncate">
                 Container Depot
               </h1>
-              <p className="hidden sm:block text-xs lg:text-sm font-gilroy text-gray-600 dark:text-gray-400 truncate">
+              <p className="hidden sm:block header-subtitle text-gray-600 dark:text-gray-400 truncate">
                 {user?.role ? t(`users.role.${user.role}`) : ''}
               </p>
             </div>
@@ -74,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md animate-bounce-subtle"
               >
                 <Download className="h-4 w-4" />
-                <span className="hidden md:inline font-gilroy-medium text-sm">{t('common.install')} {getModuleInstallName()}</span>
+                <span className="header-button">{t('common.install')} {getModuleInstallName()}</span>
               </button>
             )}
 
@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 ) : (
                   <Moon className="h-4 w-4" />
                 )}
-                <span className="font-gilroy-medium text-sm">{theme === 'dark' ? t('common.light') : t('common.dark')}</span>
+                <span className="header-button">{theme === 'dark' ? t('common.light') : t('common.dark')}</span>
               </button>
 
               {/* Language Switcher */}
@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <Globe className="h-4 w-4" />
-                <span className="font-gilroy-medium">{i18n.language.toUpperCase()}</span>
+                <span className="header-button">{i18n.language.toUpperCase()}</span>
               </button>
 
               {/* Notifications */}
@@ -130,8 +130,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                     })()}
                   </div>
                   <div className="text-sm">
-                    <p className="font-gilroy-medium text-gray-900 dark:text-white">{user?.name}</p>
-                    <p className="text-xs font-gilroy text-gray-600 dark:text-gray-400 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
+                    <p className="header-user-name text-gray-900 dark:text-white">{user?.name}</p>
+                    <p className="header-user-role text-gray-600 dark:text-gray-400 capitalize">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
 
@@ -163,40 +163,48 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
         <>
           {/* Backdrop */}
           <div
-            className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn"
+            className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-md z-40 animate-fadeIn"
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
           {/* Mobile Menu Panel */}
-          <div className="lg:hidden fixed top-[0px] left-0 right-0 bottom-0 bg-white dark:bg-gray-900 z-[60] overflow-y-auto animate-slideDown">
-            <div className="px-4 py-6 space-y-6">
-              {/* Close Button */}
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-95"
-                  aria-label="Close menu"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+          <div className="lg:hidden fixed top-0 left-0 right-0 bottom-0 bg-white dark:bg-gray-900 z-[60] overflow-y-auto animate-slideDown">
+            {/* Header with Close Button */}
+            <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg px-4 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <span className="font-bold text-gray-900 dark:text-white">Menu</span>
               </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all active:scale-90"
+                aria-label="Close menu"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
 
+            <div className="px-4 py-6 space-y-6">
               {/* User Profile Card */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-gray-800 rounded-2xl p-5 border-2 border-blue-200 dark:border-blue-800 shadow-lg">
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 rounded-2xl p-5 shadow-xl">
                 <div className="flex items-center space-x-4">
-                  <div className="h-14 w-14 bg-blue-600 rounded-full flex items-center justify-center shadow-xl">
+                  <div className="h-14 w-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner">
                     <User className="h-7 w-7 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-lg font-gilroy-bold text-gray-900 dark:text-white">{user?.name}</p>
-                    <p className="text-sm text-blue-800 dark:text-blue-300 capitalize font-gilroy-medium">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
+                    <p className="font-bold text-white text-lg">{user?.name}</p>
+                    <p className="text-blue-200 capitalize text-sm">{user?.role ? t(`users.role.${user.role}`) : ''}</p>
                   </div>
                 </div>
               </div>
 
               {/* Quick Actions Grid */}
-              <div className="space-y-2">
-                <label className="text-xs font-gilroy-bold text-gray-500 uppercase tracking-wide px-1">
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-gray-500 dark:text-gray-400 px-1 uppercase tracking-wider">
                   {t('common.quickActions')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -206,18 +214,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       toggleTheme();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-800 transition-all border border-gray-200 dark:border-gray-700 shadow-sm active:scale-95"
+                    className="flex flex-col items-center justify-center gap-3 px-4 py-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-100 dark:border-gray-700 active:scale-95"
                   >
-                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-md">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm">
                       {theme === 'dark' ? (
                         <Sun className="h-6 w-6 text-yellow-500" />
                       ) : (
                         <Moon className="h-6 w-6 text-gray-700" />
                       )}
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-600 dark:text-gray-300 font-gilroy-medium">{theme === 'dark' ? t('common.light') : t('common.dark')}</p>
-                    </div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{theme === 'dark' ? t('common.light') : t('common.dark')}</p>
                   </button>
 
                   {/* Language Switcher */}
@@ -226,36 +232,37 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                       i18n.changeLanguage(i18n.language === 'en' ? 'fr' : 'en');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-800 transition-all border border-gray-200 dark:border-gray-700 shadow-sm active:scale-95"
+                    className="flex flex-col items-center justify-center gap-3 px-4 py-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-100 dark:border-gray-700 active:scale-95"
                   >
-                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-md">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm">
                       <Globe className="h-6 w-6 text-gray-700 dark:text-gray-300" />
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-600 dark:text-gray-300 font-gilroy-medium">{i18n.language.toUpperCase()}</p>
-                    </div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{i18n.language.toUpperCase()}</p>
                   </button>
                 </div>
 
-                  {/* Notifications */}
-                  <button
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="relative flex flex-col items-center justify-center space-y-2 px-4 py-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-800 transition-all border border-gray-200 dark:border-gray-700 shadow-sm active:scale-95"
-                  >
-                    <div className="relative">
-                      <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-md">
-                        <Bell className="h-6 w-6 text-gray-700 dark:text-gray-300" />
-                      </div>
-                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-numeric font-bold shadow-lg">
-                        3
-                      </span>
+                {/* Notifications - Full Width */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full relative flex items-center justify-between px-5 py-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-100 dark:border-gray-700 active:scale-95"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm">
+                      <Bell className="h-6 w-6 text-gray-700 dark:text-gray-300" />
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-600 dark:text-gray-300 font-gilroy-medium"><span className="font-numeric">3</span> {t('common.newNotifications')}</p>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 dark:text-white">{t('common.notifications')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">3 {t('common.newNotifications')}</p>
                     </div>
-                  </button>
-                </div>
+                  </div>
+                  <span className="h-6 w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
+                    3
+                  </span>
+                </button>
               </div>
+
+              {/* Divider */}
+              <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
               {/* Logout Button */}
               <button
@@ -263,21 +270,22 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                   handleLogout();
                   setIsMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95 font-gilroy-bold"
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-all active:scale-95 font-semibold"
               >
                 <LogOut className="h-5 w-5" />
                 <span>{t('nav.logout')}</span>
               </button>
 
               {/* App Info */}
-              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs font-gilroy text-gray-500 dark:text-gray-400 text-center">
+              <div className="pt-4">
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
                   {t('common.appFooter')}
                 </p>
               </div>
             </div>
-          </>
-        )}
+          </div>
+        </>
+      )}
 
       {/* CSS Animations */}
       <style>{`
@@ -292,7 +300,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
 
         @keyframes slideDown {
           from {
-            transform: translateY(-100%);
+            transform: translateY(-20px);
             opacity: 0;
           }
           to {
@@ -301,12 +309,23 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
           }
         }
 
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.95);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
         .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
+          animation: fadeIn 0.2s ease-out forwards;
         }
 
         .animate-slideDown {
-          animation: slideDown 0.3s ease-out;
+          animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes bounce-subtle {

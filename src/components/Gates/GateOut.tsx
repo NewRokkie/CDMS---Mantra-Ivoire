@@ -13,6 +13,12 @@ import { PendingGateOut } from './types';
 import { handleError } from '../../services/errorHandling';
 import { CardSkeleton } from '../Common/CardSkeleton';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
+
+/**
+ * Props for the GateOut component
+ * Container for gate-out operations and container release
+ */
+interface GateOutProps {}
 import { TableSkeleton } from '../Common/TableSkeleton';
 import { exportToExcel, formatDateShortForExport, formatTimeForExport, formatDateForExport, formatDurationForExport } from '../../utils/excelExport';
 import { useToast } from '../../hooks/useToast';
@@ -33,7 +39,7 @@ interface GateOutFormData {
   notes?: string;
 }
 
-export const GateOut: React.FC = () => {
+export const GateOut: React.FC<GateOutProps> = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { currentYard, validateYardOperation } = useYard();
@@ -45,7 +51,7 @@ export const GateOut: React.FC = () => {
   const [selectedOperation, setSelectedOperation] = useState<PendingGateOut | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [releaseOrders, setReleaseOrders] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
   const [gateOutOperations, setGateOutOperations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,12 +79,12 @@ export const GateOut: React.FC = () => {
         ]);
 
         // Ensure we have arrays before setting state
-        setReleaseOrders(Array.isArray(ordersData) ? ordersData : []);
+        setBookings(Array.isArray(ordersData) ? ordersData : []);
         setContainers(Array.isArray(containersData) ? containersData : []);
         setGateOutOperations(Array.isArray(operationsData) ? operationsData : []);
       } catch (error) {
         handleError(error, 'GateOut.loadData');
-        setReleaseOrders([]);
+        setBookings([]);
         setContainers([]);
         setGateOutOperations([]);
       } finally {
@@ -108,7 +114,7 @@ export const GateOut: React.FC = () => {
       async () => {
         try {
           const orders = await bookingReferenceService.getAll();
-          setReleaseOrders(Array.isArray(orders) ? orders : []);
+          setBookings(Array.isArray(orders) ? orders : []);
         } catch (error) {
           console.error('Error fetching booking references:', error);
           handleError(error, 'GateOut.realtimeUpdate');
@@ -192,7 +198,7 @@ export const GateOut: React.FC = () => {
           }
 
           // Find the associated booking to get transaction type
-          const associatedBooking = releaseOrders.find(booking => 
+          const associatedBooking = bookings.find(booking => 
             booking.id === op.bookingReferenceId || booking.bookingNumber === op.bookingNumber
           );
 
@@ -410,7 +416,7 @@ export const GateOut: React.FC = () => {
         const { gateOutCodecoService } = await import('../../services/edi/gateOutCodecoService');
 
         // Find the booking reference using bookingReferenceId
-        const booking = releaseOrders.find(order => 
+        const booking = bookings.find(order => 
           order.id === (operation as any).bookingReferenceId || 
           order.bookingNumber === operation.bookingNumber
         );
@@ -455,7 +461,7 @@ export const GateOut: React.FC = () => {
           logger.warn('Booking not found for EDI transmission', 'GateOut', {
             bookingReferenceId: (operation as any).bookingReferenceId,
             bookingNumber: operation.bookingNumber,
-            availableBookings: releaseOrders.length
+            availableBookings: bookings.length
           });
         }
       } catch (ediError) {
@@ -592,7 +598,7 @@ export const GateOut: React.FC = () => {
   if (!canPerformGateOut) return (
     <div className="text-center py-12">
       <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.restricted')}</h3>
+      <h3 className="h4 text-gray-900 dark:text-white mb-2">{t('common.restricted')}</h3>
       <p className="text-gray-600">{t('common.unauthorized')}</p>
     </div>
   );
@@ -653,21 +659,24 @@ export const GateOut: React.FC = () => {
           </div>
 
           {/* Action Buttons - Mobile First */}
-          <div className="grid grid-cols-2 gap-3 lg:flex lg:justify-end lg:space-x-3">
+          <div className="grid grid-cols-2 gap-3 min-w-0 lg:flex lg:justify-end lg:space-x-3">
             <button
+              type="button"
               onClick={() => setShowForm(true)}
-              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl lg:rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
+              className="flex min-w-0 items-center justify-center gap-2 whitespace-nowrap px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl lg:rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold text-xs sm:text-sm lg:text-base"
             >
-              <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">Gate Out</span>
+              <Plus className="h-5 w-5 lg:h-4 lg:w-4 shrink-0" />
+              Gate Out
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveView('pending')}
-              className="flex items-center justify-center space-x-2 px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold"
+              className="flex min-w-0 items-center justify-center gap-2 whitespace-nowrap px-4 py-3 lg:px-6 lg:py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl lg:rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 font-semibold text-xs sm:text-sm lg:text-base"
             >
-              <Clock className="h-5 w-5 lg:h-4 lg:w-4" />
-              <span className="text-sm lg:text-base">{t('gate.out.pending')} ({pendingOperations.length})</span>
+              <Clock className="h-5 w-5 lg:h-4 lg:w-4 shrink-0" />
+              <span className="lg:hidden">{t('gate.out.pendingShort')} ({pendingOperations.length})</span>
+              <span className="hidden lg:inline">{t('gate.out.pending')} ({pendingOperations.length})</span>
             </button>
           </div>
         </div>
@@ -684,8 +693,8 @@ export const GateOut: React.FC = () => {
                 <Truck className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-blue-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{todaysGateOuts}</p>
-                <p className="text-xs font-medium text-blue-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.today')}</p>
+                <p className="stat text-gray-900 dark:text-white">{todaysGateOuts}</p>
+                <p className="badge text-blue-700 lg:text-gray-500">{t('gate.out.stats.today')}</p>
               </div>
             </div>
           </div>
@@ -697,8 +706,8 @@ export const GateOut: React.FC = () => {
                 <Clock className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-yellow-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{pendingOperations.length}</p>
-                <p className="text-xs font-medium text-orange-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.pending')}</p>
+                <p className="stat text-gray-900 dark:text-white">{pendingOperations.length}</p>
+                <p className="badge text-orange-700 lg:text-gray-500">{t('gate.out.stats.pending')}</p>
               </div>
             </div>
           </div>
@@ -710,8 +719,8 @@ export const GateOut: React.FC = () => {
                 <Package className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-green-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{containersProcessed}</p>
-                <p className="text-xs font-medium text-green-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.processed')}</p>
+                <p className="stat text-gray-900 dark:text-white">{containersProcessed}</p>
+                <p className="badge text-green-700 lg:text-gray-500">{t('gate.out.stats.processed')}</p>
               </div>
             </div>
           </div>
@@ -723,8 +732,8 @@ export const GateOut: React.FC = () => {
                 <AlertTriangle className="h-6 w-6 lg:h-5 lg:w-5 text-white lg:text-red-600" />
               </div>
               <div className="lg:ml-3">
-                <p className="text-2xl lg:text-lg font-bold text-gray-900">{issuesReported}</p>
-                <p className="text-xs font-medium text-red-700 lg:text-gray-500 leading-tight">{t('gate.out.stats.issues')}</p>
+                <p className="stat text-gray-900 dark:text-white">{issuesReported}</p>
+                <p className="badge text-red-700 lg:text-gray-500">{t('gate.out.stats.issues')}</p>
               </div>
             </div>
           </div>
@@ -765,7 +774,7 @@ export const GateOut: React.FC = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
                   }`}
                 >
-                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('releases.inProcess') : t(`common.status.${filter}`)}
+                  {filter === 'all' ? t('common.all') : filter === 'in_process' ? t('bookings.inProcess') : t(`common.status.${filter}`)}
                 </button>
               ))}
             </div>
@@ -778,7 +787,7 @@ export const GateOut: React.FC = () => {
               >
                 <option value="all">{t('common.all')}</option>
                 <option value="pending">{t('common.status.pending')}</option>
-                <option value="in_process">{t('releases.inProcess')}</option>
+                <option value="in_process">{t('bookings.inProcess')}</option>
                 <option value="completed">{t('common.status.completed')}</option>
               </select>
               {searchTerm && (
@@ -809,7 +818,7 @@ export const GateOut: React.FC = () => {
         <GateOutModal
           showModal={showForm}
           setShowModal={setShowForm}
-          availableBookings={releaseOrders}
+          availableBookings={bookings}
           onSubmit={handleCreateGateOut}
           isProcessing={isProcessing}
         />

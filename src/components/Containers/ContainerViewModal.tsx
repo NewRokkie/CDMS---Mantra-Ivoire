@@ -150,7 +150,7 @@ export const ContainerViewModal: React.FC<ContainerViewModalProps> = ({
     icon: FileText,
     data: {
       containerId: container.id.slice(0, 8).toLocaleUpperCase(),
-      bookingReference: container.releaseOrderId || '-'
+      bookingReference: container.bookingId || '-'
     },
     layout: 'grid' as const
   };

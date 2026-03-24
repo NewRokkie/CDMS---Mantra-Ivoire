@@ -140,9 +140,9 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="space-y-1">
-                      <div className="text-sm text-gray-900 font-medium">
-                        {stack.currentOccupancy}/{stack.capacity}
-                        <span className="text-xs text-gray-500 ml-2">
+                      <div className="text-sm text-gray-900 font-medium font-mono">
+                        <span className="font-numeric">{stack.currentOccupancy}/{stack.capacity}</span>
+                        <span className="numeric-text ml-2">
                           ({stack.capacity > 0 ? Math.round((stack.currentOccupancy / stack.capacity) * 100) : 0}%)
                         </span>
                       </div>
@@ -150,22 +150,22 @@ export const StackConfigurationTable: React.FC<StackConfigurationTableProps> = (
                         <div className="flex flex-wrap gap-1 text-xs">
                           {stack.containerStats.size20ft > 0 && (
                             <span className="inline-flex px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                              20ft: {stack.containerStats.size20ft}
+                              20ft: <span className="font-numeric">{stack.containerStats.size20ft}</span>
                             </span>
                           )}
                           {stack.containerStats.size40ft > 0 && (
                             <span className="inline-flex px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
-                              40ft: {stack.containerStats.size40ft}
+                              40ft: <span className="font-numeric">{stack.containerStats.size40ft}</span>
                             </span>
                           )}
                           {stack.containerStats.damaged > 0 && (
                             <span className="inline-flex px-1.5 py-0.5 bg-red-100 text-red-700 rounded">
-                              {t('common.damaged')}: {stack.containerStats.damaged}
+                              {t('common.damaged')}: <span className="font-numeric">{stack.containerStats.damaged}</span>
                             </span>
                           )}
                           {stack.containerStats.maintenance > 0 && (
                             <span className="inline-flex px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded">
-                              Maint: {stack.containerStats.maintenance}
+                              Maint: <span className="font-numeric">{stack.containerStats.maintenance}</span>
                             </span>
                           )}
                         </div>

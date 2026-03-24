@@ -236,7 +236,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
           {/* Validation Errors */}
           {validationErrors.length > 0 && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <h4 className="text-sm font-medium text-red-800 mb-2">Veuillez corriger les erreurs suivantes :</h4>
+              <h4 className="label text-red-800 dark:text-red-200 mb-2">Veuillez corriger les erreurs suivantes :</h4>
               <ul className="text-sm text-red-700 space-y-1">
                 {validationErrors.map((error, index) => (
                   <li key={index}>• {error}</li>
@@ -251,7 +251,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-4">
                   <Building className="h-5 w-5 text-blue-600 mr-2" />
-                  <h4 className="text-lg font-semibold text-gray-900">Informations de base</h4>
+                  <h4 className="h4 text-gray-900 dark:text-white">Informations de base</h4>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -307,7 +307,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-4">
                   <MapPin className="h-5 w-5 text-green-600 mr-2" />
-                  <h4 className="text-lg font-semibold text-gray-900">Adresse</h4>
+                  <h4 className="h4 text-gray-900 dark:text-white">Adresse</h4>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -356,7 +356,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-4">
                   <User className="h-5 w-5 text-purple-600 mr-2" />
-                  <h4 className="text-lg font-semibold text-gray-900">Personne de Contact</h4>
+                  <h4 className="h4 text-gray-900 dark:text-white">Personne de Contact</h4>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -422,7 +422,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-4">
                   <FileText className="h-5 w-5 text-indigo-600 mr-2" />
-                  <h4 className="text-lg font-semibold text-gray-900">Informations Complémentaires</h4>
+                  <h4 className="h4 text-gray-900 dark:text-white">Informations Complémentaires</h4>
                 </div>
 
                 <div className="space-y-6">
@@ -471,7 +471,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
               {/* Summary */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-                <h4 className="text-lg font-semibold text-blue-900 mb-4">Résumé</h4>
+                <h4 className="h4 text-blue-900 dark:text-blue-200 mb-4">Résumé</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-blue-800">Code:</span>

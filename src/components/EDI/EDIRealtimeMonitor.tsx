@@ -66,7 +66,9 @@ export const EDIRealtimeMonitor: React.FC<EDIRealtimeMonitorProps> = ({ onViewDe
       >
         <span className={`w-2 h-2 rounded-full ${badgeColor} ${processing.length > 0 ? 'animate-pulse' : ''}`} />
         <Activity className="h-3.5 w-3.5 text-gray-500" />
-        <span className="text-gray-700 font-medium">{badgeLabel}</span>
+        <span className="text-gray-700 font-medium">
+          {badgeLabel.split(': ').map((part, i) => i === 1 ? <span key={i} className="font-numeric">{part}</span> : part)}
+        </span>
       </button>
 
       {/* Modal */}
@@ -109,13 +111,13 @@ export const EDIRealtimeMonitor: React.FC<EDIRealtimeMonitorProps> = ({ onViewDe
             {/* Summary pills */}
             <div className="px-6 py-3 flex items-center gap-3 border-b border-gray-100 bg-gray-50">
               <span className="flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
-                <RefreshCw className="h-3 w-3" /> Processing: {processing.length}
+                <RefreshCw className="h-3 w-3" /> Processing: <span className="font-numeric">{processing.length}</span>
               </span>
               <span className="flex items-center gap-1.5 text-xs font-medium text-red-700 bg-red-100 px-2.5 py-1 rounded-full">
-                <XCircle className="h-3 w-3" /> Failed: {failed.length}
+                <XCircle className="h-3 w-3" /> Failed: <span className="font-numeric">{failed.length}</span>
               </span>
               <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
-                <CheckCircle className="h-3 w-3" /> Success: {logs.filter(l => l.status === 'success').length}
+                <CheckCircle className="h-3 w-3" /> Success: <span className="font-numeric">{logs.filter(l => l.status === 'success').length}</span>
               </span>
             </div>
 

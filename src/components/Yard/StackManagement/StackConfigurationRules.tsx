@@ -1,7 +1,13 @@
 import React from 'react';
 import { Shield } from 'lucide-react';
 
-export const StackConfigurationRules: React.FC = () => {
+/**
+ * Props for the StackConfigurationRules component
+ * Informational component displaying stack configuration business rules
+ */
+interface StackConfigurationRulesProps {}
+
+export const StackConfigurationRules: React.FC<StackConfigurationRulesProps> = () => {
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
       <div className="flex items-start space-x-3">

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, Mail, Phone, MapPin } from 'lucide-react';
+import { Plus, Search, Filter, CreditCard as Edit, Eye, Trash2, Building, MapPin } from 'lucide-react';
 import { Client } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { clientService } from '../../services/api';
-import { ClientSearchField } from '../Common/ClientSearchField';
 import { ClientFormModal } from './ClientFormModal';
 import { ClientViewModal } from './ClientViewModal';
 import { ContactDisplay } from '../Common/ContactDisplay';
@@ -13,7 +12,13 @@ import { handleError } from '../../services/errorHandling';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 
-export const ClientMasterData: React.FC = () => {
+/**
+ * Props for the ClientMasterData component
+ * Container component for managing client master data
+ */
+interface ClientMasterDataProps {}
+
+export const ClientMasterData: React.FC<ClientMasterDataProps> = () => {
   const { t } = useTranslation();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +113,7 @@ export const ClientMasterData: React.FC = () => {
   const DesktopContent = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">{t('clients.title')}</h2>
+        <h2 className="h2 text-gray-900 dark:text-white">{t('clients.title')}</h2>
         <div className="flex items-center space-x-2">         
           {canManageClients && (
             <button
@@ -133,8 +138,8 @@ export const ClientMasterData: React.FC = () => {
               <Building className="h-5 w-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">{t('clients.stats.total')}</p>
-              <p className="text-lg font-semibold text-gray-900">{clients.length}</p>
+              <p className="label text-gray-500 dark:text-gray-400">{t('clients.stats.total')}</p>
+              <p className="h4 text-gray-900 dark:text-white">{clients.length}</p>
             </div>
           </div>
         </div>
@@ -145,8 +150,8 @@ export const ClientMasterData: React.FC = () => {
               <Building className="h-5 w-5 text-green-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">{t('clients.stats.active')}</p>
-              <p className="text-lg font-semibold text-gray-900">
+              <p className="label text-gray-500 dark:text-gray-400">{t('clients.stats.active')}</p>
+              <p className="h4 text-gray-900 dark:text-white">
                 {clients.filter(c => c.isActive).length}
               </p>
             </div>
@@ -193,19 +198,19 @@ export const ClientMasterData: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left badge text-gray-500 dark:text-gray-400 uppercase">
                   {t('common.client')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left badge text-gray-500 dark:text-gray-400 uppercase">
                   {t('clients.table.contact')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left badge text-gray-500 dark:text-gray-400 uppercase">
                   {t('common.location')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.status')}
+                <th className="px-6 py-3 text-left badge text-gray-500 dark:text-gray-400 uppercase">
+                  {t('common.statusLabel')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left badge text-gray-500 dark:text-gray-400 uppercase">
                   {t('common.actions')}
                 </th>
               </tr>
@@ -225,7 +230,7 @@ export const ClientMasterData: React.FC = () => {
                   <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="text-gray-500">
                       <Building className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-lg font-medium">{t('clients.noClients')}</p>
+                      <p className="h4">{t('clients.noClients')}</p>
                       <p className="text-sm">
                         {searchTerm || statusFilter !== 'all' 
                           ? t('common.tryAdjusting')

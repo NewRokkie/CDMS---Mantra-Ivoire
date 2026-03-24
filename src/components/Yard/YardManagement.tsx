@@ -10,7 +10,13 @@ import { DesktopOnlyMessage } from '../Common/DesktopOnlyMessage';
 import { Container } from '../../types';
 import { handleError } from '../../services/errorHandling';
 
-export const YardManagement: React.FC = () => {
+/**
+ * Props for the YardManagement component
+ * Main container for yard operations and stack management
+ */
+interface YardManagementProps {}
+
+export const YardManagement: React.FC<YardManagementProps> = () => {
   const { currentYard: contextYard } = useYard();
   const { t } = useTranslation();
   const [allContainers, setAllContainers] = useState<Container[]>([]);

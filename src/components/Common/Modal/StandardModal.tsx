@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { StandardModalProps, NotificationState } from './types';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { StandardModalProps } from './types';
 import { ModalHeader } from './components/ModalHeader';
 import { ModalBody } from './components/ModalBody';
 import { ModalFooter } from './components/ModalFooter';
-import { NotificationArea } from './components/NotificationArea';
 import { useFocusManagement } from './hooks/useFocusManagement';
 import { useAriaAnnouncements } from './hooks/useAriaAnnouncements';
+import { useToast } from '../../../hooks/useToast';
 
 export const StandardModal: React.FC<StandardModalProps> = ({
   isOpen,
@@ -30,15 +31,10 @@ export const StandardModal: React.FC<StandardModalProps> = ({
   customFooter,
   hideDefaultFooter = false,
   isFormValid = true,
-  validationSummary
+  validationSummary,
+  isNested = false
 }) => {
-  const [notification, setNotification] = useState<NotificationState>({
-    type: 'info',
-    message: '',
-    show: false,
-    autoHide: true,
-    duration: 3000
-  });
+  const { error } = useToast();
 
   const { modalRef } = useFocusManagement({
     isOpen,
@@ -48,31 +44,13 @@ export const StandardModal: React.FC<StandardModalProps> = ({
   });
   const { announce } = useAriaAnnouncements({ isOpen });
 
-  const showNotification = useCallback((
-    type: NotificationState['type'],
-    message: string,
-    options?: { autoHide?: boolean; duration?: number }
-  ) => {
-    setNotification({
-      type,
-      message,
-      show: true,
-      autoHide: options?.autoHide ?? (type === 'success'),
-      duration: options?.duration ?? 3000
-    });
-  }, []);
-
-  const hideNotification = useCallback(() => {
-    setNotification(prev => ({ ...prev, show: false }));
-  }, []);
-
   const handleSubmit = async () => {
     if (onSubmit && !isSubmitting && isFormValid) {
       try {
         await onSubmit();
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
-        showNotification('error', errorMessage, { autoHide: false });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+        error(errorMessage);
         announce(errorMessage, 'assertive');
       }
     }
@@ -88,14 +66,16 @@ export const StandardModal: React.FC<StandardModalProps> = ({
     '2xl': 'max-w-6xl'
   }[size] || 'max-w-lg';
 
-  return (
+  const zIndexClass = isNested ? 'z-[60]' : 'z-50';
+
+  const modalContent = (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden"
+      className={`fixed inset-0 ${zIndexClass} flex items-center justify-center p-2 sm:p-4 overflow-hidden`}
     >
       {/* Overlay avec flou et fondu */}
-      <div 
+      <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-300"
         onClick={preventBackdropClose ? undefined : onClose}
       />
@@ -108,7 +88,7 @@ export const StandardModal: React.FC<StandardModalProps> = ({
           relative w-full ${sizeClasses}
           flex flex-col
           bg-white dark:bg-gray-900
-          rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]
+          rounded-3xl shadow-[0_32px_64px_-15px_rgba(0,0,0,0.3)]
           overflow-hidden
           animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-400
           ${className}
@@ -126,16 +106,8 @@ export const StandardModal: React.FC<StandardModalProps> = ({
         />
 
         <ModalBody scrollable={true} className="relative min-h-0 flex-1">
-          <NotificationArea
-            notification={notification}
-            onDismiss={hideNotification}
-          />
-
           <div className="animate-in fade-in slide-in-from-left-2 duration-500 delay-150 fill-mode-both">
-            {typeof children === 'function'
-              ? children({ showNotification, hideNotification })
-              : children
-            }
+            {children}
           </div>
         </ModalBody>
 
@@ -144,15 +116,15 @@ export const StandardModal: React.FC<StandardModalProps> = ({
             {customFooter || (
               <>
                 {validationSummary && (
-                  <div className="flex-1 text-sm text-red-500 animate-in fade-in">
+                  <div className="flex-1 text-sm text-red-500 animate-in fade-in font-inter antialiased">
                     {validationSummary}
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 ml-auto">
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-3 sm:ml-auto sm:flex-initial">
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors"
+                    className="min-h-10 shrink-0 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors font-inter antialiased whitespace-nowrap"
                   >
                     {cancelLabel}
                   </button>
@@ -164,22 +136,24 @@ export const StandardModal: React.FC<StandardModalProps> = ({
                       disabled={isSubmitting || !isFormValid}
                       className={`
                         relative group
-                        px-6 py-2 rounded-xl
-                        bg-blue-600 text-white text-sm font-bold
-                        shadow-md shadow-blue-500/20
+                        min-h-10 shrink-0 px-3 sm:px-7 py-2.5 rounded-xl
+                        bg-blue-600 text-white text-xs sm:text-sm font-bold
+                        shadow-lg shadow-blue-500/20
                         transition-all active:scale-95
                         disabled:opacity-50 disabled:grayscale disabled:scale-100
-                        flex items-center justify-center gap-2
+                        inline-flex items-center justify-center gap-2
+                        font-inter antialiased
+                        max-w-[55%] sm:max-w-none
                       `}
                     >
                       {isSubmitting ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>Traitement...</span>
+                          <div className="w-4 h-4 shrink-0 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span className="truncate sm:max-w-none">Traitement...</span>
                         </>
                       ) : (
                         <>
-                          <span>{submitLabel}</span>
+                          <span className="truncate sm:max-w-none">{submitLabel}</span>
                           <div className="absolute inset-0 rounded-xl bg-blue-400 blur-lg opacity-0 group-hover:opacity-20 transition-opacity" />
                         </>
                       )}
@@ -193,4 +167,12 @@ export const StandardModal: React.FC<StandardModalProps> = ({
       </div>
     </div>
   );
+
+  // Toujours rendre le modal avec un Portal pour éviter les soucis de stacking context (z-index)
+  // avec le Header ou la Sidebar
+  if (typeof document !== 'undefined') {
+    return ReactDOM.createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 };

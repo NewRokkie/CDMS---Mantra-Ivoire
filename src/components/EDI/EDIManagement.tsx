@@ -28,6 +28,12 @@ import { EDIClientModal } from './EDIClientModal';
 import { EDIValidator } from './EDIValidator';
 import { EDITransmissionDetailsModal } from './EDITransmissionDetailsModal';
 import { EDIRealtimeMonitor } from './EDIRealtimeMonitor';
+
+/**
+ * Props for the EDIManagement component
+ * Container for EDI file transmission and monitoring
+ */
+interface EDIManagementProps {}
 import { ediManagementService, type EDITransmissionLog } from '../../services/edi/ediManagement';
 import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 import { ediRealDataService } from '../../services/edi/ediRealDataService';

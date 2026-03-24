@@ -260,13 +260,13 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-[#A0C800]"></div>
                 <span className="text-gray-700">
-                  <span className="font-semibold">{selectedStackIds.size}</span> stacks selected
+                  <span className="font-numeric font-semibold">{selectedStackIds.size}</span> stacks selected
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <Package className="h-4 w-4 text-gray-500" />
                 <span className="text-gray-700">
-                  Total capacity: <span className="font-semibold">{totalCapacity}</span> containers
+                  Total capacity: <span className="font-numeric font-semibold">{totalCapacity}</span> containers
                 </span>
               </div>
             </div>

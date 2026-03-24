@@ -1,6 +1,5 @@
-import React from 'react';
-import { Calendar, Package, User, Truck, MapPin, AlertTriangle, CheckCircle, Clock, ChevronRight, Wifi, WifiOff, XCircle } from 'lucide-react';
-import { useTheme } from '../../../hooks/useTheme';
+import React, { useState } from 'react';
+import { Wifi, WifiOff, Search, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Operation {
   id: string;
@@ -33,6 +32,10 @@ interface MobileOperationsTableProps {
   selectedFilter: string;
   onClearSearch?: () => void;
   onClearFilter?: () => void;
+  onSearchChange?: (val: string) => void;
+  onFilterChange?: (val: string) => void;
+  onExport?: () => void;
+  totalOperations?: number;
 }
 
 export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
@@ -40,367 +43,288 @@ export const MobileOperationsTable: React.FC<MobileOperationsTableProps> = ({
   searchTerm,
   selectedFilter,
   onClearSearch,
-  onClearFilter
+  onClearFilter,
+  onSearchChange,
+  onFilterChange,
+  onExport,
+  totalOperations
 }) => {
-  const { theme } = useTheme();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(operations.length / itemsPerPage);
 
-  // Filter operations based on selected filter
-  const getFilteredOperations = () => {
-    let filtered = operations;
+  const currentOperations = operations.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(op =>
-        op.containerNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        op.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        op.truckNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        op.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (op.secondContainerNumber && op.secondContainerNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+  const getStatusStyle = (status?: string) => {
+    switch (status) {
+      case 'completed': return 'bg-emerald-50 text-emerald-600';
+      case 'in_process': return 'bg-blue-50 text-blue-600';
+      case 'cancelled': return 'bg-red-50 text-red-600';
+      case 'pending':
+      default:
+        return 'bg-amber-50 text-amber-600';
     }
-
-    // Apply status filter
-    if (selectedFilter !== 'all') {
-      switch (selectedFilter) {
-        case 'pending':
-          filtered = filtered.filter(op => op.status === 'pending');
-          break;
-        case 'completed':
-          filtered = filtered.filter(op => op.status === 'completed');
-          break;
-        case 'alimentaire':
-          filtered = filtered.filter(op => op.classification === 'alimentaire');
-          break;
-        case 'divers':
-          filtered = filtered.filter(op => op.classification === 'divers');
-          break;
-      }
-    }
-
-    return filtered;
   };
 
-  const filteredOperations = getFilteredOperations();
-
-  const getStatusBadge = (status?: string) => {
-    const statusConfig = {
-      pending: { color: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700', label: 'Pending', icon: Clock },
-      in_process: { color: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700', label: 'In Process', icon: Clock },
-      completed: { color: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700', label: 'Completed', icon: CheckCircle },
-      cancelled: { color: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700', label: 'Cancelled', icon: AlertTriangle }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    const Icon = config.icon;
-
-    return (
-      <span className={`inline-flex items-center px-3 py-1.5 text-xs font-bold rounded-full border-2 ${config.color}`}>
-        <Icon className="h-3.5 w-3.5 mr-1.5" />
-        {config.label}
-      </span>
-    );
+  const getContainerLeftBorderColor = (status?: string, type?: string) => {
+    if (type === 'alimentaire') return 'bg-emerald-500';
+    if (status === 'completed') return 'bg-blue-600';
+    return 'bg-amber-400';
   };
 
   const getEDIStatusBadge = (operation: Operation) => {
-    // Only show EDI status for completed operations
     if (operation.status !== 'completed') {
-      return null;
+      return (
+        <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold tracking-wide bg-slate-50 text-slate-400 font-inter antialiased">
+          Pending
+        </span>
+      );
     }
 
     if (operation.ediTransmitted === true) {
       return (
-        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700">
-          <Wifi className="h-3 w-3 mr-1" />
-          EDI Sent
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide bg-emerald-50 text-emerald-600 font-inter antialiased">
+          <Wifi className="h-3.5 w-3.5" /> EDI Sent
         </span>
       );
     } else if (operation.ediTransmitted === false) {
       return (
-        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700">
-          <XCircle className="h-3 w-3 mr-1" />
-          EDI Failed
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide bg-red-50 text-red-600 font-inter antialiased">
+          <WifiOff className="h-3.5 w-3.5" /> EDI Failed
         </span>
       );
     } else {
       return (
-        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
-          <WifiOff className="h-3 w-3 mr-1" />
-          No EDI
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide bg-slate-100 text-slate-500 font-inter antialiased">
+          <WifiOff className="h-3.5 w-3.5" /> No EDI
         </span>
       );
     }
   };
 
-  const formatDate = (date?: Date) => {
-    if (!date) return '-';
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
-    <div className="space-y-4 px-4 lg:px-0">
-      {/* Mobile-First Card Layout */}
-      <div className="space-y-4 lg:space-y-0 lg:bg-white dark:bg-gray-800 lg:rounded-lg lg:border lg:border-gray-200 dark:lg:border-gray-700 lg:overflow-hidden">
-        {/* Desktop Table Header */}
-        <div className="hidden lg:block px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Gate In Operations</h3>
+    <div className="bg-white rounded-2xl shadow-[0_10px_30px_-5px_rgba(25,28,30,0.04)] overflow-hidden border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+      <div className="p-6 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 xl:items-end dark:border-gray-700">
+        <div>
+          <h4 className="text-xl font-bold text-gray-900 tracking-tight dark:text-white">Recent Operations</h4>
+          <p className="text-gray-500 text-sm">Gate In</p>
         </div>
+        <div className="relative group w-full sm:w-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200/30 rounded-[2rem] text-xs focus:ring-2 focus:ring-blue-500 w-full sm:w-64 transition-all font-display placeholder:text-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 font-inter antialiased"
+            placeholder="Search container, truck or client..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            type="text"
+          />
+        </div>
+        <div className="flex bg-gray-50 p-1 rounded-xl dark:bg-gray-700 w-full sm:w-auto overflow-x-auto no-scrollbar">
+          {['all', 'pending', 'completed', 'alimentaire', 'divers'].map(filter => (
+            <button
+              key={filter}
+              onClick={() => onFilterChange?.(filter)}
+              className={`px-4 py-1.5 text-xs transition-colors whitespace-nowrap font-inter antialiased ${selectedFilter === filter ? 'font-bold rounded-[3rem] bg-white shadow-sm text-blue-600 dark:bg-gray-600 dark:text-blue-400' : 'font-medium rounded-[3rem] text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'}`}
+            >
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </button>
+          ))}
+          <button onClick={onExport} className="px-4 py-1.5 text-xs font-bold rounded-[3rem] bg-[#A0C800] text-white shadow-sm hover:bg-[#8eb100] transition-colors flex items-center gap-1.5 ml-1 font-inter antialiased">
+            <Download className="h-4 w-4" /> Excel
+          </button>
+        </div>
+      </div>
 
-        {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Entry Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Container
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Truck
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Driver
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  EDI Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredOperations.map((operation) => (
-                <tr
-                  key={operation.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {operation.completedAt?.toLocaleDateString() || operation.createdAt.toLocaleDateString()}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {operation.completedAt?.toLocaleTimeString() || operation.createdAt.toLocaleTimeString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{operation.containerNumber}</div>
-                    {operation.secondContainerNumber && (
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{operation.secondContainerNumber}</div>
-                    )}
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {operation.containerSize} • {
-                        // FIX: Ensure containerType is not null/undefined before processing string methods
-                        operation.containerType
-                          ? operation.containerType.charAt(0).toUpperCase() + operation.containerType.slice(1).replace('_', ' ')
-                          : '' // Render an empty string if containerType is missing
-                      }
-                    </div>
-                  </td>
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50/50 dark:bg-gray-700/50">
+            <tr>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 font-inter antialiased">Container</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 font-inter antialiased">Client</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 font-inter antialiased">Truck / Driver</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 font-inter antialiased">Entry Date</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 text-center font-inter antialiased">Status</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 font-inter antialiased">Location</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 text-center font-inter antialiased">EDI Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+            {currentOperations.map((operation) => {
+              const borderCol = getContainerLeftBorderColor(operation.status, operation.classification);
+              const opDate = operation.completedAt ? new Date(operation.completedAt) : (operation.createdAt ? new Date(operation.createdAt) : new Date(operation.date));
+              return (
+                <tr key={operation.id} className="hover:bg-slate-50 transition-colors group dark:hover:bg-gray-700/50 font-inter antialiased">
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{operation.clientCode}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{operation.clientName}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {operation.truckNumber}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{operation.driverName}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{operation.transportCompany}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {getStatusBadge(operation.status)}
-                      {operation.classification === 'alimentaire' && (
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                          Alimentaire
-                        </span>
-                      )}
-                      {operation.classification === 'divers' && (
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                          Divers
-                        </span>
-                      )}
-                    </div>
-                    {operation.bookingReference && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {operation.bookingReference}
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-8 ${borderCol} rounded-full`}></div>
+                      <div className="flex flex-col items-start">
+                        <span className="font-bold text-gray-900 dark:text-white">{operation.containerNumber}</span>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider dark:text-gray-400">{operation.containerSize} {operation.containerType ? operation.containerType.substring(0, 3) : ''}</span>
                       </div>
-                    )}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {operation.assignedLocation || (
-                      <span className="text-gray-400 dark:text-gray-500 italic">Pending</span>
-                    )}
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700 dark:text-gray-300">{operation.clientName}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 font-inter antialiased">
+                    <div className='flex flex-col'>
+                      <span className="font-bold text-gray-900 dark:text-white">{operation.truckNumber}</span>
+                      <span className="text-[12px] text-emerald-700 font-bold dark:text-gray-400 font-inter antialiased">{operation.driverName}</span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 font-inter antialiased">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900 dark:text-white font-inter antialiased">
+                        {opDate.toLocaleDateString('fr-FR')}
+                      </span>
+                      <span className="text-[12px] text-emerald-700 font-bold dark:text-gray-400 font-inter antialiased">
+                        {opDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide font-inter antialiased ${getStatusStyle(operation.status)}`}>
+                      {operation.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 font-inter antialiased">{operation.assignedLocation || 'Pending'}</td>
+                  <td className="px-6 py-4 text-center">
                     {getEDIStatusBadge(operation)}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+            {currentOperations.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  No operations found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-        {/* Mobile Card Layout */}
-        <div className="lg:hidden space-y-3">
-          {filteredOperations.map((operation) => (
-            <div
-              key={operation.id}
-              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-xl active:shadow-md transition-all duration-300 overflow-hidden"
-            >
-              {/* Card Header with gradient */}
-              <div className="bg-gradient-to-r from-gray-50 dark:from-gray-700 to-blue-50 dark:to-gray-600 px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <div className="p-1.5 bg-blue-600 rounded-lg shadow-sm">
-                        <Package className="h-4 w-4 text-white" />
-                      </div>
-                      <span className="font-bold text-gray-900 dark:text-white text-base truncate">
-                        {operation.containerNumber}
-                      </span>
-                      {operation.secondContainerNumber && (
-                        <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                          +1
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {getStatusBadge(operation.status)}
-                      {operation.classification === 'alimentaire' && (
-                        <span className="flex items-center px-2.5 py-1 text-xs font-bold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Alimentaire
-                        </span>
-                      )}
-                      {getEDIStatusBadge(operation)}
+      {/* Mobile Card-based View */}
+      <div className="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
+        {currentOperations.map((operation) => {
+          const borderCol = getContainerLeftBorderColor(operation.status, operation.classification);
+          const opDate = operation.completedAt ? new Date(operation.completedAt) : (operation.createdAt ? new Date(operation.createdAt) : new Date(operation.date));
+
+          return (
+            <div key={operation.id} className="p-4 hover:bg-gray-50 transition-colors active:bg-gray-100/50 dark:hover:bg-gray-700/30">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-1.5 h-10 ${borderCol} rounded-full`}></div>
+                  <div>
+                    <h5 className="font-gilroy-bold text-base font-black text-gray-900 dark:text-white font-inter antialiased tracking-tight">
+                      {operation.containerNumber}
+                    </h5>
+                    <div className="flex items-center gap-2">
+                      <span className="font-gilroy text-[10px] font-bold text-gray-400 uppercase tracking-widest">{operation.containerSize} {operation.containerType}</span>
                     </div>
                   </div>
-                  <div className="text-right ml-3 flex-shrink-0">
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">
-                      {operation.containerSize}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                      {/* This version is safer as `undefined` renders as nothing in React */}
-                      {operation.containerType?.replace('_', ' ')}
-                    </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider font-gilroy antialiased ${getStatusStyle(operation.status)}`}>
+                    STATUS : {operation.status}
+                  </span>
+                  <div className="font-gilroy text-[10px] font-bold text-gray-400 antialiased">
+                    {opDate.toLocaleDateString('fr-FR')} - {opDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
 
-              {/* Card Content */}
-              <div className="px-5 py-4 space-y-3.5">
-                {/* Client Info */}
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0 p-2.5 bg-purple-100 dark:bg-purple-800 rounded-xl">
-                    <User className="h-5 w-5 text-purple-600 dark:text-purple-300" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 dark:text-white text-sm truncate">{operation.clientName}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{operation.clientCode}</div>
-                  </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="font-gilroy text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Client</label>
+                  <p className="font-gilroy text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{operation.clientName}</p>
                 </div>
-
-                {/* Transport Info */}
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0 p-2.5 bg-green-100 dark:bg-green-800 rounded-xl">
-                    <Truck className="h-5 w-5 text-green-600 dark:text-green-300" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 dark:text-white text-sm">{operation.driverName}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      <span className="font-mono font-medium">{operation.truckNumber}</span>
-                      <span className="mx-1.5">•</span>
-                      <span>{operation.transportCompany}</span>
-                    </div>
-                  </div>
+                <div>
+                  <label className="font-gilroy text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Location</label>
+                  <p className="font-gilroy text-xs font-black text-blue-600 dark:text-blue-400">{operation.assignedLocation || 'Pending'}</p>
                 </div>
-
-                {/* Location & Date */}
-                <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Location</div>
-                        <div className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                          {operation.assignedLocation || 'Pending'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Date</div>
-                        <div className="text-sm font-bold text-gray-900 dark:text-white">
-                          {formatDate(operation.completedAt || operation.createdAt)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Booking Reference */}
-                {operation.bookingReference && (
-                  <div className="bg-gradient-to-r from-blue-50 dark:from-blue-900/30 to-blue-100 dark:to-blue-800/30 rounded-xl p-3 border border-blue-200 dark:border-blue-700">
-                    <div className="text-xs text-blue-700 dark:text-blue-300 font-bold mb-0.5">Booking Reference</div>
-                    <div className="text-sm text-blue-900 dark:text-blue-100 font-mono font-bold">{operation.bookingReference}</div>
-                  </div>
-                )}
               </div>
 
-              {/* Card Footer with action hint */}
-              <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Tap to view details</span>
-                <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+              <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <span className="font-gilroy text-[11px] font-bold text-gray-900 dark:text-white">Camion : {operation.truckNumber}</span>
+                    <span className="font-gilroy text-[10px] font-medium text-emerald-600">Chauffeur : {operation.driverName}</span>
+                  </div>
+                </div>
+                <div className="font-gilroy scale-90 origin-right">
+                  EDI Status : {getEDIStatusBadge(operation)}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Empty State - No Operations Available */}
-        {filteredOperations.length === 0 && (
-          <div className="px-4 py-12 lg:py-16 text-center">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-full">
-                <Package className="h-12 w-12 text-gray-400 dark:text-gray-500" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">No Operations Available</h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                  {searchTerm || selectedFilter !== 'all'
-                    ? 'No operations match your current search or filter criteria.'
-                    : 'No gate in operations have been recorded yet. Create your first operation to get started.'
-                  }
-                </p>
-              </div>
-              {(searchTerm || selectedFilter !== 'all') && (
-                <button
-                  onClick={() => {
-                    onClearSearch?.();
-                    onClearFilter?.();
-                  }}
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm"
-                >
-                  Clear filters to see all operations
-                </button>
-              )}
-            </div>
+          );
+        })}
+        {currentOperations.length === 0 && (
+          <div className="p-8 text-center text-gray-400 font-gilroy text-sm">
+            No operations found.
           </div>
         )}
+      </div>
+
+      <div className="p-6 bg-gray-50/30 border-t border-gray-50 flex justify-center dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Showing <span className="font-bold text-gray-900 dark:text-white">{operations.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> to <span className="font-bold text-gray-900 dark:text-white">{Math.min(currentPage * itemsPerPage, operations.length)}</span> of <span className="font-bold text-gray-900 dark:text-white">{operations.length}</span> operations
+          </p>
+
+          {totalPages > 0 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:hover:bg-gray-700"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum = i + 1;
+                if (totalPages > 5 && currentPage > 3) {
+                  pageNum = currentPage - 2 + i;
+                  if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                }
+
+                const isActive = currentPage === pageNum;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`min-w-[32px] h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${isActive ? 'font-bold bg-blue-600 text-white shadow-sm' : 'font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <>
+                  <span className="px-1 text-gray-500 text-xs">...</span>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="min-w-[32px] h-8 flex items-center justify-center rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-100 transition-colors dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:hover:bg-gray-700"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

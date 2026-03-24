@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, ChevronDown, Check, Building, AlertTriangle, Loader } from 'lucide-react';
 import { useYard } from '../../hooks/useYard';
-import { useAuth } from '../../hooks/useAuth';
 import { handleError } from '../../services/errorHandling';
 import { useToast } from '../../hooks/useToast';
 
-export const YardSelector: React.FC = () => {
+/**
+ * Props for the YardSelector component
+ * Dropdown selector for switching between available yards
+ */
+interface YardSelectorProps {}
+
+export const YardSelector: React.FC<YardSelectorProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { currentYard, availableYards, setCurrentYard, error } = useYard();
-  const { user } = useAuth();
   const toast = useToast();
 
   // Close dropdown when clicking outside
@@ -50,7 +54,7 @@ export const YardSelector: React.FC = () => {
     return (
       <div className="flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg">
         <MapPin className="h-4 w-4 text-blue-600" />
-        <span className="text-sm font-gilroy-medium text-blue-900">
+        <span className="text-sm font-medium text-blue-900">
           {currentYard?.name || 'No Yard Selected'}
         </span>
       </div>
@@ -84,10 +88,10 @@ export const YardSelector: React.FC = () => {
           <div className="text-left min-w-0 flex-1">
             {currentYard ? (
               <>
-                <div className="font-gilroy-bold text-gray-900 text-xs lg:text-sm truncate">{currentYard.name}</div>
+                <div className="font-semibold text-gray-900 text-xs lg:text-sm truncate">{currentYard.name}</div>
               </>
             ) : (
-              <div className="text-gray-500 font-gilroy text-xs lg:text-sm truncate">Select...</div>
+              <div className="text-gray-500 font-normal text-xs lg:text-sm truncate">Select...</div>
             )}
           </div>
         </div>
@@ -111,7 +115,7 @@ export const YardSelector: React.FC = () => {
           {/* Header */}
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-gilroy-medium text-gray-500 uppercase tracking-wide">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Available Yards
               </span>
               <span className="text-xs font-numeric text-gray-500">
@@ -124,7 +128,6 @@ export const YardSelector: React.FC = () => {
           <div className="max-h-48 lg:max-h-64 overflow-y-auto">
             {availableYards.map((yard) => {
               const isSelected = currentYard?.id === yard.id;
-              const occupancyRate = (yard.currentOccupancy / yard.totalCapacity) * 100;
 
               return (
                 <button
@@ -154,7 +157,7 @@ export const YardSelector: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
                           <span className={`
-                            font-gilroy-medium text-sm truncate
+                            font-medium text-sm truncate
                             ${isSelected ? 'text-green-900' : 'text-gray-900'}
                           `}>
                             {yard.name}

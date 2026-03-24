@@ -28,7 +28,7 @@ export const GateInHeader: React.FC<GateInHeaderProps> = ({
 
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-2xl font-bold text-gray-900">Gate In Management</h2>
+      <h2 className="h2 text-gray-900 dark:text-white">Gate In Management</h2>
       <div className="flex items-center space-x-3">
         <button
           onClick={onShowPending}

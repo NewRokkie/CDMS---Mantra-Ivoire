@@ -129,12 +129,12 @@ export const GateOutCompletionModal: React.FC<GateOutCompletionModalProps> = ({
       };
     }
 
-    // Check if container belongs to this booking (using releaseOrderId)
-    if (operation && container.releaseOrderId && operation.bookingReferenceId && 
-        container.releaseOrderId !== operation.bookingReferenceId) {
+    // Check if container belongs to this booking (using bookingId)
+    if (operation && container.bookingId && operation.bookingReferenceId && 
+        container.bookingId !== operation.bookingReferenceId) {
       return {
         isValid: false,
-        message: `Container belongs to booking ${container.releaseOrderId}, not ${operation.bookingReferenceId}`,
+        message: `Container belongs to booking ${container.bookingId}, not ${operation.bookingReferenceId}`,
         container
       };
     }

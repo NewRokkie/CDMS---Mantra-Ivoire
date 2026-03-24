@@ -1,5 +1,6 @@
 /**
- * Indicateur de statut EDI pour le header
+ * EDI Status Indicator for header
+ * Displays real-time connectivity status with the EDI system
  */
 
 import React, { useState, useEffect } from 'react';
@@ -7,7 +8,12 @@ import { Badge, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from 
 import { Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { ediManagementService } from '../../services/edi/ediManagement';
 
-export const EDIStatusIndicator: React.FC = () => {
+/**
+ * Props for the EDIStatusIndicator component
+ */
+interface EDIStatusIndicatorProps {}
+
+export const EDIStatusIndicator: React.FC<EDIStatusIndicatorProps> = () => {
   const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
 

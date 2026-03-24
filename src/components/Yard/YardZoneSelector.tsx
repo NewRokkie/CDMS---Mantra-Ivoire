@@ -76,21 +76,21 @@ export const YardZoneSelector: React.FC<YardZoneSelectorProps> = ({
                   <div>
                     <div className="font-medium text-gray-900">{zone.name}</div>
                     <div className="text-xs text-gray-600">
-                      {stats.total} containers
+                      <span className="font-numeric">{stats.total}</span> containers
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">{stats.inDepot}</div>
+                  <div className="text-sm font-medium text-gray-900 font-numeric">{stats.inDepot}</div>
                   <div className="text-xs text-gray-500">active</div>
                 </div>
               </div>
               
               {/* Zone breakdown */}
               <div className="mt-2 flex items-center space-x-4 text-xs text-gray-600">
-                <span>🟢 {stats.inDepot} Active</span>
-                <span>🟠 {stats.maintenance} Maintenance</span>
-                {stats.damaged > 0 && <span>🔴 {stats.damaged} Damaged</span>}
+                <span>🟢 <span className="font-numeric">{stats.inDepot}</span> Active</span>
+                <span>🟠 <span className="font-numeric">{stats.maintenance}</span> Maintenance</span>
+                {stats.damaged > 0 && <span>🔴 <span className="font-numeric">{stats.damaged}</span> Damaged</span>}
               </div>
             </button>
           );

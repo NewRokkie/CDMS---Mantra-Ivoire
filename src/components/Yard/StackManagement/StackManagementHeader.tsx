@@ -27,7 +27,7 @@ export const StackManagementHeader: React.FC<StackManagementHeaderProps> = ({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center space-x-2 sm:space-x-4">
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{t('stack.title')}</h2>
+          <h2 className="h2 text-gray-900 dark:text-white">{t('stack.title')}</h2>
           <p className="text-sm sm:text-base text-gray-600 hidden sm:block">{t('stack.subtitle')}</p>
         </div>
         <button

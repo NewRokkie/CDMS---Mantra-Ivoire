@@ -6,7 +6,7 @@ import { handleError } from '../../services/errorHandling';
 import { logger } from '../../utils/logger';
 import { AdvancedFilters, FilterOptions } from './AdvancedFilters';
 import { InteractivePieChart, InteractiveBarChart, InteractiveLineChart } from './InteractiveCharts';
-import { useSuccessNotification, useErrorNotification, useInfoNotification } from '../Common/Notifications/NotificationSystem';
+import { useToast } from '../../hooks/useToast';
 
 interface SimpleAnalyticsTabProps {
   viewMode?: 'current' | 'global';
@@ -57,10 +57,7 @@ export const SimpleAnalyticsTab: React.FC<SimpleAnalyticsTabProps> = ({
     clientCode: []
   });
 
-  // Notification hooks
-  const showSuccess = useSuccessNotification();
-  const showError = useErrorNotification();
-  const showInfo = useInfoNotification();
+  const toast = useToast();
   const [availableFilterOptions, setAvailableFilterOptions] = useState({
     containerSizes: ['20ft', '40ft'],
     containerStatuses: ['in_depot', 'out_depot', 'maintenance', 'cleaning', 'gate_in', 'gate_out'],
@@ -133,10 +130,7 @@ export const SimpleAnalyticsTab: React.FC<SimpleAnalyticsTabProps> = ({
       (filters.dateRange.startDate || filters.dateRange.endDate ? 1 : 0);
     
     if (activeFiltersCount > 0) {
-      showInfo(
-        'Filtres appliqués',
-        `${activeFiltersCount} filtre(s) actif(s) appliqué(s) aux données`
-      );
+      toast.info(`${activeFiltersCount} filtre(s) actif(s) appliqué(s) aux données`);
     }
   };
 
@@ -149,7 +143,7 @@ export const SimpleAnalyticsTab: React.FC<SimpleAnalyticsTabProps> = ({
     };
     setFilters(resetFilters);
     loadAnalyticsData();
-    showInfo('Filtres réinitialisés', 'Tous les filtres ont été supprimés');
+    toast.info('Filtres réinitialisés. Tous les filtres ont été supprimés');
   };
 
   useEffect(() => {
@@ -345,17 +339,10 @@ export const SimpleAnalyticsTab: React.FC<SimpleAnalyticsTabProps> = ({
         filename: baseFilename
       });
 
-      // Show success notification
-      showSuccess(
-        'Export réussi',
-        `Le rapport analytics a été exporté en format ${format.toUpperCase()}`
-      );
+      toast.success(`Export réussi. Le rapport analytics a été exporté en format ${format.toUpperCase()}`);
     } catch (error) {
       handleError(error, 'SimpleAnalyticsTab.handleExport');
-      showError(
-        'Erreur d\'export',
-        'Une erreur est survenue lors de l\'export du rapport. Veuillez réessayer.'
-      );
+      toast.error('Erreur d\'export. Une erreur est survenue lors de l\'export du rapport. Veuillez réessayer.');
     }
   };
 

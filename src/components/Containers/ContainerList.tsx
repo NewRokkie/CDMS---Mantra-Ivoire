@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Download, Edit, AlertTriangle, FileText, Recycle, RefreshCw, Wifi, WifiOff, XCircle, Clock, X, Filter, ChevronDown, Calendar, FileSpreadsheet, FileCode } from 'lucide-react';
 import { Container } from '../../types';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -18,6 +18,12 @@ import { handleError } from '../../services/errorHandling';
 import { exportToExcel, formatDateForExport, formatDateShortForExport } from '../../utils/excelExport';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
+
+/**
+ * Props for the ContainerList component
+ * Container component for displaying and managing containers
+ */
+interface ContainerListProps {}
 import { ediTransmissionService } from '../../services/edi/ediTransmissionService';
 import { containerTypeOptions } from '../Gates/constants';
 import { getContainerLocationDisplay, getContainerLocationClass } from '../../utils/containerLocationDisplay';
@@ -81,7 +87,7 @@ const formatGateInTime = (date?: Date | null): string => {
 };
 // REMOVED: Mock data now managed by global store
 
-export const ContainerList: React.FC = () => {
+export const ContainerList: React.FC<ContainerListProps> = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   // EDI Status per container - separate tracking for Gate In and Gate Out
@@ -639,7 +645,7 @@ function filterTable(){
   // Show client restriction notice
   const showClientNotice = !canViewAllData() && user?.role === 'client';
 
-  const DesktopContent = () => (
+  const DesktopContent = useMemo(() => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -704,7 +710,7 @@ function filterTable(){
               <p className="text-sm font-medium text-gray-500">
                 {showClientNotice ? 'Your Containers' : 'Total Containers'}
               </p>
-              <p className="text-lg font-semibold text-gray-900">{filteredContainers.length}</p>
+              <p className="stat font-mono"><span className="font-numeric">{filteredContainers.length}</span></p>
             </div>
           </div>
         </div>
@@ -716,8 +722,8 @@ function filterTable(){
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">In Depot</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {filteredContainers.filter(c => c.status === 'in_depot').length}
+              <p className="stat font-mono">
+                <span className="font-numeric">{filteredContainers.filter(c => c.status === 'in_depot').length}</span>
               </p>
             </div>
           </div>
@@ -730,8 +736,8 @@ function filterTable(){
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Maintenance</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {filteredContainers.filter(c => c.status === 'in_buffer').length}
+              <p className="stat font-mono">
+                <span className="font-numeric">{filteredContainers.filter(c => c.status === 'in_buffer').length}</span>
               </p>
             </div>
           </div>
@@ -744,8 +750,8 @@ function filterTable(){
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">With Damage</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {filteredContainers.filter(c => c.damage && c.damage.length > 0).length}
+              <p className="stat font-mono">
+                <span className="font-numeric">{filteredContainers.filter(c => c.damage && c.damage.length > 0).length}</span>
               </p>
             </div>
           </div>
@@ -753,79 +759,119 @@ function filterTable(){
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+      <div className="depot-section overflow-visible">
+        <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-4">
+          {/* Left: Search & Status */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-blue-500 transition-colors" />
               <input
                 type="text"
                 placeholder={showClientNotice ? "Search your containers..." : t('containers.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="depot-input pl-10 pr-10 w-full sm:w-64"
               />
+              <button
+                onClick={() => setSearchTerm('')}
+                className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-all duration-200 ${searchTerm ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                tabIndex={-1}
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Status</option>
-              <option value="gate_in">Gate In</option>
-              <option value="in_depot">In Depot</option>
-              <option value="gate_out">Gate Out</option>
-              <option value="out_depot">Out Depot</option>
-              <option value="in_buffer">Maintenance</option>
-            </select>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="depot-input pl-10 w-full sm:w-44 appearance-none cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="gate_in">Gate In</option>
+                <option value="in_depot">In Depot</option>
+                <option value="gate_out">Gate Out</option>
+                <option value="out_depot">Out Depot</option>
+                <option value="in_buffer">Maintenance</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
+            </div>
           </div>
 
-          <div className="flex items-center space-x-2 relative">
-            <div className="flex items-center space-x-2">
-              <label className="text-xs text-gray-500">From</label>
-              <div className="w-40">
+          {/* Right: Date Range & Client & Export */}
+          <div className="flex flex-wrap xl:flex-nowrap gap-3 items-center">
+            {/* Date Range */}
+            <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1.5 border border-gray-200 flex-shrink-0">
+              <Calendar className="h-4 w-4 text-gray-400 ml-2 flex-shrink-0" />
+              <span className="text-xs text-gray-500 font-medium hidden sm:inline flex-shrink-0">From</span>
+              <div className="w-32 sm:w-36">
                 <DatePicker
                   value={startDate}
                   onChange={(d) => setStartDate(d)}
-                  placeholder="Start date"
+                  placeholder="Start"
                   className=""
                   compact={true}
                 />
               </div>
-              <label className="text-xs text-gray-500">To</label>
-              <div className="w-40">
+              <span className="text-xs text-gray-400 flex-shrink-0">|</span>
+              <span className="text-xs text-gray-500 font-medium hidden sm:inline flex-shrink-0">To</span>
+              <div className="w-32 sm:w-36">
                 <DatePicker
                   value={endDate}
                   onChange={(d) => setEndDate(d)}
-                  placeholder="End date"
+                  placeholder="End"
                   className=""
-                  compact={true}
-                />
-              </div>
-
-              <div className="w-64">
-                <ClientSearchField
-                  clients={clientOptions.map(c => ({ id: c.id || c.key, code: c.code || '', name: c.name || c.key }))}
-                  selectedClientId={selectedExportClientId}
-                  onClientSelect={handleExportClientSelect}
-                  placeholder="Filter by client..."
                   compact={true}
                 />
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 ml-2">
-              <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => setShowExportOptions(prev => !prev)}>
+            {/* Client Filter */}
+            <div className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[280px] flex-shrink-0">
+              <ClientSearchField
+                clients={clientOptions.map(c => ({ id: c.id || c.key, code: c.code || '', name: c.name || c.key }))}
+                selectedClientId={selectedExportClientId}
+                onClientSelect={handleExportClientSelect}
+                placeholder="Filter by client..."
+                compact={true}
+              />
+            </div>
+
+            {/* Export Button */}
+            <div className="relative flex-shrink-0">
+              <button
+                className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+                onClick={() => setShowExportOptions(prev => !prev)}
+              >
                 <Download className="h-4 w-4" />
-                <span>Export</span>
+                <span className="hidden sm:inline">Export</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${showExportOptions ? 'rotate-180' : ''}`} />
               </button>
 
               {showExportOptions && (
-                <div className="absolute right-0 mt-12 bg-white border border-gray-200 rounded shadow-lg z-50">
-                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50" onClick={() => { handleExport('csv'); setShowExportOptions(false); }}>Export CSV</button>
-                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50" onClick={() => { handleExport('excel'); setShowExportOptions(false); }}>Export Excel</button>
-                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50" onClick={() => { handleExport('html'); setShowExportOptions(false); }}>Export HTML</button>
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <button
+                    className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                    onClick={() => { handleExport('csv'); setShowExportOptions(false); }}
+                  >
+                    <FileSpreadsheet className="h-4 w-4 mr-2 text-gray-400" />
+                    Export CSV
+                  </button>
+                  <button
+                    className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                    onClick={() => { handleExport('excel'); setShowExportOptions(false); }}
+                  >
+                    <FileSpreadsheet className="h-4 w-4 mr-2 text-green-500" />
+                    Export Excel
+                  </button>
+                  <button
+                    className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                    onClick={() => { handleExport('html'); setShowExportOptions(false); }}
+                  >
+                    <FileCode className="h-4 w-4 mr-2 text-orange-500" />
+                    Export HTML
+                  </button>
                 </div>
               )}
             </div>
@@ -843,7 +889,7 @@ function filterTable(){
                   Container
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.status')}
+                  {t('common.statusLabel')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                 {canViewAllData() && (<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>)}
@@ -1081,8 +1127,14 @@ function filterTable(){
         )}
       </div>
     </div>
-  );
-
+  ), [
+    t, showClientNotice, user?.company, showViewModal, selectedContainer, showEditModal, showAuditModal,
+    filteredContainers, searchTerm, statusFilter, startDate, endDate, selectedExportClientId,
+    clientOptions, showExportOptions, ediGateInStatusByContainerId, ediGateOutStatusByContainerId,
+    canViewAllData, canEditContainers, handleViewContainer, handleEditContainer,
+    handleViewAuditLog, handleDeleteContainer, regenerateEDI, setSearchTerm, setStatusFilter,
+    setStartDate, setEndDate, handleExportClientSelect, setShowExportOptions, handleExport
+  ]);
 
   if (loading) {
     return (
@@ -1109,7 +1161,7 @@ function filterTable(){
 
       {/* Desktop View */}
       <div className="hidden lg:block">
-        <DesktopContent />
+        {DesktopContent}
       </div>
     </>
   );

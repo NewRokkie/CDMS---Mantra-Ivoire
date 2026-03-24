@@ -2,7 +2,7 @@ import React from 'react';
 import { List, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 
-interface ReleaseOrderStats {
+interface BookingStats {
   total: number;
   pending: number;
   completed: number;
@@ -11,11 +11,11 @@ interface ReleaseOrderStats {
   readyContainers: number;
 }
 
-interface ReleaseOrderKPICardsProps {
-  stats: ReleaseOrderStats;
+interface BookingKPICardsProps {
+  stats: BookingStats;
 }
 
-export const ReleaseOrderKPICards: React.FC<ReleaseOrderKPICardsProps> = ({ stats }) => {
+export const BookingKPICards: React.FC<BookingKPICardsProps> = ({ stats }) => {
   const { theme } = useTheme();
 
   return (

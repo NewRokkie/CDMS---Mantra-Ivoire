@@ -6,7 +6,7 @@ const MODULE_URL_MAP: Record<string, string> = {
   'dashboard': '/dashboard',
   'gate-in': '/gate-in',
   'gate-out': '/gate-out',
-  'releases': '/booking', // Module mapping to booking URL
+  'bookings': '/booking', // Module mapping to booking URL
   'containers': '/containers',
   'yard-management': '/yard',
   'edi': '/edi',

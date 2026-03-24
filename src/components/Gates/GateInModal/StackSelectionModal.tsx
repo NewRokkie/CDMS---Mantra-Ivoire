@@ -477,6 +477,7 @@ export const StackSelectionModal: React.FC<StackSelectionModalProps> = ({
       icon={MapPin}
       size="xl"
       maxHeight="95vh"
+      isNested={true}
     >
       {/* Search and Filters - Sticky header */}
       <div className="px-6 py-3 border-b border-gray-200 bg-white backdrop-blur-sm -mx-8 -mt-4 mb-4 sticky top-[-1rem] z-10 shadow-sm">

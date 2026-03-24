@@ -151,14 +151,14 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
       `}>
         {/* Input Field */}
         <div className={`
-          relative flex items-center bg-white dark:bg-gray-700 border-2 rounded-xl transition-all duration-300
+          relative flex items-center bg-white dark:bg-gray-700 rounded-xl transition-all duration-300
           ${isFocused || isOpen
-            ? 'border-blue-500 shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10'
+            ? 'shadow-lg shadow-blue-500/20 ring-2 ring-blue-500/20'
             : selectedClient
-            ? 'border-green-400 shadow-md shadow-green-400/10'
-            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 shadow-sm'
+            ? 'shadow-md shadow-green-400/10 ring-2 ring-green-400/20'
+            : 'shadow-sm ring-1 ring-gray-200 dark:ring-gray-600 hover:ring-gray-300'
           }
-          ${disabled ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed' : 'hover:shadow-md'}
+          ${disabled ? 'bg-gray-50 dark:bg-gray-800 ring-gray-200 dark:ring-gray-700 cursor-not-allowed' : 'hover:shadow-md'}
         `}>
 
           {/* Search Icon */}
@@ -183,7 +183,7 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
             disabled={disabled}
             className={`
             w-full ${compact ? 'pl-10 pr-16 py-2 text-sm' : 'pl-12 pr-20 py-4 text-sm md:text-base'} bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
-              focus:outline-none transition-all duration-300
+              outline-none focus:outline-none focus:ring-0 border-0 transition-all duration-300
               ${disabled ? 'cursor-not-allowed text-gray-500 dark:text-gray-400' : ''}
               font-medium
             `}
@@ -224,7 +224,7 @@ export const ClientSearchField: React.FC<ClientSearchFieldProps> = ({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className={`
-          absolute z-50 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl
+          absolute z-[100] mt-2 left-0 min-w-full w-max max-w-[400px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl
           max-h-64 overflow-hidden animate-slide-in-up
           ${filteredClients.length > 0 ? '' : 'py-4'}
         `}>

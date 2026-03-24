@@ -169,7 +169,7 @@ const ProtectedApp: React.FC = () => {
           isMobileMenuOpen={isSidebarOpen}
           setIsMobileMenuOpen={setIsSidebarOpen}
         />
-        <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
+        <div className={`flex-1 flex flex-col min-w-0 lg:ml-0 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-0 lg:opacity-100 pointer-events-none lg:pointer-events-auto' : ''}`}>
           <Header onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
           <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-50 dark:bg-gray-900">
             <RouteController />

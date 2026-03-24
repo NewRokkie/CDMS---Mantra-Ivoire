@@ -21,7 +21,13 @@ const FEATURES_LIST = [
   { icon: Shield, text: "Sécurité et conformité optimisées", aria: "Icône représentant la sécurité" }
 ] as const;
 
-export const LoginForm: React.FC = React.memo(() => {
+/**
+ * Props for the LoginForm component
+ * Currently stateless - uses hooks for authentication state
+ */
+interface LoginFormProps {}
+
+export const LoginForm: React.FC<LoginFormProps> = React.memo(() => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,7 +42,7 @@ export const LoginForm: React.FC = React.memo(() => {
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-  const { login, resetPassword, isLoading, isAuthenticated, authError, isDatabaseConnected, needsInitialSetup, checkInitialSetup } = useAuth();
+  const { login, resetPassword, isLoading, isAuthenticated, isDatabaseConnected, needsInitialSetup, checkInitialSetup } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -235,14 +241,14 @@ export const LoginForm: React.FC = React.memo(() => {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-10 animate-scale-in">
             <div className="text-center mb-10">
               <img src={IMAGE_PATHS.LOGO_MANTRA} alt="Logo" className="mx-auto mb-4 h-24" />
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">Bienvenue</h1>
-              <p className="text-gray-600 text-lg" id="login-description">Connectez-vous à votre compte</p>
+              <h1 className="h2 text-gray-900 mb-3">Bienvenue</h1>
+              <p className="body-lg text-gray-600" id="login-description">Connectez-vous à votre compte</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8" aria-labelledby="login-description">
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="label text-gray-700 mb-2">
                   Adresse Email
                 </label>
                 <div className="relative">
@@ -274,7 +280,7 @@ export const LoginForm: React.FC = React.memo(() => {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="password" className="label text-gray-700 mb-2">
                   Mot de passe
                 </label>
                 <div className="relative">
@@ -340,7 +346,7 @@ export const LoginForm: React.FC = React.memo(() => {
               <button
                 type="submit"
                 disabled={isProcessing}
-                className="w-full bg-[#A0C800] text-white py-4 px-8 rounded-xl hover:bg-[#8bb400] focus:ring-2 focus:ring-[#A0C800] focus:ring-offset-2 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 interactive touch-target text-lg"
+                className="w-full bg-[#A0C800] text-white py-4 px-8 rounded-xl hover:bg-[#8bb400] focus:ring-2 focus:ring-[#A0C800] focus:ring-offset-2 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 interactive touch-target button-text"
                 aria-label={isProcessing ? "Connexion en cours" : "Se connecter"}
               >
                 {isProcessing ? (
@@ -393,7 +399,7 @@ export const LoginForm: React.FC = React.memo(() => {
 
                 <div className="space-y-3">
                   <div>
-                    <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="reset-email" className="label text-gray-700 mb-2">
                       Adresse Email
                     </label>
                     <input

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { LayoutDashboard, Container, FileText, Send, LogIn, LogOut as LogOutIcon, BarChart3, Building, Users, Grid3x3 as Grid3X3, Shield, Settings, ChevronRight, Cog, X, LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../hooks/useTheme';
 import { ModuleAccess } from '../../types';
 import { SyncStatusIndicator } from '../Sync';
 import { handleError } from '../../services/errorHandling';
@@ -29,7 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, hasModuleAccess, refreshModuleAccess } = useAuth();
   const { t } = useTranslation();
-  const { theme } = useTheme();
 
   // Force re-render when user module access changes
   const userModuleAccessKey = user?.moduleAccess ? JSON.stringify(user.moduleAccess) : 'no-access';
@@ -99,10 +97,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     // 2. Gate In - First operational step
     { id: 'gate-in', icon: LogIn, label: t('nav.gateIn'), moduleKey: 'gateIn' as const },
 
-    // 3. Release Orders - Must be created before Gate Out
-    { id: 'releases', icon: FileText, label: t('nav.bookingReference'), moduleKey: 'releases' as const },
+    // 3. Bookings - Must be created before Gate Out
+    { id: 'bookings', icon: FileText, label: t('nav.bookings'), moduleKey: 'bookings' as const },
 
-    // 4. Gate Out - Depends on Release Orders
+    // 4. Gate Out - Depends on Bookings
     { id: 'gate-out', icon: LogOutIcon, label: t('nav.gateOut'), moduleKey: 'gateOut' as const },
 
     // 5. Containers - Overview after operations
@@ -206,10 +204,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <img src="/assets/logo_favicon.ico" alt="Logo" className="h-10 w-10" />
             </div>
             <div className="flex-1 flex flex-col justify-center">
-              <h2 className="font-gilroy-bold text-lg tracking-tight text-slate-900 dark:text-white leading-none">
+              <h2 className="sidebar-brand-title text-slate-900 dark:text-white">
                 MANTRA <span className="text-olam-dark">IVOIRE</span>
               </h2>
-              <p className="text-[10px] uppercase tracking-wider font-gilroy-bold text-slate-400 dark:text-gray-500 mt-1">Depot Management System</p>
+              <p className="sidebar-brand-subtitle text-slate-400 dark:text-gray-500 mt-1">DMS</p>
             </div>
           </div>
 
@@ -251,7 +249,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-olam-green rounded-r-md"></div>
                     )}
                     <Icon className={`h-[22px] w-[22px] flex-shrink-0 ${isActive ? 'text-accent-teal' : 'text-slate-400 group-hover:text-accent-teal transition-colors'}`} />
-                    <span className={`text-sm ${isActive ? 'font-gilroy-bold text-accent-teal' : 'font-gilroy-medium'}`}>{item.label}</span>
+                    <span className={`sidebar-nav-item ${isActive ? 'font-bold text-accent-teal' : 'text-slate-500 dark:text-gray-400'}`}>{item.label}</span>
                   </button>
                 </li>
               );
@@ -273,7 +271,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="flex items-center space-x-3">
                     <Cog className={`h-[22px] w-[22px] flex-shrink-0 text-accent-teal`} />
-                    <span className="font-gilroy-bold text-sm">Configurations</span>
+                    <span className="sidebar-nav-item font-bold">Configurations</span>
                   </div>
                   <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${isConfigurationsOpen ? 'rotate-90' : ''}`} />
                 </button>
@@ -290,13 +288,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             onClick={() => {
                               handleConfigurationItemClick(item.id);
                             }}
-                            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sm ${isActive
-                              ? 'bg-slate-50 dark:bg-gray-800 text-accent-teal font-gilroy-bold'
-                              : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800 font-gilroy-medium'
+                            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 ${isActive
+                              ? 'bg-slate-50 dark:bg-gray-800 text-accent-teal font-bold'
+                              : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-gray-800 font-medium'
                               }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-accent-teal' : 'bg-slate-300'}`}></span>
-                            <span>{item.label}</span>
+                            <span className="sidebar-nav-item">{item.label}</span>
                           </button>
                         </li>
                       );
@@ -312,16 +310,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4 border-t border-slate-200 dark:border-gray-700 flex-shrink-0 bg-slate-50/50 dark:bg-gray-800/50">
           {user && (
             <div className="flex items-center gap-3 mb-3">
-              <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-gray-700 flex items-center justify-center text-slate-500 dark:text-gray-400 text-xs font-gilroy-bold border border-white dark:border-gray-600 shadow-sm">
+              <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-gray-700 flex items-center justify-center text-slate-500 dark:text-gray-400 text-xs font-bold border border-white dark:border-gray-600 shadow-sm">
                 {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-gilroy-bold text-slate-700 dark:text-gray-200 truncate">{user.name || 'User'}</p>
+                <p className="sidebar-config-label font-bold text-slate-700 dark:text-gray-200 truncate">{user.name || 'User'}</p>
                 <p className="text-xs text-slate-400 dark:text-gray-500 truncate">{user.email || 'user@example.com'}</p>
               </div>
             </div>
           )}
-          <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-gray-500 font-gilroy-bold uppercase tracking-wider">
+          <div className="flex items-center justify-between sidebar-brand-subtitle text-slate-400 dark:text-gray-500">
             <span>v1.0.0</span>
             <span>© 2025 DepotManager</span>
           </div>

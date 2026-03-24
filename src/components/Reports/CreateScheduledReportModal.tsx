@@ -202,6 +202,7 @@ export const CreateScheduledReportModal: React.FC<CreateScheduledReportModalProp
       onSubmit={handleSubmit}
       submitLabel={editingReport ? 'Update Report' : 'Create Report'}
       isFormValid={Object.keys(errors).length === 0}
+      isNested={true}
     >
       <div className="space-y-6">
         {/* Basic Information */}

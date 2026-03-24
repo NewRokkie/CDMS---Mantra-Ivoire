@@ -79,27 +79,27 @@ export const BufferZoneStats: React.FC<BufferZoneStatsProps> = ({ className = ''
         </div>
         <div className="lg:ml-3 flex-1">
           <div className="flex items-center justify-center lg:justify-start space-x-2">
-            <p className="text-2xl lg:text-lg font-bold text-gray-900 dark:text-white">{stats.currentOccupancy}</p>
-            <span className="text-sm text-gray-500 dark:text-gray-400">/ {stats.totalCapacity}</span>
+            <p className="stat text-gray-900 dark:text-white">{stats.currentOccupancy}</p>
+            <span className="helper text-gray-500 dark:text-gray-400">/ {stats.totalCapacity}</span>
           </div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 leading-tight">Zones Tampons</p>
+          <p className="label text-gray-500 dark:text-gray-400 leading-tight">Zones Tampons</p>
           
           {/* Détails supplémentaires pour desktop */}
           <div className="hidden lg:block mt-1 space-y-1">
             <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
               <span>Stacks tampons:</span>
-              <span className="font-medium dark:text-white">{stats.totalBufferStacks}</span>
+              <span className="font-medium dark:text-white numeric-text">{stats.totalBufferStacks}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
               <span>Taux d'occupation:</span>
-              <span className={`font-medium ${getUtilizationColor(stats.utilizationRate)}`}>
+              <span className={`font-medium numeric-text ${getUtilizationColor(stats.utilizationRate)}`}>
                 {stats.utilizationRate}%
               </span>
             </div>
             {stats.availableSpaces > 0 && (
               <div className="flex items-center justify-between text-xs text-green-600 dark:text-green-400">
                 <span>Places disponibles:</span>
-                <span className="font-medium">{stats.availableSpaces}</span>
+                <span className="font-medium numeric-text">{stats.availableSpaces}</span>
               </div>
             )}
           </div>

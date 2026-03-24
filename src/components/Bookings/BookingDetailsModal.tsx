@@ -430,8 +430,8 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
                 <Clock className="w-4 h-4 text-orange-500 dark:text-orange-400" />
               </div>
               <div className="flex items-baseline space-x-2 mb-1">
-                <span className="text-2xl font-bold text-orange-900 dark:text-orange-100">{remaining20ft}</span>
-                <span className="text-sm text-orange-600 dark:text-orange-400">of {booking.containerQuantities.size20ft}</span>
+                <span className="stat font-mono" style={{color: 'rgb(124, 45, 18)'}}><span className="font-numeric">{remaining20ft}</span></span>
+                <span className="text-sm text-orange-600 dark:text-orange-400">of <span className="font-numeric">{booking.containerQuantities.size20ft}</span></span>
               </div>
               <div className="w-full bg-orange-200 dark:bg-orange-700 rounded-full h-2 mb-1">
                 <div
@@ -443,7 +443,7 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
               </div>
               <div className="text-xs text-orange-700 dark:text-orange-400">
                 {booking.containerQuantities.size20ft > 0 ?
-                  `${Math.round((remaining20ft / booking.containerQuantities.size20ft) * 100)}% remaining` :
+                  <span><span className="font-numeric">{Math.round((remaining20ft / booking.containerQuantities.size20ft) * 100)}</span>% remaining</span> :
                   t('common.noContainers')
                 }
               </div>
@@ -456,8 +456,8 @@ const BookingDetailsContent: React.FC<BookingDetailsContentProps> = ({
                 <Clock className="w-4 h-4 text-purple-500 dark:text-purple-400" />
               </div>
               <div className="flex items-baseline space-x-2 mb-1">
-                <span className="text-2xl font-bold text-purple-900 dark:text-purple-100">{adjustedRemaining40ft}</span>
-                <span className="text-sm text-purple-600 dark:text-purple-400">of {booking.containerQuantities.size40ft}</span>
+                <span className="stat font-mono" style={{color: 'rgb(88, 28, 135)'}}><span className="font-numeric">{adjustedRemaining40ft}</span></span>
+                <span className="text-sm text-purple-600 dark:text-purple-400">of <span className="font-numeric">{booking.containerQuantities.size40ft}</span></span>
               </div>
               <div className="w-full bg-purple-200 dark:bg-purple-700 rounded-full h-2 mb-1">
                 <div
